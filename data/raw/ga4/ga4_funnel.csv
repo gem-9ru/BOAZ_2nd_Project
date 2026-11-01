@@ -1,0 +1,19 @@
+medium,device,users,visit_users,view_users,cart_users,checkout_users,purchase_users
+organic,desktop,57145,56706,12341,2295,1752,734
+organic,mobile,39252,38992,8416,1650,1309,570
+(none),desktop,37052,36660,8333,1742,1265,548
+<Other>,desktop,25867,25779,5283,1009,753,293
+(none),mobile,25046,24797,5474,1126,864,393
+referral,desktop,24737,24281,6184,1364,1097,529
+<Other>,mobile,17762,17689,3657,664,495,193
+referral,mobile,16920,16614,4219,957,755,380
+cpc,desktop,7830,7798,1599,279,220,99
+cpc,mobile,5268,5252,1050,189,142,56
+(data deleted),desktop,4325,3935,1978,610,511,313
+(data deleted),mobile,2884,2616,1316,390,338,217
+organic,tablet,2221,2205,489,91,71,28
+(none),tablet,1388,1373,296,49,45,17
+<Other>,tablet,1033,1029,224,43,31,13
+referral,tablet,924,908,244,48,43,20
+cpc,tablet,318,317,66,13,10,4
+(data deleted),tablet,182,165,83,26,14,12

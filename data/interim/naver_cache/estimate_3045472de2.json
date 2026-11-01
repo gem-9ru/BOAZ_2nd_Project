@@ -1,0 +1,408 @@
+{
+ "request": {
+  "device": "MOBILE",
+  "keywordplus": true,
+  "key": "필라테스",
+  "bids": [
+   70,
+   100,
+   150,
+   200,
+   250,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900,
+   1000,
+   1100,
+   1200,
+   1300,
+   1400,
+   1500,
+   1600,
+   1700,
+   1800,
+   1900,
+   2000,
+   2100,
+   2200,
+   2300,
+   2400,
+   2500,
+   2600,
+   2700,
+   2800,
+   2900,
+   3000,
+   3200,
+   3400,
+   3600,
+   3800,
+   4000,
+   4200,
+   4400,
+   4600,
+   4800,
+   5000,
+   5200,
+   5400,
+   5600,
+   5800,
+   6000,
+   6500,
+   7000,
+   7500,
+   8000,
+   8500,
+   9000,
+   9500,
+   10000
+  ]
+ },
+ "fetched_at": "2026-11-02 01:35:15",
+ "response": {
+  "device": "MOBILE",
+  "keyword": "필라테스",
+  "estimate": [
+   {
+    "bid": 70,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 100,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 150,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 200,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 250,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 300,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 400,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 500,
+    "clicks": 0,
+    "impressions": 4188,
+    "cost": 0
+   },
+   {
+    "bid": 600,
+    "clicks": 0,
+    "impressions": 9038,
+    "cost": 0
+   },
+   {
+    "bid": 700,
+    "clicks": 0,
+    "impressions": 13888,
+    "cost": 0
+   },
+   {
+    "bid": 800,
+    "clicks": 0,
+    "impressions": 18738,
+    "cost": 0
+   },
+   {
+    "bid": 900,
+    "clicks": 0,
+    "impressions": 23588,
+    "cost": 0
+   },
+   {
+    "bid": 1000,
+    "clicks": 0,
+    "impressions": 28438,
+    "cost": 0
+   },
+   {
+    "bid": 1100,
+    "clicks": 0,
+    "impressions": 33288,
+    "cost": 0
+   },
+   {
+    "bid": 1200,
+    "clicks": 0,
+    "impressions": 38138,
+    "cost": 0
+   },
+   {
+    "bid": 1300,
+    "clicks": 0,
+    "impressions": 42988,
+    "cost": 0
+   },
+   {
+    "bid": 1400,
+    "clicks": 165,
+    "impressions": 47838,
+    "cost": 207367
+   },
+   {
+    "bid": 1500,
+    "clicks": 319,
+    "impressions": 52688,
+    "cost": 424732
+   },
+   {
+    "bid": 1600,
+    "clicks": 463,
+    "impressions": 57538,
+    "cost": 651036
+   },
+   {
+    "bid": 1700,
+    "clicks": 599,
+    "impressions": 62388,
+    "cost": 887001
+   },
+   {
+    "bid": 1800,
+    "clicks": 726,
+    "impressions": 67238,
+    "cost": 1129279
+   },
+   {
+    "bid": 1900,
+    "clicks": 847,
+    "impressions": 72088,
+    "cost": 1380745
+   },
+   {
+    "bid": 2000,
+    "clicks": 961,
+    "impressions": 76938,
+    "cost": 1638349
+   },
+   {
+    "bid": 2100,
+    "clicks": 1070,
+    "impressions": 81788,
+    "cost": 1904081
+   },
+   {
+    "bid": 2200,
+    "clicks": 1174,
+    "impressions": 86638,
+    "cost": 2176823
+   },
+   {
+    "bid": 2300,
+    "clicks": 1273,
+    "impressions": 91488,
+    "cost": 2455453
+   },
+   {
+    "bid": 2400,
+    "clicks": 1368,
+    "impressions": 96338,
+    "cost": 2740856
+   },
+   {
+    "bid": 2500,
+    "clicks": 1459,
+    "impressions": 99178,
+    "cost": 3032134
+   },
+   {
+    "bid": 2600,
+    "clicks": 1547,
+    "impressions": 99178,
+    "cost": 3330545
+   },
+   {
+    "bid": 2700,
+    "clicks": 1631,
+    "impressions": 99178,
+    "cost": 3633189
+   },
+   {
+    "bid": 2800,
+    "clicks": 1712,
+    "impressions": 99178,
+    "cost": 3941472
+   },
+   {
+    "bid": 2900,
+    "clicks": 1791,
+    "impressions": 99178,
+    "cost": 4257099
+   },
+   {
+    "bid": 3000,
+    "clicks": 1866,
+    "impressions": 99178,
+    "cost": 4574718
+   },
+   {
+    "bid": 3200,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 4861219
+   },
+   {
+    "bid": 3400,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 5140366
+   },
+   {
+    "bid": 3600,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 5419512
+   },
+   {
+    "bid": 3800,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 5698659
+   },
+   {
+    "bid": 4000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 5977805
+   },
+   {
+    "bid": 4200,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 6256951
+   },
+   {
+    "bid": 4400,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 6536098
+   },
+   {
+    "bid": 4600,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 6815244
+   },
+   {
+    "bid": 4800,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 7094390
+   },
+   {
+    "bid": 5000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 7373537
+   },
+   {
+    "bid": 5200,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 7652683
+   },
+   {
+    "bid": 5400,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 7931830
+   },
+   {
+    "bid": 5600,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 8210976
+   },
+   {
+    "bid": 5800,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 8490122
+   },
+   {
+    "bid": 6000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 8769269
+   },
+   {
+    "bid": 6500,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 9467135
+   },
+   {
+    "bid": 7000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 10165001
+   },
+   {
+    "bid": 7500,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 10862867
+   },
+   {
+    "bid": 8000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 11560733
+   },
+   {
+    "bid": 8500,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 11856936
+   },
+   {
+    "bid": 9000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 11856936
+   },
+   {
+    "bid": 9500,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 11856936
+   },
+   {
+    "bid": 10000,
+    "clicks": 1869,
+    "impressions": 99178,
+    "cost": 11856936
+   }
+  ]
+ }
+}

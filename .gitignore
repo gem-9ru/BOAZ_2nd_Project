@@ -1,0 +1,10 @@
+.env
+.streamlit/secrets.toml
+# 원본 데이터는 제외하되, 공개 GA4 쿼리 결과는 팀 공유용으로 포함
+data/raw/*
+!data/raw/ga4/
+__pycache__/
+.ipynb_checkpoints/
+.pytest_cache/
+.venv/
+.DS_Store
