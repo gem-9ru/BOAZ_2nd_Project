@@ -75,7 +75,7 @@ def activation_funnel(params, clicks=1000):
         cur *= r
         names.append(n)
         vals.append(cur)
-    fig = go.Figure(go.Funnel(y=names, x=vals, textinfo="value+percent initial", marker=dict(color=AARRR_COLORS["활성화"])))
+    fig = go.Figure(go.Funnel(y=names, x=vals, texttemplate="%{value:,.1f}<br>%{percentInitial:.1%}", marker=dict(color=AARRR_COLORS["활성화"])))
     return _layout(fig, f"클릭 {clicks:,}회 기준 활성화 퍼널", 300)
 
 

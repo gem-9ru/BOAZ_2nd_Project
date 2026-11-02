@@ -75,7 +75,9 @@ def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
     step = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
     best = step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "") if len(step) else name
     best_gain = won(step.iloc[0]["up"]) if len(step) else "-"
-    out.append({"title": f"가장 많이 빠지는 단계는 '{name}'(통과율 {rate:.1%})이고, 개선 효과가 가장 큰 단계는 '{best}'입니다.",
+    title = (f"가장 많이 빠지고 개선 효과도 가장 큰 단계는 '{name}'(통과율 {rate:.1%})입니다." if best == name else
+             f"가장 많이 빠지는 단계는 '{name}'(통과율 {rate:.1%})이고, 개선 효과가 가장 큰 단계는 '{best}'입니다.")
+    out.append({"title": title,
                 "evidence": f"'{best}' 이탈 10% 감소 → 12개월 이익 {best_gain}",
                 "action": f"A/B 테스트: {prescription(best)}"})
     budget = max(sum(opt_roas["spends"]) if opt_roas else 0.0, 1.0)
