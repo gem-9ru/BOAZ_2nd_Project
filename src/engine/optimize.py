@@ -79,10 +79,10 @@ def lever_table(channels: Sequence[Channel], spends: Sequence[float], params: Fu
 
     levers = [
         ("spend", "광고비", lambda f: run([s * f for s in spends], params)),
-        ("cvr", "전환율 (클릭→과업 완료)", lambda f: run(spends, scale_all_steps(f))),
-        ("retention", "리텐션", lambda f: run(spends, params.with_changes(retention_scale=params.retention_scale * f))),
-        ("aov", "객단가", lambda f: run(spends, params.with_changes(aov=params.aov * f))),
-        ("freq", "월 구매 빈도", lambda f: run(spends, params.with_changes(purchase_freq=params.purchase_freq * f))),
+        ("cvr", "전환율 (클릭→목표 행동)", lambda f: run(spends, scale_all_steps(f))),
+        ("retention", "재구매 (리텐션)", lambda f: run(spends, params.with_changes(retention_scale=params.retention_scale * f))),
+        ("aov", "1회 결제 금액 (객단가)", lambda f: run(spends, params.with_changes(aov=params.aov * f))),
+        ("freq", "한 달 구매 횟수", lambda f: run(spends, params.with_changes(purchase_freq=params.purchase_freq * f))),
     ]
     for i, (name, _) in enumerate(params.steps):
         levers.append((f"step_{i}", f"단계: {name} (이탈 감소)", lambda f, i=i: run(spends, scale_step(i, f))))

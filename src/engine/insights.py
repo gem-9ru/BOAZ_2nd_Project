@@ -38,20 +38,20 @@ def warnings(res: SimResult, keyword_alloc: Optional[pd.DataFrame] = None) -> Li
     s, out = res.summary, []
     # PMF 경고 (기획안 결정 5): 현재 리텐션에서 12개월 LTV/CAC < 1
     if s["ltv_cac"] is not None and s["ltv_cac"] < D.PMF_LTV_CAC_THRESHOLD:
-        out.append(("error", f"PMF 경고: 현재 리텐션에서 12개월 LTV/CAC가 {s['ltv_cac']:.2f}입니다. 광고로 데려온 고객 1명이 "
-                             f"12개월 동안 남기는 이익({won(s['ltv_12m'])})이 데려오는 비용({won(s['paid_cac'])})보다 작습니다. "
-                             "광고비 증액보다 리텐션·전환율 개선이 먼저입니다."))
+        out.append(("error", f"광고할수록 손해인 상태입니다 (PMF 경고). 광고로 데려온 손님 1명이 1년 동안 남겨 주는 돈({won(s['ltv_12m'])})이 "
+                             f"데려오는 데 든 광고비({won(s['paid_cac'])})보다 작습니다 (LTV/CAC {s['ltv_cac']:.2f}). "
+                             "광고비를 늘리기 전에 재구매·구매 비율을 먼저 올려야 합니다."))
     if s["paid_cac"] is not None and s["payback_month"] is None:
-        out.append(("warning", "36개월 안에 고객 1명당 광고비(CAC)를 회수하지 못합니다."))
+        out.append(("warning", "손님 1명을 데려오는 데 쓴 광고비를 3년 안에 되찾지 못합니다 (회수 기간 36개월 넘음)."))
     if keyword_alloc is not None and len(keyword_alloc):
         sat = keyword_alloc[keyword_alloc["saturated"] & (keyword_alloc["spend"] > 0)]
         for _, row in sat.iterrows():
-            out.append(("warning", f"포화 구간: '{row['keyword']}' 한계 CPC({won(row['marginal_cpc'])})가 평균 CPC({won(row['cpc'])})의 "
-                                   f"{D.SATURATION_RATIO:.0f}배를 넘습니다. 세부 키워드를 추가하거나 다른 채널로 옮기세요."))
+            out.append(("warning", f"'{row['keyword']}' 검색어는 돈을 더 넣어도 효과가 작습니다 (포화). 클릭 1번을 더 얻는 데 {won(row['marginal_cpc'])}이 들어 "
+                                   f"평균({won(row['cpc'])})의 {D.SATURATION_RATIO:.0f}배가 넘습니다. 다른 검색어를 추가하거나 예산을 메타로 옮기세요."))
     for _, row in res.by_channel.iterrows():
         if row["unspent"] > 1:
-            out.append(("info", f"{row['label']}: 선택한 키워드로는 월 {won(row['unspent'])}을 더 쓸 수 없습니다 "
-                                "(최고 입찰가에서도 노출 한도). 키워드를 추가하거나 예산을 옮기세요."))
+            out.append(("info", f"{row['label']}: 고른 검색어를 찾는 사람이 적어 한 달 {won(row['unspent'])}은 쓰지 못합니다. "
+                                "검색어를 더 추가하거나 남는 예산을 다른 채널로 옮기세요."))
     return out
 
 
@@ -65,64 +65,68 @@ def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
     if len(core):
         top = core.iloc[0]
         if top["key"] != "spend" and len(spend_row):
-            out.append({"title": f"광고비를 더 쓰기 전에 퍼널을 보세요: '{top['lever']}' 개선이 광고비 증액보다 이익을 더 키웁니다.",
-                        "evidence": f"+10% 시 12개월 이익 변화 — {top['lever']} {won(top['up'])}, 광고비 {won(spend_row.iloc[0]['up'])}",
-                        "action": "아래 이탈 단계 실험부터 진행"})
+            out.append({"title": f"광고비를 늘리는 것보다 '{top['lever']}'을(를) 올리는 게 이익을 더 키웁니다.",
+                        "evidence": f"10% 좋아지면 1년 동안 남는 돈 — {top['lever']} {_signed(top['up'])}, 광고비 10% 증액 {_signed(spend_row.iloc[0]['up'])}",
+                        "action": "아래 '실험해 보기'의 단계 개선부터 시작"})
         else:
-            out.append({"title": "지금은 광고비 증액이 가장 효과가 큰 레버입니다.",
-                        "evidence": f"광고비 +10% → 12개월 이익 {won(top['up'])}", "action": "예산 증액 후 한계 CPC 모니터링"})
+            out.append({"title": "지금은 광고비를 늘리는 것이 이익을 가장 많이 키웁니다.",
+                        "evidence": f"광고비 10% 증액 → 1년 동안 남는 돈 {_signed(top['up'])}", "action": "예산을 조금씩 늘리면서 클릭당 비용이 너무 오르지 않는지 지켜보기"})
     name, rate = biggest_drop(p)
     step = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
     best = step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "") if len(step) else name
     best_gain = won(step.iloc[0]["up"]) if len(step) else "-"
-    title = (f"가장 많이 빠지고 개선 효과도 가장 큰 단계는 '{name}'(통과율 {rate:.1%})입니다." if best == name else
-             f"가장 많이 빠지는 단계는 '{name}'(통과율 {rate:.1%})이고, 개선 효과가 가장 큰 단계는 '{best}'입니다.")
+    title = (f"손님이 가장 많이 그만두는 곳은 '{name}' 단계입니다 (100명 중 {rate * 100:.0f}명만 통과). 여기를 고치는 효과가 가장 큽니다." if best == name else
+             f"손님이 가장 많이 그만두는 곳은 '{name}' 단계(100명 중 {rate * 100:.0f}명 통과)지만, 고쳤을 때 효과는 '{best}' 단계가 가장 큽니다.")
     out.append({"title": title,
-                "evidence": f"'{best}' 이탈 10% 감소 → 12개월 이익 {best_gain}",
-                "action": f"A/B 테스트: {prescription(best)}"})
+                "evidence": f"'{best}'에서 그만두는 사람 10% 감소 → 1년 동안 남는 돈 {best_gain} 증가",
+                "action": f"두 버전 비교 실험(A/B 테스트): {prescription(best)}"})
     budget = max(sum(opt_roas["spends"]) if opt_roas else 0.0, 1.0)
     no_ads = opt_profit is not None and sum(opt_profit["spends"]) < 0.05 * budget
     if no_ads:
-        out.append({"title": "지금 퍼널·객단가·마진에서는 광고비를 쓸수록 12개월 이익이 줄어듭니다.",
-                    "evidence": f"12개월 이익 최적 광고비 ≈ 0원 · 현재 LTV/CAC {s['ltv_cac'] or 0:.2f}",
-                    "action": "광고 확대 전에 전환율·리텐션·객단가 레버부터 개선 (위 토네이도 참고)"})
+        out.append({"title": "지금 숫자로는 광고비를 쓸수록 1년 동안 남는 돈이 줄어듭니다.",
+                    "evidence": f"남는 돈이 가장 큰 광고비 ≈ 0원 · 손님이 남기는 돈은 데려오는 비용의 {s['ltv_cac'] or 0:.2f}배",
+                    "action": "광고를 늘리기 전에 구매 비율·재구매·결제 금액부터 올리기 (왼쪽 막대 그래프 참고)"})
     elif opt_profit is not None and opt_roas is not None:
         diff = max(abs(a - b) for a, b in zip(opt_profit["spends"], opt_roas["spends"]))
         if diff > 0.05 * budget:
-            out.append({"title": "ROAS 기준 배분과 12개월 이익 기준 배분이 다릅니다 → ROAS만 보면 부분 최적화입니다.",
-                        "evidence": "ROAS 최적 " + " / ".join(won(x) for x in opt_roas["spends"])
-                                    + " vs 이익 최적 " + " / ".join(won(x) for x in opt_profit["spends"]) + " (채널 순서: 네이버 / 메타)",
-                        "action": "④ 화면의 비교표에서 두 안의 12개월 이익 차이 확인"})
+            out.append({"title": "광고 매체 숫자(ROAS)만 보고 짠 예산과 실제로 남는 돈이 가장 큰 예산이 다릅니다.",
+                        "evidence": "ROAS 기준 네이버 " + " · 메타 ".join(won(x) for x in opt_roas["spends"])
+                                    + " vs 남는 돈 기준 네이버 " + " · 메타 ".join(won(x) for x in opt_profit["spends"]) + " (한 달)",
+                        "action": "④ 결과의 '계획별 비교' 표에서 두 계획의 남는 돈 차이 확인"})
     if opt and not (no_ads and opt.get("omtm") == "profit"):
         gain = opt["value"] - opt["base_value"]
         if abs(gain) > 1e-6:
-            out.append({"title": f"'{omtm_label}' 기준으로 채널 배분을 바꾸면 OMTM이 좋아집니다.",
+            out.append({"title": f"네이버·메타 예산 비율을 바꾸면 '{omtm_label}' 목표가 더 좋아집니다.",
                         "evidence": f"{_fmt_omtm(opt['base_value'], opt['omtm'])} → {_fmt_omtm(opt['value'], opt['omtm'])}",
-                        "action": "최적안 배분으로 2~4주 집행 후 1단계 CSV로 재보정"})
+                        "action": "추천 계획으로 2~4주 광고해 보고, 실제 성과 파일을 ① 시작에 올려 다시 계산"})
     if scan is not None and len(scan) > 1:
         cur = scan[scan["multiplier"] == 1.0]
         up = scan[scan["multiplier"] == 1.25]
         if len(cur) and len(up):
             d = float(up.iloc[0]["profit_12m"] - cur.iloc[0]["profit_12m"])
-            out.append({"title": "예산 증액 여지가 있습니다." if d > 0 else "지금은 예산 증액보다 배분·퍼널 개선이 먼저입니다.",
-                        "evidence": f"예산 +25% → 12개월 이익 {'+' if d > 0 else '−'}{won(abs(d))}",
-                        "action": "④ 예산 규모별 이익 곡선의 꼭짓점 확인"})
+            out.append({"title": "광고비를 더 늘려도 이익이 늘어납니다." if d > 0 else "지금은 광고비를 늘리기보다 예산 배분과 가게 개선이 먼저입니다.",
+                        "evidence": f"광고비 25% 증액 → 1년 동안 남는 돈 {'+' if d > 0 else '−'}{won(abs(d))}",
+                        "action": "④ 결과의 '예산 규모별' 그래프에서 가장 높은 지점 확인"})
     if s["repeat_revenue"] > 0 and s["revenue"]:
-        out.append({"title": "리텐션은 광고 효율의 바닥입니다: ROAS는 재구매를 빼고 계산하므로 고객 가치를 다 보여주지 못합니다.",
-                    "evidence": f"12개월 매출 중 재구매 {s['repeat_revenue'] / s['revenue']:.0%}, ROAS(첫 구매 기준) {s['roas'] or 0:.2f}, "
-                                f"회수 기간 {str(s['payback_month']) + '개월' if s['payback_month'] else '36개월+'}",
-                    "action": "첫 구매 후 1~2개월 재구매 유도(쿠폰·리마인드) 실험"})
+        out.append({"title": "다시 오는 손님이 광고 효과를 받쳐 줍니다. ROAS는 첫 구매만 세서 이 부분을 보여주지 못합니다.",
+                    "evidence": f"1년 매출 중 재구매 {s['repeat_revenue'] / s['revenue']:.0%} · ROAS(첫 구매만) {s['roas'] or 0:.2f} · "
+                                f"광고비 본전 {str(s['payback_month']) + '개월' if s['payback_month'] else '36개월 넘음'}",
+                    "action": "첫 구매 후 1~2달 안에 다시 오게 하는 쿠폰·알림 보내 보기"})
     if keyword_recs is not None and len(keyword_recs):
         kws = ", ".join(keyword_recs["keyword"].head(3))
-        out.append({"title": "세부 키워드 기회: 경쟁이 낮거나 중간인 월 검색수 1천~3만 키워드가 있습니다.",
+        out.append({"title": "경쟁이 덜한 알짜 검색어가 있습니다 (세부 키워드).",
                     "evidence": f"추천: {kws}",
-                    "action": "② 획득 설계에서 추가해 포화를 낮추기"})
+                    "action": "② 광고 채널에서 추가해 클릭을 더 싸게 얻기"})
     return out
+
+
+def _signed(v: float) -> str:
+    return ("+" if v >= 0 else "−") + won(abs(v))
 
 
 def _fmt_omtm(v: float, omtm: str) -> str:
     if omtm == "profit":
         return won(v)
     if omtm == "roas":
-        return f"{v:.2f}"
+        return f"{v:.2f}원"
     return f"{v:,.0f}명"
