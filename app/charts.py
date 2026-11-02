@@ -55,9 +55,14 @@ def meta_curve(curve, max_spend):
     return _layout(fig, "메타 광고비-클릭 (CPC 상승 반영)", 300)
 
 
-def retention_curve(params, months=12):
+def retention_curve(params, months=12, actual: pd.DataFrame = None):
     r = params.retention(months + 1)
-    fig = go.Figure(go.Scatter(x=list(range(months + 1)), y=r, mode="lines+markers", line=dict(color=AARRR_COLORS["유지"])))
+    fig = go.Figure(go.Scatter(x=list(range(months + 1)), y=r, mode="lines+markers", name="시뮬레이션 곡선",
+                               line=dict(color=AARRR_COLORS["유지"])))
+    if actual is not None:
+        a = actual[actual["months_since"] <= months]
+        fig.add_trace(go.Scatter(x=a["months_since"], y=a["retention"], mode="markers", name="실제 코호트 평균",
+                                 marker=dict(color="gray", size=9, symbol="x")))
     fig.add_hline(y=params.retention_floor, line_dash="dot", annotation_text=f"바닥값 {params.retention_floor:.0%}")
     fig.update_xaxes(title="첫 구매 후 경과 개월")
     fig.update_yaxes(title="월 범위 리텐션", tickformat=".0%", range=[0, 1.05])
@@ -124,7 +129,7 @@ def tornado(levers: pd.DataFrame):
     df = df.sort_values("span")
     fig = go.Figure()
     fig.add_trace(go.Bar(y=df["lever"], x=df["down"], orientation="h", name="−10%", marker_color="#BAB0AC"))
-    fig.add_trace(go.Bar(y=df["lever"], x=df["up"], orientation="h", name="+10%",
+    fig.add_trace(go.Bar(y=df["lever"], x=df["up"], orientation="h", name="+10% (초록 = 이익 증가, 빨강 = 감소)",
                          marker_color=["#59A14F" if v >= 0 else "#E15759" for v in df["up"]]))
     fig.update_layout(barmode="overlay")
     fig.update_xaxes(title="12개월 이익 변화 (원)")

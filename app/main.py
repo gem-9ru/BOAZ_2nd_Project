@@ -19,6 +19,7 @@ from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_sca
 from src.engine import defaults as D  # noqa: E402
 from src.engine import data_loader as dl  # noqa: E402
 from src.engine import naver_source as ns  # noqa: E402
+from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import insights, prescription, warnings, won  # noqa: E402
 
 st.set_page_config(page_title="AARRR 광고 예산 시뮬레이터", page_icon="📈", layout="wide")
@@ -199,6 +200,15 @@ with tabs[1]:
         st.plotly_chart(charts.bid_curves(estimates, naver_curve if estimates else None), use_container_width=True)
     with g2:
         st.plotly_chart(charts.meta_target_bars(targets_df, meta_targets), use_container_width=True)
+        with st.expander("메타 캠페인 설계 가이드 (보조)"):
+            goal = st.selectbox("광고 목표", D.META_GUIDE_GOALS, index=2)
+            product = st.selectbox("상품·서비스 유형", D.META_GUIDE_PRODUCTS)
+            st.markdown(f"- **캠페인**: {D.META_GUIDE['campaign'][goal]}\n"
+                        f"- **구조**: {D.META_GUIDE['structure'][product]}\n"
+                        f"- **소재**: {D.META_GUIDE['creative'][product]}\n"
+                        + (f"- **타깃**: 고른 타깃의 상대 CPA {target_mult:.2f}배" if meta_targets else
+                           "- **타깃**: 위에서 연령·성별을 고르면 상대 CPA를 함께 봅니다"))
+            st.caption("일반적인 운영 원칙을 정리한 규칙 기반 가이드입니다. 계산에는 쓰이지 않습니다.")
         st.plotly_chart(charts.meta_curve(meta_curve, max(budget, 1)), use_container_width=True)
     alloc = None
     if estimates:
@@ -231,8 +241,22 @@ with tabs[2]:
     st.subheader("유지 · 수익 · 추천")
     r1, r2, r3 = st.columns(3)
     with r1:
-        floor = st.slider("리텐션 바닥값", 0.0, 0.6, float(D.RETENTION_FLOOR), 0.01, help="오래 지나도 남는 고객 비율 (곡선이 평평해지는 높이)")
-        decay = st.slider("리텐션 감소율", 0.1, 5.0, float(D.RETENTION_DECAY), 0.1, help="첫 구매 후 얼마나 빨리 이탈하는지")
+        # UCI 코호트 결과(data/processed/cohort_retention.csv)가 있으면 곡선을 적합해 기본값으로
+        ret_table, ret_src, fit = None, "임시값 (UCI 코호트 결과 대기)", None
+        segments = dl.retention_segments()
+        retail = [i for i, x in enumerate(segments) if "소매" in x or "제외" in x]  # 도매 분리 후 세그먼트를 기본으로
+        seg = st.selectbox("리텐션 기본값 세그먼트", segments, index=retail[0] if retail else 0) if segments else None
+        ret_table = dl.retention_curve_table(segment=seg)
+        if ret_table is not None and len(ret_table) >= 3:
+            fit = dl.fit_retention(ret_table, fit_months=min(6, int(ret_table["months_since"].max()) - 1))
+            full = dl.fit_retention(ret_table)
+            ret_src = f"UCI 코호트 적합 ({seg or '전체'}) · 앞 6개월로 맞춘 뒤 이후 오차 MAE {fit.get('holdout_mae', float('nan')):.3f}"
+            fit = full
+        floor = st.slider("리텐션 바닥값", 0.0, 0.6, round(fit["floor"], 3) if fit else float(D.RETENTION_FLOOR), 0.005,
+                          key=f"floor_{seg}_{fit is not None}", help="오래 지나도 남는 고객 비율 (곡선이 평평해지는 높이)")
+        decay = st.slider("리텐션 감소율", 0.1, 5.0, round(fit["decay"], 2) if fit else float(D.RETENTION_DECAY), 0.05,
+                          key=f"decay_{seg}_{fit is not None}", help="첫 구매 후 얼마나 빨리 이탈하는지")
+        st.caption(f"출처: {ret_src}")
     with r2:
         aov = st.number_input("객단가 (원, 중앙값 기준)", 1_000.0, 10_000_000.0, float(D.AOV), step=1_000.0)
         freq = st.number_input("활성 고객 월 구매 빈도", 0.1, 10.0, float(D.PURCHASE_FREQ), step=0.1)
@@ -246,8 +270,9 @@ with tabs[2]:
     with f2:
         st.plotly_chart(charts.activation_funnel(params), use_container_width=True)
         st.metric("클릭 → 과업 완료 전환율 (CVR)", f"{params.cvr:.2%}")
-    st.plotly_chart(charts.retention_curve(params), use_container_width=True)
-    st.caption("리텐션·구매 빈도는 UCI 코호트 분석(도매 고객 분리 후)이 나오면 교체합니다. 지금은 임시값입니다.")
+    st.plotly_chart(charts.retention_curve(params, actual=ret_table), use_container_width=True)
+    if ret_table is None:
+        st.caption("리텐션은 UCI 코호트 분석(도매 고객 분리 후)이 data/processed/cohort_retention.csv로 나오면 자동으로 적합합니다. 지금은 임시값입니다.")
 
 # 1단계 CSV 보정: 퍼널이 정해진 뒤 채널별 전환율 배수 = 내 CVR / 퍼널 CVR
 naver_cvr_mult, naver_ret_mult = D.NAVER_CVR_MULT, D.NAVER_RETENTION_MULT
@@ -365,8 +390,23 @@ with tabs[4]:
             name = top_step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "")
             st.subheader("실험 제안")
             st.markdown(f"- **{name}** 단계 A/B 테스트: {prescription(name)}. "
-                        f"이탈을 10% 줄이면 12개월 이익 {won(top_step.iloc[0]['up'])} 증가 예상\n"
-                        "- 표본 크기 계산기는 다음 버전에서 제공합니다.")
+                        f"이탈을 10% 줄이면 12개월 이익 {won(top_step.iloc[0]['up'])} 증가 예상")
+            st.subheader("표본 크기 계산기")
+            step_names = [n for n, _ in params.steps]
+            exp_step = st.selectbox("실험할 단계", step_names, index=step_names.index(name) if name in step_names else 0)
+            i = step_names.index(exp_step)
+            base_rate = params.steps[i][1]
+            lift = st.slider("검출하려는 개선 폭 (상대 %)", 1, 50, 10) / 100
+            e1, e2 = st.columns(2)
+            alpha = e1.selectbox("유의수준 α", [0.05, 0.1, 0.01])
+            power = e2.selectbox("검정력 1−β", [0.8, 0.9])
+            ss_res = sample_size(base_rate, lift, alpha, power)
+            monthly_in = res.funnel.iloc[i]["count"] / 12  # 이 단계에 들어오는 월 사용자 (퍼널 직전 단계)
+            days = days_needed(ss_res["n_total"], monthly_in)
+            st.markdown(f"기준 통과율 **{base_rate:.1%} → {ss_res['p2']:.1%}** 를 잡으려면 그룹당 **{ss_res['n_per_group']:,.0f}명**, "
+                        f"총 {ss_res['n_total']:,.0f}명이 필요합니다.  \n현재 광고 유입으로 이 단계에 월 {monthly_in:,.0f}명이 들어오므로 "
+                        + (f"약 **{days:,.0f}일**이 걸립니다." if days < 10_000 else "현재 유입으로는 실험이 어렵습니다.")
+                        + (" 기간이 너무 길면 개선 폭을 크게 잡거나 전체 트래픽(자연 유입 포함)으로 실험하세요." if days > 60 else ""))
 
 st.divider()
 st.caption("데이터: 네이버 검색광고 API(예측값), GA4 샘플 퍼널, Kaggle Sales Conversion Optimization(익명 기업, 상대 배수만 사용). "
