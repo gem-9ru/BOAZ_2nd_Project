@@ -1,0 +1,408 @@
+{
+ "request": {
+  "device": "MOBILE",
+  "keywordplus": true,
+  "key": "시나몬가루",
+  "bids": [
+   70,
+   100,
+   150,
+   200,
+   250,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900,
+   1000,
+   1100,
+   1200,
+   1300,
+   1400,
+   1500,
+   1600,
+   1700,
+   1800,
+   1900,
+   2000,
+   2100,
+   2200,
+   2300,
+   2400,
+   2500,
+   2600,
+   2700,
+   2800,
+   2900,
+   3000,
+   3200,
+   3400,
+   3600,
+   3800,
+   4000,
+   4200,
+   4400,
+   4600,
+   4800,
+   5000,
+   5200,
+   5400,
+   5600,
+   5800,
+   6000,
+   6500,
+   7000,
+   7500,
+   8000,
+   8500,
+   9000,
+   9500,
+   10000
+  ]
+ },
+ "fetched_at": "2026-11-02 02:08:12",
+ "response": {
+  "device": "MOBILE",
+  "keyword": "시나몬가루",
+  "estimate": [
+   {
+    "bid": 70,
+    "clicks": 0,
+    "impressions": 315,
+    "cost": 0
+   },
+   {
+    "bid": 100,
+    "clicks": 0,
+    "impressions": 1268,
+    "cost": 0
+   },
+   {
+    "bid": 150,
+    "clicks": 0,
+    "impressions": 2351,
+    "cost": 0
+   },
+   {
+    "bid": 200,
+    "clicks": 0,
+    "impressions": 3119,
+    "cost": 0
+   },
+   {
+    "bid": 250,
+    "clicks": 0,
+    "impressions": 3715,
+    "cost": 0
+   },
+   {
+    "bid": 300,
+    "clicks": 0,
+    "impressions": 4201,
+    "cost": 0
+   },
+   {
+    "bid": 400,
+    "clicks": 32,
+    "impressions": 4970,
+    "cost": 10930
+   },
+   {
+    "bid": 500,
+    "clicks": 110,
+    "impressions": 5565,
+    "cost": 45053
+   },
+   {
+    "bid": 600,
+    "clicks": 187,
+    "impressions": 6052,
+    "cost": 89307
+   },
+   {
+    "bid": 700,
+    "clicks": 265,
+    "impressions": 6292,
+    "cost": 144580
+   },
+   {
+    "bid": 800,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 209848
+   },
+   {
+    "bid": 900,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 233106
+   },
+   {
+    "bid": 1000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 256364
+   },
+   {
+    "bid": 1100,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1200,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1300,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1400,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1500,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1600,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1700,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1800,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 1900,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2100,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2200,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2300,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2400,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2500,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2600,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2700,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2800,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 2900,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 3000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 3200,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 3400,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 3600,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 3800,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 4000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 4200,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 4400,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 4600,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 4800,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 5000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 5200,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 5400,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 5600,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 5800,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 6000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 6500,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 7000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 7500,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 8000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 8500,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 9000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 9500,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   },
+   {
+    "bid": 10000,
+    "clicks": 342,
+    "impressions": 6292,
+    "cost": 267786
+   }
+  ]
+ }
+}

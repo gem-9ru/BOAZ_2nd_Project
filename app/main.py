@@ -17,8 +17,9 @@ import charts  # noqa: E402
 from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_scan,  # noqa: E402
                         lever_table, optimize_allocation, simulate)
 from src.engine import defaults as D  # noqa: E402
+from src.engine import data_loader as dl  # noqa: E402
 from src.engine import naver_source as ns  # noqa: E402
-from src.engine.insights import sentences, warnings, won  # noqa: E402
+from src.engine.insights import insights, prescription, warnings, won  # noqa: E402
 
 st.set_page_config(page_title="AARRR 광고 예산 시뮬레이터", page_icon="📈", layout="wide")
 
@@ -51,7 +52,7 @@ def load_estimate(keyword: str, online: bool):
 
 st.title("📈 AARRR 기반 광고 예산 시뮬레이터")
 st.caption("광고 예산이 획득 → 활성화 → 유지 → 수익 → 추천으로 어떻게 이어지는지 12개월을 시뮬레이션하고, "
-           "예산을 늘릴지 · 채널을 바꿀지 · 퍼널의 어느 단계를 먼저 고칠지 알려줍니다. (프로토타입 v0)")
+           "예산을 늘릴지 · 채널을 바꿀지 · 퍼널의 어느 단계를 먼저 고칠지 알려줍니다. (프로토타입 v0.2)")
 
 tabs = st.tabs(["① 시작", "② 획득 설계", "③ 퍼널 설정", "④ 시뮬레이션", "⑤ 개선 우선순위"])
 
@@ -81,11 +82,19 @@ with tabs[0]:
                 f = ROOT / "app" / "sample_ad_performance.csv"
             try:
                 raw = pd.read_csv(f)
-                need = {"source", "spend", "clicks", "conversions"}
-                if not need <= set(raw.columns):
-                    st.error(f"필요한 컬럼이 없습니다: {sorted(need - set(raw.columns))} (컬럼 매핑은 다음 버전)")
+                # 매체마다 컬럼 이름이 달라서(Meta "지출 금액", 네이버 "총비용" 등) 템플릿 컬럼에 매핑
+                fields = {"source": "매체 (utm_source)", "spend": "광고비", "clicks": "클릭", "conversions": "전환 (핵심 과업)"}
+                cols = list(raw.columns)
+                with st.expander("컬럼 매핑", expanded=not set(fields) <= set(cols)):
+                    mapping = {k: st.selectbox(label, cols, index=cols.index(k) if k in cols else 0, key=f"map_{k}")
+                               for k, label in fields.items()}
+                df_up = pd.DataFrame({k: raw[v] for k, v in mapping.items()})
+                for k in ("spend", "clicks", "conversions"):
+                    df_up[k] = pd.to_numeric(df_up[k].astype(str).str.replace(",", ""), errors="coerce")
+                if df_up[["spend", "clicks", "conversions"]].isna().all().any():
+                    st.error("광고비·클릭·전환에 숫자 컬럼을 매핑해 주세요.")
                 else:
-                    g = raw.groupby(raw["source"].str.lower())[["spend", "clicks", "conversions"]].sum()
+                    g = df_up.groupby(df_up["source"].astype(str).str.lower())[["spend", "clicks", "conversions"]].sum()
                     g["CPC"] = g["spend"] / g["clicks"]
                     g["CVR"] = g["conversions"] / g["clicks"]
                     g["CPA"] = g["spend"] / g["conversions"]
@@ -93,15 +102,15 @@ with tabs[0]:
                                                  "CPC": "{:,.0f}", "CVR": "{:.2%}", "CPA": "{:,.0f}"}))
                     upload = g
                     st.info("합계 기준으로 CPC·CVR을 계산했습니다 (광고별 비율 평균이 아님). "
-                            "메타 CPC와 채널별 전환율 배수를 이 값으로 보정합니다.")
+                            "source가 naver·meta인 행으로 메타 CPC와 채널별 전환율을 보정합니다.")
             except Exception as e:  # noqa: BLE001
                 st.error(f"CSV를 읽지 못했습니다: {e}")
-        st.markdown("**0단계 기본값 출처 (현재는 임시값)**")
+        st.markdown("**0단계 기본값 출처**")
         st.markdown(
-            "- 획득: 네이버 검색광고 API 실시간 예상 실적 ✅ / 메타 CPC는 Kaggle 타깃별 CPC 예정\n"
-            "- 활성화: GA4 샘플 퍼널 예정\n"
-            "- 유지·수익: UCI Online Retail II 코호트 (도매 분리 후) 예정\n"
-            "- 추천: 사용자 입력 (기본 0)")
+            "- 획득: 네이버 검색광고 API 실시간 예상 실적 ✅ / 메타는 사용자 입력 CPC × Kaggle 타깃별 상대 CPA ✅\n"
+            "- 활성화: GA4 샘플 사용자 기준 퍼널 ✅ (랜딩 도착 단계만 임시값)\n"
+            "- 유지·수익: UCI Online Retail II 코호트 (도매 분리 후) 예정 — 지금은 임시값\n"
+            "- 금액(객단가·CPC)은 원화로 직접 입력 · 추천은 가정값 (기본 0)")
 
 # ─────────────────────────── ② 획득 설계 ───────────────────────────
 with tabs[1]:
@@ -123,7 +132,7 @@ with tabs[1]:
         kw_df = load_keywords((ns.SAMPLE_KEYWORD,), False)
         st.warning(f"'{hint_text}' 조회 결과가 없어 (오프라인이거나 캐시 없음) 예시 키워드 '{ns.SAMPLE_KEYWORD}' 캐시로 대신 보여줍니다.")
 
-    estimates = {}
+    estimates, recs = {}, None
     if kw_df is not None:
         base_hints = (ns.SAMPLE_KEYWORD,) if fallback else hints
         default_sel = [k for k in base_hints if k in set(kw_df["keyword"])] or kw_df["keyword"].head(3).tolist()
@@ -133,9 +142,16 @@ with tabs[1]:
         with k1:
             st.plotly_chart(charts.keyword_scatter(kw_df, selected), use_container_width=True)
         with k2:
-            st.dataframe(kw_df.head(50).rename(columns={
-                "keyword": "키워드", "pc_qc": "PC 검색", "mobile_qc": "모바일 검색", "mobile_clicks": "모바일 평균 클릭",
-                "mobile_ctr": "모바일 CTR(%)", "comp": "경쟁", "total_qc": "합계 검색"}), height=360)
+            tier_filter = st.multiselect("유형", ["대표", "세부", "롱테일"], default=["대표", "세부"],
+                                         help="월 검색수(PC+모바일): 3만 이상 대표, 1천~3만 세부, 1천 미만 롱테일")
+            st.dataframe(kw_df[kw_df["tier"].isin(tier_filter)].head(100)[
+                ["keyword", "tier", "total_qc", "comp", "mobile_ctr", "mobile_clicks"]].rename(columns={
+                "keyword": "키워드", "tier": "유형", "total_qc": "월 검색수", "comp": "경쟁",
+                "mobile_ctr": "모바일 CTR(%)", "mobile_clicks": "모바일 평균 클릭"}), height=300, hide_index=True)
+        recs = ns.recommend_keywords(kw_df, seeds=list(base_hints))
+        if len(recs):
+            st.markdown("**세부 키워드 기회** (월 검색수 1천~3만 · 경쟁 낮음/중간 · 입력 키워드를 포함한 것 우선): "
+                        + ", ".join(f"`{k}`" for k in recs["keyword"]) + " — 위 선택 목록에 추가해 보세요.")
         with st.spinner("입찰가별 예상 실적을 불러오는 중…"):
             for kw in selected:
                 est = load_estimate(kw, online and not fallback)
@@ -161,39 +177,38 @@ with tabs[1]:
         if naver_curve.capacity > 0:
             st.caption(f"선택한 키워드로 네이버에 쓸 수 있는 최대 광고비: 월 {won(naver_curve.capacity)}")
     with m2:
+        targets_df = dl.meta_targets()
+        meta_targets = st.multiselect("메타 타깃 (연령·성별)", targets_df["target"].tolist(),
+                                      help="Kaggle 캠페인 통제 상대 CPA 배수를 입력 CPC에 곱합니다. 비우면 전체 평균(1배).")
+        target_mult = dl.target_multiplier(meta_targets)
         with st.expander("메타 설정 (기본값 = 임시값)", expanded=False):
-            meta_cpc = st.number_input("기본 CPC (원)", 50.0, 20_000.0, float(D.META_BASE_CPC), step=50.0,
-                                       help="Kaggle 타깃별 CPC로 교체 예정")
+            meta_cpc_input = st.number_input("기본 CPC (원, 직접 입력)", 50.0, 20_000.0, float(D.META_BASE_CPC), step=50.0)
             meta_sat = st.slider("포화 정도 (100만 원당 CPC 상승률)", 0.0, 2.0, float(D.META_SATURATION), 0.05)
             meta_cvr_mult = st.slider("메타 전환율 배수 (검색 대비)", 0.1, 2.0, float(D.META_CVR_MULT), 0.05)
             meta_ret_mult = st.slider("메타 고객 리텐션 배수", 0.1, 2.0, float(D.META_RETENTION_MULT), 0.05)
-        naver_cvr_mult, naver_ret_mult = D.NAVER_CVR_MULT, D.NAVER_RETENTION_MULT
-        if upload is not None:
-            base_cvr = FunnelParams().cvr
-            if "meta" in upload.index:
-                meta_cpc = float(upload.loc["meta", "CPC"])
-                meta_cvr_mult = float(upload.loc["meta", "CVR"] / base_cvr)
-            if "naver" in upload.index:
-                naver_cvr_mult = float(upload.loc["naver", "CVR"] / base_cvr)
-            st.caption(f"1단계 보정 적용: 메타 CPC {meta_cpc:,.0f}원, 전환율 배수 네이버 {naver_cvr_mult:.2f} / 메타 {meta_cvr_mult:.2f}")
-
-    channels = [
-        Channel("naver", "네이버 검색", naver_curve, naver_cvr_mult, naver_ret_mult),
-        Channel("meta", "메타", MetaCurve(meta_cpc, meta_sat), meta_cvr_mult, meta_ret_mult),
-    ]
+        meta_cpc = meta_cpc_input * target_mult
+        if upload is not None and "meta" in upload.index:
+            meta_cpc = float(upload.loc["meta", "CPC"])  # 1단계: 내 실제 CPC가 타깃 배수보다 우선
+        st.caption(f"메타 적용 CPC: {meta_cpc:,.0f}원" + (f" (입력 {meta_cpc_input:,.0f}원 × 타깃 배수 {target_mult:.2f})"
+                                                       if upload is None or "meta" not in upload.index else " (1단계 CSV)"))
+    meta_curve = MetaCurve(meta_cpc, meta_sat)
     spends = [naver_budget, meta_budget]
 
     g1, g2 = st.columns([3, 2])
     with g1:
         st.plotly_chart(charts.bid_curves(estimates, naver_curve if estimates else None), use_container_width=True)
     with g2:
-        st.plotly_chart(charts.meta_curve(channels[1].curve, max(budget, 1)), use_container_width=True)
+        st.plotly_chart(charts.meta_target_bars(targets_df, meta_targets), use_container_width=True)
+        st.plotly_chart(charts.meta_curve(meta_curve, max(budget, 1)), use_container_width=True)
+    alloc = None
     if estimates:
-        alloc = naver_curve.allocation(naver_budget)
-        st.markdown("**네이버 예산의 키워드별 배분** (한계 CPC가 낮은 구간부터 채움)")
-        st.dataframe(alloc.rename(columns={"keyword": "키워드", "spend": "월 광고비", "clicks": "월 클릭",
-                                           "bid": "권장 입찰가", "cpc": "평균 CPC"})
-                     .style.format({"월 광고비": "{:,.0f}", "월 클릭": "{:,.0f}", "권장 입찰가": "{:,.0f}", "평균 CPC": "{:,.0f}"}),
+        alloc = naver_curve.allocation(naver_budget, D.SATURATION_RATIO)
+        st.markdown("**네이버 예산의 키워드별 배분** (한계 CPC가 낮은 구간부터 채움 · 한계 CPC가 평균의 2배를 넘으면 포화)")
+        show = alloc.assign(saturated=alloc["saturated"].map({True: "⚠️ 포화", False: ""}))
+        st.dataframe(show.rename(columns={"keyword": "키워드", "spend": "월 광고비", "clicks": "월 클릭", "bid": "권장 입찰가",
+                                          "marginal_cpc": "한계 CPC", "cpc": "평균 CPC", "saturated": "포화"})
+                     .style.format({"월 광고비": "{:,.0f}", "월 클릭": "{:,.0f}", "권장 입찰가": "{:,.0f}",
+                                    "한계 CPC": "{:,.0f}", "평균 CPC": "{:,.0f}"}, na_rep="-"),
                      hide_index=True)
     st.caption("네이버 예상 실적은 네이버의 예측값(월간, 모바일)입니다. 실제 성과와 다를 수 있습니다.")
 
@@ -202,13 +217,17 @@ with tabs[2]:
     st.subheader(f"활성화: 클릭 → {task}")
     f1, f2 = st.columns([1, 1])
     with f1:
-        steps_df = pd.DataFrame([{"단계": n, "전환율": r} for n, r in D.FUNNEL_STEPS])
+        mediums = dl.ga4_mediums() or [dl.GA4_ALL]
+        medium = st.selectbox("기본값 출처: GA4 샘플 유입 매체", mediums,
+                              help="'전체'가 기본. cpc(유료 검색) 유입만의 퍼널도 고를 수 있습니다. (data deleted)는 비정상적으로 높으니 주의")
+        base_steps, src = dl.funnel_steps(medium)
+        steps_df = pd.DataFrame([{"단계": n, "전환율": round(r, 3)} for n, r in base_steps])
         steps_df.loc[len(steps_df) - 1, "단계"] = f"{task} 완료"
         edited = st.data_editor(steps_df, num_rows="dynamic", hide_index=True, key="steps_editor",
                                 column_config={"전환율": st.column_config.NumberColumn(min_value=0.0, max_value=1.0, step=0.01, format="%.2f")})
         edited = edited.dropna()
         steps = [(str(n), float(r)) for n, r in zip(edited["단계"], edited["전환율"])]
-        st.caption("기본값은 임시값 (GA4 샘플 퍼널로 교체 예정). 단계를 추가·삭제할 수 있습니다.")
+        st.caption(f"출처: {src}. 첫 단계(광고 클릭 → 방문)는 GA4에 없어 임시값입니다. 값을 고치거나 단계를 추가·삭제할 수 있습니다.")
     st.subheader("유지 · 수익 · 추천")
     r1, r2, r3 = st.columns(3)
     with r1:
@@ -228,6 +247,19 @@ with tabs[2]:
         st.plotly_chart(charts.activation_funnel(params), use_container_width=True)
         st.metric("클릭 → 과업 완료 전환율 (CVR)", f"{params.cvr:.2%}")
     st.plotly_chart(charts.retention_curve(params), use_container_width=True)
+    st.caption("리텐션·구매 빈도는 UCI 코호트 분석(도매 고객 분리 후)이 나오면 교체합니다. 지금은 임시값입니다.")
+
+# 1단계 CSV 보정: 퍼널이 정해진 뒤 채널별 전환율 배수 = 내 CVR / 퍼널 CVR
+naver_cvr_mult, naver_ret_mult = D.NAVER_CVR_MULT, D.NAVER_RETENTION_MULT
+if upload is not None and params.cvr > 0:
+    if "meta" in upload.index:
+        meta_cvr_mult = float(upload.loc["meta", "CVR"] / params.cvr)
+    if "naver" in upload.index:
+        naver_cvr_mult = float(upload.loc["naver", "CVR"] / params.cvr)
+channels = [
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_mult, naver_ret_mult),
+    Channel("meta", "메타", meta_curve, meta_cvr_mult, meta_ret_mult),
+]
 
 # ─────────────── 계산 (④·⑤ 공용, 입력이 바뀔 때만 최적화 재계산) ───────────────
 res = simulate(channels, spends, params)
@@ -259,7 +291,18 @@ def kpis(s, cols):
 
 # ─────────────────────────── ④ 시뮬레이션 ───────────────────────────
 with tabs[3]:
-    st.subheader("현재안")
+    if upload is not None:
+        st.caption(f"1단계 보정 적용: 전환율 배수 네이버 {naver_cvr_mult:.2f} / 메타 {meta_cvr_mult:.2f}, 메타 CPC {meta_cpc:,.0f}원")
+    fmt = {"profit": won, "roas": lambda v: f"{v:.2f}", "new_customers": lambda v: f"{v:,.0f}명"}[omtm]
+    o1, o2 = st.columns([1, 2])
+    with o1:
+        st.metric(f"OMTM · {D.OMTM_OPTIONS[omtm]}", fmt(opt["base_value"]), delta=f"최적안 {fmt(opt['value'])}",
+                  delta_color="off", border=True, help="시작 화면에서 고른 단 하나의 목표. 최적안은 이 지표를 최대화합니다.")
+    with o2:
+        st.markdown(f"**현재안**: 네이버 {won(spends[0])} · 메타 {won(spends[1])} / 월  \n"
+                    f"**최적안**: 네이버 {won(opt['spends'][0])} · 메타 {won(opt['spends'][1])} / 월"
+                    + (f" (미사용 {won(budget - sum(opt['spends']))})" if budget - sum(opt["spends"]) > 1 else ""))
+    st.subheader("현재안 KPI")
     kpis(res.summary, st.columns(7))
     a1, a2 = st.columns([1, 1])
     with a1:
@@ -298,12 +341,13 @@ with tabs[3]:
                                     "cac": "CAC", "ltv_12m": "12개월 LTV"})
                  .style.format("{:,.0f}", subset=["배정 예산", "집행 가능", "클릭", "평균 CPC", "한계 CPC", "CAC", "12개월 LTV"])
                  .format("{:,.1f}", subset=["신규 고객"], na_rep="-"), hide_index=True, width="stretch")
+    st.plotly_chart(charts.payback(res.customer_cum_profit, res.summary["paid_cac"]), use_container_width=True)
     with st.expander("월별 상세 표"):
         st.dataframe(res.monthly.style.format("{:,.0f}"), hide_index=True, width="stretch")
 
 # ─────────────────────────── ⑤ 개선 우선순위 ───────────────────────────
 with tabs[4]:
-    for lvl, text in warnings(res):
+    for lvl, text in warnings(res, alloc):
         getattr(st, lvl)(text)
     t1, t2 = st.columns([3, 2])
     with t1:
@@ -311,17 +355,20 @@ with tabs[4]:
         st.caption("광고비·전환율·리텐션·객단가·구매 빈도는 ±10%, 퍼널 단계는 '이탈률 ±10%'로 바꿨을 때의 12개월 이익 변화입니다.")
     with t2:
         st.subheader("인사이트")
-        for line in sentences(res, levers, opt, D.OMTM_OPTIONS[omtm], scan):
-            st.markdown(f"- {line}")
+        for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs):
+            with st.container(border=True):
+                st.markdown(f"**{card['title']}**  \n📊 {card['evidence']}  \n🧪 {card['action']}")
         core = levers[levers["core"]][["lever", "up"]].rename(columns={"lever": "레버 (+10%)", "up": "12개월 이익 변화"})
         st.dataframe(core.style.format({"12개월 이익 변화": "{:+,.0f}"}), hide_index=True, width="stretch")
         top_step = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
         if len(top_step):
             name = top_step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "")
             st.subheader("실험 제안")
-            st.markdown(f"- **{name}** 단계 A/B 테스트: 이탈을 10% 줄이면 12개월 이익 {won(top_step.iloc[0]['up'])} 증가 예상\n"
+            st.markdown(f"- **{name}** 단계 A/B 테스트: {prescription(name)}. "
+                        f"이탈을 10% 줄이면 12개월 이익 {won(top_step.iloc[0]['up'])} 증가 예상\n"
                         "- 표본 크기 계산기는 다음 버전에서 제공합니다.")
 
 st.divider()
-st.caption("데이터: 네이버 검색광고 API(예측값) · 기본값은 임시값이며 Kaggle Facebook Ads, GA4 샘플, UCI Online Retail II(CC BY 4.0) 분석값으로 교체 예정. "
+st.caption("데이터: 네이버 검색광고 API(예측값), GA4 샘플 퍼널, Kaggle Sales Conversion Optimization(익명 기업, 상대 배수만 사용). "
+           "리텐션·구매 빈도는 UCI Online Retail II(CC BY 4.0) 분석 후 교체 예정. 금액은 원화 입력값이며 외부 데이터 통화는 환산하지 않습니다. "
            "단계별 데이터 출처가 달라 0단계 결과는 출발점이며, 자기 데이터를 넣을수록 정확해집니다.")

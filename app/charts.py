@@ -25,7 +25,9 @@ def keyword_scatter(kw: pd.DataFrame, selected):
             marker=dict(color=color, size=np.where(d["선택"] == "선택", 14, 7),
                         line=dict(width=np.where(d["선택"] == "선택", 2, 0), color="black")),
             text=d["keyword"], hovertemplate="%{text}<br>월 검색수 %{x:,.0f}<br>모바일 CTR %{y:.2f}%<extra></extra>"))
-    fig.update_xaxes(type="log", title="월 검색수 (PC+모바일, 로그)")
+    for x, label in [(1_000, "세부 ↑"), (30_000, "대표 ↑")]:
+        fig.add_vline(x=x, line_dash="dot", line_color="gray", annotation_text=label, annotation_position="top right")
+    fig.update_xaxes(type="log", title="월 검색수 (PC+모바일, 로그) · 롱테일 < 1천 ≤ 세부 < 3만 ≤ 대표")
     fig.update_yaxes(title="모바일 CTR (%)")
     return _layout(fig, "키워드 검색량 vs CTR (색: 경쟁 정도)")
 
@@ -96,10 +98,11 @@ def cum_profit(cur: pd.DataFrame, opt: pd.DataFrame = None, opt_label="최적안
 
 def revenue_split(monthly: pd.DataFrame):
     fig = go.Figure()
-    fig.add_trace(go.Bar(x=monthly["month"], y=monthly["new_revenue"], name="신규 매출", marker_color="#4C78A8"))
-    fig.add_trace(go.Bar(x=monthly["month"], y=monthly["repeat_revenue"], name="재구매 매출", marker_color="#F28E2B"))
-    fig.add_trace(go.Scatter(x=monthly["month"], y=monthly["spend"], name="광고비", mode="lines", line=dict(color="gray")))
-    fig.update_layout(barmode="stack")
+    fig.add_trace(go.Scatter(x=monthly["month"], y=monthly["new_revenue"], name="신규 매출", stackgroup="rev",
+                             line=dict(color="#4C78A8")))
+    fig.add_trace(go.Scatter(x=monthly["month"], y=monthly["repeat_revenue"], name="재구매 매출", stackgroup="rev",
+                             line=dict(color="#F28E2B")))
+    fig.add_trace(go.Scatter(x=monthly["month"], y=monthly["spend"], name="광고비", mode="lines", line=dict(color="gray", dash="dot")))
     fig.update_xaxes(title="개월", dtick=1)
     fig.update_yaxes(title="원")
     return _layout(fig, "월별 매출: 신규 vs 재구매", 340)
@@ -126,3 +129,26 @@ def tornado(levers: pd.DataFrame):
     fig.update_layout(barmode="overlay")
     fig.update_xaxes(title="12개월 이익 변화 (원)")
     return _layout(fig, "레버별 12개월 이익 민감도 (토네이도)", 80 + 40 * len(df))
+
+
+def meta_target_bars(targets: pd.DataFrame, selected):
+    df = targets.sort_values("rel_cpa")
+    colors = [CUR if t in selected else "#BAB0AC" for t in df["target"]]
+    fig = go.Figure(go.Bar(
+        x=df["target"], y=df["rel_cpa"], marker_color=colors,
+        error_y=dict(type="data", symmetric=False, array=df["high"] - df["rel_cpa"], arrayminus=df["rel_cpa"] - df["low"]),
+        customdata=df["purchases"], hovertemplate="%{x}<br>상대 CPA %{y:.2f}배<br>구매 %{customdata}건<extra></extra>"))
+    fig.add_hline(y=1.0, line_dash="dot", annotation_text="전체 평균 = 1")
+    fig.update_yaxes(title="상대 CPA (캠페인 통제, 95% 구간)")
+    return _layout(fig, "메타 타깃별 구매당 비용 배수 (Kaggle)", 300)
+
+
+def payback(curve, cac, months=24):
+    x = list(range(1, months + 1))
+    fig = go.Figure(go.Scatter(x=x, y=curve[:months], mode="lines+markers", name="고객 1명 누적 이익",
+                               line=dict(color=AARRR_COLORS["수익"])))
+    if cac:
+        fig.add_hline(y=cac, line_dash="dash", line_color="#E15759", annotation_text=f"유료 CAC {cac:,.0f}원")
+    fig.update_xaxes(title="첫 구매 후 개월", dtick=2)
+    fig.update_yaxes(title="누적 매출총이익 (원)")
+    return _layout(fig, "회수 기간: 고객 1명의 누적 이익 vs CAC", 320)

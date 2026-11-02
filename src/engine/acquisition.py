@@ -76,10 +76,11 @@ class NaverCurve:
                 return seg["dcost"] / seg["dclicks"]
         return None
 
-    def allocation(self, spend: float) -> pd.DataFrame:
-        """주어진 네이버 예산에서 키워드별 광고비·클릭·권장 입찰가."""
+    def allocation(self, spend: float, saturation_ratio: float = 2.0) -> pd.DataFrame:
+        """주어진 네이버 예산에서 키워드별 광고비·클릭·권장 입찰가·한계 CPC·포화 여부."""
         left = self.spendable(spend)
-        rows: Dict[str, dict] = {kw: {"keyword": kw, "spend": 0.0, "clicks": 0.0, "bid": 0.0} for kw in self.points}
+        rows: Dict[str, dict] = {kw: {"keyword": kw, "spend": 0.0, "clicks": 0.0, "bid": 0.0, "marginal_cpc": np.nan}
+                                 for kw in self.points}
         for seg in self.segments:
             if left <= 0:
                 break
@@ -88,9 +89,11 @@ class NaverCurve:
             row["spend"] += seg["dcost"] * frac
             row["clicks"] += seg["dclicks"] * frac
             row["bid"] = max(row["bid"], seg["bid"])
+            row["marginal_cpc"] = seg["dcost"] / seg["dclicks"]  # 이 키워드에서 마지막으로 산 구간의 한계 CPC
             left -= seg["dcost"] * frac
         out = pd.DataFrame(rows.values())
         out["cpc"] = np.where(out["clicks"] > 0, out["spend"] / out["clicks"].where(out["clicks"] > 0), np.nan)
+        out["saturated"] = out["marginal_cpc"] > saturation_ratio * out["cpc"]
         return out
 
     def curve_table(self, n: int = 60) -> pd.DataFrame:

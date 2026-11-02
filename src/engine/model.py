@@ -57,6 +57,7 @@ class SimResult:
     by_channel: pd.DataFrame
     summary: Dict[str, Optional[float]]
     funnel: pd.DataFrame
+    customer_cum_profit: Optional[np.ndarray] = None  # 유료 고객 1명의 누적 매출총이익 (36개월, 회수 기간 차트용)
 
 
 def simulate(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams) -> SimResult:
@@ -182,4 +183,4 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
     stages.append(("추천", "추천 신규 고객", float(ref_new_m.sum())))
     funnel = pd.DataFrame(stages, columns=["aarrr", "stage", "count"])
 
-    return SimResult(list(channels), params, monthly, by_channel, summary, funnel)
+    return SimResult(list(channels), params, monthly, by_channel, summary, funnel, np.cumsum(gp_curve))

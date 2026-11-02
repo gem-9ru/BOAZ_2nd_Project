@@ -1,0 +1,408 @@
+{
+ "request": {
+  "device": "MOBILE",
+  "keywordplus": true,
+  "key": "필라테스기구",
+  "bids": [
+   70,
+   100,
+   150,
+   200,
+   250,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900,
+   1000,
+   1100,
+   1200,
+   1300,
+   1400,
+   1500,
+   1600,
+   1700,
+   1800,
+   1900,
+   2000,
+   2100,
+   2200,
+   2300,
+   2400,
+   2500,
+   2600,
+   2700,
+   2800,
+   2900,
+   3000,
+   3200,
+   3400,
+   3600,
+   3800,
+   4000,
+   4200,
+   4400,
+   4600,
+   4800,
+   5000,
+   5200,
+   5400,
+   5600,
+   5800,
+   6000,
+   6500,
+   7000,
+   7500,
+   8000,
+   8500,
+   9000,
+   9500,
+   10000
+  ]
+ },
+ "fetched_at": "2026-11-02 02:08:08",
+ "response": {
+  "device": "MOBILE",
+  "keyword": "필라테스기구",
+  "estimate": [
+   {
+    "bid": 70,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 100,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 150,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 200,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 250,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 300,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 400,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 500,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 600,
+    "clicks": 40,
+    "impressions": 152,
+    "cost": 11027
+   },
+   {
+    "bid": 700,
+    "clicks": 50,
+    "impressions": 343,
+    "cost": 23083
+   },
+   {
+    "bid": 800,
+    "clicks": 60,
+    "impressions": 535,
+    "cost": 37366
+   },
+   {
+    "bid": 900,
+    "clicks": 71,
+    "impressions": 726,
+    "cost": 54306
+   },
+   {
+    "bid": 1000,
+    "clicks": 81,
+    "impressions": 918,
+    "cost": 72252
+   },
+   {
+    "bid": 1100,
+    "clicks": 91,
+    "impressions": 1109,
+    "cost": 91636
+   },
+   {
+    "bid": 1200,
+    "clicks": 102,
+    "impressions": 1300,
+    "cost": 113421
+   },
+   {
+    "bid": 1300,
+    "clicks": 112,
+    "impressions": 1492,
+    "cost": 135357
+   },
+   {
+    "bid": 1400,
+    "clicks": 123,
+    "impressions": 1683,
+    "cost": 159648
+   },
+   {
+    "bid": 1500,
+    "clicks": 133,
+    "impressions": 1875,
+    "cost": 183699
+   },
+   {
+    "bid": 1600,
+    "clicks": 143,
+    "impressions": 2066,
+    "cost": 208646
+   },
+   {
+    "bid": 1700,
+    "clicks": 154,
+    "impressions": 2257,
+    "cost": 235960
+   },
+   {
+    "bid": 1800,
+    "clicks": 164,
+    "impressions": 2449,
+    "cost": 262592
+   },
+   {
+    "bid": 1900,
+    "clicks": 174,
+    "impressions": 2640,
+    "cost": 289954
+   },
+   {
+    "bid": 2000,
+    "clicks": 185,
+    "impressions": 2832,
+    "cost": 319733
+   },
+   {
+    "bid": 2100,
+    "clicks": 195,
+    "impressions": 3023,
+    "cost": 348495
+   },
+   {
+    "bid": 2200,
+    "clicks": 206,
+    "impressions": 3214,
+    "cost": 379716
+   },
+   {
+    "bid": 2300,
+    "clicks": 216,
+    "impressions": 3406,
+    "cost": 409733
+   },
+   {
+    "bid": 2400,
+    "clicks": 226,
+    "impressions": 3597,
+    "cost": 440307
+   },
+   {
+    "bid": 2500,
+    "clicks": 230,
+    "impressions": 3789,
+    "cost": 459428
+   },
+   {
+    "bid": 2600,
+    "clicks": 230,
+    "impressions": 3980,
+    "cost": 470312
+   },
+   {
+    "bid": 2700,
+    "clicks": 230,
+    "impressions": 4171,
+    "cost": 480785
+   },
+   {
+    "bid": 2800,
+    "clicks": 230,
+    "impressions": 4363,
+    "cost": 490877
+   },
+   {
+    "bid": 2900,
+    "clicks": 230,
+    "impressions": 4554,
+    "cost": 500615
+   },
+   {
+    "bid": 3000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 510022
+   },
+   {
+    "bid": 3200,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 527932
+   },
+   {
+    "bid": 3400,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 544755
+   },
+   {
+    "bid": 3600,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 560616
+   },
+   {
+    "bid": 3800,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 575620
+   },
+   {
+    "bid": 4000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 589854
+   },
+   {
+    "bid": 4200,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 603393
+   },
+   {
+    "bid": 4400,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 616302
+   },
+   {
+    "bid": 4600,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 628638
+   },
+   {
+    "bid": 4800,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 640448
+   },
+   {
+    "bid": 5000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 651776
+   },
+   {
+    "bid": 5200,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 662660
+   },
+   {
+    "bid": 5400,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 673133
+   },
+   {
+    "bid": 5600,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 683225
+   },
+   {
+    "bid": 5800,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 692962
+   },
+   {
+    "bid": 6000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 702370
+   },
+   {
+    "bid": 6500,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 724582
+   },
+   {
+    "bid": 7000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 745147
+   },
+   {
+    "bid": 7500,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 764292
+   },
+   {
+    "bid": 8000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 782202
+   },
+   {
+    "bid": 8500,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 791430
+   },
+   {
+    "bid": 9000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 791430
+   },
+   {
+    "bid": 9500,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 791430
+   },
+   {
+    "bid": 10000,
+    "clicks": 230,
+    "impressions": 4660,
+    "cost": 791430
+   }
+  ]
+ }
+}

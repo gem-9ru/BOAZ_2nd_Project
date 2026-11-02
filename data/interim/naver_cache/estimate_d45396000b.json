@@ -1,0 +1,408 @@
+{
+ "request": {
+  "device": "MOBILE",
+  "keywordplus": true,
+  "key": "요구르트",
+  "bids": [
+   70,
+   100,
+   150,
+   200,
+   250,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900,
+   1000,
+   1100,
+   1200,
+   1300,
+   1400,
+   1500,
+   1600,
+   1700,
+   1800,
+   1900,
+   2000,
+   2100,
+   2200,
+   2300,
+   2400,
+   2500,
+   2600,
+   2700,
+   2800,
+   2900,
+   3000,
+   3200,
+   3400,
+   3600,
+   3800,
+   4000,
+   4200,
+   4400,
+   4600,
+   4800,
+   5000,
+   5200,
+   5400,
+   5600,
+   5800,
+   6000,
+   6500,
+   7000,
+   7500,
+   8000,
+   8500,
+   9000,
+   9500,
+   10000
+  ]
+ },
+ "fetched_at": "2026-11-02 02:08:10",
+ "response": {
+  "device": "MOBILE",
+  "keyword": "요구르트",
+  "estimate": [
+   {
+    "bid": 70,
+    "clicks": 0,
+    "impressions": 469,
+    "cost": 0
+   },
+   {
+    "bid": 100,
+    "clicks": 0,
+    "impressions": 1569,
+    "cost": 0
+   },
+   {
+    "bid": 150,
+    "clicks": 0,
+    "impressions": 2820,
+    "cost": 0
+   },
+   {
+    "bid": 200,
+    "clicks": 0,
+    "impressions": 3707,
+    "cost": 0
+   },
+   {
+    "bid": 250,
+    "clicks": 0,
+    "impressions": 4395,
+    "cost": 0
+   },
+   {
+    "bid": 300,
+    "clicks": 0,
+    "impressions": 4958,
+    "cost": 0
+   },
+   {
+    "bid": 400,
+    "clicks": 0,
+    "impressions": 5845,
+    "cost": 0
+   },
+   {
+    "bid": 500,
+    "clicks": 0,
+    "impressions": 6533,
+    "cost": 0
+   },
+   {
+    "bid": 600,
+    "clicks": 0,
+    "impressions": 7096,
+    "cost": 0
+   },
+   {
+    "bid": 700,
+    "clicks": 0,
+    "impressions": 7268,
+    "cost": 0
+   },
+   {
+    "bid": 800,
+    "clicks": 38,
+    "impressions": 7268,
+    "cost": 24694
+   },
+   {
+    "bid": 900,
+    "clicks": 129,
+    "impressions": 7268,
+    "cost": 94306
+   },
+   {
+    "bid": 1000,
+    "clicks": 221,
+    "impressions": 7268,
+    "cost": 179512
+   },
+   {
+    "bid": 1100,
+    "clicks": 313,
+    "impressions": 7268,
+    "cost": 279661
+   },
+   {
+    "bid": 1200,
+    "clicks": 404,
+    "impressions": 7268,
+    "cost": 393780
+   },
+   {
+    "bid": 1300,
+    "clicks": 496,
+    "impressions": 7268,
+    "cost": 523735
+   },
+   {
+    "bid": 1400,
+    "clicks": 587,
+    "impressions": 7268,
+    "cost": 626329
+   },
+   {
+    "bid": 1500,
+    "clicks": 679,
+    "impressions": 7268,
+    "cost": 724493
+   },
+   {
+    "bid": 1600,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 1700,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 1800,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 1900,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2100,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2200,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2300,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2400,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2500,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2600,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2700,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2800,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 2900,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 3000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 3200,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 3400,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 3600,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 3800,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 4000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 4200,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 4400,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 4600,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 4800,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 5000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 5200,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 5400,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 5600,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 5800,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 6000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 6500,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 7000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 7500,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 8000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 8500,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 9000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 9500,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   },
+   {
+    "bid": 10000,
+    "clicks": 719,
+    "impressions": 7268,
+    "cost": 767173
+   }
+  ]
+ }
+}
