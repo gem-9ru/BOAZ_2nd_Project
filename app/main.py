@@ -90,7 +90,7 @@ def signed(v):
 
 # ───────────────────────────── 플로팅 도움말 ─────────────────────────────
 st.markdown("""<style>
-.st-key-help_fab {position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: auto;}
+.st-key-help_fab {position: fixed; bottom: 4.5rem; right: 1.5rem; z-index: 1000; width: auto;}
 .st-key-help_fab > div > div > button {border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.25);}
 </style>""", unsafe_allow_html=True)
 help_fab = st.container(key="help_fab")  # 내용은 계산이 끝난 뒤 맨 아래에서 채움 (지금 숫자로 답하려고)
