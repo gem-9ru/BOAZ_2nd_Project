@@ -846,5 +846,5 @@ def help_chat(ctx):
 
 
 with help_fab:
-    with st.popover("💬 도우미에게 묻기"):
+    with st.popover("💬 도우미"):
         help_chat(help_ctx)
