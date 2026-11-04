@@ -107,3 +107,19 @@ def test_lever_table_has_core_levers():
     df = lever_table([meta()], [1_000_000], FunnelParams())
     assert {"spend", "cvr", "retention", "aov"} <= set(df["key"])
     assert (df.set_index("key").loc[["cvr", "retention", "aov"], "up"] > 0).all()
+
+
+def test_naver_estimate_converted_to_month():
+    # 네이버 예상 실적은 과거 28일 기준 → 30.4/28로 월 환산 (캐시 원본은 그대로)
+    import json
+    from src.engine import defaults as D, naver_source as ns
+    raw = json.loads(ns._cache_path("estimate", f"{ns.SAMPLE_KEYWORD}|{D.NAVER_DEVICE}").read_text(encoding="utf-8"))
+    raw = pd.DataFrame(raw["response"]["estimate"]).astype({"clicks": float, "cost": float}).sort_values("bid").reset_index(drop=True)
+    est = ns.bid_estimate(ns.SAMPLE_KEYWORD, device=D.NAVER_DEVICE, online=False)
+    factor = D.DAYS_PER_MONTH / D.NAVER_ESTIMATE_DAYS
+    assert factor == pytest.approx(30.4 / 28)
+    assert est["bid"].tolist() == raw["bid"].astype(float).tolist()
+    assert np.allclose(est["clicks"], raw["clicks"] * factor)
+    assert np.allclose(est["cost"], raw["cost"] * factor)
+    pos = raw["clicks"] > 0
+    assert np.allclose(est.loc[pos, "cost"] / est.loc[pos, "clicks"], raw.loc[pos, "cost"] / raw.loc[pos, "clicks"])

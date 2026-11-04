@@ -19,6 +19,7 @@ from typing import List, Optional
 import pandas as pd
 import requests
 
+from . import defaults as D
 from .data_loader import keyword_tier
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -32,6 +33,8 @@ BIDS = (
     + list(range(3200, 6001, 200))
     + list(range(6500, 10001, 500))
 )
+
+MONTH_FACTOR = D.DAYS_PER_MONTH / D.NAVER_ESTIMATE_DAYS  # 네이버 예상 실적(28일) → 한 달
 
 
 def _cache_path(kind: str, key: str) -> Path:
@@ -147,7 +150,8 @@ def keyword_tool(hints: List[str], online: bool = True) -> Optional[pd.DataFrame
 
 
 def bid_estimate(keyword: str, device: str = "MOBILE", online: bool = True) -> Optional[pd.DataFrame]:
-    """입찰가별 예상 실적 (월간 예상치로 간주). 컬럼: bid, impressions, clicks, cost."""
+    """입찰가별 예상 실적 (과거 28일 기준 → 월 환산). 컬럼: bid, impressions, clicks, cost.
+    캐시는 API 원본(28일) 그대로 두고, 읽을 때 impressions·clicks·cost에 30.4/28을 곱한다 (입찰가는 그대로)."""
     keyword = keyword.strip().replace(" ", "")
     key = f"{keyword}|{device}"
     cached = _read_cache("estimate", key)
@@ -165,6 +169,7 @@ def bid_estimate(keyword: str, device: str = "MOBILE", online: bool = True) -> O
     if data is None:
         return None
     df = pd.DataFrame(data["estimate"])[["bid", "impressions", "clicks", "cost"]].astype(float)
+    df[["impressions", "clicks", "cost"]] *= MONTH_FACTOR
     df["keyword"] = keyword
     return df.sort_values("bid").reset_index(drop=True)
 

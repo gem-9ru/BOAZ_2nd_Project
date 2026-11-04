@@ -20,6 +20,8 @@ MONTHS = 12                         # 시뮬레이션 기간 (월 단위 코호�
 CHANNEL_SHARES = {"naver": 0.6, "meta": 0.4}   # PLACEHOLDER: 초기 배분 비율
 
 NAVER_DEVICE = "MOBILE"             # 검색 대부분이 모바일 (가이드 1-6)
+NAVER_ESTIMATE_DAYS = 28            # /estimate/performance는 과거 28일 기준 추정 (네이버 답변, searchad-apidoc 이슈 #841)
+DAYS_PER_MONTH = 30.4               # 한 달 평균 일수 → 예상 실적 × 30.4/28 ≈ 1.086으로 월 환산
 NAVER_CVR_MULT = 1.0                # 검색 의도 기준 채널 (전환율 배수 1.0)
 NAVER_RETENTION_MULT = 1.0
 

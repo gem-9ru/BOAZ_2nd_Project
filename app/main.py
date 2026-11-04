@@ -215,6 +215,8 @@ with tabs[1]:
         missing = [k for k in selected if k not in estimates]
         if missing:
             st.caption(f"네이버 예상 클릭이 없어 계산에서 뺀 검색어: {', '.join(missing)}")
+        if estimates:
+            st.caption("네이버 예상 실적(최근 4주)을 한 달 기준으로 환산했습니다 (× 30.4/28 ≈ 1.09).")
 
     naver_curve = NaverCurve(estimates) if estimates else None
     if naver_curve is None:
