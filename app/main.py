@@ -18,6 +18,8 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "app"))
 
 import charts  # noqa: E402
+import helpbot  # noqa: E402
+from helpbot import SCREEN_HELP  # noqa: E402
 from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_scan,  # noqa: E402
                         lever_table, optimize_allocation, simulate)
 from src.engine import attribution as A  # noqa: E402
@@ -41,67 +43,6 @@ HELP = {
     "payback": "손님 1명을 데려오는 데 쓴 광고비를 그 손님이 남겨 주는 돈으로 되찾기까지 걸리는 개월 수",
     "profit": "12개월 동안 남는 돈 = 매출 × 마진율 − 광고비 − 메시지 발송비",
     "roas": "광고비 1원당 첫 구매 매출 (ROAS). 재구매는 빠져 있어 실제 가치보다 작게 보일 수 있음",
-}
-
-# 용어 사전: 용어 → (쉬운 설명, 비유·예시)
-GLOSSARY = {
-    "AARRR": ("손님이 우리 가게와 만나는 5단계: 알게 됨(획득) → 써 봄(활성화) → 다시 옴(유지) → 돈을 냄(수익) → 소개함(추천)",
-              "광고는 첫 단계만 책임지지만, 이익은 다섯 단계를 다 거쳐야 생깁니다."),
-    "OMTM": ("지금 가장 중요한 목표 지표 하나 (One Metric That Matters)", "최적화는 이 숫자를 가장 크게 만드는 예산 배분을 찾습니다."),
-    "객단가": ("손님이 한 번 결제할 때 평균 금액", "커피 원두 1봉 2만 원, 필라테스 10회권 30만 원"),
-    "마진율": ("매출 중 원가·배송비 등을 빼고 남는 비율", "1만 원 팔아 3,500원 남으면 35%"),
-    "UTM": ("광고 링크 뒤에 붙이는 꼬리표(utm_source 등). 어느 광고로 들어왔는지 분석 도구가 알 수 있게 함", "?utm_source=naver&utm_medium=cpc"),
-    "CPC (클릭당 비용)": ("광고를 한 번 클릭할 때 내는 돈", "CPC 700원 = 클릭 100번에 7만 원"),
-    "CPM (노출당 비용)": ("광고가 1,000번 보일 때 내는 돈. 메타는 이 방식이 기본", "CPM 1만 원, 클릭률 1% → CPC 1,000원"),
-    "CTR (클릭률)": ("광고를 본 사람 중 클릭한 비율", "소재가 지치면 떨어지고, 그만큼 CPC가 오릅니다."),
-    "포화": ("같은 키워드에 돈을 더 넣어도 클릭이 잘 안 늘고 클릭당 비용만 오르는 상태", "이미 꽉 찬 가게 앞에 전단지를 더 뿌리는 것"),
-    "한계 CPC": ("예산을 조금 더 늘렸을 때 추가로 얻는 클릭 1번의 비용", "평균보다 훨씬 비싸면 포화 신호"),
-    "학습 단계": ("메타가 광고를 보여줄 사람을 찾는 기간. 광고 세트마다 7일에 약 50건의 결과가 있어야 안정됨", "예산이 작으면 광고 세트를 합치세요."),
-    "전환율 (CVR)": ("광고를 클릭한 사람 중 실제로 구매(또는 예약·상담)까지 한 사람의 비율", "전환율 1% = 100명이 클릭하면 1명이 구매"),
-    "퍼널": ("클릭 → 방문 → 관심 → 과업 시작 → 과업 완료처럼 손님이 거치는 단계와 각 단계에서 남는 비율", "깔때기처럼 아래로 갈수록 사람이 줄어듭니다."),
-    "세그먼트": ("손님을 유입 매체·기기 등으로 나눈 묶음", "검색광고로 온 손님 vs 직접 들어온 손님"),
-    "z-검정": ("두 묶음의 비율 차이가 우연인지 확인하는 통계 방법. p값이 0.05보다 작으면 '우연이 아닐 가능성이 높음'", ""),
-    "어트리뷰션 (기여)": ("구매 전에 거친 여러 광고·유입 경로에 구매를 나눠 주는 방법", "첫 클릭은 처음 알게 한 채널에, 마지막 클릭은 마지막에 들어온 채널에 100%"),
-    "자기 참조": ("결제·로그인 페이지에서 우리 사이트로 돌아온 것이 '외부 유입'으로 잘못 잡힌 것", "GA4 '원치 않는 추천 목록'에 내 도메인을 넣으면 걸러집니다."),
-    "증분 반응률": ("메시지를 받은 사람의 구매율 − 받지 않은 대조군의 구매율. 메시지가 없어도 살 사람은 빼야 함", "받은 쪽 5%, 대조군 3% → 증분 2%"),
-    "손익분기 반응률": ("메시지 1건 발송비를 메우려면 받은 사람 중 몇 %가 더 사야 하는지", "건당 20원, 반응 1건 이익 2만 원 → 0.1%"),
-    "브랜드 메시지": ("카카오 광고성 메시지. 채널 친구나 광고 수신 동의자에게 08:00~20:50에 보낼 수 있음", "장바구니 리마인드는 알림톡(정보성)으로 못 보냄"),
-    "리텐션 (재방문율)": ("첫 구매 후 시간이 지나도 다시 구매하는 손님 비율", "3개월 뒤 리텐션 10% = 100명 중 10명이 그달에도 구매"),
-    "CAC (고객 획득 비용)": ("광고로 손님 1명을 데려오는 데 든 돈", "CPC 700원 ÷ 전환율 1% = 7만 원"),
-    "LTV (고객 생애 가치)": ("손님 1명이 일정 기간 동안 남겨 주는 돈의 합", "여기서는 12개월 동안 남기는 이익"),
-    "LTV/CAC": ("손님이 남겨 주는 돈 ÷ 데려오는 데 든 돈", "1보다 크면 남는 장사, 작으면 밑지는 장사"),
-    "ROAS (광고 수익률)": ("광고비 1원당 매출. 광고 매체가 보여주는 대표 숫자", "ROAS 2 = 광고비 100만 원으로 매출 200만 원 (재구매는 빠짐)"),
-    "회수 기간": ("광고로 데려온 손님에게서 그 광고비를 되찾는 데 걸리는 개월 수", "짧을수록 현금 흐름이 안전"),
-    "손익분기 비용": ("어떤 개선에 이 금액 이하로 쓰면 이득이라는 상한. 개선 비용을 모를 때 비교 기준", "이탈 10% 감소 → 1년 +300만 원이면, 300만 원까지 써도 이득"),
-    "A/B 테스트": ("두 가지 화면(A·B)을 손님을 나눠 보여주고 어느 쪽이 더 잘 되는지 비교하는 실험", ""),
-}
-
-# 화면별 도움말: (보여줄 용어, "이 숫자는 어디서 왔나요?")
-SCREEN_HELP = {
-    "① 시작": (["AARRR", "OMTM", "객단가", "마진율", "UTM"],
-              "- 객단가·마진·월 예산은 **직접 입력**입니다. 기본값(객단가 6만 원, 마진 35%)은 예시일 뿐이라 결과를 크게 바꿉니다.\n"
-              "- 데이터 준비 체크리스트는 **현업 측정 준비 단계**(전환 정의, UTM, GA4 주요 이벤트, 원치 않는 추천)를 그대로 옮긴 것입니다."),
-    "② 광고 관리자": (["CPC (클릭당 비용)", "CPM (노출당 비용)", "CTR (클릭률)", "포화", "한계 CPC", "학습 단계"],
-                  "- **네이버 클릭·비용**: 네이버 검색광고 API 예상 실적 ✅. 과거 28일 기준이라 × 30.4/28로 한 달 환산. 노출 순위는 품질지수도 반영한 네이버 예측값이며, 품질지수 자체는 모델 밖입니다.\n"
-                  "- **메타 CPC**: 직접 입력(또는 CPM ÷ (1000×CTR)). 연령·성별 배수는 Kaggle 광고 데이터 ✅\n"
-                  "- **메타 학습 단계 50건**: 메타 비즈니스 도움말 검색 요약 기준 (원문 미확인)"),
-    "③ 로그 분석": (["퍼널", "전환율 (CVR)", "세그먼트", "z-검정"],
-                 "- **단계별 전환율**: GA4 공개 샘플(구글 굿즈 스토어, 2020-11~2021-01) 사용자 기준 ✅. 열린 유입경로라 뒤 단계 전환율이 실제보다 높을 수 있습니다.\n"
-                 "- **광고 클릭 → 방문 0.85**는 GA4에 없는 단계라 임시값입니다.\n"
-                 "- `(data deleted)` 매체는 마스킹 편향(방문→구매 8%)으로 비교에서 뺐습니다."),
-    "④ 어트리뷰션": (["어트리뷰션 (기여)", "자기 참조"],
-                  "- **경로**: GA4 샘플 구매 5,692건마다 그 시점까지 같은 사용자가 거친 세션의 유입 매체를 시간순으로 이은 것 ✅\n"
-                  "- 규칙 기반 모델(첫·마지막·선형·U자형)은 GA4가 2023년 11월부터 제공하지 않습니다. 여기서는 '기준을 바꾸면 결론이 흔들리는가'를 보는 민감도 점검으로 씁니다.\n"
-                  "- 기여는 채널에 **배분된** 몫이지 그 채널이 **만든** 전환(인과)이 아닙니다. 인과는 실험으로만 확인할 수 있습니다."),
-    "⑤ 자동화": (["증분 반응률", "손익분기 반응률", "브랜드 메시지", "리텐션 (재방문율)"],
-               "- 도달 가능 비율·건당 발송비·반응률·할인율은 모두 **직접 입력**입니다. 기본값을 지어내지 않았습니다.\n"
-               "- 발송 대상 수는 엔진의 12개월 코호트(광고로 온 손님 기준)에서 계산합니다.\n"
-               "- 배지의 규제 내용: 정보통신망법 제50조(2026-10-02 시행본), 카카오 브랜드 메시지·알림톡 심사 가이드 ✅\n"
-               "- **재구매 곡선**: UCI 코호트 결과 대기 중이라 임시값입니다."),
-    "⑥ 결과·우선순위": (["LTV (고객 생애 가치)", "CAC (고객 획득 비용)", "LTV/CAC", "ROAS (광고 수익률)", "회수 기간", "손익분기 비용", "A/B 테스트"],
-                    "- 네 선택지는 모두 **12개월 남는 돈 증가(광고비·발송비를 뺀 뒤)** 하나의 기준으로 비교합니다.\n"
-                    "- 퍼널 개선은 비용을 모르므로 '이만큼까지 써도 이득'인 상한으로 표시합니다.\n"
-                    "- 모든 선택지는 '가정이 맞다면'의 예측입니다. 각 선택지 아래 실험 카드로 가정을 확인하세요."),
 }
 
 OMTM_PLAIN = {"new_customers": "새 손님 수 최대로", "profit": "1년 동안 남는 돈 최대로", "roas": "광고비 대비 첫 매출(ROAS) 최대로"}
@@ -150,21 +91,9 @@ def signed(v):
 # ───────────────────────────── 플로팅 도움말 ─────────────────────────────
 st.markdown("""<style>
 .st-key-help_fab {position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: auto;}
-.st-key-help_fab button {border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.25);}
+.st-key-help_fab > div > div > button {border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.25);}
 </style>""", unsafe_allow_html=True)
-with st.container(key="help_fab"):
-    with st.popover("❔ 도움말"):
-        screen = st.radio("지금 보고 있는 화면", TAB_NAMES, horizontal=True, key="help_screen")
-        terms, source = SCREEN_HELP[screen]
-        st.markdown("**이 화면의 용어**")
-        for term in terms:
-            desc, ex = GLOSSARY[term]
-            st.markdown(f"- **{term}**: {desc}" + (f"  \n  💡 {ex}" if ex else ""))
-        st.markdown("**이 숫자는 어디서 왔나요?**")
-        st.markdown(source)
-        with st.expander("전체 용어 사전"):
-            for term, (desc, ex) in GLOSSARY.items():
-                st.markdown(f"- **{term}**: {desc}" + (f" — {ex}" if ex else ""))
+help_fab = st.container(key="help_fab")  # 내용은 계산이 끝난 뒤 맨 아래에서 채움 (지금 숫자로 답하려고)
 
 with st.sidebar:
     st.header("처음이신가요?")
@@ -174,7 +103,7 @@ with st.sidebar:
                 "4. **④ 어트리뷰션**: 매체가 보고한 숫자를 믿어도 되는지 봐요\n"
                 "5. **⑤ 자동화**: 메시지가 광고비보다 나은지 봐요\n"
                 "6. **⑥ 결과·우선순위**: 무엇을 먼저 할지 정해요")
-    st.caption("②~⑤는 건너뛰어도 기본값으로 결과가 나옵니다. 용어는 오른쪽 아래 ❔ 도움말에서 볼 수 있습니다.")
+    st.caption("②~⑤는 건너뛰어도 기본값으로 결과가 나옵니다. 모르는 말은 오른쪽 아래 💬 도우미에게 물어보세요.")
 
 st.title("📈 광고 예산 시뮬레이터")
 st.caption("광고비를 쓰면 손님이 얼마나 오고, 다시 오고, 1년 뒤 얼마가 남는지 미리 계산하고, "
@@ -837,3 +766,39 @@ with heads[5]:
 st.divider()
 st.caption("데이터: 네이버 검색광고 API(예측값, 최근 4주 → 월 환산), GA4 공개 샘플(퍼널·구매 경로), Kaggle Sales Conversion Optimization(상대 배수만). "
            "리텐션·구매 빈도는 UCI Online Retail II 분석 후 교체 예정. 결과는 출발점을 잡기 위한 추정치이며, 내 숫자를 넣을수록 정확해집니다.")
+
+# ─────────────────────── 플로팅 도움말 챗봇 (규칙 기반) ───────────────────────
+top_row = top_opt.iloc[0] if len(top_opt) else None
+help_ctx = {
+    "profit": res.summary["profit_12m"], "ltv": res.summary["ltv_12m"], "cac": res.summary["paid_cac"],
+    "ltv_cac": res.summary["ltv_cac"], "roas": res.summary["roas"], "payback": res.summary["payback_month"],
+    "cvr": params.cvr, "aov": aov, "margin": margin, "pmf": pmf,
+    "verdict": verdict(res.summary, opt_profit["spends"])[1],
+    "top_option": None if top_row is None else (top_row["option"], float(top_row["gain"]), top_row["cost_kind"], float(top_row["cost"])),
+    "best_step": (bname, float(best["up"]), prescription(bname)) if len(steps_lv) else None,
+    "attribution": attr_verdict,
+}
+with help_fab:
+    with st.popover("💬 도우미에게 묻기"):
+        screen = st.selectbox("지금 보고 있는 화면", TAB_NAMES, key="help_screen")
+        chat = ss.setdefault("help_chat", [])
+        box = st.container()   # 대화가 위, 입력이 아래 (채팅 순서). 입력은 아래에서 받지만 답은 이 자리에 그림
+        picked = st.pills("이런 걸 물어볼 수 있어요", helpbot.SUGGESTIONS[screen], key=f"help_pick_{len(chat)}")
+        typed = st.chat_input("궁금한 걸 물어보세요 (예: ROAS가 뭐야?)", key="help_input")
+        q = typed or picked
+        if q:
+            chat.append(("user", q))
+            chat.append(("assistant", helpbot.answer(q, help_ctx, screen, won)))
+        with box:
+            if not chat:
+                with st.chat_message("assistant", avatar="💬"):
+                    st.markdown("안녕하세요! 광고 용어 뜻, 지금 계산된 내 숫자, 숫자의 출처, 무엇부터 할지 물어보세요.")
+            for role, text in chat[-8:]:
+                with st.chat_message(role, avatar="💬" if role == "assistant" else "🙂"):
+                    st.markdown(text)
+        if chat and st.button("대화 지우기", key="help_clear"):
+            ss["help_chat"] = []
+            st.rerun()
+        with st.expander("전체 용어 사전"):
+            for term, (desc, ex) in helpbot.GLOSSARY.items():
+                st.markdown(f"- **{term}**: {desc}" + (f" — {ex}" if ex else ""))
