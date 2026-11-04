@@ -303,13 +303,44 @@ with tabs[1]:
 with tabs[2]:
     f1, f2 = st.columns([1, 1])
     with f1:
-        mediums = dl.ga4_mediums() or [dl.GA4_ALL]
-        medium = st.selectbox("기본값으로 쓸 실제 쇼핑몰 기록 (GA4 샘플 매체)", mediums,
-                              help="'전체'가 기본입니다. 'cpc'를 고르면 검색광고로 들어온 방문자만의 비율을 씁니다.")
-        base_steps, src = dl.funnel_steps(medium)
+        fun_file = st.file_uploader("내 GA4 유입경로 CSV (선택) — 없으면 GA4 공개 샘플", type="csv",
+                                    help="GA4 유입경로 탐색 보고서를 내보낸 파일. 형식: 세그먼트(매체·기기) 열 + 단계별 사용자 수 열 (예: segment, 방문, 상담, 계약)")
+        fun_df, up_tab, seg_cvr, seg_label = None, None, None, "GA4 매체별"
+        if fun_file is not None:
+            try:
+                fun_df = pd.read_csv(fun_file)
+            except Exception as e:  # noqa: BLE001
+                st.error(f"퍼널 CSV를 읽지 못했습니다: {e}")
+        if fun_df is not None:
+            cols = list(fun_df.columns)
+            numeric = [c for c in cols if pd.to_numeric(fun_df[c].astype(str).str.replace(",", ""), errors="coerce").notna().mean() > 0.9]
+            seg_opts = ["(없음)"] + [c for c in cols if c not in numeric]
+            u1, u2 = st.columns(2)
+            seg_pick = u1.selectbox("세그먼트 열 (매체·기기)", seg_opts, index=1 if len(seg_opts) > 1 else 0)
+            seg_col = None if seg_pick == "(없음)" else seg_pick
+            unit = u2.radio("숫자 기준", ["사용자 수", "세션 수"], horizontal=True,
+                            help="GA4 보고서는 사용자·세션 기준이 섞여 있습니다. 한 기준으로 통일된 파일을 올려 주세요.")
+            step_cols = st.multiselect("단계 열 (첫 단계부터 순서대로)", numeric, default=numeric)
+            if len(step_cols) >= 2:
+                up_tab = dl.segment_rates(fun_df, seg_col, step_cols)
+                medium = st.selectbox("퍼널 기본값으로 쓸 세그먼트", [dl.GA4_ALL] + [i for i in up_tab.index if i != dl.GA4_ALL])
+                base_steps, src = dl.upload_funnel(fun_df, step_cols, seg_col, medium)
+                overall = up_tab.columns[len(step_cols)]
+                seg_cvr = lambda m: float(up_tab.loc[m, overall]) if m in up_tab.index else None  # noqa: E731
+                seg_label = "내 퍼널 CSV"
+                if unit == "세션 수":
+                    st.caption("세션 기준 전환율은 같은 사람이 여러 번 방문하면 사용자 기준보다 낮게 나옵니다.")
+            else:
+                st.warning("단계 열을 2개 이상 골라 주세요. 그동안은 GA4 샘플을 씁니다.")
+                fun_df = None
+        if fun_df is None:
+            mediums = dl.ga4_mediums() or [dl.GA4_ALL]
+            medium = st.selectbox("기본값으로 쓸 실제 쇼핑몰 기록 (GA4 샘플 매체)", mediums,
+                                  help="'전체'가 기본입니다. 'cpc'를 고르면 검색광고로 들어온 방문자만의 비율을 씁니다.")
+            base_steps, src = dl.funnel_steps(medium)
         steps_df = pd.DataFrame([{"단계": n, "전환율": round(r, 3)} for n, r in base_steps])
         steps_df.loc[len(steps_df) - 1, "단계"] = f"{task} 완료"
-        edited = st.data_editor(steps_df, num_rows="dynamic", hide_index=True, key="steps_editor",
+        edited = st.data_editor(steps_df, num_rows="dynamic", hide_index=True, key=f"steps_editor_{src}",
                                 column_config={"전환율": st.column_config.NumberColumn(
                                     "다음 단계로 가는 비율", min_value=0.0, max_value=1.0, step=0.01, format="%.2f")})
         edited = edited.dropna()
@@ -319,12 +350,17 @@ with tabs[2]:
     funnel_slot = f2.container()
     opp_slot = st.container()
     with st.expander("세그먼트 비교 (매체·기기별 단계 전환율)"):
-        dim = st.radio("나눠 볼 기준", ["medium", "device"], horizontal=True, format_func={"medium": "유입 매체", "device": "기기"}.get)
-        seg = dl.segment_table(dim)
-        if seg is None:
-            st.caption("GA4 퍼널 파일이 없습니다.")
+        if up_tab is not None and len(up_tab) > 1:
+            seg = up_tab
+            st.caption("올린 퍼널 CSV의 세그먼트별 비교입니다.")
         else:
-            rate_cols = dl.STEP_LABELS
+            dim = st.radio("나눠 볼 기준", ["medium", "device"], horizontal=True, format_func={"medium": "유입 매체", "device": "기기"}.get)
+            seg = dl.segment_table(dim)
+        if seg is None or len(seg) < 2:
+            st.caption("비교할 세그먼트가 없습니다.")
+        else:
+            rate_cols = [c for c in seg.columns if c not in ("visitors", "purchases", "small")]
+            overall = rate_cols[-1]
             allv = seg.loc[dl.GA4_ALL]
 
             def _hl(col):
@@ -343,7 +379,7 @@ with tabs[2]:
             a_seg = s1.selectbox("비교할 세그먼트 A", names, index=0)
             b_seg = s2.selectbox("비교할 세그먼트 B", names, index=names.index("cpc") if "cpc" in names else min(1, len(names) - 1))
             z, p = dl.two_prop_z(seg.loc[a_seg, "purchases"], seg.loc[a_seg, "visitors"], seg.loc[b_seg, "purchases"], seg.loc[b_seg, "visitors"])
-            st.markdown(f"방문→완료 **{a_seg} {seg.loc[a_seg, '방문→완료']:.2%}** vs **{b_seg} {seg.loc[b_seg, '방문→완료']:.2%}** · "
+            st.markdown(f"{overall} **{a_seg} {seg.loc[a_seg, overall]:.2%}** vs **{b_seg} {seg.loc[b_seg, overall]:.2%}** · "
                         f"z = {z:.2f}, p = {p:.3g} → " + ("**우연이 아닐 가능성이 높은 차이** (p < 0.05)" if p < 0.05 else "우연일 수 있는 차이"))
             st.caption("매체별 전환율 차이는 ⑥ 계산에서 네이버 검색광고의 구매 확률 배수(cpc ÷ 전체)로 쓰입니다. 광고 성과 CSV가 있으면 그것이 우선합니다.")
 
@@ -376,8 +412,10 @@ params = FunnelParams(steps=steps, retention_floor=floor, retention_decay=decay,
                       aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv)
 
 # 채널 전환율 배수: CSV > GA4 매체별 > 기본값 중 하나만 (MECE #4). 어트리뷰션 보정은 ④에서 그 위에 한 번만
-naver_cvr_base, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload)
-meta_cvr_base, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_in, params.cvr, medium, upload)
+naver_cvr_base, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload,
+                                                     seg_cvr=seg_cvr, seg_label=seg_label)
+meta_cvr_base, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_in, params.cvr, medium, upload,
+                                                   seg_cvr=seg_cvr, seg_label=seg_label)
 if meta_cvr_src.startswith("가정값") and meta_cvr_in != D.META_CVR_MULT:
     meta_cvr_src = "직접 입력"
 base_channels = [
@@ -608,7 +646,7 @@ with tabs[5]:
     lvl, msg = verdict(res.summary, opt_profit["spends"])
     getattr(st, lvl)(msg)
     defaults_used = [name for name, used in [("① 객단가·마진 기본값", aov == D.AOV and margin == D.MARGIN),
-                                             ("② 예시 검색어", hint_text == ns.SAMPLE_KEYWORD), ("③ GA4 샘플 퍼널", not funnel_edited),
+                                             ("② 예시 검색어", hint_text == ns.SAMPLE_KEYWORD), ("③ GA4 샘플 퍼널", fun_df is None and not funnel_edited),
                                              ("④ 보정 없음(마지막 클릭)", not corrected), ("⑤ 자동 메시지 미입력", auto_params is None)] if used]
     if defaults_used:
         st.caption("기본값 사용 중: " + " · ".join(defaults_used))
@@ -778,27 +816,35 @@ help_ctx = {
     "best_step": (bname, float(best["up"]), prescription(bname)) if len(steps_lv) else None,
     "attribution": attr_verdict,
 }
+
+
+@st.fragment
+def help_chat(ctx):
+    """질문할 때 앱 전체가 아니라 이 채팅만 다시 그린다 (답은 마지막 전체 계산 결과 ctx로)."""
+    screen = st.selectbox("지금 보고 있는 화면", TAB_NAMES, key="help_screen")
+    chat = ss.setdefault("help_chat", [])
+    box = st.container()   # 대화가 위, 입력이 아래 (채팅 순서). 입력은 아래에서 받지만 답은 이 자리에 그림
+    picked = st.pills("이런 걸 물어볼 수 있어요", helpbot.SUGGESTIONS[screen], key=f"help_pick_{len(chat)}")
+    typed = st.chat_input("궁금한 걸 물어보세요 (예: ROAS가 뭐야?)", key="help_input")
+    q = typed or picked
+    if q:
+        chat.append(("user", q))
+        chat.append(("assistant", helpbot.answer(q, ctx, screen, won)))
+    with box:
+        if not chat:
+            with st.chat_message("assistant", avatar="💬"):
+                st.markdown("안녕하세요! 광고 용어 뜻, 지금 계산된 내 숫자, 숫자의 출처, 무엇부터 할지 물어보세요.")
+        for role, text in chat[-8:]:
+            with st.chat_message(role, avatar="💬" if role == "assistant" else "🙂"):
+                st.markdown(text)
+    if chat and st.button("대화 지우기", key="help_clear"):
+        ss["help_chat"] = []
+        st.rerun(scope="fragment")
+    with st.expander("전체 용어 사전"):
+        for term, (desc, ex) in helpbot.GLOSSARY.items():
+            st.markdown(f"- **{term}**: {desc}" + (f" — {ex}" if ex else ""))
+
+
 with help_fab:
     with st.popover("💬 도우미에게 묻기"):
-        screen = st.selectbox("지금 보고 있는 화면", TAB_NAMES, key="help_screen")
-        chat = ss.setdefault("help_chat", [])
-        box = st.container()   # 대화가 위, 입력이 아래 (채팅 순서). 입력은 아래에서 받지만 답은 이 자리에 그림
-        picked = st.pills("이런 걸 물어볼 수 있어요", helpbot.SUGGESTIONS[screen], key=f"help_pick_{len(chat)}")
-        typed = st.chat_input("궁금한 걸 물어보세요 (예: ROAS가 뭐야?)", key="help_input")
-        q = typed or picked
-        if q:
-            chat.append(("user", q))
-            chat.append(("assistant", helpbot.answer(q, help_ctx, screen, won)))
-        with box:
-            if not chat:
-                with st.chat_message("assistant", avatar="💬"):
-                    st.markdown("안녕하세요! 광고 용어 뜻, 지금 계산된 내 숫자, 숫자의 출처, 무엇부터 할지 물어보세요.")
-            for role, text in chat[-8:]:
-                with st.chat_message(role, avatar="💬" if role == "assistant" else "🙂"):
-                    st.markdown(text)
-        if chat and st.button("대화 지우기", key="help_clear"):
-            ss["help_chat"] = []
-            st.rerun()
-        with st.expander("전체 용어 사전"):
-            for term, (desc, ex) in helpbot.GLOSSARY.items():
-                st.markdown(f"- **{term}**: {desc}" + (f" — {ex}" if ex else ""))
+        help_chat(help_ctx)

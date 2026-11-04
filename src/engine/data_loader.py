@@ -156,8 +156,11 @@ def ga4_medium_cvr(medium: str = GA4_ALL) -> Optional[float]:
 
 
 def resolve_cvr_mult(channel: str, default: float, funnel_cvr: float, funnel_medium: str = GA4_ALL,
-                     upload: Optional[pd.DataFrame] = None, use_ga4: bool = True) -> Tuple[float, str]:
-    """(배수, 출처). 퍼널 자체가 그 매체 기준이면 GA4 배수는 1 (이중 계산 방지)."""
+                     upload: Optional[pd.DataFrame] = None, use_ga4: bool = True,
+                     seg_cvr=None, seg_label: str = "GA4 매체별") -> Tuple[float, str]:
+    """(배수, 출처). 퍼널 자체가 그 매체 기준이면 GA4 배수는 1 (이중 계산 방지).
+    seg_cvr: 세그먼트 이름 → 방문→완료 전환율 함수. 기본은 GA4 샘플, 내 퍼널 CSV를 올리면 그 표."""
+    seg_cvr = seg_cvr or ga4_medium_cvr
     if upload is not None and channel in upload.index and funnel_cvr > 0:
         cvr = float(upload.loc[channel, "CVR"])
         if cvr == cvr and cvr > 0:
@@ -165,10 +168,10 @@ def resolve_cvr_mult(channel: str, default: float, funnel_cvr: float, funnel_med
     medium = GA4_CHANNEL_MEDIUM.get(channel)
     if use_ga4 and medium:
         if funnel_medium == medium:
-            return 1.0, f"GA4 '{medium}' 퍼널을 이미 사용 중"
-        num, den = ga4_medium_cvr(medium), ga4_medium_cvr(funnel_medium)
+            return 1.0, f"'{medium}' 퍼널을 이미 사용 중"
+        num, den = seg_cvr(medium), seg_cvr(funnel_medium)
         if num and den:
-            return num / den, f"GA4 매체별 ('{medium}' ÷ '{funnel_medium}' 방문→구매)"
+            return num / den, f"{seg_label} ('{medium}' ÷ '{funnel_medium}' 방문→완료)"
     return default, "기본값" if default == 1.0 else "가정값 (근거 데이터 없음)"
 
 
@@ -177,22 +180,45 @@ SEGMENT_MIN_USERS = 1_000  # 이보다 방문자가 적으면 비교에서 회�
 STEP_LABELS = ["방문→관심", "관심→과업 시작", "과업 시작→진행", "진행→완료", "방문→완료"]
 
 
+def segment_rates(df: pd.DataFrame, seg_col: Optional[str], step_cols: List[str],
+                  labels: Optional[List[str]] = None) -> pd.DataFrame:
+    """세그먼트별 단계 전환율 표. 행 = 세그먼트 + '전체', 열 = visitors, 단계 전환율들, 첫→끝, purchases, small."""
+    counts = df[step_cols].apply(lambda c: pd.to_numeric(c.astype(str).str.replace(",", ""), errors="coerce")).fillna(0)
+    g = counts.groupby(df[seg_col].astype(str)).sum() if seg_col else pd.DataFrame(columns=step_cols)
+    g.loc[GA4_ALL] = counts.sum()
+    labels = labels or [f"{a}→{b}" for a, b in zip(step_cols, step_cols[1:])] + [f"{step_cols[0]}→{step_cols[-1]}"]
+    out = pd.DataFrame({"visitors": g[step_cols[0]]}, index=g.index)
+    for i, lab in enumerate(labels[:-1]):
+        out[lab] = g[step_cols[i + 1]] / g[step_cols[i]].where(g[step_cols[i]] > 0)
+    out[labels[-1]] = g[step_cols[-1]] / g[step_cols[0]].where(g[step_cols[0]] > 0)
+    out["purchases"] = g[step_cols[-1]]
+    out["small"] = out["visitors"] < SEGMENT_MIN_USERS
+    return out.sort_values("visitors", ascending=False)
+
+
 def segment_table(dim: str = "medium") -> Optional[pd.DataFrame]:
-    """매체·기기별 단계 전환율. (data deleted)는 마스킹 편향으로 제외."""
+    """GA4 샘플 매체·기기별 단계 전환율. (data deleted)는 마스킹 편향으로 제외."""
     df = _ga4_table()
     if df is None or dim not in df.columns:
         return None
     df = df[df.get("medium", "") != "(data deleted)"]
-    g = df.groupby(dim)[D.GA4_EVENTS].sum()
-    g.loc[GA4_ALL] = g.sum()
-    ev = D.GA4_EVENTS
-    out = pd.DataFrame({"visitors": g[ev[0]]}, index=g.index)
-    for i, lab in enumerate(STEP_LABELS[:-1]):
-        out[lab] = g[ev[i + 1]] / g[ev[i]].where(g[ev[i]] > 0)
-    out[STEP_LABELS[-1]] = g[ev[-1]] / g[ev[0]]
-    out["purchases"] = g[ev[-1]]
-    out["small"] = out["visitors"] < SEGMENT_MIN_USERS
-    return out.sort_values("visitors", ascending=False)
+    return segment_rates(df, dim, D.GA4_EVENTS, STEP_LABELS)
+
+
+def upload_funnel(df: pd.DataFrame, step_cols: List[str], seg_col: Optional[str] = None,
+                  segment: str = GA4_ALL) -> Tuple[List[Tuple[str, float]], str]:
+    """내 GA4 유입경로 CSV(명세 3-1: segment, step_1_users, …, step_n_users) → 퍼널 단계.
+
+    단계 열이 5개(방문·관심·과업 시작·진행·완료)면 엔진의 일반 단계 이름을 쓰고, 아니면 열 이름을 쓴다.
+    첫 단계 '랜딩 도착'(광고 클릭 → 방문)은 분석 도구에 없어 기본값을 유지한다.
+    """
+    if len(step_cols) < 2:
+        raise ValueError("단계 열을 2개 이상 골라 주세요.")
+    tab = segment_rates(df, seg_col, step_cols)
+    row = tab.loc[segment] if segment in tab.index else tab.loc[GA4_ALL]
+    rates = [float(row.iloc[1 + i]) if row.iloc[1 + i] == row.iloc[1 + i] else 0.0 for i in range(len(step_cols) - 1)]
+    names = [n for n, _ in D.FUNNEL_STEPS[1:]] if len(step_cols) == len(D.FUNNEL_STEPS) else list(step_cols[1:])
+    return [D.FUNNEL_STEPS[0]] + list(zip(names, rates)), f"내 퍼널 CSV ({segment}, 첫 단계 {int(row['visitors']):,}명)"
 
 
 def two_prop_z(x1: float, n1: float, x2: float, n2: float) -> Tuple[float, float]:

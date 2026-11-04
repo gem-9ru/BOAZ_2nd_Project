@@ -102,3 +102,23 @@ def test_compare_options_same_basis():
     assert df.loc["광고비 증액", "disabled"] and df.loc["채널 재배분", "gain"] >= 0
     assert df.loc["퍼널 개선", "cost_kind"] == "ceiling"
     assert sum(df.loc["채널 재배분", "spends"]) == pytest.approx(1_000_000)   # 같은 예산 (덜 쓰기 아님)
+
+
+def test_upload_funnel_matches_ga4_defaults():  # 명세 3-1 1단계: 내 GA4 유입경로 CSV
+    raw = pd.read_csv(dl.ROOT / "data" / "raw" / "ga4" / "ga4_funnel.csv")
+    steps, src = dl.upload_funnel(raw, D.GA4_EVENTS)
+    assert [n for n, _ in steps] == [n for n, _ in D.FUNNEL_STEPS]
+    assert dict(steps)["과업 시작"] == pytest.approx(0.205, abs=1e-3)
+    cpc, _ = dl.upload_funnel(raw, D.GA4_EVENTS, "medium", "cpc")
+    assert dict(cpc)["과업 완료"] == pytest.approx(0.427, abs=1e-3)
+    tab = dl.segment_rates(raw, "device", D.GA4_EVENTS)
+    assert set(tab.index) >= {"desktop", "mobile", dl.GA4_ALL}
+    my = pd.DataFrame({"채널": ["a", "b"], "방문": ["1,000", "500"], "상담": [100, 25], "계약": [10, 5]})
+    steps, _ = dl.upload_funnel(my, ["방문", "상담", "계약"], "채널", "b")
+    assert [n for n, _ in steps] == ["랜딩 도착", "상담", "계약"] and dict(steps)["상담"] == pytest.approx(0.05)
+
+
+def test_resolver_uses_uploaded_segments():
+    seg = {"cpc": 0.01, dl.GA4_ALL: 0.02}
+    m, src = dl.resolve_cvr_mult("naver", 1.0, 0.01, seg_cvr=seg.get, seg_label="내 퍼널 CSV")
+    assert m == pytest.approx(0.5) and "내 퍼널 CSV" in src

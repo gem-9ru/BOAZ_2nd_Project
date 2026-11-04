@@ -88,20 +88,20 @@ def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
     if no_ads:
         out.append({"title": "지금 숫자로는 광고비를 쓸수록 1년 동안 남는 돈이 줄어듭니다.",
                     "evidence": f"남는 돈이 가장 큰 광고비 ≈ 0원 · 손님이 남기는 돈은 데려오는 비용의 {s['ltv_cac'] or 0:.2f}배",
-                    "action": "광고를 늘리기 전에 구매 비율·재구매·결제 금액부터 올리기 (왼쪽 막대 그래프 참고)"})
+                    "action": "광고를 늘리기 전에 구매 비율·재구매·결제 금액부터 올리기 (⑥ 4가지 선택지 비교 참고)"})
     elif opt_profit is not None and opt_roas is not None:
         diff = max(abs(a - b) for a, b in zip(opt_profit["spends"], opt_roas["spends"]))
         if diff > 0.05 * budget:
             out.append({"title": "광고 매체 숫자(ROAS)만 보고 짠 예산과 실제로 남는 돈이 가장 큰 예산이 다릅니다.",
                         "evidence": "ROAS 기준 네이버 " + " · 메타 ".join(won(x) for x in opt_roas["spends"])
                                     + " vs 남는 돈 기준 네이버 " + " · 메타 ".join(won(x) for x in opt_profit["spends"]) + " (한 달)",
-                        "action": "④ 결과의 '계획별 비교' 표에서 두 계획의 남는 돈 차이 확인"})
+                        "action": "⑥ '계획별 비교와 그래프'에서 두 계획의 남는 돈 차이 확인"})
     if opt and not (no_ads and opt.get("omtm") == "profit"):
         gain = opt["value"] - opt["base_value"]
         if abs(gain) > 1e-6:
             out.append({"title": f"네이버·메타 예산 비율을 바꾸면 '{omtm_label}' 목표가 더 좋아집니다.",
                         "evidence": f"{_fmt_omtm(opt['base_value'], opt['omtm'])} → {_fmt_omtm(opt['value'], opt['omtm'])}",
-                        "action": "추천 계획으로 2~4주 광고해 보고, 실제 성과 파일을 ① 시작에 올려 다시 계산"})
+                        "action": "추천 계획으로 2~4주 광고해 보고, ① 시작에서 실제 광고 성과 파일을 올려 다시 계산"})
     if scan is not None and len(scan) > 1:
         cur = scan[scan["multiplier"] == 1.0]
         up = scan[scan["multiplier"] == 1.25]
@@ -109,17 +109,17 @@ def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
             d = float(up.iloc[0]["profit_12m"] - cur.iloc[0]["profit_12m"])
             out.append({"title": "광고비를 더 늘려도 이익이 늘어납니다." if d > 0 else "지금은 광고비를 늘리기보다 예산 배분과 가게 개선이 먼저입니다.",
                         "evidence": f"광고비 25% 증액 → 1년 동안 남는 돈 {'+' if d > 0 else '−'}{won(abs(d))}",
-                        "action": "④ 결과의 '예산 규모별' 그래프에서 가장 높은 지점 확인"})
+                        "action": "⑥ '계획별 비교와 그래프'의 예산 규모별 그래프에서 가장 높은 지점 확인"})
     if s["repeat_revenue"] > 0 and s["revenue"]:
         out.append({"title": "다시 오는 손님이 광고 효과를 받쳐 줍니다. ROAS는 첫 구매만 세서 이 부분을 보여주지 못합니다.",
                     "evidence": f"1년 매출 중 재구매 {s['repeat_revenue'] / s['revenue']:.0%} · ROAS(첫 구매만) {s['roas'] or 0:.2f} · "
                                 f"광고비 본전 {str(s['payback_month']) + '개월' if s['payback_month'] else '36개월 넘음'}",
-                    "action": "첫 구매 후 1~2달 안에 다시 오게 하는 쿠폰·알림 보내 보기"})
+                    "action": "⑤ 자동화의 '첫 구매 후 재구매' 시나리오로 손익분기 반응률 확인"})
     if keyword_recs is not None and len(keyword_recs):
         kws = ", ".join(keyword_recs["keyword"].head(3))
         out.append({"title": "경쟁이 덜한 알짜 검색어가 있습니다 (세부 키워드).",
                     "evidence": f"추천: {kws}",
-                    "action": "② 광고 채널에서 추가해 클릭을 더 싸게 얻기"})
+                    "action": "② 광고 관리자에서 추가해 클릭을 더 싸게 얻기"})
     return out
 
 
