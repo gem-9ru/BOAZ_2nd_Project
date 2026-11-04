@@ -1,6 +1,10 @@
-"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입.
+"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.5.
 
 실행: streamlit run app/main.py
+
+화면 (기능명세_4개도구.md 1장): ① 시작 ② 광고 관리자 ③ 로그 분석 ④ 어트리뷰션 ⑤ 자동화 ⑥ 결과·우선순위.
+각 탭 맨 위에는 '이 화면이 답하는 질문' 한 줄과 결과 숫자 하나만 두고, 나머지는 접기 안에 넣는다.
+결과 숫자는 모든 입력이 모인 뒤 계산되므로, 탭마다 맨 위 자리(head)를 먼저 만들고 마지막에 채운다.
 """
 import sys
 from pathlib import Path
@@ -16,11 +20,15 @@ sys.path.insert(0, str(ROOT / "app"))
 import charts  # noqa: E402
 from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_scan,  # noqa: E402
                         lever_table, optimize_allocation, simulate)
-from src.engine import defaults as D  # noqa: E402
+from src.engine import attribution as A  # noqa: E402
+from src.engine import automation as AU  # noqa: E402
 from src.engine import data_loader as dl  # noqa: E402
+from src.engine import defaults as D  # noqa: E402
 from src.engine import naver_source as ns  # noqa: E402
+from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
-from src.engine.insights import insights, prescription, warnings, won  # noqa: E402
+from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
+from src.engine.optimize import compare_options  # noqa: E402
 
 st.set_page_config(page_title="AARRR 광고 예산 시뮬레이터", page_icon="📈", layout="wide")
 
@@ -28,40 +36,76 @@ st.set_page_config(page_title="AARRR 광고 예산 시뮬레이터", page_icon="
 HELP = {
     "new": "12개월 동안 새로 온 손님 수 (광고로 온 손님 + 지인 추천으로 온 손님)",
     "paid_cac": "광고로 손님 1명을 데려오는 데 든 돈 (CAC) = 광고비 ÷ 광고로 온 손님 수",
-    "blended_cac": "추천 손님까지 포함했을 때 손님 1명당 광고비 = 광고비 ÷ 전체 새 손님 수",
     "ltv": "손님 1명이 첫 구매 후 12개월 동안 남겨 주는 돈 (LTV, 매출 × 마진)",
     "ltv_cac": "손님이 남겨 주는 돈 ÷ 데려오는 데 든 돈 (LTV/CAC). 1보다 작으면 손님을 데려올수록 손해",
     "payback": "손님 1명을 데려오는 데 쓴 광고비를 그 손님이 남겨 주는 돈으로 되찾기까지 걸리는 개월 수",
-    "profit": "12개월 동안 남는 돈 = 매출 × 마진율 − 광고비",
+    "profit": "12개월 동안 남는 돈 = 매출 × 마진율 − 광고비 − 메시지 발송비",
     "roas": "광고비 1원당 첫 구매 매출 (ROAS). 재구매는 빠져 있어 실제 가치보다 작게 보일 수 있음",
-    "cpc": "클릭 1번에 드는 평균 광고비 (CPC)",
-    "mcpc": "클릭을 1번 더 얻는 데 드는 추가 비용 (한계 CPC). 예산을 늘릴수록 비싸짐",
 }
 
-# 사이드바 용어 사전: (용어, 쉬운 설명, 비유·예시)
-GLOSSARY = [
-    ("AARRR", "손님이 우리 가게와 만나는 5단계: 알게 됨(획득) → 써 봄(활성화) → 다시 옴(유지) → 돈을 냄(수익) → 소개함(추천)",
-     "광고는 첫 단계만 책임지지만, 이익은 다섯 단계를 다 거쳐야 생깁니다."),
-    ("CPC (클릭당 비용)", "광고를 한 번 클릭할 때 내는 돈", "CPC 700원 = 클릭 100번에 7만 원"),
-    ("전환율 (CVR)", "광고를 클릭한 사람 중 실제로 구매(또는 예약·상담)까지 한 사람의 비율",
-     "전환율 1% = 100명이 클릭하면 1명이 구매"),
-    ("CAC (고객 획득 비용)", "광고로 손님 1명을 데려오는 데 든 돈", "CPC 700원 ÷ 전환율 1% = 7만 원"),
-    ("객단가", "손님이 한 번 결제할 때 평균 금액", "커피 원두 1봉 2만 원, 필라테스 10회권 30만 원"),
-    ("마진율", "매출 중 원가·배송비 등을 빼고 남는 비율", "1만 원 팔아 3,500원 남으면 35%"),
-    ("리텐션 (재방문율)", "첫 구매 후 시간이 지나도 다시 구매하는 손님 비율", "3개월 뒤 리텐션 10% = 100명 중 10명이 그달에도 구매"),
-    ("LTV (고객 생애 가치)", "손님 1명이 일정 기간 동안 남겨 주는 돈의 합", "여기서는 12개월 동안 남기는 이익"),
-    ("LTV/CAC", "손님이 남겨 주는 돈 ÷ 데려오는 데 든 돈", "1보다 크면 남는 장사, 작으면 밑지는 장사"),
-    ("ROAS (광고 수익률)", "광고비 1원당 매출. 광고 매체가 보여주는 대표 숫자", "ROAS 2 = 광고비 100만 원으로 매출 200만 원 (재구매는 빠짐)"),
-    ("회수 기간", "광고비로 데려온 손님에게서 그 광고비를 되찾는 데 걸리는 개월 수", "짧을수록 현금 흐름이 안전"),
-    ("포화", "같은 키워드에 돈을 더 넣어도 클릭이 잘 안 늘고 클릭당 비용만 오르는 상태", "이미 꽉 찬 가게 앞에 전단지를 더 뿌리는 것"),
-    ("한계 CPC", "예산을 조금 더 늘렸을 때 추가로 얻는 클릭 1번의 비용", "평균보다 훨씬 비싸면 포화 신호"),
-    ("퍼널", "클릭 → 방문 → 관심 → 구매 시작 → 구매 완료처럼 손님이 거치는 단계와 각 단계에서 남는 비율",
-     "깔때기처럼 아래로 갈수록 사람이 줄어듭니다."),
-    ("OMTM", "지금 가장 중요한 목표 지표 하나 (One Metric That Matters)", "최적화는 이 숫자를 가장 크게 만드는 예산 배분을 찾습니다."),
-    ("A/B 테스트", "두 가지 화면(A·B)을 손님을 나눠 보여주고 어느 쪽이 더 잘 되는지 비교하는 실험", ""),
-]
+# 용어 사전: 용어 → (쉬운 설명, 비유·예시)
+GLOSSARY = {
+    "AARRR": ("손님이 우리 가게와 만나는 5단계: 알게 됨(획득) → 써 봄(활성화) → 다시 옴(유지) → 돈을 냄(수익) → 소개함(추천)",
+              "광고는 첫 단계만 책임지지만, 이익은 다섯 단계를 다 거쳐야 생깁니다."),
+    "OMTM": ("지금 가장 중요한 목표 지표 하나 (One Metric That Matters)", "최적화는 이 숫자를 가장 크게 만드는 예산 배분을 찾습니다."),
+    "객단가": ("손님이 한 번 결제할 때 평균 금액", "커피 원두 1봉 2만 원, 필라테스 10회권 30만 원"),
+    "마진율": ("매출 중 원가·배송비 등을 빼고 남는 비율", "1만 원 팔아 3,500원 남으면 35%"),
+    "UTM": ("광고 링크 뒤에 붙이는 꼬리표(utm_source 등). 어느 광고로 들어왔는지 분석 도구가 알 수 있게 함", "?utm_source=naver&utm_medium=cpc"),
+    "CPC (클릭당 비용)": ("광고를 한 번 클릭할 때 내는 돈", "CPC 700원 = 클릭 100번에 7만 원"),
+    "CPM (노출당 비용)": ("광고가 1,000번 보일 때 내는 돈. 메타는 이 방식이 기본", "CPM 1만 원, 클릭률 1% → CPC 1,000원"),
+    "CTR (클릭률)": ("광고를 본 사람 중 클릭한 비율", "소재가 지치면 떨어지고, 그만큼 CPC가 오릅니다."),
+    "포화": ("같은 키워드에 돈을 더 넣어도 클릭이 잘 안 늘고 클릭당 비용만 오르는 상태", "이미 꽉 찬 가게 앞에 전단지를 더 뿌리는 것"),
+    "한계 CPC": ("예산을 조금 더 늘렸을 때 추가로 얻는 클릭 1번의 비용", "평균보다 훨씬 비싸면 포화 신호"),
+    "학습 단계": ("메타가 광고를 보여줄 사람을 찾는 기간. 광고 세트마다 7일에 약 50건의 결과가 있어야 안정됨", "예산이 작으면 광고 세트를 합치세요."),
+    "전환율 (CVR)": ("광고를 클릭한 사람 중 실제로 구매(또는 예약·상담)까지 한 사람의 비율", "전환율 1% = 100명이 클릭하면 1명이 구매"),
+    "퍼널": ("클릭 → 방문 → 관심 → 과업 시작 → 과업 완료처럼 손님이 거치는 단계와 각 단계에서 남는 비율", "깔때기처럼 아래로 갈수록 사람이 줄어듭니다."),
+    "세그먼트": ("손님을 유입 매체·기기 등으로 나눈 묶음", "검색광고로 온 손님 vs 직접 들어온 손님"),
+    "z-검정": ("두 묶음의 비율 차이가 우연인지 확인하는 통계 방법. p값이 0.05보다 작으면 '우연이 아닐 가능성이 높음'", ""),
+    "어트리뷰션 (기여)": ("구매 전에 거친 여러 광고·유입 경로에 구매를 나눠 주는 방법", "첫 클릭은 처음 알게 한 채널에, 마지막 클릭은 마지막에 들어온 채널에 100%"),
+    "자기 참조": ("결제·로그인 페이지에서 우리 사이트로 돌아온 것이 '외부 유입'으로 잘못 잡힌 것", "GA4 '원치 않는 추천 목록'에 내 도메인을 넣으면 걸러집니다."),
+    "증분 반응률": ("메시지를 받은 사람의 구매율 − 받지 않은 대조군의 구매율. 메시지가 없어도 살 사람은 빼야 함", "받은 쪽 5%, 대조군 3% → 증분 2%"),
+    "손익분기 반응률": ("메시지 1건 발송비를 메우려면 받은 사람 중 몇 %가 더 사야 하는지", "건당 20원, 반응 1건 이익 2만 원 → 0.1%"),
+    "브랜드 메시지": ("카카오 광고성 메시지. 채널 친구나 광고 수신 동의자에게 08:00~20:50에 보낼 수 있음", "장바구니 리마인드는 알림톡(정보성)으로 못 보냄"),
+    "리텐션 (재방문율)": ("첫 구매 후 시간이 지나도 다시 구매하는 손님 비율", "3개월 뒤 리텐션 10% = 100명 중 10명이 그달에도 구매"),
+    "CAC (고객 획득 비용)": ("광고로 손님 1명을 데려오는 데 든 돈", "CPC 700원 ÷ 전환율 1% = 7만 원"),
+    "LTV (고객 생애 가치)": ("손님 1명이 일정 기간 동안 남겨 주는 돈의 합", "여기서는 12개월 동안 남기는 이익"),
+    "LTV/CAC": ("손님이 남겨 주는 돈 ÷ 데려오는 데 든 돈", "1보다 크면 남는 장사, 작으면 밑지는 장사"),
+    "ROAS (광고 수익률)": ("광고비 1원당 매출. 광고 매체가 보여주는 대표 숫자", "ROAS 2 = 광고비 100만 원으로 매출 200만 원 (재구매는 빠짐)"),
+    "회수 기간": ("광고로 데려온 손님에게서 그 광고비를 되찾는 데 걸리는 개월 수", "짧을수록 현금 흐름이 안전"),
+    "손익분기 비용": ("어떤 개선에 이 금액 이하로 쓰면 이득이라는 상한. 개선 비용을 모를 때 비교 기준", "이탈 10% 감소 → 1년 +300만 원이면, 300만 원까지 써도 이득"),
+    "A/B 테스트": ("두 가지 화면(A·B)을 손님을 나눠 보여주고 어느 쪽이 더 잘 되는지 비교하는 실험", ""),
+}
+
+# 화면별 도움말: (보여줄 용어, "이 숫자는 어디서 왔나요?")
+SCREEN_HELP = {
+    "① 시작": (["AARRR", "OMTM", "객단가", "마진율", "UTM"],
+              "- 객단가·마진·월 예산은 **직접 입력**입니다. 기본값(객단가 6만 원, 마진 35%)은 예시일 뿐이라 결과를 크게 바꿉니다.\n"
+              "- 데이터 준비 체크리스트는 **현업 측정 준비 단계**(전환 정의, UTM, GA4 주요 이벤트, 원치 않는 추천)를 그대로 옮긴 것입니다."),
+    "② 광고 관리자": (["CPC (클릭당 비용)", "CPM (노출당 비용)", "CTR (클릭률)", "포화", "한계 CPC", "학습 단계"],
+                  "- **네이버 클릭·비용**: 네이버 검색광고 API 예상 실적 ✅. 과거 28일 기준이라 × 30.4/28로 한 달 환산. 노출 순위는 품질지수도 반영한 네이버 예측값이며, 품질지수 자체는 모델 밖입니다.\n"
+                  "- **메타 CPC**: 직접 입력(또는 CPM ÷ (1000×CTR)). 연령·성별 배수는 Kaggle 광고 데이터 ✅\n"
+                  "- **메타 학습 단계 50건**: 메타 비즈니스 도움말 검색 요약 기준 (원문 미확인)"),
+    "③ 로그 분석": (["퍼널", "전환율 (CVR)", "세그먼트", "z-검정"],
+                 "- **단계별 전환율**: GA4 공개 샘플(구글 굿즈 스토어, 2020-11~2021-01) 사용자 기준 ✅. 열린 유입경로라 뒤 단계 전환율이 실제보다 높을 수 있습니다.\n"
+                 "- **광고 클릭 → 방문 0.85**는 GA4에 없는 단계라 임시값입니다.\n"
+                 "- `(data deleted)` 매체는 마스킹 편향(방문→구매 8%)으로 비교에서 뺐습니다."),
+    "④ 어트리뷰션": (["어트리뷰션 (기여)", "자기 참조"],
+                  "- **경로**: GA4 샘플 구매 5,692건마다 그 시점까지 같은 사용자가 거친 세션의 유입 매체를 시간순으로 이은 것 ✅\n"
+                  "- 규칙 기반 모델(첫·마지막·선형·U자형)은 GA4가 2023년 11월부터 제공하지 않습니다. 여기서는 '기준을 바꾸면 결론이 흔들리는가'를 보는 민감도 점검으로 씁니다.\n"
+                  "- 기여는 채널에 **배분된** 몫이지 그 채널이 **만든** 전환(인과)이 아닙니다. 인과는 실험으로만 확인할 수 있습니다."),
+    "⑤ 자동화": (["증분 반응률", "손익분기 반응률", "브랜드 메시지", "리텐션 (재방문율)"],
+               "- 도달 가능 비율·건당 발송비·반응률·할인율은 모두 **직접 입력**입니다. 기본값을 지어내지 않았습니다.\n"
+               "- 발송 대상 수는 엔진의 12개월 코호트(광고로 온 손님 기준)에서 계산합니다.\n"
+               "- 배지의 규제 내용: 정보통신망법 제50조(2026-10-02 시행본), 카카오 브랜드 메시지·알림톡 심사 가이드 ✅\n"
+               "- **재구매 곡선**: UCI 코호트 결과 대기 중이라 임시값입니다."),
+    "⑥ 결과·우선순위": (["LTV (고객 생애 가치)", "CAC (고객 획득 비용)", "LTV/CAC", "ROAS (광고 수익률)", "회수 기간", "손익분기 비용", "A/B 테스트"],
+                    "- 네 선택지는 모두 **12개월 남는 돈 증가(광고비·발송비를 뺀 뒤)** 하나의 기준으로 비교합니다.\n"
+                    "- 퍼널 개선은 비용을 모르므로 '이만큼까지 써도 이득'인 상한으로 표시합니다.\n"
+                    "- 모든 선택지는 '가정이 맞다면'의 예측입니다. 각 선택지 아래 실험 카드로 가정을 확인하세요."),
+}
 
 OMTM_PLAIN = {"new_customers": "새 손님 수 최대로", "profit": "1년 동안 남는 돈 최대로", "roas": "광고비 대비 첫 매출(ROAS) 최대로"}
+TAB_NAMES = list(SCREEN_HELP)
 
 ss = st.session_state
 
@@ -76,55 +120,117 @@ def load_estimate(keyword: str, online: bool):
     return ns.bid_estimate(keyword, device=D.NAVER_DEVICE, online=online)
 
 
-def guide(text: str):
-    """탭 맨 위 '이 화면에서 할 일' 안내."""
-    st.info(text, icon="🧭")
+@st.cache_data(show_spinner=False)
+def load_paths():
+    return A.load_ga4_paths()
 
+
+def cached(name: str, key, fn):
+    """입력이 바뀔 때만 다시 계산 (최적화처럼 느린 계산용)."""
+    store = ss.setdefault("_cache", {})
+    if name not in store or store[name][0] != key:
+        store[name] = (key, fn())
+    return store[name][1]
+
+
+def question(q: str):
+    st.markdown(f"#### ❓ {q}")
+
+
+def pct(v):
+    if v is None or v != v:
+        return "-"
+    return f"{v:.2%}" if abs(v) < 0.01 else f"{v:.1%}"
+
+
+def signed(v):
+    return ("+" if v >= 0 else "−") + won(abs(v))
+
+
+# ───────────────────────────── 플로팅 도움말 ─────────────────────────────
+st.markdown("""<style>
+.st-key-help_fab {position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 1000; width: auto;}
+.st-key-help_fab button {border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.25);}
+</style>""", unsafe_allow_html=True)
+with st.container(key="help_fab"):
+    with st.popover("❔ 도움말"):
+        screen = st.radio("지금 보고 있는 화면", TAB_NAMES, horizontal=True, key="help_screen")
+        terms, source = SCREEN_HELP[screen]
+        st.markdown("**이 화면의 용어**")
+        for term in terms:
+            desc, ex = GLOSSARY[term]
+            st.markdown(f"- **{term}**: {desc}" + (f"  \n  💡 {ex}" if ex else ""))
+        st.markdown("**이 숫자는 어디서 왔나요?**")
+        st.markdown(source)
+        with st.expander("전체 용어 사전"):
+            for term, (desc, ex) in GLOSSARY.items():
+                st.markdown(f"- **{term}**: {desc}" + (f" — {ex}" if ex else ""))
 
 with st.sidebar:
     st.header("처음이신가요?")
-    st.markdown("1. **① 시작**: 무엇을 팔고 월 광고비가 얼마인지 적어요\n"
-                "2. **② 광고 채널**: 네이버에 쓸 검색어를 넣고 네이버·메타(인스타그램·페이스북) 비율을 정해요\n"
-                "3. **③ 손님 흐름**: 결제 금액·남는 비율을 우리 가게 숫자로 바꿔요\n"
-                "4. **④ 결과**: 1년 뒤 남는 돈과 더 나은 예산안을 봐요\n"
-                "5. **⑤ 개선 순서**: 광고비를 늘릴지, 다른 걸 먼저 고칠지 봐요")
-    st.caption("숫자를 몰라도 기본값으로 바로 결과가 나옵니다. 아는 숫자부터 하나씩 바꿔 보세요.")
-    st.header("📖 용어 사전")
-    for term, desc, ex in GLOSSARY:
-        with st.expander(term):
-            st.markdown(desc + (f"  \n\n💡 {ex}" if ex else ""))
+    st.markdown("1. **① 시작**: 무엇을 팔고, 1회 결제 금액·남는 비율·월 광고비를 적어요\n"
+                "2. **② 광고 관리자**: 네이버 검색어와 메타 예산을 정해요\n"
+                "3. **③ 로그 분석**: 손님이 어디서 그만두는지 봐요\n"
+                "4. **④ 어트리뷰션**: 매체가 보고한 숫자를 믿어도 되는지 봐요\n"
+                "5. **⑤ 자동화**: 메시지가 광고비보다 나은지 봐요\n"
+                "6. **⑥ 결과·우선순위**: 무엇을 먼저 할지 정해요")
+    st.caption("②~⑤는 건너뛰어도 기본값으로 결과가 나옵니다. 용어는 오른쪽 아래 ❔ 도움말에서 볼 수 있습니다.")
 
 st.title("📈 광고 예산 시뮬레이터")
-st.caption("광고비를 쓰면 손님이 얼마나 오고, 다시 오고, 1년 뒤 얼마가 남는지 미리 계산해 봅니다. "
-           "광고비를 늘릴지 · 네이버와 메타(인스타그램·페이스북) 중 어디에 쓸지 · 가게의 어느 부분을 먼저 고칠지 알려줍니다. "
-           "(AARRR 프레임워크 · 프로토타입 v0.4)")
+st.caption("광고비를 쓰면 손님이 얼마나 오고, 다시 오고, 1년 뒤 얼마가 남는지 미리 계산하고, "
+           "광고비 증액 · 채널 재배분 · 퍼널 개선 · 자동 메시지 중 무엇을 먼저 할지 같은 기준으로 비교합니다. "
+           "(AARRR 프레임워크 · 프로토타입 v0.5)")
 
-tabs = st.tabs(["① 시작", "② 광고 채널", "③ 손님 흐름", "④ 결과", "⑤ 개선 순서"])
+tabs = st.tabs(TAB_NAMES)
+heads = []
+for t in tabs:
+    with t:
+        heads.append(st.container())
+        st.divider()
 
 # ───────────────────────────── ① 시작 ─────────────────────────────
 with tabs[0]:
-    guide("무엇을 팔고, 광고로 손님이 무엇을 해 주길 바라는지, 한 달에 광고비를 얼마 쓸지 정해 주세요. "
-          "나머지는 기본값으로 채워져 있어 바로 ④ 결과를 볼 수 있습니다.")
     c1, c2 = st.columns([1, 1])
     with c1:
-        st.subheader("무엇을 위한 광고인가요?")
+        st.subheader("무엇을 팔고, 얼마가 남나요?")
         business = st.text_input("무엇을 파나요? (메모용, 계산에는 쓰이지 않음)", placeholder="예: 동네 필라테스 스튜디오, 원두 온라인몰 …")
-        task = st.selectbox("광고를 본 손님이 해 줬으면 하는 행동", D.CORE_TASKS,
-                            help="이 행동을 한 사람을 '새 손님'으로 셉니다. (핵심 과업)")
+        task = st.selectbox("광고를 본 손님이 해 줬으면 하는 행동 (핵심 과업)", D.CORE_TASKS,
+                            help="이 행동을 한 사람을 '새 손님'으로 셉니다.")
         if task == "직접 입력":
             task = st.text_input("행동 이름", value="전환") or "전환"
-        omtm = st.radio("가장 중요한 목표 하나 (OMTM)", list(D.OMTM_OPTIONS), horizontal=True,
-                        format_func=OMTM_PLAIN.get, index=1,
-                        help="앱이 '더 나은 예산안'을 찾을 때 이 목표를 기준으로 삼습니다. 잘 모르겠으면 '1년 동안 남는 돈'을 고르세요.")
-        budget = st.number_input("한 달 광고비 (원)", min_value=0, max_value=1_000_000_000,
-                                 value=D.MONTHLY_BUDGET, step=100_000, format="%d")
+        a1, a2 = st.columns(2)
+        aov = a1.number_input("1회 평균 결제 금액 (원, 객단가)", 1_000.0, 10_000_000.0, float(D.AOV), step=1_000.0,
+                              help="손님이 한 번 결제할 때 평균 금액. 결과를 가장 크게 바꾸는 숫자입니다.")
+        margin = a2.slider("매출 중 남는 비율 (마진율)", 0.0, 1.0, float(D.MARGIN), 0.01,
+                           help="1만 원어치 팔면 원가·배송비·수수료를 빼고 얼마가 남는지. 0.35 = 3,500원")
+        st.caption(f"→ 1회 결제당 남는 돈 {won(aov * margin)}. 기본값(6만 원·35%)은 예시라, 우리 가게 숫자로 꼭 바꿔 주세요.")
+        with st.expander("더 알면 바꾸기: 한 달 구매 횟수"):
+            freq = st.number_input("단골이 한 달에 사는 횟수", 0.1, 10.0, float(D.PURCHASE_FREQ), step=0.1,
+                                   help="그달에 다시 온 손님이 평균 몇 번 결제하는지 (월 구매 빈도). UCI 분석 후 교체 예정인 임시값")
+        st.subheader("목표와 예산")
+        omtm = st.radio("가장 중요한 목표 하나 (OMTM)", list(D.OMTM_OPTIONS), horizontal=True, format_func=OMTM_PLAIN.get, index=1,
+                        help="'더 나은 예산안'을 찾을 때 이 목표를 기준으로 삼습니다. 잘 모르겠으면 '1년 동안 남는 돈'.")
+        budget = st.number_input("한 달 광고비 (원)", min_value=0, max_value=1_000_000_000, value=D.MONTHLY_BUDGET,
+                                 step=100_000, format="%d")
         st.caption(f"= 한 달 {won(budget)}, 1년이면 {won(budget * 12)}")
     with c2:
-        st.subheader("가진 데이터")
-        level = st.radio("광고를 해 본 기록이 있나요?", ["아직 없어요 (기본값으로 계산)", "있어요 (광고 성과 CSV 파일 올리기)"],
-                         help="네이버·메타 광고 관리자에서 내려받은 성과 파일이 있으면 내 실제 클릭당 비용·전환율로 계산합니다.")
+        st.subheader("데이터 준비 체크리스트")
+        st.caption("현업 마케팅의 첫 단계는 '측정 준비'입니다. 해 둔 것에 체크하면 쓸 수 있는 기능을 자동으로 정합니다.")
+        chk_utm = st.checkbox("광고 링크에 UTM 꼬리표를 붙였다", help="어느 광고로 들어왔는지 GA4가 알 수 있게 하는 꼬리표")
+        chk_ga4 = st.checkbox(f"GA4에서 '{task}'을(를) 주요 이벤트(전환)로 설정했다")
+        chk_ref = st.checkbox("GA4 '원치 않는 추천 목록'에 내 도메인·결제 대행사를 넣었다",
+                              help="안 넣으면 결제 후 돌아온 방문이 '외부 유입(referral)'으로 잡혀 ④ 어트리뷰션이 왜곡됩니다.")
+        chk_csv = st.checkbox("네이버·메타 광고 성과 파일(CSV)이 있다")
+        data_level = 1 if chk_csv or (chk_utm and chk_ga4) else 0
+        if data_level:
+            st.success("**1단계 (내 데이터 사용)**: " + " · ".join(
+                x for x, ok in [("광고 성과 CSV로 클릭당 비용·전환율 보정", chk_csv), ("④에 내 전환 경로 파일 업로드", chk_utm and chk_ga4)] if ok))
+        else:
+            st.info("**0단계 (기본값 체험)**: 공개 데이터 기본값으로 계산합니다. UTM과 GA4 주요 이벤트를 설정하면 내 데이터로 바꿀 수 있습니다.")
+        if not chk_ref and (chk_utm or chk_ga4):
+            st.warning("'원치 않는 추천' 설정이 없으면 ④에서 내 도메인을 직접 적어 자기 참조를 걸러 주세요.")
         upload = None
-        if level.startswith("있어요"):
+        if chk_csv:
             f = st.file_uploader("광고 성과 CSV (date, source, spend, clicks, conversions …)", type="csv")
             if f is None:
                 st.caption("템플릿 예시: `app/sample_ad_performance.csv` — 파일이 없으면 예시 파일로 보여줍니다.")
@@ -150,22 +256,12 @@ with tabs[0]:
                     st.dataframe(g.style.format({"spend": "{:,.0f}", "clicks": "{:,.0f}", "conversions": "{:,.0f}",
                                                  "CPC": "{:,.0f}", "CVR": "{:.2%}", "CPA": "{:,.0f}"}))
                     upload = g
-                    st.info("클릭당 비용(CPC)·전환율(CVR)·구매 1건당 비용(CPA)을 전체 합계로 계산했습니다. "
-                            "매체 이름이 naver·meta인 행의 숫자로 기본값을 내 실제 숫자로 바꿉니다.")
+                    st.caption("매체 이름이 naver·meta인 행의 클릭당 비용·전환율이 기본값보다 우선합니다.")
             except Exception as e:  # noqa: BLE001
                 st.error(f"CSV를 읽지 못했습니다: {e}")
-        with st.expander("기본값은 어디서 왔나요?"):
-            st.markdown(
-                "- **광고 클릭 수**: 네이버 검색광고가 알려주는 실시간 예상치 ✅ / 메타(인스타그램·페이스북)는 직접 넣은 클릭당 비용에 "
-                "연령·성별별 차이(Kaggle 광고 데이터)를 곱함 ✅\n"
-                "- **클릭 후 구매까지 비율**: 실제 온라인몰(구글 GA4 샘플) 방문자 기록 ✅ (광고 클릭 → 방문 단계만 임시값)\n"
-                "- **재구매·결제 금액**: 실제 온라인 쇼핑몰 거래 데이터(UCI) 분석 후 교체 예정 — 지금은 임시값\n"
-                "- 금액(결제 금액·클릭당 비용)은 원화로 직접 넣고, 지인 추천은 기본 0으로 둡니다")
 
-# ─────────────────────────── ② 획득 설계 ───────────────────────────
+# ─────────────────────────── ② 광고 관리자 ───────────────────────────
 with tabs[1]:
-    guide("손님이 네이버에서 검색할 만한 단어를 넣으면, 네이버가 알려주는 예상 클릭 수로 광고 효과를 계산합니다. "
-          "아래에서 네이버와 메타(인스타그램·페이스북)에 예산을 어떻게 나눌지 정하세요.")
     api_ok = ns.api_available()
     top = st.columns([2, 1])
     with top[0]:
@@ -175,38 +271,24 @@ with tabs[1]:
         online = st.toggle("네이버에서 지금 바로 조회", value=api_ok, disabled=not api_ok,
                            help="끄면 미리 저장해 둔 결과만 씁니다 (인터넷 없이 시연할 때).")
         if not api_ok:
-            st.caption("⚠️ .env 키가 없어 오프라인 모드로 동작합니다.")
+            st.caption("⚠️ API 키가 없어 저장해 둔 결과로 동작합니다.")
     hints = tuple(h.strip().replace(" ", "") for h in hint_text.split(",") if h.strip())[:5]
     kw_df = load_keywords(hints, online) if hints else None
     fallback = False
     if kw_df is None:
         fallback = True
         kw_df = load_keywords((ns.SAMPLE_KEYWORD,), False)
-        st.warning(f"'{hint_text}' 검색 결과를 가져오지 못해 예시 단어 '{ns.SAMPLE_KEYWORD}'로 대신 보여줍니다. "
-                   "'네이버에서 지금 바로 조회'가 켜져 있는지 확인해 주세요.")
+        st.warning(f"'{hint_text}' 검색 결과를 가져오지 못해 예시 단어 '{ns.SAMPLE_KEYWORD}'로 대신 보여줍니다.")
 
-    estimates, recs = {}, None
+    estimates, recs, selected = {}, None, []
     if kw_df is not None:
         base_hints = (ns.SAMPLE_KEYWORD,) if fallback else hints
         default_sel = [k for k in base_hints if k in set(kw_df["keyword"])] or kw_df["keyword"].head(3).tolist()
-        selected = st.multiselect("광고를 걸 검색어 (최대 8개)",
-                                  kw_df["keyword"].tolist(), default=default_sel, max_selections=8,
-                                  help="고른 검색어마다 '광고비를 얼마 쓰면 클릭이 몇 번 나오는지' 네이버 예상치를 불러옵니다.")
+        selected = st.multiselect("광고를 걸 검색어 (최대 8개)", kw_df["keyword"].tolist(), default=default_sel, max_selections=8)
         recs = ns.recommend_keywords(kw_df, seeds=list(base_hints))
         if len(recs):
             st.success("💡 **추천 검색어**: " + ", ".join(f"`{k}`" for k in recs["keyword"])
-                       + "  \n검색하는 사람이 적당히 많고(월 1천~3만 회) 경쟁 광고주가 적은 단어입니다. 위 목록에 추가해 보세요.")
-        with st.expander("비슷한 검색어 전체 보기 (검색량·경쟁 정도)"):
-            k1, k2 = st.columns([1, 1])
-            with k1:
-                st.plotly_chart(charts.keyword_scatter(kw_df, selected), use_container_width=True)
-            with k2:
-                tier_filter = st.multiselect("검색량 크기", ["대표", "세부", "롱테일"], default=["대표", "세부"],
-                                             help="한 달 검색 횟수 기준: 3만 회 이상 '대표'(인기·비쌈), 1천~3만 회 '세부'(알짜), 1천 회 미만 '롱테일'(소수)")
-                st.dataframe(kw_df[kw_df["tier"].isin(tier_filter)].head(100)[
-                    ["keyword", "tier", "total_qc", "comp", "mobile_ctr", "mobile_clicks"]].rename(columns={
-                    "keyword": "검색어", "tier": "크기", "total_qc": "한 달 검색 수", "comp": "광고 경쟁",
-                    "mobile_ctr": "광고 클릭률(%)", "mobile_clicks": "광고 클릭 수(평균)"}), height=300, hide_index=True)
+                       + "  \n검색하는 사람이 적당히 많고(월 1천~3만 회) 경쟁 광고주가 적은 단어입니다.")
         with st.spinner("입찰가별 예상 실적을 불러오는 중…"):
             for kw in selected:
                 est = load_estimate(kw, online and not fallback)
@@ -215,173 +297,322 @@ with tabs[1]:
         missing = [k for k in selected if k not in estimates]
         if missing:
             st.caption(f"네이버 예상 클릭이 없어 계산에서 뺀 검색어: {', '.join(missing)}")
-        if estimates:
-            st.caption("네이버 예상 실적(최근 4주)을 한 달 기준으로 환산했습니다 (× 30.4/28 ≈ 1.09).")
+    naver_curve = NaverCurve(estimates) if estimates else NaverCurve({})
+    if not estimates:
+        st.info("광고를 걸 수 있는 네이버 검색어가 없어 네이버 광고비는 0으로 계산합니다.")
 
-    naver_curve = NaverCurve(estimates) if estimates else None
-    if naver_curve is None:
-        st.info("광고를 걸 수 있는 네이버 검색어가 없어 네이버 광고비는 0으로 계산합니다. 다른 검색어를 넣어 보세요.")
-        naver_curve = NaverCurve({})
-
-    st.divider()
     st.subheader("예산 나누기")
     m1, m2 = st.columns([1, 1])
     with m1:
         naver_share = st.slider("네이버 검색광고에 쓸 비율 (%)", 0, 100, int(D.CHANNEL_SHARES["naver"] * 100), step=5,
-                                help="나머지는 메타(인스타그램·페이스북) 광고에 씁니다. ④ 결과에서 더 나은 비율을 알려줍니다.")
+                                help="나머지는 메타(인스타그램·페이스북) 광고에 씁니다. ⑥에서 더 나은 비율을 알려줍니다.")
         naver_budget = budget * naver_share / 100
         meta_budget = budget - naver_budget
         st.markdown(f"**네이버** 월 {won(naver_budget)} · **메타** 월 {won(meta_budget)}")
         if naver_curve.capacity > 0:
-            st.caption(f"고른 검색어로 네이버에 쓸 수 있는 돈은 한 달 최대 {won(naver_curve.capacity)}입니다. "
-                       "그보다 많이 넣으면 검색하는 사람이 부족해 다 쓰지 못합니다.")
+            st.caption(f"고른 검색어로 네이버에 쓸 수 있는 돈은 한 달 최대 {won(naver_curve.capacity)}입니다.")
     with m2:
-        targets_df = dl.meta_targets()
-        meta_targets = st.multiselect("메타 광고를 보여줄 사람 (연령·성별)", targets_df["target"].tolist(),
-                                      help="연령·성별에 따라 구매 1건을 얻는 비용이 다릅니다 (Kaggle 광고 데이터). 비워 두면 전체 평균으로 계산합니다.")
-        target_mult = dl.target_multiplier(meta_targets)
-        with st.expander("메타 세부 설정 (모르면 그대로 두세요)", expanded=False):
-            meta_cpc_input = st.number_input("클릭 1번당 비용 (원, CPC)", 50.0, 20_000.0, float(D.META_BASE_CPC), step=50.0,
-                                             help="메타 광고 관리자에서 보이는 'CPC(링크 클릭당 비용)'. 모르면 기본값 700원")
+        meta_cpc_input = st.number_input("메타 클릭 1번당 비용 (원, CPC)", 50.0, 20_000.0, float(D.META_BASE_CPC), step=50.0,
+                                         help="메타 광고 관리자의 'CPC(링크 클릭당 비용)'. 타깃을 쪼개지 않는 캠페인 하나(Advantage+ 판매 캠페인) 기준")
+    learn_slot = st.container()
+    with st.expander("고급 설정 (메타 세부 설정 · 가이드 · 검색어 전체 보기)"):
+        g1, g2 = st.columns(2)
+        with g1:
+            st.markdown("**메타 비용**")
+            use_cpm = st.checkbox("CPC 대신 노출당 비용(CPM)과 클릭률(CTR)로 입력", help="메타는 노출당 과금이 기본이고 CPC는 결과값입니다.")
+            if use_cpm:
+                cpm = st.number_input("CPM (1,000회 노출당 비용, 원)", 100.0, 100_000.0, 7_000.0, step=500.0)
+                ctr = st.number_input("CTR (클릭률, %)", 0.05, 20.0, 1.0, step=0.05) / 100
+                meta_cpc_input = cpc_from_cpm(cpm, ctr)
+                st.caption(f"→ CPC = CPM ÷ (1000 × CTR) = {meta_cpc_input:,.0f}원. 소재가 지쳐 CTR이 떨어지면 CPC가 오릅니다.")
             meta_sat = st.slider("예산을 늘릴 때 클릭 단가가 오르는 정도", 0.0, 2.0, float(D.META_SATURATION), 0.05,
-                                 help="0.3 = 광고비를 100만 원 늘릴 때마다 클릭당 비용이 30% 오름 (같은 사람에게 반복 노출되어 비싸짐)")
-            meta_cvr_mult = st.slider("메타 손님의 구매 확률 (기본 퍼널 손님 = 1, 가정값)", 0.1, 2.0, float(D.META_CVR_MULT), 0.05,
-                                      help="근거 데이터가 없는 가정값입니다. 0.7 = ③ 퍼널 평균 손님의 70%. 광고 성과 CSV를 올리면 실제 값으로 바뀝니다.")
-            meta_ret_mult = st.slider("메타 손님이 다시 오는 정도 (네이버 손님 = 1, 가정값)", 0.1, 2.0, float(D.META_RETENTION_MULT), 0.05)
-        meta_cpc = meta_cpc_input * target_mult
-        if upload is not None and "meta" in upload.index:
-            meta_cpc = float(upload.loc["meta", "CPC"])  # 1단계: 내 실제 CPC가 타깃 배수보다 우선
-        st.caption(f"메타 클릭 1번당 비용: {meta_cpc:,.0f}원" + (f" (입력 {meta_cpc_input:,.0f}원 × 고른 연령·성별 보정 {target_mult:.2f}배)"
-                                                          if upload is None or "meta" not in upload.index else " (올린 CSV 기준)"))
+                                 help="0.3 = 광고비를 100만 원 늘릴 때마다 클릭당 비용이 30% 오름 (가정값)")
+            ad_sets = st.number_input("메타 광고 세트 수", 1, 20, 1, help="학습 가능 예산 점검에 씁니다.")
+            st.markdown("**메타 손님 가정** (근거 데이터 없음 · 가정값)")
+            meta_cvr_in = st.slider("메타 손님의 구매 확률 (③ 퍼널 평균 손님 = 1)", 0.1, 2.0, float(D.META_CVR_MULT), 0.05,
+                                    help="가정값입니다. 광고 성과 CSV를 올리면 실제 값으로 바뀝니다.")
+            meta_ret_mult = st.slider("메타 손님이 다시 오는 정도 (네이버 손님 = 1)", 0.1, 2.0, float(D.META_RETENTION_MULT), 0.05)
+        with g2:
+            targets_df = dl.meta_targets()
+            meta_targets = st.multiselect("연령·성별을 나눠 볼 때 (선택)", targets_df["target"].tolist(),
+                                          help="Advantage+ 판매 캠페인은 타깃 자동화가 전제라 기본은 나누지 않습니다. 나누면 Kaggle 상대 CPA 배수를 곱합니다.")
+            st.plotly_chart(charts.meta_target_bars(targets_df, meta_targets), use_container_width=True)
+            goal = st.selectbox("메타 광고 목표", D.META_GUIDE_GOALS, index=2)
+            product = st.selectbox("상품·서비스 유형", D.META_GUIDE_PRODUCTS)
+            st.markdown(f"- **캠페인**: {D.META_GUIDE['campaign'][goal]}\n- **구조**: {D.META_GUIDE['structure'][product]}\n"
+                        f"- **소재**: {D.META_GUIDE['creative'][product]}")
+            st.caption("규칙 기반 운영 가이드입니다. 계산에는 쓰이지 않습니다.")
+        if kw_df is not None:
+            k1, k2 = st.columns([1, 1])
+            k1.plotly_chart(charts.keyword_scatter(kw_df, selected), use_container_width=True)
+            tier_filter = k2.multiselect("검색량 크기", ["대표", "세부", "롱테일"], default=["대표", "세부"])
+            k2.dataframe(kw_df[kw_df["tier"].isin(tier_filter)].head(100)[
+                ["keyword", "tier", "total_qc", "comp", "mobile_ctr", "mobile_clicks"]].rename(columns={
+                "keyword": "검색어", "tier": "크기", "total_qc": "한 달 검색 수", "comp": "광고 경쟁",
+                "mobile_ctr": "광고 클릭률(%)", "mobile_clicks": "광고 클릭 수(평균)"}), height=300, hide_index=True)
+    target_mult = dl.target_multiplier(meta_targets)
+    meta_cpc = meta_cpc_input * target_mult
+    if upload is not None and "meta" in upload.index:
+        meta_cpc = float(upload.loc["meta", "CPC"])  # 1단계: 내 실제 CPC가 우선
     meta_curve = MetaCurve(meta_cpc, meta_sat)
     spends = [naver_budget, meta_budget]
-
-    g1, g2 = st.columns([3, 2])
-    with g1:
-        st.plotly_chart(charts.bid_curves(estimates, naver_curve if estimates else None), use_container_width=True)
-        st.caption("곡선이 처음엔 가파르다가 점점 평평해집니다. 평평해질수록 광고비를 더 넣어도 클릭이 잘 안 는다는 뜻(포화)입니다.")
-    with g2:
-        st.plotly_chart(charts.meta_target_bars(targets_df, meta_targets), use_container_width=True)
-        st.caption("막대가 1보다 낮으면 평균보다 싸게 구매를 얻는 연령·성별, 높으면 비싼 연령·성별입니다.")
-        with st.expander("메타 광고 만드는 방법 가이드"):
-            goal = st.selectbox("광고 목표", D.META_GUIDE_GOALS, index=2)
-            product = st.selectbox("상품·서비스 유형", D.META_GUIDE_PRODUCTS)
-            st.markdown(f"- **캠페인**: {D.META_GUIDE['campaign'][goal]}\n"
-                        f"- **구조**: {D.META_GUIDE['structure'][product]}\n"
-                        f"- **소재**: {D.META_GUIDE['creative'][product]}\n"
-                        + (f"- **타깃**: 고른 타깃의 상대 CPA {target_mult:.2f}배" if meta_targets else
-                           "- **타깃**: 위에서 연령·성별을 고르면 상대 CPA를 함께 봅니다"))
-            st.caption("일반적인 운영 원칙을 정리한 규칙 기반 가이드입니다. 계산에는 쓰이지 않습니다.")
-        st.plotly_chart(charts.meta_curve(meta_curve, max(budget, 1)), use_container_width=True)
     alloc = None
-    if estimates:
-        alloc = naver_curve.allocation(naver_budget, D.SATURATION_RATIO)
-        st.markdown("**네이버 예산을 검색어별로 이렇게 나누면 좋아요**")
-        st.caption("클릭을 가장 싸게 얻을 수 있는 검색어부터 예산을 채웠습니다. '권장 입찰가'는 네이버 광고 관리자에 넣을 클릭당 최대 금액입니다.")
-        show = alloc.assign(saturated=alloc["saturated"].map({True: "⚠️ 포화 (돈을 더 넣어도 효과 작음)", False: "✅ 여유"}))
-        st.dataframe(show.rename(columns={"keyword": "검색어", "spend": "한 달 광고비", "clicks": "한 달 클릭", "bid": "권장 입찰가",
-                                          "marginal_cpc": "클릭 1번 더 얻는 비용", "cpc": "평균 클릭당 비용", "saturated": "상태"})
-                     .style.format({"한 달 광고비": "{:,.0f}", "한 달 클릭": "{:,.0f}", "권장 입찰가": "{:,.0f}",
-                                    "클릭 1번 더 얻는 비용": "{:,.0f}", "평균 클릭당 비용": "{:,.0f}"}, na_rep="-"),
-                     hide_index=True)
-    st.caption("네이버 숫자는 네이버가 내놓은 예상치(한 달, 모바일 기준)라 실제와 다를 수 있습니다.")
+    with st.expander("곡선과 검색어별 예산 보기", expanded=True):
+        c1, c2 = st.columns([3, 2])
+        c1.plotly_chart(charts.bid_curves(estimates, naver_curve if estimates else None), use_container_width=True)
+        c1.caption("네이버 예상 실적(최근 4주)을 한 달 기준으로 환산했습니다 (× 30.4/28 ≈ 1.09). 평평해질수록 포화입니다.")
+        c2.plotly_chart(charts.meta_curve(meta_curve, max(budget, 1)), use_container_width=True)
+        if estimates:
+            alloc = naver_curve.allocation(naver_budget, D.SATURATION_RATIO)
+            show = alloc.assign(saturated=alloc["saturated"].map({True: "⚠️ 포화", False: "✅ 여유"}))
+            st.dataframe(show.rename(columns={"keyword": "검색어", "spend": "한 달 광고비", "clicks": "한 달 클릭", "bid": "권장 입찰가",
+                                              "marginal_cpc": "클릭 1번 더 얻는 비용", "cpc": "평균 클릭당 비용", "saturated": "상태"})
+                         .style.format({"한 달 광고비": "{:,.0f}", "한 달 클릭": "{:,.0f}", "권장 입찰가": "{:,.0f}",
+                                        "클릭 1번 더 얻는 비용": "{:,.0f}", "평균 클릭당 비용": "{:,.0f}"}, na_rep="-"), hide_index=True)
 
-# ─────────────────────────── ③ 퍼널 설정 ───────────────────────────
+# ─────────────────────────── ③ 로그 분석 ───────────────────────────
 with tabs[2]:
-    guide(f"광고를 클릭한 사람이 {task}까지 몇 %나 가는지, 그리고 한 번 온 손님이 얼마나 다시 오고 얼마를 쓰는지 정합니다. "
-          "우리 가게 숫자를 알면 바꾸고, 모르면 기본값을 그대로 두세요. 특히 '1회 평균 결제 금액'과 '남는 비율'은 결과를 크게 바꿉니다.")
-    st.subheader(f"클릭한 사람 중 몇 %가 {task}까지 갈까요? (활성화)")
     f1, f2 = st.columns([1, 1])
     with f1:
         mediums = dl.ga4_mediums() or [dl.GA4_ALL]
-        medium = st.selectbox("기본값으로 쓸 실제 쇼핑몰 기록 (구글 GA4 샘플)", mediums,
+        medium = st.selectbox("기본값으로 쓸 실제 쇼핑몰 기록 (GA4 샘플 매체)", mediums,
                               help="'전체'가 기본입니다. 'cpc'를 고르면 검색광고로 들어온 방문자만의 비율을 씁니다.")
         base_steps, src = dl.funnel_steps(medium)
         steps_df = pd.DataFrame([{"단계": n, "전환율": round(r, 3)} for n, r in base_steps])
         steps_df.loc[len(steps_df) - 1, "단계"] = f"{task} 완료"
         edited = st.data_editor(steps_df, num_rows="dynamic", hide_index=True, key="steps_editor",
                                 column_config={"전환율": st.column_config.NumberColumn(
-                                    "다음 단계로 가는 비율", min_value=0.0, max_value=1.0, step=0.01, format="%.2f",
-                                    help="0.23 = 이전 단계 사람 100명 중 23명이 이 단계까지 옴")})
+                                    "다음 단계로 가는 비율", min_value=0.0, max_value=1.0, step=0.01, format="%.2f")})
         edited = edited.dropna()
         steps = [(str(n), float(r)) for n, r in zip(edited["단계"], edited["전환율"])]
-        st.caption(f"출처: {src}. 첫 단계(광고 클릭 → 페이지 도착)는 기록이 없어 임시값입니다. "
-                   "표의 숫자를 직접 고치거나 행을 추가·삭제할 수 있습니다.")
-    st.subheader("한 번 온 손님은 얼마나 다시 오고, 얼마를 쓸까요? (유지 · 수익 · 추천)")
-    r1, r2, r3 = st.columns(3)
-    with r1:
-        # UCI 코호트 결과(data/processed/cohort_retention.csv)가 있으면 곡선을 적합해 기본값으로
-        ret_table, ret_src, fit = None, "임시값 (UCI 코호트 결과 대기)", None
-        segments = dl.retention_segments()
-        retail = [i for i, x in enumerate(segments) if "소매" in x or "제외" in x]  # 도매 분리 후 세그먼트를 기본으로
-        seg = st.selectbox("재구매 기본값으로 쓸 손님 유형", segments, index=retail[0] if retail else 0) if segments else None
-        ret_table = dl.retention_curve_table(segment=seg)
-        if ret_table is not None and len(ret_table) >= 3:
-            fit = dl.fit_retention(ret_table, fit_months=min(6, int(ret_table["months_since"].max()) - 1))
-            full = dl.fit_retention(ret_table)
-            ret_src = f"UCI 코호트 적합 ({seg or '전체'}) · 앞 6개월로 맞춘 뒤 이후 오차 MAE {fit.get('holdout_mae', float('nan')):.3f}"
-            fit = full
-        st.markdown("**다시 오는 손님 (리텐션)**")
-        floor = st.slider("오래 지나도 꾸준히 오는 단골 비율", 0.0, 0.6, round(fit["floor"], 3) if fit else float(D.RETENTION_FLOOR), 0.005,
-                          key=f"floor_{seg}_{fit is not None}",
-                          help="0.06 = 처음 온 손님 100명 중 6명은 몇 달이 지나도 매달 다시 구매 (리텐션 바닥값)")
-        decay = st.slider("첫 구매 후 손님이 떠나는 속도", 0.1, 5.0, round(fit["decay"], 2) if fit else float(D.RETENTION_DECAY), 0.05,
-                          key=f"decay_{seg}_{fit is not None}",
-                          help="클수록 첫 달 이후 손님이 빨리 줄어듭니다. 아래 곡선 그래프로 모양을 확인하세요 (리텐션 감소율)")
-        st.caption(f"출처: {ret_src}")
-    with r2:
-        st.markdown("**쓰는 돈 (수익)**")
-        aov = st.number_input("1회 평균 결제 금액 (원, 객단가)", 1_000.0, 10_000_000.0, float(D.AOV), step=1_000.0,
-                              help="손님이 한 번 결제할 때 평균 금액")
-        freq = st.number_input("단골이 한 달에 사는 횟수", 0.1, 10.0, float(D.PURCHASE_FREQ), step=0.1,
-                               help="그달에 다시 온 손님이 평균 몇 번 결제하는지 (월 구매 빈도)")
-        margin = st.slider("매출 중 남는 비율 (마진율)", 0.0, 1.0, float(D.MARGIN), 0.01,
-                           help="1만 원어치 팔면 원가·배송비·수수료를 빼고 얼마가 남는지. 0.35 = 3,500원")
-        st.caption(f"→ 1회 결제당 남는 돈 {won(aov * margin)}")
-    with r3:
-        st.markdown("**지인 소개 (추천)**")
-        invite_rate = st.slider("단골 1명이 한 달에 소개하는 사람 수", 0.0, 2.0, float(D.INVITE_RATE), 0.05,
-                                help="모르면 0으로 두세요. 추천 이벤트를 할 계획이 있을 때 바꿔 보세요.")
-        invite_conv = st.slider("소개받은 사람이 실제 손님이 되는 비율", 0.0, 1.0, float(D.INVITE_CONV), 0.01)
-        st.caption(f"→ 단골 100명이 한 달에 새 손님 {invite_rate * invite_conv * 100:.1f}명을 데려옴 (가정값)")
-    params = FunnelParams(steps=steps, retention_floor=floor, retention_decay=decay, purchase_freq=freq,
-                          aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv)
-    with f2:
-        st.plotly_chart(charts.activation_funnel(params), use_container_width=True)
-        st.metric(f"광고 클릭 → {task}까지 가는 비율 (전환율, CVR)", f"{params.cvr:.2%}",
-                  help="위 표의 비율을 모두 곱한 값입니다.")
-        st.caption(f"= 광고를 {1 / params.cvr:,.0f}번 클릭해야 손님 1명이 {task}합니다." if params.cvr > 0 else "")
-    st.plotly_chart(charts.retention_curve(params, actual=ret_table), use_container_width=True)
-    if ret_table is None:
-        st.caption("재구매 비율은 실제 쇼핑몰 거래 데이터(UCI) 분석 결과가 나오면 자동으로 바뀝니다. 지금은 임시값입니다.")
+        funnel_edited = not steps_df.dropna().reset_index(drop=True).equals(edited.reset_index(drop=True))
+        st.caption(f"출처: {src}. 첫 단계(광고 클릭 → 페이지 도착)는 기록이 없어 임시값입니다.")
+    funnel_slot = f2.container()
+    opp_slot = st.container()
+    with st.expander("세그먼트 비교 (매체·기기별 단계 전환율)"):
+        dim = st.radio("나눠 볼 기준", ["medium", "device"], horizontal=True, format_func={"medium": "유입 매체", "device": "기기"}.get)
+        seg = dl.segment_table(dim)
+        if seg is None:
+            st.caption("GA4 퍼널 파일이 없습니다.")
+        else:
+            rate_cols = dl.STEP_LABELS
+            allv = seg.loc[dl.GA4_ALL]
 
-# 채널 전환율 배수: CSV > GA4 매체별 > 기본값 중 하나만 (MECE #4)
-naver_ret_mult = D.NAVER_RETENTION_MULT
-naver_cvr_mult, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload)
-meta_cvr_mult, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_mult, params.cvr, medium, upload)
-if meta_cvr_src.startswith("가정값") and meta_cvr_mult != D.META_CVR_MULT:
+            def _hl(col):
+                if col.name not in rate_cols:
+                    return [""] * len(col)
+                return ["color: #999" if seg.loc[i, "small"] else
+                        ("background-color: #d9f0d3" if v > allv[col.name] * 1.1 else
+                         "background-color: #f6d5d5" if v < allv[col.name] * 0.9 else "") for i, v in col.items()]
+            st.dataframe(seg.drop(columns=["small"]).style.apply(_hl)
+                         .format({c: "{:.1%}" for c in rate_cols} | {"visitors": "{:,.0f}", "purchases": "{:,.0f}"}),
+                         width="stretch", column_config={"visitors": "방문자", "purchases": "완료"})
+            st.caption(f"초록 = 전체보다 10% 이상 높음, 빨강 = 10% 이상 낮음, 회색 = 방문자 {dl.SEGMENT_MIN_USERS:,}명 미만. "
+                       "(data deleted)는 마스킹 편향으로 뺐습니다. 이 샘플에서는 기기보다 매체 차이가 큽니다.")
+            names = [i for i in seg.index if i != dl.GA4_ALL]
+            s1, s2 = st.columns(2)
+            a_seg = s1.selectbox("비교할 세그먼트 A", names, index=0)
+            b_seg = s2.selectbox("비교할 세그먼트 B", names, index=names.index("cpc") if "cpc" in names else min(1, len(names) - 1))
+            z, p = dl.two_prop_z(seg.loc[a_seg, "purchases"], seg.loc[a_seg, "visitors"], seg.loc[b_seg, "purchases"], seg.loc[b_seg, "visitors"])
+            st.markdown(f"방문→완료 **{a_seg} {seg.loc[a_seg, '방문→완료']:.2%}** vs **{b_seg} {seg.loc[b_seg, '방문→완료']:.2%}** · "
+                        f"z = {z:.2f}, p = {p:.3g} → " + ("**우연이 아닐 가능성이 높은 차이** (p < 0.05)" if p < 0.05 else "우연일 수 있는 차이"))
+            st.caption("매체별 전환율 차이는 ⑥ 계산에서 네이버 검색광고의 구매 확률 배수(cpc ÷ 전체)로 쓰입니다. 광고 성과 CSV가 있으면 그것이 우선합니다.")
+
+# ─────────────────── ⑤ 자동화: 재구매 가정 (엔진 파라미터라 먼저 받음) ───────────────────
+with tabs[4]:
+    badge_slot = st.container()
+    with st.expander("지금 재구매·추천 가정 (자동화 전)"):
+        r1, r2 = st.columns(2)
+        with r1:
+            ret_src, fit = "임시값 (UCI 코호트 결과 대기)", None
+            segments = dl.retention_segments()
+            retail = [i for i, x in enumerate(segments) if "소매" in x or "제외" in x]
+            rseg = st.selectbox("재구매 기본값으로 쓸 손님 유형", segments, index=retail[0] if retail else 0) if segments else None
+            ret_table = dl.retention_curve_table(segment=rseg)
+            if ret_table is not None and len(ret_table) >= 3:
+                hold = dl.fit_retention(ret_table, fit_months=min(6, int(ret_table["months_since"].max()) - 1))
+                fit = dl.fit_retention(ret_table)
+                ret_src = f"UCI 코호트 적합 ({rseg or '전체'}) · 이후 기간 오차 MAE {hold.get('holdout_mae', float('nan')):.3f}"
+            floor = st.slider("오래 지나도 꾸준히 오는 단골 비율", 0.0, 0.6, round(fit["floor"], 3) if fit else float(D.RETENTION_FLOOR), 0.005,
+                              key=f"floor_{rseg}_{fit is not None}")
+            decay = st.slider("첫 구매 후 손님이 떠나는 속도", 0.1, 5.0, round(fit["decay"], 2) if fit else float(D.RETENTION_DECAY), 0.05,
+                              key=f"decay_{rseg}_{fit is not None}")
+            st.caption(f"출처: {ret_src}")
+        with r2:
+            invite_rate = st.slider("단골 1명이 한 달에 소개하는 사람 수", 0.0, 2.0, float(D.INVITE_RATE), 0.05, help="모르면 0")
+            invite_conv = st.slider("소개받은 사람이 실제 손님이 되는 비율", 0.0, 1.0, float(D.INVITE_CONV), 0.01)
+        ret_chart_slot = st.container()
+
+params = FunnelParams(steps=steps, retention_floor=floor, retention_decay=decay, purchase_freq=freq,
+                      aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv)
+
+# 채널 전환율 배수: CSV > GA4 매체별 > 기본값 중 하나만 (MECE #4). 어트리뷰션 보정은 ④에서 그 위에 한 번만
+naver_cvr_base, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload)
+meta_cvr_base, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_in, params.cvr, medium, upload)
+if meta_cvr_src.startswith("가정값") and meta_cvr_in != D.META_CVR_MULT:
     meta_cvr_src = "직접 입력"
-channels = [
-    Channel("naver", "네이버 검색", naver_curve, naver_cvr_mult, naver_ret_mult),
-    Channel("meta", "메타", meta_curve, meta_cvr_mult, meta_ret_mult),
+base_channels = [
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base, D.NAVER_RETENTION_MULT),
+    Channel("meta", "메타", meta_curve, meta_cvr_base, meta_ret_mult),
 ]
 
-# ─────────────── 계산 (④·⑤ 공용, 입력이 바뀔 때만 최적화 재계산) ───────────────
+# ─────────────────────────── ④ 어트리뷰션 ───────────────────────────
+with tabs[3]:
+    a1, a2 = st.columns([1, 1])
+    with a1:
+        path_file = st.file_uploader("내 전환 경로 CSV (path, conversions, revenue) — 없으면 GA4 샘플", type="csv",
+                                     help="path는 접점을 ' > '로 연결 (예: naver > meta > direct). GA4 BigQuery·MMP 경로 리포트를 이 형식으로 내보내세요.")
+        paths = None
+        if path_file is not None:
+            try:
+                paths = A.from_upload(pd.read_csv(path_file))
+                path_src = f"올린 파일 ({len(paths):,}개 경로)"
+            except Exception as e:  # noqa: BLE001
+                st.error(f"경로 CSV를 읽지 못했습니다: {e}")
+        if paths is None:
+            paths = load_paths()
+            path_src = "GA4 샘플 (구매 5,692건)"
+        domains_text = st.text_input("내 도메인 (자기 참조로 거를 주소, 쉼표로)", ", ".join(A.SELF_DOMAINS) if path_file is None else "",
+                                     help="결제·로그인 페이지에서 돌아온 방문이 외부 유입으로 잡히지 않게 거릅니다.")
+    with a2:
+        clean = st.toggle("정제 후 (자기 참조 제거)", value=True, help="끄면 정제 전 결과를 봅니다. 시연: referral 기여가 어떻게 바뀌는지")
+        st.caption(f"데이터: {path_src}. 전환 인정 기간: 경로에 접점 시각이 없어 적용하지 않음 (GA4 기본 30일)")
+    table, sp, attr_verdict, model, k_naver, k_meta = None, pd.Series(dtype=float), "경로 데이터가 없습니다.", "last", 1.0, 1.0
+    if paths is not None and len(paths):
+        domains = [d.strip() for d in domains_text.split(",") if d.strip()]
+        cleaned = A.clean_paths(paths, domains, clean=clean)
+        table = A.credit_table(cleaned)
+        sp = A.spread(table.drop(index=A.UNKNOWN, errors="ignore"))
+        attr_verdict = A.verdict(table)
+        t1, t2 = st.columns([1, 1])
+        with t1:
+            show = table.rename(columns=A.MODELS)
+            show["변동폭 (%p)"] = table.max(axis=1) - table.min(axis=1)
+            st.dataframe(show.style.format("{:.1f}"), width="stretch")
+            st.caption(f"구매 중 접점 1개짜리 경로 {A.single_touch_share(cleaned):.1%}. 값은 채널에 **배분된** 기여(%)이며, 그 채널이 만든 전환은 아닙니다."
+                       + (f" 정제 전 referral 접점의 {A.self_ref_share(paths):.1%}가 '{A.SELF_DOMAINS[0]}' 자기 참조입니다."
+                          if path_file is None else ""))
+        t2.plotly_chart(charts.attribution_bars(table.head(6), A.MODELS), use_container_width=True)
+
+        st.subheader("보정 전후 배분")
+        b1, b2, b3 = st.columns(3)
+        model = b1.selectbox("보정에 쓸 모델", list(A.MODELS), format_func=A.MODELS.get, index=1,
+                             help="마지막 클릭 = 보정 없음 (매체 보고·많은 도구의 기본 관점)")
+        path_chs = [c for c in table.index if c != A.UNKNOWN]
+        opts = ["(연결 안 함)"] + path_chs
+        guess = {"naver": next((c for c in ("naver", "cpc", "paid_search") if c in path_chs), "(연결 안 함)"),
+                 "meta": next((c for c in ("meta", "paid_social", "social", "facebook", "instagram") if c in path_chs), "(연결 안 함)")}
+        map_naver = b2.selectbox("네이버 검색광고 = 경로의", opts, index=opts.index(guess["naver"]))
+        map_meta = b3.selectbox("메타 = 경로의", opts, index=opts.index(guess["meta"]))
+        k = A.correction_factors(table, model)
+        k_naver = float(k.get(map_naver, 1.0)) if map_naver != "(연결 안 함)" else 1.0
+        k_meta = float(k.get(map_meta, 1.0)) if map_meta != "(연결 안 함)" else 1.0
+        st.caption(f"보정계수 k = {A.MODELS[model]} 기여 ÷ 마지막 클릭 기여. 식별 불가를 뺀 채널 전체에서 총 전환이 보존되도록 정규화 → "
+                   f"네이버 {k_naver:.2f}배 · 메타 {k_meta:.2f}배. 이 배수는 구매 확률 배수 위에 한 번만 곱합니다.")
+    attr_slot = st.container()
+    with st.expander("매체가 보고한 전환 수와 GA4 숫자가 왜 다를까? (체크리스트)"):
+        r1, r2 = st.columns(2)
+        rep = r1.number_input("매체가 보고한 전환 수 (예: 메타 광고 관리자)", min_value=0, value=0)
+        ga = r2.number_input("같은 기간 GA4 전환 수 (같은 채널)", min_value=0, value=0)
+        if rep and ga:
+            st.metric("매체 보고 ÷ GA4", f"{rep / ga:.2f}배")
+        for item in A.REPORT_GAP_CHECKLIST:
+            st.markdown(f"- {item}")
+
+channels = [
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base * k_naver, D.NAVER_RETENTION_MULT),
+    Channel("meta", "메타", meta_curve, meta_cvr_base * k_meta, meta_ret_mult),
+]
+corrected = abs(k_naver - 1) > 1e-9 or abs(k_meta - 1) > 1e-9
+
+# ─────────────────────────── ⑤ 자동화: 시나리오 ───────────────────────────
+with tabs[4]:
+    with badge_slot:
+        cols = st.columns(len(AU.BADGES))
+        for c, (badge, desc) in zip(cols, AU.BADGES):
+            c.markdown(f"**{badge}**", help=desc)
+    st.caption("입력은 모두 직접 넣는 값입니다 (기본값 없음). **증분 반응률**은 메시지를 받은 사람과 받지 않은 대조군의 구매율 차이입니다. "
+               "발송 도구의 '클릭 후 구매율'을 넣으면 효과가 부풀려집니다. 모르면 비워 두고 손익분기 반응률만 보세요.")
+    auto_results = []
+    scols = st.columns(3)
+    for col, key in zip(scols, AU.SCENARIOS):
+        sc = AU.SCENARIOS[key]
+        with col.container(border=True):
+            on = st.checkbox(f"**{sc['label']}**", key=f"auto_on_{key}")
+            st.caption(f"대상: {sc['target']} · 효과: {sc['effect']} · {sc['message']}")
+            if not on:
+                continue
+            reach = st.number_input("도달 가능 비율 (%)", 0.0, 100.0, value=None, step=5.0, key=f"reach_{key}",
+                                    help="대상 중 채널 친구이거나 광고성 정보 수신에 동의한 사람의 비율")
+            cost = st.number_input("건당 발송비 (원)", 0.0, 1_000.0, value=None, step=1.0, key=f"cost_{key}", help="사용 중인 발송 대행사 단가")
+            resp = st.number_input("증분 반응률 (%) — 모르면 비워 두기", 0.0, 100.0, value=None, step=0.1, key=f"resp_{key}")
+            disc = st.number_input("쿠폰 할인율 (%, 선택)", 0.0, 90.0, value=0.0, step=5.0, key=f"disc_{key}")
+            dormant_n = st.number_input("휴면 기준: 첫 구매 후 몇 개월", 1, 11, 3, key=f"n_{key}",
+                                        help="업종별 구매 주기를 모르므로 직접 입력") if key == "dormant" else 3
+            if reach is None or cost is None:
+                st.caption("도달 가능 비율과 건당 발송비를 넣으면 계산합니다.")
+                continue
+            inp = AU.ScenarioInput(key, reach / 100, cost, None if resp is None else resp / 100, disc / 100, int(dormant_n))
+            r = AU.run_scenario(channels, spends, params, inp)
+            auto_results.append(r)
+            st.metric("손익분기 반응률", pct(r["breakeven"]), help="받은 사람 중 이 비율 이상이 '더' 사야 발송비를 메웁니다 (재구매 효과 제외, 보수적)")
+            st.markdown(f"월 발송 {r['sends_month']:,.0f}건 · 월 발송비 {won(r['cost_month'])}")
+            if r["profit_delta"] is not None:
+                st.metric("1년 동안 남는 돈 변화", signed(r["profit_delta"]), delta="발송비·할인 뺀 뒤", delta_color="off")
+                if r["ad_alt_delta"] is not None:
+                    st.plotly_chart(charts.money_compare(["메시지", "같은 돈을 광고에"], [r["profit_delta"], r["ad_alt_delta"]]),
+                                    use_container_width=True, key=f"cmp_{key}")
+            with st.expander("대조군 실험 설계"):
+                p0 = st.number_input("대조군(메시지 안 받은 대상)의 구매율 (%) — 모르면 비워 두기", 0.0, 100.0, value=None, step=0.5, key=f"p0_{key}")
+                if p0:
+                    s = sample_size(p0 / 100, r["breakeven"] / (p0 / 100))
+                    d = days_needed(s["n_per_group"] / 0.1, r["sends_month"])
+                    st.markdown(f"대상의 10%를 **대조군으로 남기고** 보내지 않습니다. 손익분기만큼의 차이({pct(r['breakeven'])}p)를 확인하려면 "
+                                f"그룹마다 {s['n_per_group']:,.0f}명 → 대조군 10%로 모으면 약 **{d:,.0f}일**" if d < 10_000 else
+                                "지금 발송량으로는 대조군 실험이 어렵습니다. 발송 대상을 넓히거나 기간을 길게 잡으세요.")
+                else:
+                    st.caption("대조군 구매율을 알면 필요한 표본과 기간을 계산합니다. 처음엔 10% 대조군으로 2~4주 보내 이 값을 먼저 재세요.")
+    has_resp = any(r["profit_delta"] is not None for r in auto_results)
+    auto_params, auto_cost = AU.combine(params, auto_results, params.months) if has_resp else (None, None)
+    with ret_chart_slot:
+        st.plotly_chart(charts.retention_curve(auto_params or params, actual=ret_table), use_container_width=True)
+        if auto_params is not None:
+            st.caption("곡선은 반응률을 넣은 자동 메시지를 반영한 재구매 비율입니다.")
+
+# ─────────────────────── 계산 (입력이 바뀔 때만 최적화 재계산) ───────────────────────
 res = simulate(channels, spends, params)
-cache_key = repr((omtm, budget, spends, params, [(c.key, c.cvr_mult, c.retention_mult) for c in channels],
-                  sorted(estimates), meta_cpc, meta_sat))
-if ss.get("opt_key") != cache_key:
-    with st.spinner("최적 배분을 계산하는 중…"):
-        opt = optimize_allocation(channels, budget, params, omtm)
-        opt_profit = opt if omtm == "profit" else optimize_allocation(channels, budget, params, "profit")
-        opt_roas = opt if omtm == "roas" else optimize_allocation(channels, budget, params, "roas")
-        ss["opt_cache"] = (opt, opt_profit, opt_roas, lever_table(channels, spends, params), budget_scan(channels, spends, params))
-        ss["opt_key"] = cache_key
-opt, opt_profit, opt_roas, levers, scan = ss["opt_cache"]
+ckey = repr((omtm, budget, spends, params, [(c.key, c.cvr_mult, c.retention_mult) for c in channels], sorted(estimates), meta_cpc, meta_sat))
+opt, opt_profit, opt_roas, levers, scan = cached("opt", ckey, lambda: (
+    optimize_allocation(channels, budget, params, omtm),
+    optimize_allocation(channels, budget, params, "profit"),
+    optimize_allocation(channels, budget, params, "roas"),
+    lever_table(channels, spends, params),
+    budget_scan(channels, spends, params)))
+opt = dict(opt, omtm=omtm, base_value={"new_customers": res.summary["new_customers"], "profit": res.summary["profit_12m"],
+                                       "roas": res.summary["roas"] or 0.0}[omtm])
 res_opt = simulate(channels, opt["spends"], params)
-opt["omtm"] = omtm
-opt["base_value"] = {"new_customers": res.summary["new_customers"], "profit": res.summary["profit_12m"],
-                     "roas": res.summary["roas"] or 0.0}[omtm]
+pmf = res.summary["ltv_cac"] is not None and res.summary["ltv_cac"] < D.PMF_LTV_CAC_THRESHOLD
+okey = repr((ckey, repr(auto_params), None if auto_cost is None else np.round(auto_cost, 2).tolist(), pmf))
+options = cached("options", okey, lambda: compare_options(channels, spends, params, levers, budget, None,
+                                                          auto_params, auto_cost, pmf_warning=pmf))
+
+# 보정 전후 배분 (④)
+with attr_slot:
+    if corrected:
+        before = cached("opt_before", repr((ckey, naver_cvr_base, meta_cvr_base)),
+                        lambda: optimize_allocation(base_channels, budget, params, "profit"))
+        rows = []
+        for name, sp_ in [("보정 전 최적 (마지막 클릭)", before["spends"]), (f"보정 후 최적 ({A.MODELS[model]})", opt_profit["spends"])]:
+            s = simulate(channels, sp_, params).summary
+            rows.append({"배분": name, "네이버 (월)": sp_[0], "메타 (월)": sp_[1], "1년 동안 남는 돈 (보정 가정)": s["profit_12m"]})
+        st.dataframe(pd.DataFrame(rows).style.format({c: "{:,.0f}" for c in ["네이버 (월)", "메타 (월)", "1년 동안 남는 돈 (보정 가정)"]}),
+                     hide_index=True, width="stretch")
+        st.caption("두 배분 모두 보정 후 가정으로 1년 이익을 계산했습니다. 차이 = 마지막 클릭만 믿고 배분했을 때 놓치는 돈. "
+                   "⑥ '채널 재배분'은 보정 가정에서 계산합니다.")
+    else:
+        st.caption("'보정에 쓸 모델'을 마지막 클릭이 아닌 것으로 바꾸고 경로 채널을 네이버·메타에 연결하면 보정 전후 배분을 비교합니다.")
+
+# ─────────────────────────── ⑥ 결과·우선순위 ───────────────────────────
 
 
 def kpis(s):
@@ -396,153 +627,213 @@ def kpis(s):
 
 
 def verdict(s, opt_profit_spends):
-    """④ 맨 위 '한눈에 결론': 신호등 + 쉬운 문장 한두 줄."""
+    """신호등 + 쉬운 문장."""
     ratio, cac, ltv = s["ltv_cac"], s["paid_cac"], s["ltv_12m"]
-    best = sum(opt_profit_spends)
     if ratio is None:
         return "info", "광고비가 0원이라 광고 효과를 계산할 수 없습니다. ① 시작에서 한 달 광고비를 넣어 주세요."
     if ratio < 1:
-        return "error", (f"🔴 **지금 조건이면 광고를 할수록 손해입니다.** 손님 1명을 데려오는 데 {won(cac)}이 드는데, "
-                         f"그 손님이 1년 동안 남겨 주는 돈은 {won(ltv)}뿐입니다.  \n"
-                         "광고비를 늘리기보다 ⑤ 개선 순서에서 구매 비율·재구매·결제 금액을 먼저 올려 보세요. "
-                         "(③에서 '1회 평균 결제 금액'과 '남는 비율'이 우리 가게 숫자와 맞는지도 확인하세요.)")
+        return "error", (f"🔴 **지금 조건이면 광고를 할수록 손해입니다 (PMF 경고).** 손님 1명을 데려오는 데 {won(cac)}이 드는데, "
+                         f"그 손님이 1년 동안 남겨 주는 돈은 {won(ltv)}뿐입니다. 광고비 증액은 보류하고 유지·활성화 선택지를 먼저 봅니다. "
+                         "(① 객단가·마진이 우리 가게 숫자와 맞는지도 확인하세요.)")
     if s["profit_12m"] < 0:
         return "warning", (f"🟡 **손님 한 명 한 명은 남는 장사지만, 1년 안에는 아직 적자입니다** ({won(s['profit_12m'])}). "
-                           f"광고비 본전을 찾는 데 {s['payback_month'] or '36+'}개월이 걸려서입니다. 기간을 길게 보거나 예산 배분을 바꿔 보세요.")
-    msg = (f"🟢 **광고가 돈을 벌어 줍니다.** 1년 동안 {won(s['profit_12m'])}이 남고, "
-           f"광고비 본전은 {s['payback_month']}개월이면 찾습니다.")
-    if best < budget * 0.9:
-        msg += f"  \n다만 한 달 {won(best)} 정도만 써도 이익이 가장 큽니다. 그 이상은 돈을 더 넣어도 효과가 줄어듭니다."
+                           f"광고비 본전을 찾는 데 {s['payback_month'] or '36+'}개월이 걸려서입니다.")
+    msg = f"🟢 **광고가 돈을 벌어 줍니다.** 1년 동안 {won(s['profit_12m'])}이 남고, 광고비 본전은 {s['payback_month']}개월이면 찾습니다."
+    if sum(opt_profit_spends) < budget * 0.9:
+        msg += f"  \n다만 한 달 {won(sum(opt_profit_spends))} 정도만 써도 이익이 가장 큽니다."
     return "success", msg
 
 
-# ─────────────────────────── ④ 시뮬레이션 ───────────────────────────
-with tabs[3]:
-    st.caption(f"채널별 구매 확률 배수: 네이버 {naver_cvr_mult:.2f}배 ({naver_cvr_src}) · 메타 {meta_cvr_mult:.2f}배 ({meta_cvr_src}) · "
-               f"메타 재방문 배수 {meta_ret_mult:.2f}배 ({'가정값' if meta_ret_mult == D.META_RETENTION_MULT else '직접 입력'})")
-    st.subheader("한눈에 결론")
+def exp_card(row):
+    """선택지별 실험 설계 카드 (명세 6장, 10-3)."""
+    name = row["option"]
+    if name == "광고비 증액":
+        st.markdown("**지역·기간 분할 실험**: 비슷한 지역(또는 주) 두 묶음 중 한쪽만 예산을 10% 늘리고 2~4주 비교합니다. "
+                    "매체 보고 전환이 아니라 **전체 매출·문의 수**로 비교해야 증분이 보입니다.")
+    elif name == "채널 재배분":
+        st.markdown("**기간 분할 실험**: 추천 배분으로 2주 → 원래 배분으로 2주를 번갈아 집행하고 같은 기간 전체 전환을 비교합니다. "
+                    "④ 기여 보정은 인과가 아니므로, 이 실험이 보정 가정을 확인합니다.")
+    elif name == "퍼널 개선":
+        step_names = [n for n, _ in params.steps]
+        label = row["detail"].replace(" (이탈 감소) 10%", "")
+        i = step_names.index(label) if label in step_names else int(np.argmin([r for _, r in params.steps]))
+        st.markdown(f"**A/B 테스트**: '{step_names[i]}' 단계를 두 버전으로 만들어 손님을 반씩 나눕니다. 바꿔 볼 것: {prescription(step_names[i])}")
+        lift = st.slider("확인하고 싶은 개선 (지금보다 %)", 1, 50, 10, key="ab_lift") / 100
+        e1, e2 = st.columns(2)
+        alpha = e1.selectbox("유의수준 α (우연을 효과로 착각할 위험)", [0.05, 0.1, 0.01], key="ab_alpha")
+        power = e2.selectbox("검정력 1−β (진짜 효과를 찾아낼 확률)", [0.8, 0.9], key="ab_power")
+        base_rate = params.steps[i][1]
+        s = sample_size(base_rate, lift, alpha, power)
+        monthly_in = res.funnel.iloc[i]["count"] / 12
+        days = days_needed(s["n_total"], monthly_in)
+        st.markdown(f"통과율 **{base_rate:.1%} → {s['p2']:.1%}** 확인에 A·B 각각 **{s['n_per_group']:,.0f}명** · 광고로 이 단계에 한 달 {monthly_in:,.0f}명 → "
+                    + (f"약 **{days:,.0f}일**" if days < 10_000 else "지금 손님 수로는 어려움")
+                    + (" (너무 길면 광고 외 방문자까지 포함해 실험하세요)" if days > 60 else ""))
+    else:
+        st.markdown("**대조군(홀드아웃) 실험**: 대상의 10%에게는 보내지 않고 두 그룹의 구매율 차이(증분 반응률)를 잽니다. "
+                    "필요한 인원·기간은 ⑤ 시나리오 카드의 '대조군 실험 설계'에서 계산합니다.")
+
+
+with tabs[5]:
+    warn = warnings(res, alloc)
     lvl, msg = verdict(res.summary, opt_profit["spends"])
     getattr(st, lvl)(msg)
-    fmt = {"profit": won, "roas": lambda v: f"{v:.2f}원", "new_customers": lambda v: f"{v:,.0f}명"}[omtm]
-    o1, o2 = st.columns([1, 2])
+    defaults_used = [name for name, used in [("① 객단가·마진 기본값", aov == D.AOV and margin == D.MARGIN),
+                                             ("② 예시 검색어", hint_text == ns.SAMPLE_KEYWORD), ("③ GA4 샘플 퍼널", not funnel_edited),
+                                             ("④ 보정 없음(마지막 클릭)", not corrected), ("⑤ 자동 메시지 미입력", auto_params is None)] if used]
+    if defaults_used:
+        st.caption("기본값 사용 중: " + " · ".join(defaults_used))
+    st.subheader("4가지 선택지 비교 (같은 기준: 1년 동안 남는 돈 증가)")
+    o1, o2 = st.columns([3, 2])
     with o1:
-        st.metric(f"내 목표 · {OMTM_PLAIN[omtm]}", fmt(opt["base_value"]), delta=f"추천안이면 {fmt(opt['value'])}",
-                  delta_color="off", border=True, help="① 시작에서 고른 목표(OMTM). 추천안은 이 숫자를 가장 크게 만드는 예산 배분입니다.")
-    with o2:
-        unused = budget - sum(opt["spends"])
-        st.markdown(f"**지금 계획**: 네이버 월 {won(spends[0])} · 메타 월 {won(spends[1])}  \n"
-                    f"**추천 계획**: 네이버 월 {won(opt['spends'][0])} · 메타 월 {won(opt['spends'][1])}"
-                    + (f" · 쓰지 않고 아끼기 월 {won(unused)}" if unused > 1 else ""))
-        st.caption("추천 계획은 앱이 여러 배분을 계산해 보고 내 목표가 가장 좋아지는 조합을 고른 것입니다.")
-    st.subheader("지금 계획의 주요 숫자")
-    st.caption("숫자 옆 ⓘ에 마우스를 올리면 뜻을 볼 수 있습니다. 왼쪽 사이드바의 용어 사전도 참고하세요.")
-    kpis(res.summary)
-    a1, a2 = st.columns([1, 1])
-    with a1:
-        st.plotly_chart(charts.aarrr_funnel(res.funnel, res.summary), use_container_width=True)
-        st.caption("광고 클릭부터 재구매까지 1년 동안 손님 수가 단계마다 어떻게 줄어드는지 보여줍니다.")
-    with a2:
-        st.plotly_chart(charts.cum_profit(res.monthly, res_opt.monthly, f"추천 계획 ({OMTM_PLAIN[omtm]})"),
-                        use_container_width=True)
-        st.caption("선이 0 위로 올라가는 달부터 광고가 이익을 내기 시작합니다.")
-    st.subheader("계획별 비교")
-
-    def plan_row(name, sp, r):
-        s = r.summary
-        return {"계획": name, "네이버 (월)": sp[0], "메타 (월)": sp[1], "아끼는 돈 (월)": budget - sum(sp),
-                "새 손님": s["new_customers"], "손님 1명 데려오는 비용": s["paid_cac"], "남기는 돈÷데려오는 비용": s["ltv_cac"],
-                "ROAS": s["roas"], "1년 동안 남는 돈": s["profit_12m"]}
-
-    rows = [plan_row("지금 계획", spends, res), plan_row(f"추천 계획 ({OMTM_PLAIN[omtm]})", opt["spends"], res_opt)]
-    if omtm != "profit":
-        rows.append(plan_row("남는 돈이 가장 큰 계획", opt_profit["spends"], simulate(channels, opt_profit["spends"], params)))
-    if omtm != "roas":
-        rows.append(plan_row("ROAS가 가장 높은 계획", opt_roas["spends"], simulate(channels, opt_roas["spends"], params)))
-    st.dataframe(pd.DataFrame(rows).style.format({
-        "네이버 (월)": "{:,.0f}", "아끼는 돈 (월)": "{:,.0f}", "메타 (월)": "{:,.0f}", "새 손님": "{:,.0f}",
-        "손님 1명 데려오는 비용": "{:,.0f}", "남기는 돈÷데려오는 비용": "{:.2f}", "ROAS": "{:.2f}", "1년 동안 남는 돈": "{:,.0f}"}, na_rep="-"),
-        hide_index=True, width="stretch")
-    st.caption("💡 광고 매체가 보여주는 ROAS(광고비 대비 첫 매출)만 보고 예산을 짜면, 재구매와 남는 비율을 놓쳐 "
-               "실제로 남는 돈이 가장 큰 계획과 달라질 수 있습니다. 손해가 나는 구간에서는 예산을 덜 쓰는 것이 정답일 수도 있습니다.")
-    b1, b2 = st.columns([1, 1])
-    with b1:
-        st.plotly_chart(charts.revenue_split(res.monthly), use_container_width=True)
-        st.caption("시간이 지날수록 재구매 매출이 쌓입니다. 이 부분은 ROAS에 잡히지 않습니다.")
-    with b2:
-        st.plotly_chart(charts.budget_scan_chart(scan, budget), use_container_width=True)
-        st.caption("가장 높은 지점이 남는 돈이 가장 큰 한 달 광고비입니다. 점선(지금 예산)이 그보다 오른쪽이면 너무 많이 쓰는 중입니다.")
-    st.plotly_chart(charts.payback(res.customer_cum_profit, res.summary["paid_cac"]), use_container_width=True)
-    st.caption("실선(손님 1명이 남겨 준 돈 누적)이 빨간 점선(데려오는 데 쓴 광고비)을 넘는 달이 본전을 찾는 시점입니다.")
-    with st.expander("자세히 보기: 채널별 결과 (한 달 기준)"):
-        bc = res.by_channel[["label", "budget", "spend", "clicks", "cpc", "marginal_cpc", "new_customers", "cac", "ltv_12m"]]
-        st.dataframe(bc.rename(columns={"label": "채널", "budget": "배정한 돈", "spend": "실제로 쓸 수 있는 돈", "clicks": "클릭",
-                                        "cpc": "평균 클릭당 비용", "marginal_cpc": "클릭 1번 더 얻는 비용", "new_customers": "새 손님",
-                                        "cac": "손님 1명 데려오는 비용", "ltv_12m": "손님 1명이 1년간 남기는 돈"})
-                     .style.format("{:,.0f}", subset=["배정한 돈", "실제로 쓸 수 있는 돈", "클릭", "평균 클릭당 비용",
-                                                      "클릭 1번 더 얻는 비용", "손님 1명 데려오는 비용", "손님 1명이 1년간 남기는 돈"])
-                     .format("{:,.1f}", subset=["새 손님"], na_rep="-"), hide_index=True, width="stretch")
-    with st.expander("자세히 보기: 월별 상세 표"):
-        st.dataframe(res.monthly.rename(columns={
-            "month": "개월", "spend": "광고비", "clicks": "클릭", "paid_new": "광고로 온 새 손님", "referral_new": "추천으로 온 새 손님",
-            "new_customers": "새 손님 합계", "active": "그달 구매한 손님", "orders": "주문 수", "revenue": "매출",
-            "new_revenue": "새 손님 매출", "repeat_revenue": "재구매 매출", "gross_profit": "남는 돈(광고비 전)",
-            "profit": "남는 돈(광고비 후)", "cum_profit": "누적 남는 돈"}).style.format("{:,.0f}"), hide_index=True, width="stretch")
-
-# ─────────────────────────── ⑤ 개선 우선순위 ───────────────────────────
-with tabs[4]:
-    guide("광고비를 늘리는 것과 가게의 다른 부분(구매 비율, 재구매, 결제 금액)을 고치는 것 중 무엇이 이익을 더 키우는지 비교합니다. "
-          "위에서부터 확인할 것 → 무엇을 먼저 고칠지 → 어떻게 실험할지 순서로 보세요.")
-    warn = warnings(res, alloc)
+        def _cost(r):
+            if r["gain"] != r["gain"]:
+                return "-"
+            return {"known": f"{won(r['cost'])} (이미 뺌)", "zero": "0원 (같은 예산)",
+                    "ceiling": f"모름 → {won(r['cost'])}까지 써도 이득"}[r["cost_kind"]]
+        tbl = pd.DataFrame({"선택지": options["option"] + np.where(options["disabled"], " (PMF 경고로 보류)", ""),
+                            "내용": options["detail"], "1년 남는 돈 증가": options["gain"], "비용": options.apply(_cost, axis=1)})
+        st.dataframe(tbl.style.format({"1년 남는 돈 증가": lambda v: "-" if v != v else f"{v:+,.0f}원"})
+                     .apply(lambda r: ["color: #999"] * len(r) if "보류" in r["선택지"] else [""] * len(r), axis=1),
+                     hide_index=True, width="stretch")
+    o2.plotly_chart(charts.options_bars(options), use_container_width=True)
+    st.caption("모든 숫자는 '가정이 맞다면'의 예측입니다. 아래 실험 카드로 확인한 뒤 실행하세요.")
+    for _, row in options.iterrows():
+        if row["gain"] != row["gain"]:
+            continue
+        with st.expander(f"🧪 {row['option']} — 실험으로 확인하기"):
+            exp_card(row)
     if warn:
-        st.subheader("먼저 확인할 것")
-        for lvl, text in warn:
-            getattr(st, lvl)(text)
-    t1, t2 = st.columns([3, 2])
-    with t1:
-        st.subheader("무엇을 고치면 이익이 가장 많이 늘까?")
-        st.plotly_chart(charts.tornado(levers), use_container_width=True)
-        st.caption("각 항목을 10% 좋게(초록) 또는 나쁘게(빨강) 바꿨을 때 1년 동안 남는 돈이 얼마나 변하는지입니다. "
-                   "막대가 길수록 효과가 큰 항목이니 위에서부터 고치세요. "
-                   "'단계: ○○ (이탈 감소)'는 그 단계에서 그만두는 사람을 10% 줄인다는 뜻입니다.")
-    with t2:
-        st.subheader("이렇게 해 보세요")
-        for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs):
-            with st.container(border=True):
-                st.markdown(f"**{card['title']}**  \n📊 근거: {card['evidence']}  \n🧪 해 볼 일: {card['action']}")
+        with st.expander(f"먼저 확인할 것 ({len(warn)})", expanded=any(lv == "error" for lv, _ in warn)):
+            for wl, text in warn:
+                getattr(st, wl)(text)
+    st.subheader("지금 계획의 주요 숫자")
+    st.caption(f"채널별 구매 확률 배수: 네이버 {channels[0].cvr_mult:.2f}배 ({naver_cvr_src}{f' × 어트리뷰션 {k_naver:.2f}' if k_naver != 1 else ''}) · "
+               f"메타 {channels[1].cvr_mult:.2f}배 ({meta_cvr_src}{f' × 어트리뷰션 {k_meta:.2f}' if k_meta != 1 else ''}) · "
+               f"메타 재방문 배수 {meta_ret_mult:.2f}배 ({'가정값' if meta_ret_mult == D.META_RETENTION_MULT else '직접 입력'})")
+    kpis(res.summary)
+    with st.expander("계획별 비교와 그래프"):
+        def plan_row(name, sp_, r):
+            s = r.summary
+            return {"계획": name, "네이버 (월)": sp_[0], "메타 (월)": sp_[1], "아끼는 돈 (월)": budget - sum(sp_),
+                    "새 손님": s["new_customers"], "LTV/CAC": s["ltv_cac"], "ROAS": s["roas"], "1년 동안 남는 돈": s["profit_12m"]}
+        rows = [plan_row("지금 계획", spends, res), plan_row(f"추천 계획 ({OMTM_PLAIN[omtm]})", opt["spends"], res_opt)]
+        if omtm != "profit":
+            rows.append(plan_row("남는 돈이 가장 큰 계획", opt_profit["spends"], simulate(channels, opt_profit["spends"], params)))
+        if omtm != "roas":
+            rows.append(plan_row("ROAS가 가장 높은 계획", opt_roas["spends"], simulate(channels, opt_roas["spends"], params)))
+        st.dataframe(pd.DataFrame(rows).style.format({"네이버 (월)": "{:,.0f}", "메타 (월)": "{:,.0f}", "아끼는 돈 (월)": "{:,.0f}",
+                                                      "새 손님": "{:,.0f}", "LTV/CAC": "{:.2f}", "ROAS": "{:.2f}", "1년 동안 남는 돈": "{:,.0f}"},
+                                                     na_rep="-"), hide_index=True, width="stretch")
+        st.caption("💡 ROAS(첫 매출)만 보고 짠 예산과 실제로 남는 돈이 가장 큰 예산은 다를 수 있습니다.")
+        c1, c2 = st.columns(2)
+        c1.plotly_chart(charts.aarrr_funnel(res.funnel, res.summary), use_container_width=True)
+        c2.plotly_chart(charts.cum_profit(res.monthly, res_opt.monthly, f"추천 계획 ({OMTM_PLAIN[omtm]})"), use_container_width=True)
+        c1.plotly_chart(charts.revenue_split(res.monthly), use_container_width=True)
+        c2.plotly_chart(charts.budget_scan_chart(scan, budget), use_container_width=True)
+        c1.plotly_chart(charts.payback(res.customer_cum_profit, res.summary["paid_cac"]), use_container_width=True)
+        c2.plotly_chart(charts.tornado(levers), use_container_width=True)
         core = levers[levers["core"]][["lever", "extra_spend", "up", "breakeven_cost"]].rename(columns={
             "lever": "10% 좋아지면", "extra_spend": "더 쓰는 광고비", "up": "1년 동안 남는 돈 변화", "breakeven_cost": "이만큼까지 써도 이득"})
         st.dataframe(core.style.format({"더 쓰는 광고비": "{:,.0f}", "1년 동안 남는 돈 변화": "{:+,.0f}", "이만큼까지 써도 이득": "{:,.0f}"},
                                        na_rep="-"), hide_index=True, width="stretch")
-        st.caption("남는 돈은 모두 광고비를 뺀 뒤의 금액입니다. 개선 항목은 비용을 모르므로, 그 개선에 '이만큼까지 써도 이득'인 상한을 보여줍니다. "
-                   "전체 전환율·객단가·구매 횟수 10%는 계산상 효과가 같아 '손님 1명당 매출' 하나로 묶었습니다.")
-        top_step = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
-        if len(top_step):
-            name = top_step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "")
-            st.subheader("실험해 보기 (A/B 테스트)")
-            st.markdown(f"'**{name}**' 단계를 두 가지 버전으로 만들어 손님을 반씩 나눠 보여주고 비교해 보세요.  \n"
-                        f"- 바꿔 볼 것: {prescription(name)}  \n"
-                        f"- 이 단계에서 그만두는 사람을 10% 줄이면 1년 동안 {won(top_step.iloc[0]['up'])}이 더 남습니다.")
-            st.markdown("**실험에 손님이 몇 명 필요할까?**")
-            st.caption("너무 적은 손님으로 비교하면 우연인지 진짜 효과인지 알 수 없습니다. 믿을 만한 결과에 필요한 인원을 계산합니다.")
-            step_names = [n for n, _ in params.steps]
-            exp_step = st.selectbox("실험할 단계", step_names, index=step_names.index(name) if name in step_names else 0)
-            i = step_names.index(exp_step)
-            base_rate = params.steps[i][1]
-            lift = st.slider("얼마나 좋아지는 걸 확인하고 싶나요? (지금보다 %)", 1, 50, 10,
-                             help="10 = 통과율이 지금의 1.1배가 되는 변화. 작은 변화일수록 더 많은 손님이 필요합니다.") / 100
-            with st.expander("통계 설정 (모르면 그대로 두세요)"):
-                e1, e2 = st.columns(2)
-                alpha = e1.selectbox("유의수준 α (우연을 효과로 착각할 위험)", [0.05, 0.1, 0.01])
-                power = e2.selectbox("검정력 1−β (진짜 효과를 찾아낼 확률)", [0.8, 0.9])
-            ss_res = sample_size(base_rate, lift, alpha, power)
-            monthly_in = res.funnel.iloc[i]["count"] / 12  # 이 단계에 들어오는 월 사용자 (퍼널 직전 단계)
-            days = days_needed(ss_res["n_total"], monthly_in)
-            st.markdown(f"통과율 **{base_rate:.1%} → {ss_res['p2']:.1%}** 변화를 확인하려면 A·B 각각 **{ss_res['n_per_group']:,.0f}명**, "
-                        f"모두 {ss_res['n_total']:,.0f}명이 필요합니다.  \n지금 광고로 이 단계에 한 달 {monthly_in:,.0f}명이 오므로 "
-                        + (f"약 **{days:,.0f}일**이 걸립니다." if days < 10_000 else "지금 손님 수로는 실험이 어렵습니다.")
-                        + (" 너무 길다면 '얼마나 좋아지는 걸 확인하고 싶나요'를 크게 잡거나, 광고 외 손님까지 포함해 실험하세요." if days > 60 else ""))
+        st.caption("남는 돈은 모두 광고비를 뺀 뒤의 금액입니다. 전체 전환율·객단가·구매 횟수 10%는 계산상 효과가 같아 '손님 1명당 매출' 하나로 묶었습니다.")
+    with st.expander("이렇게 해 보세요 (인사이트 카드)"):
+        for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs):
+            st.markdown(f"**{card['title']}**  \n📊 근거: {card['evidence']}  \n🧪 해 볼 일: {card['action']}")
+    with st.expander("자세히 보기: 채널별·월별 표 (CSV 다운로드)"):
+        bc = res.by_channel[["label", "budget", "spend", "clicks", "cpc", "marginal_cpc", "new_customers", "cac", "ltv_12m"]].rename(columns={
+            "label": "채널", "budget": "배정한 돈", "spend": "실제로 쓸 수 있는 돈", "clicks": "클릭", "cpc": "평균 클릭당 비용",
+            "marginal_cpc": "클릭 1번 더 얻는 비용", "new_customers": "새 손님", "cac": "손님 1명 데려오는 비용", "ltv_12m": "손님 1명이 1년간 남기는 돈"})
+        st.dataframe(bc.style.format("{:,.0f}", subset=[c for c in bc.columns if c not in ("채널", "새 손님")], na_rep="-")
+                     .format("{:,.1f}", subset=["새 손님"], na_rep="-"), hide_index=True, width="stretch")
+        monthly = res.monthly.rename(columns={
+            "month": "개월", "spend": "광고비", "clicks": "클릭", "paid_new": "광고로 온 새 손님", "referral_new": "추천으로 온 새 손님",
+            "new_customers": "새 손님 합계", "active": "그달 구매한 손님", "orders": "주문 수", "revenue": "매출",
+            "new_revenue": "새 손님 매출", "repeat_revenue": "재구매 매출", "gross_profit": "남는 돈(광고비 전)",
+            "extra_cost": "메시지 비용", "profit": "남는 돈(광고비 후)", "cum_profit": "누적 남는 돈"})
+        st.dataframe(monthly.style.format("{:,.0f}"), hide_index=True, width="stretch")
+        st.download_button("월별 표 CSV 내려받기", monthly.to_csv(index=False).encode("utf-8-sig"), "monthly.csv", "text/csv")
+
+# ─────────────────────── 탭 맨 위: 질문 한 줄 + 결과 숫자 하나 ───────────────────────
+with heads[0]:
+    question("1년 뒤 광고가 남겨 주는 돈은 얼마인가요?")
+    st.metric("지금 계획의 1년 동안 남는 돈", won(res.summary["profit_12m"]),
+              delta=f"LTV/CAC {res.summary['ltv_cac']:.2f}배" if res.summary["ltv_cac"] else None, delta_color="off", help=HELP["profit"])
+
+with heads[1]:
+    question("이 예산을 어느 매체·키워드에 얼마나 쓸까?")
+    sat = alloc[alloc["saturated"] & (alloc["spend"] > 0)]["keyword"].tolist() if alloc is not None else []
+    st.metric("남는 돈이 가장 큰 배분 (한 달)", f"네이버 {won(opt_profit['spends'][0])} · 메타 {won(opt_profit['spends'][1])}",
+              delta=("포화: " + ", ".join(f"'{k}'" for k in sat)) if sat else "포화된 검색어 없음", delta_color="off")
+    base_p = res.summary["profit_12m"]
+    nxt = {c.label: simulate(channels, [s + (10_000 if i == j else 0) for j, s in enumerate(spends)], params).summary["profit_12m"] - base_p
+           for i, c in enumerate(channels)}
+    best_ch = max(nxt, key=nxt.get)
+    st.caption(f"다음 1만 원(매달)을 어디에 쓰면 가장 많이 남나: **{best_ch}** (1년 {signed(nxt[best_ch])}). "
+               "채널별 한계 이익이 같아질 때까지 나누는 것이 최적입니다.")
+with learn_slot:
+    meta_cvr = params.cvr * channels[1].cvr_mult
+    if meta_budget > 0 and meta_cvr > 0:
+        lc = learning_check(meta_budget, int(ad_sets), meta_cpc / meta_cvr)
+        if not lc["ok"]:
+            st.warning(f"메타 학습 가능 예산 부족: 광고 세트 {int(ad_sets)}개 × 주 약 {LEARNING_EVENTS_PER_WEEK}건 × 예상 CPA {won(meta_cpc / meta_cvr)} "
+                       f"= 주 {won(lc['weekly_needed'])}이 필요한데, 주 예산은 {won(lc['weekly_budget'])}입니다 (세트당 주 {lc['events_per_set']:.1f}건). "
+                       "광고 세트를 합치거나 최적화 이벤트를 앞 단계(장바구니 등)로 바꾸세요. (50건은 메타 도움말 검색 요약 기준)")
+
+with funnel_slot:
+    st.plotly_chart(charts.activation_funnel(params), use_container_width=True)
+    st.metric(f"광고 클릭 → {task}까지 가는 비율 (전환율, CVR)", f"{params.cvr:.2%}")
+
+steps_lv = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
+if len(steps_lv):
+    best = steps_lv.iloc[0]
+    bname = best["lever"].replace("단계: ", "").replace(" (이탈 감소)", "")
+    with heads[2]:
+        question("손님이 어디서 새고, 그 단계를 고치면 얼마가 남나?")
+        st.metric("가장 큰 기회", bname, delta=f"이탈 10% 감소 → 1년 {signed(best['up'])}", delta_color="off")
+    with opp_slot:
+        rate = dict(params.steps)[bname]
+        per_month = res.summary["paid_new"] / 12
+        extra = per_month * ((1 - (1 - rate) * 0.9) / rate - 1) if rate > 0 else 0.0
+        dname, drate = biggest_drop(params)
+        with st.container(border=True):
+            st.markdown(f"**가장 큰 기회: '{bname}'** — 이탈 10% 감소 시 광고로 온 손님 월 **+{extra:,.1f}명**, "
+                        f"1년 동안 남는 돈 **{signed(best['up'])}** (개선에 이만큼까지 써도 이득)  \n처방: {prescription(bname)}"
+                        + (f"  \n가장 많이 새는 곳은 '{dname}'(100명 중 {drate * 100:.0f}명 통과)이지만, 고쳤을 때 효과는 '{bname}'이 가장 큽니다."
+                           if dname != bname else ""))
+
+with heads[3]:
+    question("매체가 보고한 숫자를 믿고 예산을 나눠도 되나?")
+    if len(sp):
+        st.metric("모델을 바꿨을 때 채널 기여의 최대 변동폭", f"{sp.iloc[0]:.1f}%p", delta=str(sp.index[0]), delta_color="off")
+    st.info(attr_verdict + ("" if clean else "  \n⚠️ 지금은 **정제 전** 결과입니다."), icon="⚖️")
+
+with heads[4]:
+    question("장바구니 이탈·재구매·휴면 메시지가 광고비보다 나은가?")
+    withp = [r for r in auto_results if r["profit_delta"] is not None]
+    if withp:
+        b = max(withp, key=lambda r: r["profit_delta"])
+        st.metric(f"가장 나은 시나리오: {b['label']}", signed(b["profit_delta"]),
+                  delta=f"같은 돈을 광고에: {signed(b['ad_alt_delta']) if b['ad_alt_delta'] is not None else '-'}", delta_color="off")
+    elif auto_results:
+        b = min(auto_results, key=lambda r: r["breakeven"])
+        st.metric(f"손익분기 반응률 ({b['label']})", pct(b["breakeven"]), delta="반응률을 넣으면 이익을 계산", delta_color="off")
+    else:
+        st.metric("손익분기 반응률", "-", delta="아래에서 시나리오를 켜고 도달 비율·발송비를 넣으세요", delta_color="off")
+
+with heads[5]:
+    question("광고비 증액 · 채널 재배분 · 퍼널 개선 · 자동 메시지 중 무엇을 먼저 할까?")
+    top_opt = options.dropna(subset=["gain"])
+    top_opt = top_opt[~top_opt["disabled"].astype(bool)]
+    if len(top_opt):
+        t = top_opt.iloc[0]
+        sp_gain = float(options.loc[options["option"] == "광고비 증액", "gain"].iloc[0])
+        ratio = f" (광고비 +10%의 {t['gain'] / sp_gain:.1f}배)" if t["option"] != "광고비 증액" and sp_gain > 0 else ""
+        st.metric("먼저 할 것", t["option"], delta=f"1년 {signed(t['gain'])}{ratio}", delta_color="off")
+        if t["cost_kind"] == "ceiling":
+            st.caption(f"비용을 모르는 개선은 1년 동안 최대 {won(t['cost'])}까지 쓸 가치가 있습니다.")
 
 st.divider()
-st.caption("데이터: 네이버 검색광고 API(예측값), GA4 샘플 퍼널, Kaggle Sales Conversion Optimization(익명 기업, 상대 배수만 사용). "
-           "리텐션·구매 빈도는 UCI Online Retail II(CC BY 4.0) 분석 후 교체 예정. 금액은 원화 입력값이며 외부 데이터 통화는 환산하지 않습니다. "
-           "결과는 출발점을 잡기 위한 추정치이며, 우리 가게의 실제 숫자를 넣을수록 정확해집니다.")
+st.caption("데이터: 네이버 검색광고 API(예측값, 최근 4주 → 월 환산), GA4 공개 샘플(퍼널·구매 경로), Kaggle Sales Conversion Optimization(상대 배수만). "
+           "리텐션·구매 빈도는 UCI Online Retail II 분석 후 교체 예정. 결과는 출발점을 잡기 위한 추정치이며, 내 숫자를 넣을수록 정확해집니다.")

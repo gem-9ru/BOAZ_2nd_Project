@@ -26,17 +26,18 @@ def _grid(n: int, steps: int, allow_under: bool):
             yield np.array(combo, dtype=float) / steps
 
 
-def optimize_allocation(channels: Sequence[Channel], budget: float, params: FunnelParams, omtm: str) -> Dict:
+def optimize_allocation(channels: Sequence[Channel], budget: float, params: FunnelParams, omtm: str,
+                        full_budget: bool = False) -> Dict:
     """월 총예산 안에서 OMTM을 최대화하는 채널 배분.
 
     - 신규 고객·ROAS: 예산을 모두 배분 (합 = 예산)
-    - 12개월 이익: 예산 이하로 써도 됨 (손해 구간이면 덜 쓰는 것이 최적)
+    - 12개월 이익: 예산 이하로 써도 됨 (손해 구간이면 덜 쓰는 것이 최적). full_budget=True면 예산을 모두 배분
     격자 탐색으로 시작점을 잡고 scipy SLSQP로 다듬는다 (네이버 곡선이 꺾은선이라 격자가 안전장치).
     """
     n = len(channels)
     if n == 0 or budget <= 0:
         return {"spends": [0.0] * n, "value": 0.0}
-    allow_under = omtm == "profit"
+    allow_under = omtm == "profit" and not full_budget
     steps = 50 if n <= 2 else (20 if n == 3 else 10)
     f = lambda x: omtm_value(channels, np.asarray(x) * budget, params, omtm)  # noqa: E731
 
@@ -113,3 +114,38 @@ def budget_scan(channels: Sequence[Channel], spends: Sequence[float], params: Fu
         rows.append({"multiplier": m, "monthly_budget": b, "profit_12m": s["profit_12m"],
                      "new_customers": s["new_customers"], "spend_total": s["spend_total"]})
     return pd.DataFrame(rows)
+
+
+def compare_options(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams,
+                    levers: pd.DataFrame, budget: float, corrected: Sequence[Channel] = None,
+                    auto_params: FunnelParams = None, auto_cost_m=None, pmf_warning: bool = False) -> pd.DataFrame:
+    """⑥ 4개 선택지를 12개월 이익 증분(광고비·발송비를 뺀 뒤) 하나의 기준으로 (명세 6장).
+
+    cost_kind: known(비용이 이미 빠짐) / zero(같은 예산) / ceiling(비용 모름 → 이만큼까지 써도 이득)
+    """
+    base = simulate(channels, spends, params).summary["profit_12m"]
+    rows = []
+    sp = levers[levers["key"] == "spend"].iloc[0]
+    rows.append({"option": "광고비 증액", "detail": "지금 배분 그대로 예산 +10%", "gain": sp["up"],
+                 "cost": sp["extra_spend"], "cost_kind": "known", "disabled": pmf_warning})
+    chs = list(corrected) if corrected is not None else list(channels)
+    cur = simulate(chs, spends, params).summary["profit_12m"]
+    best = optimize_allocation(chs, sum(spends), params, "profit", full_budget=True)
+    new = simulate(chs, best["spends"], params).summary["profit_12m"]
+    rows.append({"option": "채널 재배분", "detail": "같은 예산 안에서 네이버·메타 비율만 바꿈" + (" (어트리뷰션 보정 반영)" if corrected is not None else ""),
+                 "gain": max(new - cur, 0.0), "cost": 0.0, "cost_kind": "zero", "disabled": False, "spends": best["spends"]})
+    steps = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
+    if len(steps):
+        st = steps.iloc[0]
+        rows.append({"option": "퍼널 개선", "detail": st["lever"].replace("단계: ", "") + " 10%", "gain": st["up"],
+                     "cost": st["up"], "cost_kind": "ceiling", "disabled": False})
+    if auto_params is not None:
+        after = simulate(channels, spends, auto_params, extra_cost_m=auto_cost_m).summary
+        rows.append({"option": "자동 메시지", "detail": "반응률을 넣은 시나리오 합계", "gain": after["profit_12m"] - base,
+                     "cost": after["extra_cost"], "cost_kind": "known", "disabled": False})
+    else:
+        rows.append({"option": "자동 메시지", "detail": "⑤에서 증분 반응률을 넣으면 계산", "gain": np.nan,
+                     "cost": np.nan, "cost_kind": "known", "disabled": False})
+    df = pd.DataFrame(rows)
+    df["rank_gain"] = np.where(df["disabled"], -np.inf, df["gain"].fillna(-np.inf))
+    return df.sort_values("rank_gain", ascending=False).drop(columns="rank_gain").reset_index(drop=True)

@@ -132,3 +132,20 @@ class Channel:
     curve: object       # NaverCurve | MetaCurve (clicks(), spendable(), marginal_cpc())
     cvr_mult: float = 1.0        # 이 채널 클릭의 최종 전환율 배수 (구매 의도 차이)
     retention_mult: float = 1.0  # 이 채널 고객의 리텐션 배수
+
+
+# ── 메타 실무 보강 (명세 2장) ──────────────────────────────────
+LEARNING_EVENTS_PER_WEEK = 50  # 광고 세트당 7일 약 50건 (메타 비즈니스 도움말 검색 요약 기준, 원문 미확인 → '약'으로 표기)
+
+
+def cpc_from_cpm(cpm: float, ctr: float) -> float:
+    """메타는 노출당 과금이 기본: CPC = CPM ÷ (1000 × CTR). CTR은 0~1."""
+    return cpm / (1000 * ctr) if ctr > 0 else float("inf")
+
+
+def learning_check(monthly_budget: float, ad_sets: int, cpa: float) -> dict:
+    """학습 가능 예산 점검: 광고 세트 수 × 주 50건 × 예상 CPA > 주 예산이면 경고."""
+    weekly = monthly_budget * 7 / 30.4
+    need = ad_sets * LEARNING_EVENTS_PER_WEEK * cpa
+    return {"weekly_budget": weekly, "weekly_needed": need, "ok": weekly >= need,
+            "events_per_set": weekly / cpa / max(ad_sets, 1) if cpa > 0 else float("inf")}

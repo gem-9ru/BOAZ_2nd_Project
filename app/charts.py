@@ -8,9 +8,10 @@ CUR, OPT = "#4C78A8", "#F28E2B"
 
 
 def _layout(fig, title=None, height=360):
-    fig.update_layout(title=title, height=height, margin=dict(l=10, r=10, t=80 if title else 30, b=10),
-                      title_y=0.98, title_yanchor="top",
+    fig.update_layout(height=height, margin=dict(l=10, r=10, t=80 if title else 30, b=10),
                       legend=dict(orientation="h", yanchor="bottom", y=1.02, x=0))
+    if title:
+        fig.update_layout(title=title, title_y=0.98, title_yanchor="top")
     return fig
 
 
@@ -157,3 +158,34 @@ def payback(curve, cac, months=24):
     fig.update_xaxes(title="첫 구매 후 개월", dtick=2)
     fig.update_yaxes(title="손님 1명이 남겨 준 돈 누적 (원)")
     return _layout(fig, "광고비 본전은 언제 찾을까? (손님 1명 기준)", 320)
+
+
+def attribution_bars(table: pd.DataFrame, models: dict):
+    """채널(행) × 모델(열) 기여 비중(%) 묶음 막대."""
+    fig = go.Figure()
+    colors = ["#4C78A8", "#F28E2B", "#E15759", "#76B7B2", "#59A14F"]
+    for (key, label), color in zip(models.items(), colors):
+        fig.add_trace(go.Bar(x=table.index, y=table[key], name=label, marker_color=color,
+                             hovertemplate="%{x} · " + label + " %{y:.1f}%<extra></extra>"))
+    fig.update_layout(barmode="group")
+    fig.update_yaxes(title="배분된 기여 (%)")
+    fig = _layout(fig, "모델별로 채널에 배분된 기여", 440)
+    fig.update_layout(margin=dict(t=140), legend=dict(y=1.0))
+    return fig
+
+
+def options_bars(opts: pd.DataFrame):
+    """⑥ 4개 선택지의 12개월 이익 증분."""
+    df = opts.dropna(subset=["gain"]).iloc[::-1]
+    colors = ["#BAB0AC" if d else ("#59A14F" if g >= 0 else "#E15759") for d, g in zip(df["disabled"], df["gain"])]
+    fig = go.Figure(go.Bar(y=df["option"], x=df["gain"], orientation="h", marker_color=colors,
+                           text=[f"{v / 1e4:+,.0f}만 원" for v in df["gain"]], textposition="auto"))
+    fig.update_xaxes(title="1년 동안 남는 돈 증가 (원, 광고비·발송비를 뺀 뒤)")
+    return _layout(fig, None, 60 + 50 * len(df))
+
+
+def money_compare(labels, values, title=None):
+    fig = go.Figure(go.Bar(x=labels, y=values, marker_color=[OPT, CUR][: len(labels)] + ["#BAB0AC"] * max(0, len(labels) - 2),
+                           text=[f"{v / 1e4:+,.0f}만 원" for v in values], textposition="auto"))
+    fig.update_yaxes(title="1년 동안 남는 돈 증가 (원)")
+    return _layout(fig, title, 300)

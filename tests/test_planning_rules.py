@@ -74,3 +74,31 @@ def test_cvr_mult_single_owner():  # MECE #4: CSV > GA4 매체별 > 기본값, �
     assert dl.resolve_cvr_mult("naver", 1.0, 0.01, funnel_medium="cpc")[0] == 1.0  # 퍼널이 이미 cpc면 다시 곱하지 않음
     m, src = dl.resolve_cvr_mult("meta", D.META_CVR_MULT, 0.01)
     assert m == D.META_CVR_MULT and "가정값" in src
+
+
+def test_meta_learning_and_cpm():
+    from src.engine.acquisition import cpc_from_cpm, learning_check
+    assert cpc_from_cpm(10_000, 0.01) == pytest.approx(1_000)
+    small = learning_check(1_000_000, ad_sets=2, cpa=20_000)   # 주 23만 원 < 2×50×2만 원
+    assert not small["ok"] and small["weekly_needed"] == pytest.approx(2_000_000)
+    assert learning_check(100_000_000, 1, 20_000)["ok"]
+
+
+def test_segment_table_and_ztest():
+    t = dl.segment_table("medium")
+    assert "(data deleted)" not in t.index
+    assert t.loc["cpc", "방문→완료"] == pytest.approx(0.0119, abs=5e-4)
+    z, p = dl.two_prop_z(t.loc["referral", "purchases"], t.loc["referral", "visitors"], t.loc["cpc", "purchases"], t.loc["cpc", "visitors"])
+    assert z > 0 and p < 0.05
+    assert dl.two_prop_z(10, 1000, 10, 1000)[1] == pytest.approx(1.0)
+
+
+def test_compare_options_same_basis():
+    from src.engine.optimize import compare_options
+    ch = [Channel("meta", "메타", MetaCurve(100.0, 0.0))]
+    lv = lever_table(ch, [1_000_000], FunnelParams())
+    df = compare_options(ch, [1_000_000], FunnelParams(), lv, 1_000_000, pmf_warning=True).set_index("option")
+    assert set(df.index) == {"광고비 증액", "채널 재배분", "퍼널 개선", "자동 메시지"}
+    assert df.loc["광고비 증액", "disabled"] and df.loc["채널 재배분", "gain"] >= 0
+    assert df.loc["퍼널 개선", "cost_kind"] == "ceiling"
+    assert sum(df.loc["채널 재배분", "spends"]) == pytest.approx(1_000_000)   # 같은 예산 (덜 쓰기 아님)

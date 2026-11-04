@@ -170,3 +170,39 @@ def resolve_cvr_mult(channel: str, default: float, funnel_cvr: float, funnel_med
         if num and den:
             return num / den, f"GA4 매체별 ('{medium}' ÷ '{funnel_medium}' 방문→구매)"
     return default, "기본값" if default == 1.0 else "가정값 (근거 데이터 없음)"
+
+
+# ── M2 세그먼트 비교 (명세 3-2) ───────────────────────────────────
+SEGMENT_MIN_USERS = 1_000  # 이보다 방문자가 적으면 비교에서 회색 처리 (명세 9장 #3, 팀 결정 대기)
+STEP_LABELS = ["방문→관심", "관심→과업 시작", "과업 시작→진행", "진행→완료", "방문→완료"]
+
+
+def segment_table(dim: str = "medium") -> Optional[pd.DataFrame]:
+    """매체·기기별 단계 전환율. (data deleted)는 마스킹 편향으로 제외."""
+    df = _ga4_table()
+    if df is None or dim not in df.columns:
+        return None
+    df = df[df.get("medium", "") != "(data deleted)"]
+    g = df.groupby(dim)[D.GA4_EVENTS].sum()
+    g.loc[GA4_ALL] = g.sum()
+    ev = D.GA4_EVENTS
+    out = pd.DataFrame({"visitors": g[ev[0]]}, index=g.index)
+    for i, lab in enumerate(STEP_LABELS[:-1]):
+        out[lab] = g[ev[i + 1]] / g[ev[i]].where(g[ev[i]] > 0)
+    out[STEP_LABELS[-1]] = g[ev[-1]] / g[ev[0]]
+    out["purchases"] = g[ev[-1]]
+    out["small"] = out["visitors"] < SEGMENT_MIN_USERS
+    return out.sort_values("visitors", ascending=False)
+
+
+def two_prop_z(x1: float, n1: float, x2: float, n2: float) -> Tuple[float, float]:
+    """두 비율 차이 z-검정 (양측). (z, p)."""
+    from scipy.stats import norm
+    if min(n1, n2) <= 0:
+        return float("nan"), float("nan")
+    p = (x1 + x2) / (n1 + n2)
+    se = np.sqrt(p * (1 - p) * (1 / n1 + 1 / n2))
+    if se == 0:
+        return 0.0, 1.0
+    z = (x1 / n1 - x2 / n2) / se
+    return float(z), float(2 * (1 - norm.cdf(abs(z))))

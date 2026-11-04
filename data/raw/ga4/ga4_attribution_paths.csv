@@ -1,0 +1,1254 @@
+mpath,srcpath,n_sessions,purchases,revenue
+organic > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,4,154.0
+organic > organic > (unknown) > (unknown) > referral > referral > referral > referral > referral,google > google > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,9,1,58.0
+referral > organic,shop.googlemerchandisestore.com > google,2,22,1485.0
+referral > organic > (unknown) > (data deleted) > (unknown) > (unknown) > (unknown) > (data deleted) > organic,<Other> > google > (unknown) > (data deleted) > (unknown) > (unknown) > (unknown) > (data deleted) > google,9,1,
+organic > (none) > organic > organic > (none) > cpc > (unknown) > (none),google > (direct) > (unknown) > google > (direct) > google > (unknown) > (direct),8,2,50.0
+organic > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,11,1,
+referral > referral > (data deleted),googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),3,1,58.0
+organic > organic > organic,google > (data deleted) > shop.googlemerchandisestore.com,3,1,69.0
+(none) > referral > referral > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other>,7,1,21.0
+organic > referral,google > shop.googlemerchandisestore.com,2,132,8676.0
+<Other> > referral > referral > referral > referral > organic > organic > organic > organic,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > google > google,9,1,55.0
+organic > (unknown) > (none) > referral > (none) > (none) > referral > (none) > organic > organic,google > (unknown) > (direct) > <Other> > (direct) > (direct) > <Other> > (direct) > google > google,10,1,40.0
+referral > referral > referral > organic > referral > referral > referral > referral > referral > organic,<Other> > moma.corp.google.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > moma.corp.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,10,1,48.0
+(unknown) > organic > organic > referral > organic > (unknown) > referral,(unknown) > google > google > shop.googlemerchandisestore.com > google > (unknown) > shop.googlemerchandisestore.com,7,2,66.0
+(none) > referral > (none) > organic > referral,(direct) > <Other> > (direct) > google > shop.googlemerchandisestore.com,5,1,46.0
+organic > (unknown) > organic > referral > referral > referral,google > (unknown) > google > shop.googlemerchandisestore.com > perksatwork.com > shop.googlemerchandisestore.com,6,2,166.0
+organic > organic > organic > organic,google > shop.googlemerchandisestore.com > google > google,4,3,148.0
+referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,19,1643.0
+cpc > referral > referral > organic > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,5,1,7.0
+referral > organic > referral > referral,<Other> > google > <Other> > <Other>,4,4,311.0
+referral > referral,support.google.com > shop.googlemerchandisestore.com,2,1,80.0
+organic > (data deleted) > referral > referral > referral,google > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,5,1,54.0
+(none) > referral > organic,(direct) > shop.googlemerchandisestore.com > google,3,8,342.0
+organic,google,1,1122,65892.0
+referral > referral > organic > referral > organic > referral > organic,<Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,7,1,36.0
+organic > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other>,3,1,152.0
+organic > (data deleted),google > (data deleted),2,32,1981.0
+<Other> > referral > referral > (none),<Other> > shop.googlemerchandisestore.com > <Other> > (direct),4,1,32.0
+referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > googlemerchandisestore.com > <Other>,4,1,
+referral > (none) > (none),<Other> > (direct) > (direct),3,2,133.0
+(unknown) > referral > referral,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,9,295.0
+referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other>,3,20,1465.0
+organic > referral > referral > organic > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,5,1,44.0
+referral > organic > referral > (unknown) > referral > (none) > referral,<Other> > google > <Other> > (unknown) > <Other> > (direct) > <Other>,7,1,80.0
+<Other> > referral,<Other> > googlemerchandisestore.com,2,4,269.0
+(none) > referral > <Other>,(direct) > shop.googlemerchandisestore.com > <Other>,3,1,216.0
+referral > organic > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,3,2,
+referral > organic > referral > referral,<Other> > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,101.0
+referral > (unknown) > referral > referral > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,5,159.0
+referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,2,121,8640.0
+referral,<Other>,1,642,41270.0
+organic > organic > organic > referral > organic > organic,google > google > google > <Other> > google > google,6,1,64.0
+organic > referral > (none) > referral,google > <Other> > (direct) > <Other>,4,1,15.0
+organic > organic > referral,google > google > shop.googlemerchandisestore.com,3,24,1220.0
+referral > organic > referral > referral > organic > referral > referral > organic,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,8,1,25.0
+referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,67,4692.0
+referral > organic > organic > referral > referral > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,7,1,55.0
+(none) > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,11,1108.0
+organic > (unknown) > organic > referral,google > (unknown) > google > shop.googlemerchandisestore.com,4,5,170.0
+referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,8,531.0
+organic > referral > organic,google > <Other> > google,3,9,187.0
+(none) > referral > referral > referral > (none),(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),5,1,44.0
+organic > referral > organic > referral > organic > referral > organic,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,7,8,286.0
+referral > referral > organic > (unknown) > referral > organic,<Other> > shop.googlemerchandisestore.com > google > (unknown) > shop.googlemerchandisestore.com > google,6,1,55.0
+referral > (unknown) > (unknown) > (unknown) > (unknown) > referral,shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com,6,2,124.0
+(none) > organic > referral,(direct) > bing > shop.googlemerchandisestore.com,3,1,
+referral > referral > referral,mail.google.com > mail.google.com > shop.googlemerchandisestore.com,3,1,
+referral > referral > referral > referral > referral > (unknown) > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,
+referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > <Other> > <Other>,5,1,75.0
+referral > email,shop.googlemerchandisestore.com > Newsletter_November_2020,2,4,246.0
+cpc > cpc > referral > cpc > referral,google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,5,1,16.0
+(unknown) > referral,(unknown) > shop.googlemerchandisestore.com,2,26,1282.0
+(none) > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,4,1,72.0
+referral > referral > referral > (unknown) > referral,<Other> > shop.googlemerchandisestore.com > <Other> > (unknown) > <Other>,5,1,16.0
+organic > organic > referral > organic,google > google > shop.googlemerchandisestore.com > google,4,10,640.0
+referral > (data deleted) > organic > organic > organic > referral > organic,shop.googlemerchandisestore.com > (data deleted) > google > shop.googlemerchandisestore.com > google > <Other> > shop.googlemerchandisestore.com,7,1,14.0
+(unknown) > (unknown) > referral,(unknown) > (unknown) > shop.googlemerchandisestore.com,3,9,647.0
+referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,7,1,
+organic > organic > organic,google > google > google,3,19,1556.0
+organic > referral > referral > referral > referral > organic > organic > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,5,70.0
+organic > organic,google > google,2,147,8778.0
+referral > referral > organic,<Other> > shop.googlemerchandisestore.com > google,3,11,762.0
+organic > referral > organic > (unknown) > organic > organic > (unknown) > organic > (unknown) > organic > (unknown) > organic,google > <Other> > google > (unknown) > google > shop.googlemerchandisestore.com > (unknown) > google > (unknown) > google > (unknown) > google,12,1,92.0
+(none) > referral > referral,(direct) > <Other> > <Other>,3,2,34.0
+referral,sites.google.com,1,27,1547.0
+referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,3,3,380.0
+referral > referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,4,163.0
+organic > (unknown) > referral > referral > referral > referral > organic > referral,google > (unknown) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,8,1,
+organic > referral > (none),google > shop.googlemerchandisestore.com > (direct),3,4,365.0
+organic > referral > organic,google > shop.googlemerchandisestore.com > google,3,23,1403.0
+(none) > organic > referral > referral > referral > referral,(direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,2,119.0
+<Other> > referral,<Other> > <Other>,2,9,554.0
+organic > organic > referral,google > google > <Other>,3,6,260.0
+<Other> > referral,<Other> > shop.googlemerchandisestore.com,2,32,1739.0
+organic > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other>,7,2,92.0
+organic > (none),google > (direct),2,41,2883.0
+organic > (data deleted) > referral > referral > (data deleted) > (none),google > (data deleted) > <Other> > <Other> > (data deleted) > (direct),6,13,752.0
+organic > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,4,99.0
+referral > (none) > (data deleted) > referral,<Other> > (direct) > (data deleted) > <Other>,4,1,174.0
+(none) > referral > (data deleted),(direct) > shop.googlemerchandisestore.com > (data deleted),3,4,227.0
+referral > (none) > referral > referral,<Other> > (direct) > <Other> > <Other>,4,2,66.0
+referral > (data deleted) > organic,shop.googlemerchandisestore.com > (data deleted) > google,3,2,81.0
+organic > (data deleted) > referral > referral > referral,google > (data deleted) > shop.googlemerchandisestore.com > <Other> > <Other>,5,1,
+referral,googlemerchandisestore.com,1,53,3137.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,28,2031.0
+<Other> > (none) > (none) > (data deleted),<Other> > (direct) > (direct) > (data deleted),4,1,83.0
+(unknown) > referral > referral > referral,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,3,119.0
+(none) > organic > (unknown) > referral > (unknown) > (unknown) > referral,(direct) > google > (unknown) > googlemerchandisestore.com > (unknown) > (unknown) > <Other>,7,1,170.0
+(none) > organic,(direct) > google,2,16,943.0
+organic > organic > (data deleted) > (none) > (data deleted) > organic > (data deleted),google > google > <Other> > (direct) > (data deleted) > <Other> > (data deleted),7,1,140.0
+<Other> > organic > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com,3,1,70.0
+organic > (data deleted) > referral > organic > (unknown) > (none) > organic,google > (data deleted) > shop.googlemerchandisestore.com > google > (unknown) > (direct) > <Other>,7,1,123.0
+referral > referral > (none),shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),3,4,270.0
+organic > (unknown) > referral > organic > referral > referral,google > (unknown) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,23.0
+referral > referral > referral > (none) > referral > referral > referral > referral > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,10,1,21.0
+referral > referral > referral > referral > organic > (data deleted) > (data deleted) > organic,moma.corp.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > moma.corp.google.com > google > (data deleted) > (data deleted) > google,8,5,170.0
+organic > referral > referral > referral > referral > organic,google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,6,1,11.0
+organic > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,22,1035.0
+organic > referral > referral,google > <Other> > shop.googlemerchandisestore.com,3,8,400.0
+referral > referral > referral > referral > organic > (data deleted),moma.corp.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > moma.corp.google.com > google > (data deleted),6,9,306.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,16,1292.0
+referral > referral,<Other> > shop.googlemerchandisestore.com,2,55,2989.0
+organic > organic > organic > organic,google > google > google > google,4,6,683.0
+organic > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,30,2201.0
+referral > referral > cpc > referral > referral > referral > referral,googlemerchandisestore.com > googlemerchandisestore.com > google > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com,7,1,
+organic > (none) > referral > referral > referral > referral,<Other> > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,41.0
+<Other> > referral > referral > referral > referral > (none),<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),6,1,
+(unknown) > (unknown) > (unknown) > (unknown) > referral,(unknown) > (unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com,5,1,160.0
+referral,shop.googlemerchandisestore.com,1,166,8381.0
+referral > referral,<Other> > <Other>,2,45,2634.0
+(none) > (none) > organic,(direct) > (direct) > google,3,1,86.0
+organic > organic,<Other> > google,2,3,137.0
+organic > organic,<Other> > (data deleted),2,1,60.0
+referral > referral > (none) > referral,<Other> > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com,4,2,56.0
+referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,5,1,48.0
+<Other>,<Other>,1,82,5349.0
+referral > organic > <Other> > organic > referral > organic,shop.googlemerchandisestore.com > google > <Other> > google > <Other> > google,6,1,48.0
+referral > organic > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,276.0
+(none) > (none) > (unknown) > email > referral,(direct) > (direct) > (unknown) > Newsletter_November_2020 > shop.googlemerchandisestore.com,5,1,139.0
+(none) > referral > organic > (unknown) > referral,(direct) > shop.googlemerchandisestore.com > google > (unknown) > shop.googlemerchandisestore.com,5,1,23.0
+organic > (unknown) > referral,<Other> > (unknown) > <Other>,3,1,6.0
+organic > organic > organic > referral > organic > organic > organic > organic,google > google > google > shop.googlemerchandisestore.com > google > google > google > google,8,1,34.0
+referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com,3,7,124.0
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,10,674.0
+referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,4,169.0
+referral > <Other>,mail.google.com > <Other>,2,1,27.0
+referral > organic > referral,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,3,5,318.0
+organic > referral > referral > referral > referral > organic > organic > referral,google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com,8,8,1020.0
+organic > referral > referral > referral > referral > organic > organic,google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,7,1,128.0
+organic > (none) > organic > referral > referral,google > (direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,3,587.0
+organic > referral > referral,google > shop.googlemerchandisestore.com > <Other>,3,21,1063.0
+organic > referral > (data deleted) > organic,google > shop.googlemerchandisestore.com > (data deleted) > google,4,1,71.0
+organic > referral,google > <Other>,2,53,4297.0
+referral > referral > referral > organic,shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > google,4,2,88.0
+<Other> > (none) > organic > organic > referral > referral > (unknown) > (unknown) > referral,<Other> > (direct) > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > support.google.com,9,1,92.0
+referral > organic > organic,<Other> > google > google,3,6,255.0
+referral > organic > referral,<Other> > google > <Other>,3,8,376.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com > <Other> > <Other> > <Other>,5,1,
+organic > referral > organic > organic > organic > referral > referral,google > <Other> > google > google > google > <Other> > shop.googlemerchandisestore.com,7,1,33.0
+organic > referral > referral,google > <Other> > <Other>,3,6,466.0
+(none) > (none) > referral > referral > referral,(direct) > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,5,1,59.0
+organic > (none) > organic > organic,google > (direct) > google > google,4,6,304.0
+organic > organic > organic > (data deleted) > referral > referral > referral,google > <Other> > google > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,74.0
+organic > organic > (unknown) > referral,google > google > (unknown) > shop.googlemerchandisestore.com,4,3,331.0
+(unknown) > organic > referral > referral > referral > organic > referral > referral,(unknown) > google > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > google > <Other> > shop.googlemerchandisestore.com,8,1,191.0
+(none) > referral > organic > referral > organic,(direct) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,5,10,640.0
+(unknown) > referral > organic > organic,(unknown) > shop.googlemerchandisestore.com > google > google,4,1,32.0
+referral > referral > referral > referral > referral > referral,moma.corp.google.com > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,6,95.0
+referral > <Other>,shop.googlemerchandisestore.com > <Other>,2,3,62.0
+organic > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,4,3,138.0
+referral > (unknown) > referral > referral > referral > (data deleted),<Other> > (unknown) > googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > (data deleted),6,1,13.0
+(data deleted) > referral > referral,(data deleted) > shop.googlemerchandisestore.com > <Other>,3,1,51.0
+organic > referral > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,6,141.0
+(unknown) > referral > referral > referral,(unknown) > <Other> > <Other> > <Other>,4,1,113.0
+(none),(direct),1,143,8391.0
+<Other> > referral > (data deleted),<Other> > shop.googlemerchandisestore.com > (data deleted),3,1,35.0
+organic > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,36,1734.0
+referral > referral > referral > referral > organic,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,2,130.0
+cpc > referral,google > shop.googlemerchandisestore.com,2,10,804.0
+referral > organic > referral > referral,<Other> > google > <Other> > shop.googlemerchandisestore.com,4,2,331.0
+referral > referral > referral > (data deleted) > (none) > referral > <Other> > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > (direct) > <Other> > <Other> > <Other>,8,1,32.0
+organic > referral,<Other> > shop.googlemerchandisestore.com,2,15,783.0
+(none) > referral,(direct) > <Other>,2,10,713.0
+organic > (none) > <Other>,google > (direct) > <Other>,3,2,108.0
+referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other>,5,1,
+(none) > referral > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > sites.google.com,6,1,
+referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other>,4,1,102.0
+organic > referral > referral > organic > (unknown) > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > (unknown) > shop.googlemerchandisestore.com,6,2,32.0
+organic > organic > organic > organic > organic > organic > organic,shop.googlemerchandisestore.com > google > google > google > google > google > google,7,1,165.0
+organic > <Other> > referral,google > <Other> > <Other>,3,1,146.0
+organic > organic > organic > referral > referral,google > google > google > shop.googlemerchandisestore.com > <Other>,5,3,336.0
+(none) > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other>,5,1,24.0
+cpc > referral > referral > organic,google > shop.googlemerchandisestore.com > <Other> > google,4,1,14.0
+referral > referral > organic > referral,shop.googlemerchandisestore.com > <Other> > google > shop.googlemerchandisestore.com,4,1,
+organic > organic > referral > referral > organic > referral > organic > organic > organic,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google > google,9,2,49.0
+organic > (unknown) > organic,google > (unknown) > google,3,19,462.0
+referral > referral > (unknown) > (unknown) > (unknown) > organic > referral,<Other> > <Other> > (unknown) > (unknown) > (unknown) > google > shop.googlemerchandisestore.com,7,1,376.0
+cpc > referral,google > mail.google.com,2,1,32.0
+organic > (none) > (none),google > (direct) > (direct),3,5,477.0
+organic > organic > referral,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,110.0
+organic > organic > referral > referral > organic,google > google > <Other> > shop.googlemerchandisestore.com > google,5,1,41.0
+<Other> > referral > <Other> > cpc,<Other> > shop.googlemerchandisestore.com > <Other> > google,4,1,52.0
+cpc > referral,google > analytics.google.com,2,1,
+referral > (data deleted),mail.google.com > (data deleted),2,1,99.0
+organic > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,131.0
+(unknown) > referral > organic,(unknown) > shop.googlemerchandisestore.com > google,3,3,71.0
+referral > <Other> > referral,<Other> > <Other> > <Other>,3,2,48.0
+referral > (none),<Other> > (direct),2,19,1489.0
+email,Newsletter_January_2021,1,2,78.0
+referral > organic > (data deleted),<Other> > google > (data deleted),3,2,251.0
+referral,perksatwork.com,1,8,405.0
+(data deleted),(data deleted),1,19,1255.0
+organic > <Other> > (data deleted),google > <Other> > (data deleted),3,1,39.0
+(unknown) > referral > referral > referral > referral,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,16,1285.0
+organic > organic > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,1,42.0
+organic > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,77.0
+referral > (unknown) > organic,shop.googlemerchandisestore.com > (unknown) > google,3,2,24.0
+organic > (data deleted) > referral > <Other> > organic > referral,google > (data deleted) > shop.googlemerchandisestore.com > <Other> > google > shop.googlemerchandisestore.com,6,1,129.0
+referral > referral > referral > (data deleted) > referral > (data deleted) > referral > referral > organic,<Other> > <Other> > <Other> > (data deleted) > <Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,9,1,30.0
+organic > (none) > referral,google > (direct) > <Other>,3,4,208.0
+(none) > (none),(direct) > (direct),2,12,351.0
+organic > organic,shop.googlemerchandisestore.com > google,2,3,310.0
+organic > referral > referral > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,2,35.0
+organic > (data deleted) > organic,google > (data deleted) > google,3,2,192.0
+referral > (unknown) > referral,shop.googlemerchandisestore.com > (unknown) > <Other>,3,1,37.0
+organic > (unknown) > (none),google > (unknown) > (direct),3,3,170.0
+(unknown) > organic,(unknown) > google,2,8,484.0
+(none) > referral > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,2,202.0
+(none) > referral,(direct) > shop.googlemerchandisestore.com,2,19,1420.0
+(unknown) > referral > referral > referral,(unknown) > <Other> > shop.googlemerchandisestore.com > <Other>,4,2,134.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > 1424467d6c37d1542424bfa36cc525cd.safeframe.googlesyndication.com > shop.googlemerchandisestore.com,5,1,193.0
+<Other> > organic,<Other> > google,2,11,557.0
+referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > <Other>,5,6,210.0
+referral > referral > referral > referral > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,2,48.0
+referral,mail.google.com,1,10,340.0
+organic > referral > referral > referral,google > shop.googlemerchandisestore.com > <Other> > <Other>,4,2,172.0
+organic > referral > (unknown) > email,google > shop.googlemerchandisestore.com > (unknown) > Newsletter_December_2020,4,1,35.0
+<Other> > organic > organic,<Other> > google > google,3,4,118.0
+cpc,google,1,36,2398.0
+referral,9to5google.com,1,4,160.0
+referral,moma.corp.google.com,1,11,727.0
+referral > (data deleted) > (data deleted),shop.googlemerchandisestore.com > (data deleted) > (data deleted),3,1,83.0
+referral > referral > referral,<Other> > <Other> > <Other>,3,18,890.0
+referral > <Other>,<Other> > <Other>,2,7,170.0
+referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com,2,6,617.0
+referral > organic,googlemerchandisestore.com > google,2,16,59.0
+(none) > referral > referral > referral,(direct) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,1200.0
+(unknown) > (none),(unknown) > (direct),2,5,353.0
+(none) > referral > referral,(direct) > shop.googlemerchandisestore.com > <Other>,3,7,416.0
+(none) > organic > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,6,7,351.0
+(unknown) > referral > referral > referral > referral > referral,(unknown) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,132.0
+referral > referral > (none) > organic > (none),googlemerchandisestore.com > <Other> > (direct) > google > (direct),5,1,
+(none) > organic > <Other> > organic > referral > referral,(direct) > google > <Other> > google > shop.googlemerchandisestore.com > <Other>,6,1,39.0
+referral > (none) > referral > referral > referral,shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,26.0
+(none) > referral > (none) > (unknown) > (unknown) > (data deleted) > (none) > organic > (data deleted),(direct) > shop.googlemerchandisestore.com > (direct) > (unknown) > (unknown) > (data deleted) > (direct) > google > (data deleted),9,1,82.0
+<Other> > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,5,323.0
+organic > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > <Other> > <Other> > <Other>,5,1,56.0
+referral > organic > referral > (none),<Other> > google > shop.googlemerchandisestore.com > (direct),4,1,25.0
+(unknown) > referral > referral > referral > organic,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,1,27.0
+referral > referral > organic > referral > referral > referral > referral > organic > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,9,2,114.0
+organic > organic > (none) > organic > referral > organic > organic,google > google > (direct) > google > shop.googlemerchandisestore.com > <Other> > google,7,1,35.0
+organic > (data deleted) > (data deleted) > organic,google > (data deleted) > (data deleted) > <Other>,4,2,93.0
+cpc > referral > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,1,51.0
+referral > organic > referral > referral > referral > referral,<Other> > google > <Other> > <Other> > shop.googlemerchandisestore.com > <Other>,6,1,90.0
+organic > (data deleted) > referral > referral > referral > referral,google > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,72.0
+referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,8,2,680.0
+(unknown) > (unknown) > referral > referral > referral,(unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,66.0
+organic > (none) > organic,google > (direct) > <Other>,3,1,16.0
+(none) > referral > (none) > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,7,2,128.0
+organic > (unknown) > referral,google > (unknown) > <Other>,3,1,38.0
+referral > referral > referral > referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,185.0
+organic > organic > organic > (unknown) > referral > organic > referral > referral > referral,google > google > google > (unknown) > <Other> > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,9,270.0
+(unknown) > organic > organic > referral > referral,(unknown) > google > google > <Other> > <Other>,5,1,55.0
+organic > organic > referral > organic > referral > organic > (data deleted),google > google > shop.googlemerchandisestore.com > google > <Other> > google > (data deleted),7,1,48.0
+organic > referral > referral > referral > referral > (none),google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),6,1,41.0
+organic > referral > (none) > (data deleted) > organic,google > shop.googlemerchandisestore.com > (direct) > (data deleted) > google,5,1,110.0
+<Other> > organic > referral > (data deleted) > <Other> > referral > referral,<Other> > google > shop.googlemerchandisestore.com > (data deleted) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,6,84.0
+referral > referral > <Other>,<Other> > shop.googlemerchandisestore.com > <Other>,3,4,744.0
+referral > organic > organic > referral > referral > referral > referral > organic > referral,shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,9,1,85.0
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,4,420.0
+referral > organic > referral > referral > organic > referral > referral,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,2,107.0
+referral > organic > organic > referral > referral > organic > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,2,79.0
+referral > referral > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,4,7,209.0
+(unknown) > (unknown) > referral > referral > referral > referral,(unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,6,1,41.0
+organic > referral > organic > organic,google > <Other> > google > google,4,1,40.0
+referral > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,3,2,14.0
+organic > (data deleted) > (none) > organic,google > (data deleted) > (direct) > google,4,1,54.0
+organic > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,2,32.0
+referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > <Other>,4,2,405.0
+organic > referral > referral > referral > organic > referral,google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,175.0
+referral > <Other> > (data deleted) > referral > (none),<Other> > <Other> > (data deleted) > shop.googlemerchandisestore.com > (direct),5,1,88.0
+referral > referral > (none) > referral > referral > (data deleted),<Other> > <Other> > (direct) > <Other> > <Other> > <Other>,6,1,63.0
+referral > organic > referral > organic > organic,<Other> > google > shop.googlemerchandisestore.com > google > google,5,4,44.0
+organic > referral > referral > referral > (unknown) > organic > organic > organic > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > (unknown) > google > google > google > <Other> > <Other> > shop.googlemerchandisestore.com,11,1,27.0
+(unknown) > (data deleted),(unknown) > (data deleted),2,2,27.0
+organic > (unknown) > referral,google > (unknown) > shop.googlemerchandisestore.com,3,5,568.0
+organic > referral > organic > referral,google > <Other> > google > shop.googlemerchandisestore.com,4,3,159.0
+referral > referral,shop.googlemerchandisestore.com > <Other>,2,15,1336.0
+(none) > organic > referral > referral > referral > referral > (unknown) > <Other>,(direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > <Other>,8,1,28.0
+organic > referral > organic > referral > referral,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,3,204.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,11,1,71.0
+referral > (unknown) > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,3,11,1313.0
+referral > referral > referral > referral > referral > organic > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,7,1,51.0
+organic > referral > referral > referral > referral > referral > referral,google > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,38.0
+referral > referral > organic > referral > referral > referral > referral,<Other> > <Other> > google > <Other> > <Other> > <Other> > <Other>,7,2,73.0
+organic > organic > organic > referral,google > google > google > shop.googlemerchandisestore.com,4,3,116.0
+referral > referral > (data deleted) > referral > referral > referral > (data deleted),<Other> > googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > (data deleted),7,2,35.0
+(unknown) > referral,(unknown) > <Other>,2,3,150.0
+organic > (data deleted) > referral > (none) > (data deleted),google > (data deleted) > shop.googlemerchandisestore.com > (direct) > (data deleted),5,1,
+referral > organic > (data deleted) > referral,<Other> > google > (data deleted) > <Other>,4,2,150.0
+referral > referral > (unknown) > referral > (unknown) > referral,support.google.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,6,3,216.0
+referral > referral > referral > referral > referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,41.0
+referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other>,4,6,302.0
+organic > organic > (unknown) > organic > organic > organic > organic > organic,google > google > (unknown) > google > google > google > google > google,8,1,80.0
+organic > organic > (unknown) > organic > organic,google > google > (unknown) > google > google,5,3,134.0
+referral > referral > referral > referral > organic > referral > organic > referral,<Other> > shop.googlemerchandisestore.com > support.google.com > support.google.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,8,4,80.0
+<Other> > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,4,2,256.0
+(unknown) > (unknown) > referral > referral > organic,(unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,1,
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,12,1,30.0
+referral > referral > referral > referral > organic > referral > (data deleted) > organic > referral > (unknown) > (data deleted),shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > (data deleted) > google > shop.googlemerchandisestore.com > (unknown) > (data deleted),11,1,68.0
+<Other> > <Other> > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,81.0
+organic > (unknown) > (unknown) > referral,google > (unknown) > (unknown) > shop.googlemerchandisestore.com,4,2,72.0
+referral,creatoracademy.youtube.com,1,2,34.0
+referral > organic > referral > organic > referral > organic > referral > referral > referral,<Other> > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,9,1,117.0
+(unknown) > (unknown) > organic,(unknown) > (unknown) > google,3,3,56.0
+referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,3,233.0
+referral > referral > referral > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,2,159.0
+referral > (unknown) > referral > referral > (unknown) > email,<Other> > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > Newsletter_December_2020,6,1,118.0
+organic > referral > referral > referral > referral > organic > organic > referral > referral,google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,2,256.0
+referral > (data deleted) > organic > (data deleted) > <Other> > (none) > (none),<Other> > (data deleted) > google > (data deleted) > <Other> > (direct) > (direct),7,1,48.0
+referral > (none) > (none) > organic,<Other> > (direct) > (direct) > google,4,1,94.0
+organic > organic,google > <Other>,2,3,145.0
+referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,4,1,138.0
+referral > referral > referral > (unknown) > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,5,1,123.0
+organic > referral > organic > referral > (data deleted) > referral,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,6,1,159.0
+organic > referral > (unknown) > referral > referral,google > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,24.0
+(none) > (data deleted) > organic > organic,(direct) > (data deleted) > google > <Other>,4,1,42.0
+organic > referral > organic > organic > organic > referral > referral > (unknown) > referral > (unknown) > referral,google > <Other> > google > google > google > <Other> > shop.googlemerchandisestore.com > (unknown) > <Other> > (unknown) > <Other>,11,2,92.0
+<Other> > organic > referral > referral,<Other> > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,3,123.0
+organic > (unknown) > (unknown) > organic,google > (unknown) > (unknown) > google,4,2,136.0
+organic > referral > organic > organic > organic > referral,google > shop.googlemerchandisestore.com > google > google > google > shop.googlemerchandisestore.com,6,1,52.0
+(none) > organic > (data deleted),(direct) > google > (data deleted),3,1,44.0
+cpc > organic > organic > organic,google > google > google > google,4,1,108.0
+<Other> > referral > referral > referral > organic > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,62.0
+referral > referral > (none) > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > <Other>,4,1,149.0
+organic > referral > organic > referral > referral > organic,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,6,3,147.0
+(unknown) > organic > referral > referral,(unknown) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,784.0
+referral > (unknown) > referral > referral > referral,<Other> > (unknown) > <Other> > <Other> > <Other>,5,1,42.0
+organic > organic > (unknown) > organic,google > google > (unknown) > google,4,2,224.0
+referral > (data deleted),shop.googlemerchandisestore.com > (data deleted),2,1,88.0
+referral > referral > (none) > referral > organic,<Other> > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > google,5,1,17.0
+referral > referral > referral > referral > organic > (unknown) > organic,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > google > (unknown) > google,7,1,25.0
+(none) > referral > referral > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > sites.google.com > shop.googlemerchandisestore.com,7,1,22.0
+(none) > referral > referral > referral > referral > referral > referral > (data deleted),(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > sites.google.com > shop.googlemerchandisestore.com > (data deleted),8,1,55.0
+organic > organic,google > shop.googlemerchandisestore.com,2,3,89.0
+<Other> > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other>,3,3,98.0
+organic > (data deleted) > (data deleted),google > (data deleted) > (data deleted),3,4,137.0
+(none) > referral,(direct) > googlemerchandisestore.com,2,1,15.0
+referral > referral > referral > (unknown) > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > <Other> > shop.googlemerchandisestore.com,6,1,21.0
+organic > organic,bing > bing,2,3,158.0
+organic > referral > organic > cpc > referral > (data deleted),<Other> > shop.googlemerchandisestore.com > google > google > <Other> > (data deleted),6,1,96.0
+referral > organic,<Other> > google,2,41,2768.0
+referral > (none) > (none) > referral,<Other> > (direct) > (direct) > <Other>,4,3,83.0
+organic > organic > referral > referral,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,4,176.0
+organic > (data deleted) > <Other>,<Other> > (data deleted) > <Other>,3,1,32.0
+organic > (none) > organic,google > (direct) > google,3,5,324.0
+cpc > (data deleted),google > (data deleted),2,6,495.0
+(none) > referral > referral > organic > organic > referral > organic,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > google,7,1,39.0
+<Other> > referral > organic > referral > referral,<Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,156.0
+organic > referral > referral,google > <Other> > googlemerchandisestore.com,3,1,19.0
+organic > referral > (unknown) > (unknown) > referral,google > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,5,1,119.0
+(none) > organic > referral,(direct) > google > shop.googlemerchandisestore.com,3,5,956.0
+organic > referral > organic > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,72.0
+organic > referral > referral > referral,google > <Other> > <Other> > shop.googlemerchandisestore.com,4,2,164.0
+referral > (data deleted),<Other> > (data deleted),2,19,1045.0
+referral > <Other> > organic,<Other> > <Other> > google,3,1,29.0
+(none) > organic > (data deleted) > referral,(direct) > google > (data deleted) > <Other>,4,1,
+referral > referral > referral,shop.googlemerchandisestore.com > <Other> > <Other>,3,5,1091.0
+organic > (none) > referral,yahoo > (direct) > shop.googlemerchandisestore.com,3,1,117.0
+organic > (none) > (none) > referral,google > (direct) > (direct) > <Other>,4,2,384.0
+organic > (data deleted) > (none),google > (data deleted) > (direct),3,2,480.0
+organic > <Other>,google > <Other>,2,10,803.0
+organic > organic > referral > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,3,42.0
+referral > referral,shop.googlemerchandisestore.com > mail.google.com,2,3,120.0
+referral > (none) > (unknown),<Other> > (direct) > (unknown),3,1,253.0
+(none) > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,13,1018.0
+cpc > organic > referral,google > <Other> > shop.googlemerchandisestore.com,3,1,228.0
+referral > referral,sites.google.com > shop.googlemerchandisestore.com,2,3,295.0
+<Other> > (none),<Other> > (direct),2,6,470.0
+<Other> > (none) > (data deleted),<Other> > (direct) > (data deleted),3,1,116.0
+organic > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,58.0
+referral > cpc,<Other> > google,2,4,184.0
+organic,<Other>,1,17,1235.0
+<Other> > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,4,203.0
+organic > (none) > organic > referral,google > (direct) > google > shop.googlemerchandisestore.com,4,1,25.0
+(unknown) > (unknown) > referral > referral,(unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,2,97.0
+referral > referral > referral > organic > referral > organic > organic > organic,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google > google,8,1,18.0
+(unknown) > referral > (none) > cpc > organic > referral,(unknown) > shop.googlemerchandisestore.com > (direct) > google > <Other> > <Other>,6,1,69.0
+(unknown) > organic > organic > referral > organic,(unknown) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,1,65.0
+referral > referral > referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,638.0
+organic > (unknown) > referral > referral > referral,google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,29.0
+referral > organic > referral > (none) > referral,moma.corp.google.com > google > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com,5,1,104.0
+(none) > (none) > referral,(direct) > (direct) > mail.google.com,3,2,79.0
+organic > organic > referral > organic > organic > referral > (unknown) > organic,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > (unknown) > google,8,1,
+referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > <Other>,4,1,44.0
+organic > referral > organic > organic > organic > referral,google > <Other> > google > google > google > shop.googlemerchandisestore.com,6,1,83.0
+<Other> > referral > organic,<Other> > shop.googlemerchandisestore.com > google,3,5,579.0
+referral > (none) > (none) > organic > referral > referral > referral,<Other> > (direct) > (direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,70.0
+(unknown) > (unknown) > referral,(unknown) > (unknown) > mail.google.com,3,1,
+referral > organic > referral > referral > (unknown) > referral,<Other> > google > <Other> > <Other> > (unknown) > <Other>,6,1,72.0
+organic > <Other> > (none),google > <Other> > (direct),3,8,536.0
+email,Newsletter_November_2020,1,5,415.0
+referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,3,203.0
+organic > referral > organic > referral > organic > referral,google > shop.googlemerchandisestore.com > google > <Other> > google > <Other>,6,1,63.0
+(none) > organic > organic > (none) > (none) > referral > cpc,(direct) > google > google > (direct) > (direct) > shop.googlemerchandisestore.com > google,7,1,22.0
+cpc > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,5,218.0
+organic > referral > referral > organic > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,77.0
+organic > organic > referral > referral > organic > referral > referral > referral > referral > referral,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,67.0
+referral > referral > organic,<Other> > <Other> > google,3,3,132.0
+cpc > (data deleted) > referral,google > (data deleted) > shop.googlemerchandisestore.com,3,1,37.0
+referral > referral > (unknown) > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,2,36.0
+<Other> > organic > referral,<Other> > google > <Other>,3,1,
+referral > (data deleted) > organic > organic > organic > (data deleted) > (none),shop.googlemerchandisestore.com > (data deleted) > google > google > google > (data deleted) > (direct),7,1,40.0
+organic > referral > referral > referral > referral,google > <Other> > <Other> > <Other> > <Other>,5,1,
+referral > (none) > referral,support.google.com > (direct) > <Other>,3,1,38.0
+organic > referral > referral > cpc > referral > (unknown) > referral > referral > (none),google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),9,2,168.0
+organic > referral > referral > referral > organic,google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > google,5,2,56.0
+referral > (unknown) > (data deleted) > organic > referral,shop.googlemerchandisestore.com > (unknown) > (data deleted) > google > shop.googlemerchandisestore.com,5,1,65.0
+referral > referral > (none) > email > email > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > Newsletter_December_2020 > Newsletter_December_2020 > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,41.0
+organic > (unknown) > (none) > organic > (none) > organic > referral > organic > referral > referral,google > (unknown) > (direct) > google > (direct) > google > googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,35.0
+organic > organic > referral > referral > organic > referral,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,70.0
+referral > referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,152.0
+organic > referral > <Other> > (data deleted) > organic,google > <Other> > <Other> > (data deleted) > google,5,5,1121.0
+(none) > referral > referral > referral > referral,(direct) > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,3,90.0
+organic > referral > (unknown) > (unknown) > referral > organic,google > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,2,98.0
+organic > organic > organic > referral > organic,google > google > google > shop.googlemerchandisestore.com > google,5,4,679.0
+referral > referral > referral > organic,<Other> > <Other> > shop.googlemerchandisestore.com > google,4,1,100.0
+referral > (none) > referral > referral > referral,<Other> > (direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,5,1,39.0
+organic > referral > organic > organic > (none) > cpc > organic,google > <Other> > google > google > (direct) > google > google,7,1,22.0
+referral > organic,<Other> > <Other>,2,5,272.0
+(none) > (none) > (none) > organic,(direct) > (direct) > (direct) > <Other>,4,1,16.0
+organic > referral > organic,<Other> > shop.googlemerchandisestore.com > google,3,2,244.0
+(none) > organic > organic,(direct) > google > google,3,2,70.0
+organic > organic > (data deleted) > referral > referral > referral,google > <Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,6,1,30.0
+organic > referral > (unknown) > organic,<Other> > shop.googlemerchandisestore.com > (unknown) > google,4,2,56.0
+organic > organic > (data deleted),google > google > (data deleted),3,4,272.0
+organic > referral > referral > (unknown) > (unknown) > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > google,6,1,48.0
+organic > (none) > (none) > organic > referral > organic,google > (direct) > (direct) > google > shop.googlemerchandisestore.com > google,6,1,41.0
+referral > organic > (none) > organic > organic > organic > referral > (none) > (none),<Other> > google > (direct) > google > google > google > shop.googlemerchandisestore.com > (direct) > (direct),9,1,19.0
+<Other> > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,3,140.0
+<Other> > (data deleted),<Other> > (data deleted),2,12,589.0
+referral > referral,mail.google.com > shop.googlemerchandisestore.com,2,2,199.0
+<Other> > <Other> > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,9,177.0
+<Other> > referral > organic > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,94.0
+referral > organic > referral > referral > referral,sites.google.com > google > <Other> > <Other> > shop.googlemerchandisestore.com,5,1,37.0
+organic > (unknown) > (none) > organic > (none),google > (unknown) > (direct) > google > (direct),5,1,50.0
+referral > referral > referral > (unknown) > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,3,250.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com,5,1,178.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,3,375.0
+organic > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,8,1,86.0
+referral > referral > organic > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,16.0
+<Other> > referral > (data deleted) > referral,<Other> > shop.googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com,4,2,198.0
+organic > referral > organic > (none),google > shop.googlemerchandisestore.com > google > (direct),4,2,22.0
+organic > referral > (data deleted),google > shop.googlemerchandisestore.com > (data deleted),3,3,280.0
+referral > referral > referral > referral > referral > referral > referral > email,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other> > <Other> > Newsletter_January_2021,8,1,
+referral > organic > (data deleted),shop.googlemerchandisestore.com > google > (data deleted),3,4,118.0
+referral > organic > organic,shop.googlemerchandisestore.com > google > google,3,4,242.0
+referral > referral > referral > organic,sites.google.com > shop.googlemerchandisestore.com > <Other> > google,4,1,141.0
+organic > referral > organic > organic > organic > referral,google > <Other> > google > google > google > <Other>,6,3,42.0
+referral > organic > referral > organic,googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,4,1,21.0
+referral > (data deleted) > organic,<Other> > (data deleted) > google,3,10,434.0
+referral > referral > (unknown) > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,2,142.0
+referral > referral > referral > referral > (unknown) > (unknown) > (unknown) > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,11,1,58.0
+(unknown) > (none) > referral,(unknown) > (direct) > shop.googlemerchandisestore.com,3,2,122.0
+organic > referral > referral > referral > referral > referral > referral > referral > referral > <Other>,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,10,5,350.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,67.0
+(unknown) > referral > referral,(unknown) > <Other> > <Other>,3,1,71.0
+referral > organic > organic > organic > organic,shop.googlemerchandisestore.com > google > google > google > google,5,1,79.0
+organic > referral > organic > organic,google > shop.googlemerchandisestore.com > google > google,4,3,457.0
+referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,2,231.0
+referral > (unknown) > organic > (data deleted),<Other> > (unknown) > google > (data deleted),4,2,100.0
+organic > (unknown) > referral > organic,google > (unknown) > shop.googlemerchandisestore.com > google,4,3,118.0
+affiliate,Partners,1,1,23.0
+organic > (none) > (data deleted),google > (direct) > (data deleted),3,3,265.0
+referral > referral > referral > referral > referral > referral > referral > (unknown) > (unknown) > referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,12,3,59.0
+organic > organic > (unknown) > referral > referral,google > google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,4,356.0
+referral > organic > (data deleted) > referral > referral,<Other> > google > (data deleted) > <Other> > <Other>,5,3,563.0
+(none) > organic > referral > referral,(direct) > google > <Other> > shop.googlemerchandisestore.com,4,3,105.0
+<Other> > organic > (none),<Other> > google > (direct),3,2,82.0
+(none) > referral > referral > organic,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,1,32.0
+organic > referral > referral > referral > (data deleted),google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),5,2,65.0
+referral > (data deleted) > email > email,shop.googlemerchandisestore.com > (data deleted) > Newsletter_November_2020 > Newsletter_November_2020,4,1,31.0
+(unknown) > (unknown) > referral > referral > referral > referral > referral,(unknown) > (unknown) > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com,7,1,54.0
+referral > referral,googlemerchandisestore.com > googlemerchandisestore.com,2,4,180.0
+(none) > (none) > referral,(direct) > (direct) > <Other>,3,2,92.0
+referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > <Other> > <Other>,6,3,207.0
+referral > referral > (unknown) > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > <Other>,5,2,42.0
+referral > email,<Other> > Newsletter_November_2020,2,1,210.0
+organic > organic > referral > organic > referral,google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,5,2,68.0
+<Other> > referral > organic > organic > organic,<Other> > shop.googlemerchandisestore.com > google > google > google,5,5,24.0
+(none) > (none) > referral > referral,(direct) > (direct) > shop.googlemerchandisestore.com > <Other>,4,1,81.0
+referral > (unknown) > organic > organic,<Other> > (unknown) > (data deleted) > google,4,2,47.0
+referral > organic > organic > referral,shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com,4,1,26.0
+(none) > (none) > (data deleted) > organic > (none),(direct) > (direct) > (data deleted) > google > (direct),5,1,
+cpc > referral > organic,google > shop.googlemerchandisestore.com > google,3,1,44.0
+(none) > referral > (none) > referral > (unknown) > (unknown) > referral,(direct) > <Other> > (direct) > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,7,1,143.0
+referral > (none),googlemerchandisestore.com > (direct),2,2,206.0
+<Other> > <Other>,<Other> > <Other>,2,2,61.0
+<Other> > (data deleted) > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com,3,5,370.0
+organic > (none) > referral > referral,google > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,30.0
+organic > (unknown) > referral > referral,<Other> > (unknown) > googlemerchandisestore.com > googlemerchandisestore.com,4,1,39.0
+organic > cpc > (data deleted) > organic,google > google > (data deleted) > google,4,1,22.0
+(none) > referral > (data deleted),(direct) > <Other> > (data deleted),3,3,254.0
+(none) > referral > referral > (none),(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),4,2,79.0
+referral > (data deleted) > referral,googlemerchandisestore.com > (data deleted) > googlemerchandisestore.com,3,1,25.0
+(none) > (data deleted) > (none),(direct) > (data deleted) > (direct),3,1,71.0
+referral > organic,sites.google.com > google,2,2,109.0
+organic > (data deleted) > (data deleted) > organic > organic > organic,google > (data deleted) > (data deleted) > google > google > google,6,2,158.0
+referral > (data deleted) > referral,<Other> > (data deleted) > <Other>,3,3,144.0
+organic,(direct),1,14,1037.0
+(unknown) > organic > referral,(unknown) > google > shop.googlemerchandisestore.com,3,1,67.0
+(none) > organic,(direct) > <Other>,2,1,4.0
+referral > organic > <Other>,shop.googlemerchandisestore.com > <Other> > <Other>,3,1,
+organic > referral,yahoo > shop.googlemerchandisestore.com,2,1,55.0
+referral > (data deleted) > (data deleted) > referral > referral > referral > referral > referral > referral,<Other> > (data deleted) > (data deleted) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,44.0
+organic > referral > referral > referral > (unknown) > (unknown) > (unknown) > (unknown) > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > (unknown) > <Other> > <Other> > googlemerchandisestore.com,11,1,80.0
+organic > (none) > organic > organic > (none) > cpc > (unknown) > (none) > (unknown) > (unknown) > organic,google > (direct) > (unknown) > google > (direct) > google > (unknown) > (direct) > (unknown) > (unknown) > google,11,1,55.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > mail.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,55.0
+referral > referral > referral > <Other> > referral > referral > (data deleted),<Other> > <Other> > <Other> > <Other> > <Other> > <Other> > (data deleted),7,1,182.0
+cpc > referral > referral > referral,google > <Other> > <Other> > shop.googlemerchandisestore.com,4,1,28.0
+(unknown) > referral > (none),(unknown) > shop.googlemerchandisestore.com > (direct),3,1,
+referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,4,3,168.0
+referral > referral > organic,shop.googlemerchandisestore.com > <Other> > google,3,1,63.0
+organic > (data deleted) > (data deleted) > referral > organic,shop.googlemerchandisestore.com > (data deleted) > (data deleted) > shop.googlemerchandisestore.com > (data deleted),5,1,65.0
+referral > (data deleted) > (none),<Other> > (data deleted) > (direct),3,1,55.0
+referral > referral > referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,2,58.0
+<Other> > organic > (unknown) > (none),<Other> > google > (unknown) > (direct),4,1,75.0
+(none) > organic > <Other> > (none) > (none) > (none),(direct) > google > <Other> > (direct) > (direct) > (direct),6,1,14.0
+referral > referral > referral > organic > (unknown) > referral > referral,shop.googlemerchandisestore.com > <Other> > <Other> > google > (unknown) > <Other> > <Other>,7,1,42.0
+(unknown) > referral > referral > referral > referral > (unknown) > referral > referral,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,188.0
+referral > organic > organic > referral > organic > referral,<Other> > google > google > shop.googlemerchandisestore.com > google > googlemerchandisestore.com,6,1,10.0
+referral > organic > organic > referral > referral > organic > organic > referral > referral,support.google.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,90.0
+referral > organic > organic > (data deleted),<Other> > google > google > (data deleted),4,1,92.0
+organic > (none) > (none) > (unknown) > (unknown) > referral,google > (direct) > (direct) > (unknown) > (unknown) > <Other>,6,2,42.0
+referral > (unknown) > (unknown) > referral > referral,shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,42.0
+organic > referral > referral,google > googlemerchandisestore.com > googlemerchandisestore.com,3,1,1170.0
+(none) > referral > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > <Other>,6,1,24.0
+referral > (none) > referral > (none) > referral > (data deleted),<Other> > (direct) > <Other> > (direct) > <Other> > (data deleted),6,1,
+cpc > organic > organic > organic > referral,google > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com,5,2,43.0
+organic > organic > referral > organic > referral > referral,google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,81.0
+referral > organic > referral > referral > organic > referral,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,228.0
+organic > organic > organic > referral > referral,google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,63.0
+organic > (data deleted) > referral > referral,google > (data deleted) > shop.googlemerchandisestore.com > <Other>,4,1,98.0
+organic > (unknown) > organic > referral > organic,google > (unknown) > google > shop.googlemerchandisestore.com > google,5,1,34.0
+referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com > <Other>,8,1,42.0
+organic > referral > organic > referral > organic > referral > organic > organic > organic,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google > google,9,1,128.0
+organic > organic > referral > (unknown) > referral > referral,google > google > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,96.0
+cpc > (data deleted) > referral > organic > organic > referral > (unknown) > (unknown) > (unknown) > organic > organic > referral,google > (data deleted) > <Other> > google > google > shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > google > google > shop.googlemerchandisestore.com,12,1,8.0
+referral > referral > referral > referral,googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com,4,1,
+referral > referral > referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > (unknown) > <Other>,6,1,20.0
+referral > referral > referral > referral > referral > (unknown) > referral > referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,30.0
+referral > organic > organic > organic > referral > referral > organic > referral,<Other> > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,8,1,28.0
+referral > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,477.0
+organic > referral > organic > organic,google > googlemerchandisestore.com > <Other> > google,4,1,30.0
+organic > referral > organic > (unknown) > organic > organic,google > <Other> > google > (unknown) > google > shop.googlemerchandisestore.com,6,1,94.0
+organic > (none) > (data deleted) > referral,google > (direct) > (data deleted) > shop.googlemerchandisestore.com,4,2,68.0
+organic > (unknown) > referral > referral > referral,google > (unknown) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,114.0
+(none) > referral > (none) > referral > referral > referral > referral > referral > referral > referral,(direct) > 388bc8ac7073bac7a8d128d8bb3edca9.safeframe.googlesyndication.com > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,10,1,36.0
+<Other> > organic > organic,<Other> > google > shop.googlemerchandisestore.com,3,1,41.0
+referral > (none) > (unknown) > organic > (unknown) > (data deleted) > (unknown) > referral > (none) > referral > organic,<Other> > (direct) > (unknown) > <Other> > (unknown) > (data deleted) > (unknown) > <Other> > (direct) > <Other> > google,11,1,150.0
+organic > referral > organic > (data deleted),google > shop.googlemerchandisestore.com > google > (data deleted),4,6,180.0
+referral > <Other> > (unknown) > (data deleted) > referral,shop.googlemerchandisestore.com > <Other> > (unknown) > (data deleted) > shop.googlemerchandisestore.com,5,1,80.0
+(data deleted) > organic > (data deleted),(data deleted) > google > (data deleted),3,1,37.0
+referral > referral > referral > referral > referral > organic > referral > referral > organic > referral,<Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,10,1,32.0
+organic > organic > organic > organic > referral > referral,google > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,60.0
+organic > (none) > referral > (unknown) > (none) > referral > (data deleted),google > (direct) > shop.googlemerchandisestore.com > (unknown) > (direct) > <Other> > (data deleted),7,1,63.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,4,3,111.0
+referral > referral > referral > organic,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,2,51.0
+organic > referral > (none) > <Other> > referral,<Other> > <Other> > (direct) > <Other> > shop.googlemerchandisestore.com,5,1,44.0
+organic > referral > referral > (data deleted),google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),4,2,156.0
+referral > (data deleted) > (none) > referral > referral > (data deleted) > (none),<Other> > (data deleted) > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > (direct),7,1,119.0
+referral > referral > organic > organic > organic > organic > referral > referral,<Other> > <Other> > google > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,2,758.0
+referral > (unknown) > referral > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,114.0
+organic > referral,google > youtube.com,2,1,34.0
+referral > referral > referral > referral > organic > (data deleted) > (data deleted),moma.corp.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > moma.corp.google.com > google > (data deleted) > (data deleted),7,2,68.0
+referral > organic > referral > referral > referral,shop.googlemerchandisestore.com > google > <Other> > shop.googlemerchandisestore.com > groups.google.com,5,2,78.0
+referral > (data deleted) > referral > (data deleted),<Other> > (data deleted) > <Other> > (data deleted),4,2,17.0
+referral > (unknown) > organic > (data deleted) > (none) > referral > referral,shop.googlemerchandisestore.com > (unknown) > google > (data deleted) > (direct) > shop.googlemerchandisestore.com > <Other>,7,1,14.0
+organic > organic > organic > organic > organic,google > google > google > google > google,5,2,43.0
+(none) > referral > (unknown) > referral > organic > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,269.0
+(none) > (data deleted) > referral > organic,(direct) > (data deleted) > shop.googlemerchandisestore.com > google,4,2,141.0
+organic > referral > organic > (none) > referral,google > shop.googlemerchandisestore.com > google > (direct) > shop.googlemerchandisestore.com,5,1,51.0
+referral > organic > (none) > organic > organic,<Other> > google > (direct) > google > google,5,1,13.0
+referral > organic > organic,shop.googlemerchandisestore.com > <Other> > google,3,1,44.0
+organic > (none) > referral > referral > organic,google > (direct) > <Other> > shop.googlemerchandisestore.com > <Other>,5,2,147.0
+<Other> > (data deleted) > referral > referral > <Other> > organic > organic > organic,<Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > google > google > google,8,4,44.0
+organic > organic > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,3,26.0
+referral > referral > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,3,7,1042.0
+referral > email > referral,shop.googlemerchandisestore.com > Newsletter_November_2020 > shop.googlemerchandisestore.com,3,1,104.0
+organic > referral > email > referral,google > shop.googlemerchandisestore.com > Newsletter_December_2020 > <Other>,4,1,59.0
+(none) > referral > organic,(direct) > <Other> > google,3,1,14.0
+referral > <Other> > referral > referral,support.google.com > <Other> > <Other> > <Other>,4,1,227.0
+organic > (none) > referral,google > (direct) > shop.googlemerchandisestore.com,3,3,311.0
+(none) > referral > referral > (none) > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com,5,1,43.0
+referral > organic > (unknown) > (none),<Other> > google > (unknown) > (direct),4,1,164.0
+(none) > referral > referral > referral > (unknown) > referral > organic,(direct) > <Other> > <Other> > shop.googlemerchandisestore.com > (unknown) > <Other> > google,7,2,82.0
+organic > referral > (unknown) > <Other> > organic > (none) > referral,google > <Other> > (unknown) > <Other> > google > (direct) > shop.googlemerchandisestore.com,7,2,354.0
+organic > organic > referral > referral > referral > referral > referral > referral,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,66.0
+organic > organic > organic > organic,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,25.0
+referral > referral > referral > referral > referral > referral > organic,support.google.com > support.google.com > support.google.com > support.google.com > shop.googlemerchandisestore.com > support.google.com > google,7,1,16.0
+(data deleted) > referral > referral > (none) > referral > referral > (none) > referral,(data deleted) > <Other> > shop.googlemerchandisestore.com > (direct) > <Other> > shop.googlemerchandisestore.com > (direct) > <Other>,8,1,174.0
+referral > referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > <Other>,4,3,400.0
+(unknown) > referral > (none) > (none) > referral > (data deleted),(unknown) > <Other> > (direct) > (direct) > <Other> > (data deleted),6,1,86.0
+<Other> > organic > referral > (data deleted),<Other> > google > shop.googlemerchandisestore.com > (data deleted),4,2,32.0
+organic > referral > referral > referral > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,1,51.0
+referral > (none) > referral > (data deleted) > (data deleted),<Other> > (direct) > shop.googlemerchandisestore.com > (data deleted) > (data deleted),5,1,44.0
+organic > (none) > (none) > organic > (data deleted),google > (direct) > (direct) > google > (data deleted),5,1,90.0
+referral > referral > (unknown) > email > email,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > Newsletter_December_2020 > Newsletter_December_2020,5,1,24.0
+referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > <Other> > <Other> > <Other> > <Other>,8,1,85.0
+(none) > organic > organic > referral > referral > referral > organic > organic,(direct) > google > google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,8,1,576.0
+organic > referral > referral > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,54.0
+(none) > (data deleted),(direct) > (data deleted),2,8,307.0
+<Other> > referral > (none),<Other> > shop.googlemerchandisestore.com > (direct),3,2,78.0
+organic > referral > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,65.0
+(none) > organic > (unknown) > (unknown) > (none) > organic > (data deleted) > organic,(direct) > google > (unknown) > (unknown) > (direct) > google > (data deleted) > google,8,1,39.0
+<Other> > <Other> > organic > organic > organic > referral,<Other> > <Other> > google > google > google > shop.googlemerchandisestore.com,6,1,43.0
+referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com,5,1,72.0
+organic > organic > organic,google > shop.googlemerchandisestore.com > google,3,1,89.0
+referral > organic > referral > referral > referral,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,42.0
+referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,3,1,21.0
+organic > referral > (none) > (none) > organic > (none) > referral,google > <Other> > (direct) > (direct) > google > (direct) > shop.googlemerchandisestore.com,7,2,254.0
+(none) > referral > (unknown) > referral > (unknown) > referral,(direct) > perksatwork.com > (unknown) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,6,1,
+(unknown) > (unknown) > (unknown) > organic,(unknown) > (unknown) > (unknown) > google,4,1,34.0
+(data deleted) > (data deleted) > (none),(data deleted) > (data deleted) > (direct),3,1,10.0
+referral > cpc > referral > referral,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > <Other>,4,1,38.0
+cpc > organic,google > google,2,2,123.0
+organic > referral > (data deleted) > referral > (unknown) > referral,google > <Other> > (data deleted) > <Other> > (unknown) > <Other>,6,1,71.0
+(unknown) > referral > referral > referral > referral > referral,(unknown) > <Other> > <Other> > <Other> > <Other> > <Other>,6,1,20.0
+referral > organic > referral > referral,sites.google.com > google > <Other> > sites.google.com,4,1,99.0
+organic > (data deleted) > referral,bing > (data deleted) > <Other>,3,1,179.0
+referral > organic > referral > organic,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,2,110.0
+organic > referral > organic > referral,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,4,4,346.0
+organic > organic > referral > organic,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,4,1,21.0
+referral > referral > referral,mail.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,49.0
+organic > (data deleted) > referral > referral > referral > (data deleted),google > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),6,1,61.0
+(unknown) > referral > (unknown) > referral,(unknown) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,4,1,23.0
+referral > referral > referral,sites.google.com > shop.googlemerchandisestore.com > <Other>,3,1,92.0
+referral > referral > referral > referral,googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,87.0
+referral > organic > referral,<Other> > google > shop.googlemerchandisestore.com,3,2,184.0
+organic > (unknown) > organic,google > (unknown) > shop.googlemerchandisestore.com,3,1,36.0
+referral > (unknown) > referral,<Other> > (unknown) > <Other>,3,3,117.0
+referral > (unknown) > organic,<Other> > (unknown) > google,3,3,141.0
+organic,bing,1,3,250.0
+organic > organic > (none) > organic > organic,google > google > (direct) > google > google,5,1,92.0
+referral > (unknown) > referral > referral > organic > (data deleted),shop.googlemerchandisestore.com > (unknown) > <Other> > shop.googlemerchandisestore.com > google > (data deleted),6,1,20.0
+(none) > organic > referral > referral > referral > referral > referral > referral > referral > organic,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,10,3,132.0
+<Other> > (unknown) > referral > (data deleted) > (unknown) > (none) > referral,<Other> > (unknown) > shop.googlemerchandisestore.com > (data deleted) > (unknown) > (direct) > shop.googlemerchandisestore.com,7,1,22.0
+referral > (none) > <Other> > cpc > referral > referral > referral > referral > organic > referral > organic,<Other> > (direct) > <Other> > google > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,11,1,
+organic > (unknown) > organic,<Other> > (unknown) > google,3,1,89.0
+organic > <Other> > organic,google > <Other> > google,3,2,190.0
+organic > organic > organic > organic > referral > organic,google > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > google,6,1,88.0
+referral > (none) > referral,shop.googlemerchandisestore.com > (direct) > <Other>,3,1,354.0
+organic > organic > (unknown) > referral > referral > referral > referral > referral,google > google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,8,4,256.0
+cpc > referral > organic > referral > organic > organic > referral > organic > referral,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,9,1,86.0
+organic > referral > organic > cpc > referral > (data deleted) > organic,<Other> > shop.googlemerchandisestore.com > google > google > <Other> > (data deleted) > google,7,1,96.0
+referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,4,1,20.0
+referral > referral > (none) > organic > (unknown) > (data deleted),<Other> > shop.googlemerchandisestore.com > (direct) > google > (unknown) > (data deleted),6,1,42.0
+referral > referral > (unknown) > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,81.0
+referral > referral > (unknown) > referral,groups.google.com > shop.googlemerchandisestore.com > (unknown) > <Other>,4,1,53.0
+referral > organic > referral > referral > organic > referral > referral > organic > email,shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > Newsletter_December_2020,9,1,46.0
+referral > referral > organic > referral > organic > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google,6,1,86.0
+referral > (unknown),googlemerchandisestore.com > (unknown),2,1,16.0
+organic,shop.googlemerchandisestore.com,1,7,1060.0
+organic > (data deleted) > organic > organic > referral,google > (data deleted) > google > google > shop.googlemerchandisestore.com,5,1,671.0
+referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other>,7,5,150.0
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,6,4,120.0
+referral > (none) > referral > (none),<Other> > (direct) > <Other> > (direct),4,1,48.0
+referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > <Other> > <Other> > <Other>,7,1,92.0
+<Other> > cpc > referral,<Other> > google > shop.googlemerchandisestore.com,3,1,71.0
+cpc > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,31.0
+referral > referral > referral > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,5,1,110.0
+organic > organic > organic > organic > referral > referral > referral,google > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,
+organic > organic > (unknown) > referral > referral > referral > organic,google > google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,7,1,88.0
+referral > (data deleted) > (unknown) > (unknown) > (none),<Other> > (data deleted) > (unknown) > (unknown) > (direct),5,1,19.0
+referral > organic > referral > organic > organic > referral,<Other> > google > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com,6,1,10.0
+referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > <Other>,7,1,
+(none) > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,70.0
+organic > organic > organic > organic > referral,google > google > google > google > shop.googlemerchandisestore.com,5,2,24.0
+<Other> > organic > organic > referral,<Other> > google > google > <Other>,4,1,10.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,9,1,341.0
+referral > organic > organic > organic > organic > organic,shop.googlemerchandisestore.com > google > google > google > google > google,6,1,63.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,39.0
+referral > organic > referral > organic > referral > referral,<Other> > google > shop.googlemerchandisestore.com > google > mail.google.com > shop.googlemerchandisestore.com,6,1,197.0
+referral > referral > organic > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,72.0
+organic > (none) > referral > referral > referral,google > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,4,790.0
+organic > organic > referral > (none) > referral,google > google > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com,5,1,79.0
+referral > organic > (unknown) > referral > (unknown) > organic,sites.google.com > (unknown) > (unknown) > shop.googlemerchandisestore.com > (unknown) > google,6,3,49.0
+(data deleted) > organic > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,(data deleted) > google > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > <Other>,12,1,24.0
+(none) > (data deleted) > referral > referral > <Other> > cpc > (unknown) > referral > referral,(direct) > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,
+organic > referral > referral > referral > (unknown) > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,6,2,32.0
+referral > referral > referral > referral > referral > (unknown) > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,8,1,46.0
+referral > referral > referral > referral > referral > referral > referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,10,1,100.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,1530.0
+(none) > (data deleted) > (none) > (data deleted) > organic > (data deleted) > (none) > (data deleted) > (data deleted),(direct) > <Other> > (direct) > (data deleted) > <Other> > (data deleted) > (direct) > (data deleted) > (data deleted),9,1,
+organic > organic > (data deleted) > referral,google > google > (data deleted) > <Other>,4,1,
+referral > referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,2,146.0
+referral > referral > referral > referral > (unknown) > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > (unknown) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,38.0
+organic > referral > referral > organic > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > <Other> > shop.googlemerchandisestore.com,6,1,11.0
+referral > (unknown) > referral > referral,<Other> > (unknown) > <Other> > <Other>,4,1,
+referral > (data deleted) > referral > (unknown) > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > (unknown) > <Other>,5,3,180.0
+organic > referral > referral > (none) > referral > (unknown) > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,7,1,13.0
+referral > referral > referral > referral > organic > referral > organic > referral > organic,<Other> > shop.googlemerchandisestore.com > support.google.com > support.google.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,9,4,76.0
+referral > referral,support.google.com > perksatwork.com,2,1,139.0
+(none) > referral > referral > (data deleted) > organic,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > google,5,1,364.0
+organic > referral > (none) > referral,google > moma.corp.google.com > (direct) > shop.googlemerchandisestore.com,4,2,236.0
+referral > (none),sites.google.com > (direct),2,1,26.0
+organic > (none) > referral > referral > organic > organic > organic,google > (direct) > <Other> > shop.googlemerchandisestore.com > <Other> > google > google,7,2,130.0
+organic > organic > referral > referral > referral > referral,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,72.0
+organic > (data deleted) > referral > cpc,<Other> > (data deleted) > <Other> > google,4,1,91.0
+referral > <Other> > referral > organic > referral > cpc,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,6,1,60.0
+(none) > (none) > referral > referral > referral > referral > referral > referral,(direct) > (direct) > <Other> > <Other> > <Other> > <Other> > <Other> > <Other>,8,1,
+(none) > organic > organic > <Other>,(direct) > google > google > <Other>,4,1,34.0
+organic > organic > referral > referral > referral,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,2,101.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,10,1,32.0
+referral > organic > referral,googlemerchandisestore.com > google > shop.googlemerchandisestore.com,3,2,42.0
+organic > organic > (unknown) > organic > organic,google > google > (unknown) > google > (data deleted),5,1,30.0
+(none) > referral > referral > referral > organic > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > <Other>,6,1,50.0
+organic > (none) > organic > organic > organic > organic,google > (direct) > google > google > google > google,6,1,42.0
+referral > <Other> > referral > referral,<Other> > <Other> > <Other> > <Other>,4,1,71.0
+organic > (data deleted) > (none) > (data deleted),google > (data deleted) > (direct) > (data deleted),4,1,128.0
+<Other> > referral > organic > organic > cpc > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,2,100.0
+cpc > (data deleted) > (none),google > (data deleted) > (direct),3,1,72.0
+organic > <Other> > (data deleted) > (data deleted),google > <Other> > (data deleted) > (data deleted),4,1,23.0
+(data deleted) > referral > referral > referral,(data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,61.0
+organic > referral > (data deleted) > referral,google > shop.googlemerchandisestore.com > (data deleted) > <Other>,4,2,203.0
+organic > (data deleted) > referral,google > (data deleted) > shop.googlemerchandisestore.com,3,3,128.0
+referral > (data deleted) > organic > referral,<Other> > (data deleted) > google > <Other>,4,1,94.0
+<Other> > (data deleted) > (data deleted) > referral > referral > referral,<Other> > (data deleted) > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,79.0
+referral > (unknown) > organic > (data deleted) > (data deleted) > organic,<Other> > (unknown) > google > (data deleted) > (data deleted) > google,6,1,81.0
+organic > referral > referral > referral,google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,4,2,186.0
+referral > (data deleted) > referral > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,38.0
+<Other> > <Other> > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,25.0
+cpc > (data deleted) > referral > (data deleted),google > (data deleted) > shop.googlemerchandisestore.com > (data deleted),4,1,69.0
+referral > (data deleted) > referral > referral > <Other> > referral,<Other> > (data deleted) > <Other> > googlemerchandisestore.com > <Other> > <Other>,6,1,
+organic > referral,google > moma.corp.google.com,2,1,24.0
+(none) > (unknown) > referral,(direct) > (unknown) > shop.googlemerchandisestore.com,3,2,38.0
+(none) > referral > referral > organic > organic,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,5,1,95.0
+(none) > referral > (none),(direct) > shop.googlemerchandisestore.com > (direct),3,2,1174.0
+(unknown) > referral,(unknown) > mail.google.com,2,1,
+organic > referral > organic > (data deleted),google > <Other> > google > (data deleted),4,1,40.0
+(none) > referral > (none) > referral > (unknown) > (unknown) > referral > (unknown) > referral,(direct) > <Other> > (direct) > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,9,1,
+referral > referral > referral > referral,shop.googlemerchandisestore.com > sites.google.com > <Other> > <Other>,4,1,
+organic > referral > (data deleted) > (none) > (none),google > shop.googlemerchandisestore.com > (data deleted) > (direct) > (direct),5,1,63.0
+referral > organic > referral > organic > referral > referral,<Other> > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > <Other>,6,1,34.0
+(none) > (none) > referral,(direct) > (direct) > shop.googlemerchandisestore.com,3,3,24.0
+referral > referral > referral > (data deleted) > (data deleted) > organic > organic > referral,<Other> > shop.googlemerchandisestore.com > <Other> > (data deleted) > (data deleted) > google > google > <Other>,8,1,
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,
+(none) > organic > (data deleted) > organic,(direct) > google > (data deleted) > google,4,1,18.0
+organic > organic > <Other> > (data deleted),google > google > <Other> > (data deleted),4,1,50.0
+(unknown) > (data deleted) > organic > referral,(unknown) > (data deleted) > google > shop.googlemerchandisestore.com,4,1,101.0
+organic > referral > referral > referral,google > <Other> > shop.googlemerchandisestore.com > <Other>,4,3,140.0
+organic > organic > organic,(direct) > google > google,3,1,44.0
+referral > (none) > (data deleted) > referral > referral > referral > organic > referral,<Other> > (direct) > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,79.0
+organic > (data deleted) > (unknown) > (none),google > (data deleted) > (unknown) > (direct),4,1,
+organic > <Other>,(direct) > <Other>,2,1,14.0
+(unknown) > referral,(unknown) > googlemerchandisestore.com,2,1,60.0
+<Other> > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,4,1,70.0
+<Other> > organic > referral,<Other> > google > shop.googlemerchandisestore.com,3,2,89.0
+(none) > referral > referral > referral,(direct) > <Other> > <Other> > <Other>,4,1,86.0
+organic > cpc,google > google,2,2,68.0
+email > referral,Newsletter_December_2020 > shop.googlemerchandisestore.com,2,1,46.0
+<Other> > organic,<Other> > shop.googlemerchandisestore.com,2,2,68.0
+referral,l.facebook.com,1,1,16.0
+organic > referral > (none) > cpc > organic > referral > (none) > (data deleted) > organic > (data deleted) > referral > (data deleted),google > shop.googlemerchandisestore.com > (direct) > google > google > shop.googlemerchandisestore.com > (direct) > (data deleted) > google > (data deleted) > <Other> > (data deleted),12,1,37.0
+(unknown) > organic > referral > organic,(unknown) > google > shop.googlemerchandisestore.com > google,4,1,23.0
+referral > cpc > referral > referral > referral,<Other> > google > <Other> > <Other> > <Other>,5,1,72.0
+organic > organic > referral > organic > referral > organic > organic > organic,google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google > google,8,1,151.0
+organic > (data deleted) > (data deleted) > referral > (none) > referral > organic > referral,google > (data deleted) > (data deleted) > shop.googlemerchandisestore.com > (direct) > <Other> > google > shop.googlemerchandisestore.com,8,1,32.0
+organic > referral > referral,google > shop.googlemerchandisestore.com > googlemerchandisestore.com,3,2,56.0
+(none) > referral > referral > (data deleted),(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),4,1,100.0
+<Other> > (data deleted) > (data deleted) > referral,<Other> > (data deleted) > (data deleted) > shop.googlemerchandisestore.com,4,1,77.0
+referral > referral > referral > organic > referral > referral > referral,<Other> > moma.corp.google.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > moma.corp.google.com > shop.googlemerchandisestore.com,7,2,96.0
+<Other> > referral > (none) > referral > organic,<Other> > shop.googlemerchandisestore.com > (direct) > <Other> > google,5,1,25.0
+(unknown) > organic > organic > referral,(unknown) > google > google > shop.googlemerchandisestore.com,4,1,24.0
+referral > organic > organic > organic > referral > organic > referral > organic,shop.googlemerchandisestore.com > google > (data deleted) > google > <Other> > google > <Other> > google,8,1,
+(none) > referral > referral > referral,(direct) > mail.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,76.0
+referral > referral > referral > referral > organic > organic > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,44.0
+organic > organic > organic,bing > bing > bing,3,1,89.0
+cpc > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,
+(none) > referral > referral > referral > referral > referral > (unknown) > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,8,1,
+<Other> > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com,6,1,
+organic > organic > referral > referral > referral > referral > referral > referral > referral > referral > referral,google > google > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other>,11,1,72.0
+(none) > referral > referral,(direct) > <Other> > shop.googlemerchandisestore.com,3,1,299.0
+organic > organic > organic > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,4,1,28.0
+referral > (unknown) > referral > referral > (unknown) > referral > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,231.0
+referral > referral > referral > referral > organic > referral > referral > referral > email,googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > Newsletter_November_2020,9,1,55.0
+referral > (none) > (none) > organic > referral > referral,<Other> > (direct) > (direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,113.0
+cpc > (data deleted) > referral,google > (data deleted) > <Other>,3,1,
+(unknown) > referral > organic > referral > (unknown) > (unknown) > referral,(unknown) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,7,1,23.0
+referral > referral > (data deleted),shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),3,1,74.0
+<Other> > referral > organic > organic,<Other> > shop.googlemerchandisestore.com > google > google,4,2,515.0
+organic > organic > organic > organic > referral > organic > organic > referral > organic,google > google > google > google > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > google,9,1,135.0
+(none) > (data deleted) > (data deleted),(direct) > (data deleted) > (data deleted),3,2,174.0
+referral > referral > organic > organic > organic > referral > referral > referral > referral > referral,sites.google.com > <Other> > google > google > google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,10,1,345.0
+referral > organic > organic > referral > referral > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,6,1,14.0
+referral > referral > referral,<Other> > <Other> > googlemerchandisestore.com,3,1,12.0
+organic > organic > organic > organic > referral > organic,google > google > google > google > shop.googlemerchandisestore.com > google,6,1,
+(unknown) > (data deleted) > (none) > (unknown) > referral > (none) > referral,(unknown) > (data deleted) > (direct) > (unknown) > <Other> > (direct) > <Other>,7,1,85.0
+organic > referral > organic,google > googlemerchandisestore.com > google,3,1,55.0
+(unknown) > referral > referral > referral > referral > referral,(unknown) > <Other> > <Other> > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,62.0
+organic > referral > referral > referral,<Other> > perksatwork.com > shop.googlemerchandisestore.com > perksatwork.com,4,1,38.0
+referral > referral > referral > referral > referral,googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > admin.googlemerchandisestore.com,5,1,
+cpc > (unknown) > referral,google > (unknown) > <Other>,3,1,66.0
+organic > organic > referral > referral > referral > referral > referral > referral > referral > (unknown) > referral,google > google > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > googlemerchandisestore.com,11,1,4.0
+organic > referral > referral > organic > (unknown) > organic,google > shop.googlemerchandisestore.com > groups.google.com > google > (unknown) > google,6,2,142.0
+(none) > referral > (unknown) > (unknown) > (unknown) > (unknown) > organic,(direct) > shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > (unknown) > google,7,1,142.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,96.0
+(none) > organic > referral > referral > referral,(direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,19.0
+(none) > (none) > referral > (none),(direct) > (direct) > <Other> > (direct),4,1,122.0
+referral > (unknown) > referral > (unknown) > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,5,1,24.0
+organic > referral > organic > (unknown) > organic,google > <Other> > google > (unknown) > google,5,2,56.0
+<Other> > <Other> > (data deleted) > referral > (data deleted) > referral > cpc > organic > (none),<Other> > <Other> > (data deleted) > <Other> > (data deleted) > <Other> > google > google > (direct),9,1,18.0
+organic > referral > referral > referral > referral,google > <Other> > <Other> > shop.googlemerchandisestore.com > <Other>,5,1,61.0
+<Other> > (none) > (unknown) > (none),<Other> > (direct) > (unknown) > (direct),4,1,93.0
+organic > (data deleted) > referral > referral > referral > referral > referral > referral > referral > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,16.0
+referral > referral > <Other>,<Other> > <Other> > <Other>,3,3,176.0
+(none) > referral > (data deleted) > referral > referral,(direct) > <Other> > (data deleted) > <Other> > <Other>,5,1,44.0
+referral > referral > referral > referral > referral > organic > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other> > google > <Other>,7,1,11.0
+referral > (unknown) > organic > (data deleted) > (none),shop.googlemerchandisestore.com > (unknown) > google > (data deleted) > (direct),5,1,22.0
+referral > (data deleted) > (data deleted),<Other> > (data deleted) > (data deleted),3,1,39.0
+<Other> > (data deleted) > referral > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,41.0
+organic > organic > organic > (none) > (data deleted) > (data deleted),google > google > google > (direct) > (data deleted) > (data deleted),6,1,86.0
+<Other> > organic > referral > <Other>,<Other> > google > mail.google.com > <Other>,4,1,
+referral > referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,5,2,210.0
+referral > referral > organic > referral,<Other> > <Other> > google > shop.googlemerchandisestore.com,4,1,81.0
+organic > organic > organic > referral > organic > organic > organic,google > google > google > shop.googlemerchandisestore.com > google > google > google,7,1,61.0
+organic > referral > organic > organic > organic > (unknown) > organic > organic,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > (unknown) > google > google,8,1,30.0
+(none) > organic > organic > (unknown) > referral > referral,(direct) > google > google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,78.0
+referral > <Other> > referral > organic,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > google,4,1,68.0
+organic > (data deleted) > organic > (unknown) > referral,google > (data deleted) > google > (unknown) > shop.googlemerchandisestore.com,5,1,72.0
+organic > referral > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,10.0
+email > referral > referral,Newsletter_November_2020 > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,2,92.0
+organic > <Other> > referral > organic,google > <Other> > shop.googlemerchandisestore.com > google,4,1,400.0
+(none) > referral > organic > organic > organic,(direct) > <Other> > google > google > google,5,1,
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other>,11,1,
+organic > referral > referral > (unknown) > (none) > (data deleted) > referral,google > shop.googlemerchandisestore.com > googlemerchandisestore.com > (unknown) > (direct) > (data deleted) > shop.googlemerchandisestore.com,7,2,136.0
+referral > referral > referral,moma.corp.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,28.0
+(unknown) > (unknown) > (unknown) > referral,(unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com,4,4,293.0
+organic > organic > organic > organic,google > google > shop.googlemerchandisestore.com > google,4,1,42.0
+(none) > (none) > (none) > (none) > referral,(direct) > (direct) > (direct) > (direct) > shop.googlemerchandisestore.com,5,1,30.0
+cpc > organic > (unknown) > (none),google > google > (unknown) > (direct),4,1,
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,11,2,110.0
+(none) > organic > referral > referral > (unknown) > referral,(direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,6,1,16.0
+referral > referral > referral,(unknown) > mail.google.com > <Other>,3,1,39.0
+referral > referral > referral > organic > referral > organic > referral,<Other> > <Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > <Other>,7,1,18.0
+referral,support.google.com,1,3,30.0
+organic > referral > organic > referral > (unknown) > organic,google > <Other> > google > shop.googlemerchandisestore.com > (unknown) > google,6,1,120.0
+organic > (unknown) > organic > organic > organic > organic,google > (unknown) > google > google > google > google,6,1,156.0
+(data deleted) > organic,(data deleted) > <Other>,2,1,37.0
+referral > (unknown) > referral > referral,<Other> > (unknown) > shop.googlemerchandisestore.com > <Other>,4,3,194.0
+organic > (data deleted) > organic > (data deleted),google > (data deleted) > <Other> > (data deleted),4,2,110.0
+(unknown) > organic > organic,(unknown) > google > google,3,1,13.0
+organic > referral > referral > referral > (none),google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),5,1,386.0
+(none) > organic > (none),(direct) > google > (direct),3,1,13.0
+(none) > (unknown) > referral,(direct) > (unknown) > googlemerchandisestore.com,3,1,125.0
+organic > referral > (data deleted) > (none) > organic,google > shop.googlemerchandisestore.com > (data deleted) > (direct) > google,5,1,112.0
+<Other> > organic > referral,<Other> > <Other> > shop.googlemerchandisestore.com,3,1,98.0
+referral > referral > (none),shop.googlemerchandisestore.com > support.google.com > (direct),3,1,38.0
+(none) > (data deleted) > (none),(direct) > <Other> > (direct),3,1,100.0
+organic > (data deleted) > cpc > referral > (none) > organic,google > (data deleted) > google > <Other> > (direct) > google,6,1,156.0
+organic > referral > (none) > referral > (data deleted),google > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > (data deleted),5,1,50.0
+(none) > (none) > referral > (data deleted) > (none),(direct) > (direct) > <Other> > (data deleted) > (direct),5,1,15.0
+<Other> > referral > organic,<Other> > <Other> > google,3,4,198.0
+organic > referral,<Other> > <Other>,2,2,162.0
+organic > referral > (unknown) > referral,google > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,4,1,48.0
+email,Newsletter_December_2020,1,2,291.0
+referral > organic > (none) > referral,<Other> > google > (direct) > shop.googlemerchandisestore.com,4,1,74.0
+referral > referral > referral > (data deleted) > referral > (data deleted) > referral > referral,<Other> > <Other> > <Other> > (data deleted) > <Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,24.0
+referral > organic > (none),<Other> > google > (direct),3,1,34.0
+organic > (data deleted) > (data deleted) > organic > organic,google > (data deleted) > (data deleted) > google > google,5,2,126.0
+referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,92.0
+organic > organic > organic > (unknown) > organic,google > google > google > (unknown) > google,5,1,63.0
+(none) > organic > referral > referral > organic,(direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,5,1,42.0
+(unknown) > (unknown) > referral > referral > referral > referral,(unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,11.0
+(data deleted) > referral,(data deleted) > shop.googlemerchandisestore.com,2,2,51.0
+organic > organic > organic > referral,google > google > google > <Other>,4,1,
+referral > organic > referral > referral > referral,<Other> > google > <Other> > shop.googlemerchandisestore.com > <Other>,5,1,68.0
+referral > organic > organic > organic > organic > referral > referral > organic,<Other> > google > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,8,1,110.0
+(none) > (none) > (none),(direct) > (direct) > (direct),3,1,63.0
+(data deleted) > (unknown) > (data deleted) > referral,(data deleted) > (unknown) > (data deleted) > <Other>,4,1,
+referral > (unknown) > referral > referral > organic > referral > organic > organic,<Other> > (unknown) > <Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google,8,1,48.0
+referral > referral > referral > (data deleted) > referral > (data deleted) > (none),shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com > (data deleted) > (direct),7,1,29.0
+organic > (none) > (none) > referral > organic,google > (direct) > (direct) > shop.googlemerchandisestore.com > google,5,2,365.0
+organic > organic > organic > referral > organic > referral,google > google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,24.0
+(data deleted) > (unknown) > organic,(data deleted) > (unknown) > google,3,1,
+(none) > (data deleted) > referral > (unknown) > referral,(direct) > (data deleted) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,5,1,55.0
+organic > referral > referral > organic > referral > organic > (none) > referral,google > shop.googlemerchandisestore.com > <Other> > google > shop.googlemerchandisestore.com > google > (direct) > shop.googlemerchandisestore.com,8,1,159.0
+(none) > organic > organic > referral > referral > referral > (unknown) > organic,(direct) > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > google,8,1,32.0
+referral > referral > organic > referral > referral > referral > organic,<Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,7,1,123.0
+organic > referral > referral > (none) > referral > organic > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,8,1,46.0
+(unknown),(unknown),1,1,12.0
+organic > (none) > referral > referral > referral > referral > referral > referral > (unknown) > referral,google > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,10,1,
+<Other> > organic > referral > referral,<Other> > google > shop.googlemerchandisestore.com > <Other>,4,2,48.0
+organic > referral > organic > referral > organic > organic > organic > referral > referral > referral,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,48.0
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,
+organic > organic > organic > (data deleted),google > google > google > (data deleted),4,2,119.0
+<Other> > referral > (none) > (data deleted),<Other> > shop.googlemerchandisestore.com > (direct) > (data deleted),4,1,73.0
+organic > (unknown) > (none) > (none) > (none) > (none) > organic > <Other> > (none) > referral,google > (unknown) > (direct) > (direct) > (direct) > (direct) > google > <Other> > (direct) > sites.google.com,10,1,44.0
+(none) > organic,(direct) > bing,2,1,95.0
+referral > referral > referral > (unknown) > (unknown) > referral > referral > referral > referral,<Other> > <Other> > <Other> > (unknown) > (unknown) > sites.google.com > <Other> > <Other> > <Other>,9,1,44.0
+organic > organic > referral,<Other> > google > shop.googlemerchandisestore.com,3,2,
+referral > (data deleted) > referral > referral > organic > (unknown) > (unknown) > referral > organic > referral,sites.google.com > (data deleted) > mail.google.com > mail.google.com > google > (unknown) > (unknown) > mail.google.com > google > <Other>,10,1,38.0
+referral > organic > organic > (data deleted) > organic > organic > organic,<Other> > google > google > (data deleted) > google > google > google,7,1,166.0
+referral > organic,support.google.com > google,2,1,24.0
+(data deleted) > referral > referral,(data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,12.0
+referral > referral > (none) > referral,<Other> > <Other> > (direct) > shop.googlemerchandisestore.com,4,1,96.0
+referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other>,8,1,
+referral > (none) > (data deleted) > referral > (none) > organic > (none) > referral > referral > referral > referral > referral,googlemerchandisestore.com > (direct) > (data deleted) > googlemerchandisestore.com > (direct) > google > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com,12,2,20.0
+organic > referral > referral > referral > (unknown) > organic > organic > organic > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > (unknown) > google > google > google > <Other> > <Other>,10,1,68.0
+organic > organic > organic > organic > referral > referral > referral,google > google > google > google > shop.googlemerchandisestore.com > mail.google.com > shop.googlemerchandisestore.com,7,1,93.0
+referral > referral > referral > referral > referral > referral > referral > organic > organic > referral,<Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > google > google > <Other>,10,1,46.0
+organic > organic > organic > referral > <Other>,google > <Other> > google > <Other> > <Other>,5,1,37.0
+(data deleted) > organic > referral > referral > referral > referral > referral > referral > referral,(data deleted) > google > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,9,1,88.0
+cpc > referral > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,82.0
+organic > referral > organic > organic > organic,google > shop.googlemerchandisestore.com > google > google > google,5,1,44.0
+organic > organic > referral > referral > referral,google > google > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,96.0
+organic > (data deleted) > referral > referral > referral > (unknown) > referral > referral,google > (data deleted) > shop.googlemerchandisestore.com > <Other> > <Other> > (unknown) > <Other> > shop.googlemerchandisestore.com,8,1,236.0
+referral > referral > organic > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,48.0
+<Other> > referral > (unknown) > referral,<Other> > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,4,3,76.0
+organic > referral > <Other> > organic > (data deleted),google > shop.googlemerchandisestore.com > <Other> > google > (data deleted),5,1,92.0
+(none) > organic > referral > referral,(direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,3,104.0
+<Other> > (none) > organic,<Other> > (direct) > google,3,2,20.0
+organic > (data deleted) > referral > organic,google > (data deleted) > shop.googlemerchandisestore.com > google,4,1,134.0
+referral > referral > referral > organic > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,9,1,38.0
+organic > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other>,5,1,278.0
+organic > referral > organic,google > youtube.com > google,3,1,
+organic > referral > referral,google > googlemerchandisestore.com > shop.googlemerchandisestore.com,3,2,14.0
+referral > (unknown) > organic > (data deleted) > (none) > referral > referral > referral > referral,shop.googlemerchandisestore.com > (unknown) > google > (data deleted) > (direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,6.0
+(unknown) > referral > referral > referral,(unknown) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,59.0
+referral > (none) > referral > <Other>,<Other> > (direct) > <Other> > <Other>,4,1,44.0
+cpc > cpc > referral,google > google > shop.googlemerchandisestore.com,3,2,295.0
+<Other> > <Other> > referral > referral > referral > referral > referral > organic,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,8,1,22.0
+referral > referral > (data deleted),<Other> > shop.googlemerchandisestore.com > (data deleted),3,3,68.0
+(none) > referral,(direct) > perksatwork.com,2,1,35.0
+organic > organic > organic,google > <Other> > google,3,1,14.0
+organic > (data deleted) > referral > referral,google > (data deleted) > <Other> > sites.google.com,4,1,84.0
+(none) > (data deleted) > organic,(direct) > (data deleted) > google,3,1,134.0
+organic > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com,5,2,83.0
+organic > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,33.0
+referral > organic > referral > (unknown) > (unknown) > referral > (unknown) > referral > referral,<Other> > google > <Other> > (unknown) > (unknown) > <Other> > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,67.0
+(unknown) > (unknown) > referral > referral > referral > organic,(unknown) > (unknown) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,6,1,132.0
+(none) > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,108.0
+organic > <Other> > referral,google > <Other> > shop.googlemerchandisestore.com,3,3,182.0
+referral > <Other> > email > referral,shop.googlemerchandisestore.com > <Other> > Newsletter_November_2020 > <Other>,4,1,50.0
+(none) > (data deleted) > referral,(direct) > (data deleted) > <Other>,3,1,30.0
+referral > referral > referral,moma.corp.google.com > shop.googlemerchandisestore.com > <Other>,3,1,470.0
+(unknown) > referral > referral > referral > (unknown) > (unknown) > (unknown) > organic,(unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > google,8,1,14.0
+organic > (none) > organic > (data deleted),google > (direct) > google > (data deleted),4,2,184.0
+organic > (none) > referral > (data deleted) > (unknown) > (unknown) > referral > <Other>,google > (direct) > <Other> > (data deleted) > (unknown) > (unknown) > <Other> > <Other>,8,1,
+(none) > (unknown) > referral > referral,(direct) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,
+organic > referral > referral > referral > referral > referral > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,2,110.0
+<Other> > referral > organic > referral > organic > organic,<Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google,6,1,19.0
+referral > (none),support.google.com > (direct),2,1,90.0
+organic > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,29.0
+referral > (unknown) > referral > referral > referral > referral > (unknown) > referral > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,9,1,35.0
+(data deleted) > (data deleted),(data deleted) > (data deleted),2,1,82.0
+referral > (unknown) > referral > (data deleted),<Other> > (unknown) > <Other> > (data deleted),4,1,24.0
+organic > referral > organic > cpc > referral,<Other> > shop.googlemerchandisestore.com > google > google > <Other>,5,1,96.0
+organic > (unknown) > (data deleted),google > (unknown) > (data deleted),3,2,179.0
+organic > referral > (data deleted) > referral,google > <Other> > (data deleted) > <Other>,4,2,30.0
+organic > organic > referral > (data deleted) > referral,google > google > shop.googlemerchandisestore.com > (data deleted) > <Other>,5,1,55.0
+referral > (data deleted) > (data deleted) > referral,<Other> > (data deleted) > (data deleted) > <Other>,4,1,6.0
+referral > referral,mail.google.com > mail.google.com,2,1,84.0
+organic > <Other> > (none),<Other> > <Other> > (direct),3,1,96.0
+referral > (unknown) > (unknown) > referral,shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,4,1,30.0
+(none) > (unknown) > referral > referral,(direct) > (unknown) > shop.googlemerchandisestore.com > <Other>,4,1,38.0
+referral > referral > referral > referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,6,1,40.0
+referral > referral > referral > organic > organic > referral > referral > referral,<Other> > <Other> > <Other> > google > google > <Other> > shop.googlemerchandisestore.com > <Other>,8,1,55.0
+organic > (data deleted) > organic > referral > referral > (none),google > (data deleted) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),6,1,36.0
+referral > referral,sites.google.com > <Other>,2,1,
+referral > (data deleted) > referral > referral > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,16.0
+referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com,2,2,142.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,5,1,12.0
+organic > organic > (none),google > google > (direct),3,1,
+referral > email,shop.googlemerchandisestore.com > Newsletter_December_2020,2,1,18.0
+organic > <Other> > (none) > (none),google > <Other> > (direct) > (direct),4,1,130.0
+referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,3,275.0
+organic > organic > organic,shop.googlemerchandisestore.com > google > google,3,2,56.0
+referral > (data deleted) > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com,3,1,68.0
+organic > organic > (none) > organic,google > google > (direct) > google,4,1,92.0
+organic > referral > referral > organic,google > shop.googlemerchandisestore.com > <Other> > google,4,1,
+referral > (none) > organic > (data deleted),<Other> > (direct) > google > (data deleted),4,1,
+referral > referral > referral > (data deleted),<Other> > shop.googlemerchandisestore.com > <Other> > (data deleted),4,1,28.0
+organic > organic > referral > (unknown) > (unknown) > (unknown) > referral,google > google > shop.googlemerchandisestore.com > (unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com,7,1,48.0
+<Other> > referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,
+(data deleted) > organic > organic > referral,(data deleted) > google > google > shop.googlemerchandisestore.com,4,1,36.0
+referral > referral > referral > referral > referral > referral > organic,<Other> > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com > googlemerchandisestore.com > google,7,1,
+organic > (none) > (none) > referral > organic > (unknown) > organic,google > (direct) > (direct) > shop.googlemerchandisestore.com > google > (unknown) > google,7,1,19.0
+(none) > referral > referral > referral > referral > referral > referral > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,85.0
+cpc > (data deleted) > (unknown) > referral > referral > referral,google > (data deleted) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,63.0
+referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com,5,2,164.0
+organic > organic > referral > (unknown) > referral,google > google > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,5,1,112.0
+referral > organic > organic > referral > organic > referral > referral,<Other> > google > google > shop.googlemerchandisestore.com > google > googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,14.0
+referral > organic > organic > organic > organic > organic > organic > organic,<Other> > google > google > google > google > google > google > google,8,1,
+organic > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,32.0
+(none) > referral > (data deleted) > organic > (data deleted) > referral,(direct) > shop.googlemerchandisestore.com > (data deleted) > <Other> > (data deleted) > shop.googlemerchandisestore.com,6,1,41.0
+<Other> > (data deleted) > referral > organic > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,5,1,67.0
+referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > <Other> > googlemerchandisestore.com,4,1,111.0
+(unknown) > (unknown) > (unknown) > referral,(unknown) > (unknown) > (unknown) > <Other>,4,1,64.0
+organic > organic > (unknown) > referral > referral > organic > organic > referral > referral > referral,google > google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,63.0
+(unknown) > referral > referral > referral > referral > referral,(unknown) > shop.googlemerchandisestore.com > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com,6,1,162.0
+referral > organic > organic > organic,<Other> > google > google > google,4,1,24.0
+(unknown) > (unknown) > (unknown) > organic > referral,(unknown) > (unknown) > (unknown) > google > <Other>,5,1,58.0
+organic > (none) > organic > referral > referral > referral > referral,google > (direct) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,19.0
+organic > (data deleted) > organic > referral,google > (data deleted) > google > googlemerchandisestore.com,4,1,13.0
+<Other> > (data deleted) > referral > cpc > referral > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > <Other>,6,1,
+(none) > organic > referral > <Other>,(direct) > google > shop.googlemerchandisestore.com > <Other>,4,1,120.0
+organic > referral > (data deleted) > organic > referral > referral,<Other> > shop.googlemerchandisestore.com > (data deleted) > google > shop.googlemerchandisestore.com > <Other>,6,1,38.0
+<Other> > (unknown) > referral,<Other> > (unknown) > mail.google.com,3,1,71.0
+referral > organic > <Other> > organic > referral,<Other> > <Other> > <Other> > google > shop.googlemerchandisestore.com,5,2,376.0
+referral > referral > (unknown) > referral > referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,8,1,30.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,4,5,254.0
+referral > referral > referral > referral > (unknown) > referral > (unknown) > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > (unknown) > google > shop.googlemerchandisestore.com,9,2,64.0
+referral > referral > referral > (data deleted) > (unknown) > referral > referral,<Other> > <Other> > <Other> > (data deleted) > (unknown) > <Other> > <Other>,7,1,63.0
+(unknown) > referral > organic > (none),(unknown) > shop.googlemerchandisestore.com > google > (direct),4,1,84.0
+organic > organic > (data deleted) > organic,google > google > (data deleted) > google,4,1,27.0
+referral > (none) > organic > organic > organic > referral,googlemerchandisestore.com > (direct) > google > google > google > googlemerchandisestore.com,6,1,75.0
+organic > organic > organic > referral > organic,shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > google,5,1,76.0
+referral > referral > (data deleted) > (none),shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > (direct),4,1,70.0
+(unknown) > (unknown) > (unknown) > referral > referral > organic > organic,(unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,7,1,62.0
+organic > referral > referral > organic > organic > referral > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > google,7,2,21.0
+referral > referral > organic > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,4,1,12.0
+organic > organic > referral > referral,google > google > shop.googlemerchandisestore.com > <Other>,4,1,47.0
+referral > (data deleted) > referral > organic > (none) > organic > organic,<Other> > (data deleted) > <Other> > google > (direct) > google > google,7,1,169.0
+cpc > (data deleted) > (none) > (data deleted) > organic,google > (data deleted) > (direct) > (data deleted) > google,5,1,57.0
+organic > (data deleted) > organic,google > <Other> > google,3,1,39.0
+referral > referral > (unknown) > organic,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > google,4,2,102.0
+(data deleted) > referral > referral > referral,(data deleted) > shop.googlemerchandisestore.com > <Other> > <Other>,4,1,214.0
+referral > (unknown),<Other> > (unknown),2,1,11.0
+organic > referral > email,google > shop.googlemerchandisestore.com > Newsletter_December_2020,3,1,92.0
+referral > (unknown) > (none),shop.googlemerchandisestore.com > (unknown) > (direct),3,2,64.0
+referral > (data deleted) > referral > (data deleted),<Other> > (data deleted) > shop.googlemerchandisestore.com > (data deleted),4,1,20.0
+referral > (data deleted),googlemerchandisestore.com > (data deleted),2,1,30.0
+referral > organic > organic > (none) > organic > (data deleted) > referral,shop.googlemerchandisestore.com > google > google > (direct) > google > (data deleted) > shop.googlemerchandisestore.com,7,1,92.0
+organic > (none) > organic > referral > referral > referral,google > (direct) > google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,6,1,37.0
+organic > referral > referral,google > sites.google.com > shop.googlemerchandisestore.com,3,1,71.0
+organic > referral > (none) > organic > referral > organic > referral > referral > (unknown) > organic > referral,google > <Other> > (direct) > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > <Other> > (unknown) > google > <Other>,11,1,13.0
+referral > organic > <Other> > (data deleted) > (none) > (none) > (none),<Other> > google > <Other> > (data deleted) > (direct) > (direct) > (direct),7,2,158.0
+referral > (none),shop.googlemerchandisestore.com > (direct),2,2,67.0
+(none) > (data deleted) > referral > (none) > organic > organic > referral,(direct) > (data deleted) > <Other> > (direct) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,7,1,44.0
+organic > (unknown) > organic > (unknown) > organic,google > (unknown) > google > (unknown) > google,5,1,163.0
+referral > referral > referral > referral > referral > referral > referral > organic > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > google > <Other> > shop.googlemerchandisestore.com > <Other>,11,1,109.0
+<Other> > (data deleted) > referral,<Other> > (data deleted) > mail.google.com,3,1,92.0
+referral > (none) > referral,<Other> > (direct) > shop.googlemerchandisestore.com,3,1,139.0
+organic > (data deleted) > (none) > (data deleted) > (none),google > (data deleted) > (direct) > (data deleted) > (direct),5,1,50.0
+<Other> > (data deleted) > (unknown) > referral > (data deleted) > (none) > organic,<Other> > (data deleted) > (unknown) > shop.googlemerchandisestore.com > (data deleted) > (direct) > google,7,1,96.0
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > sites.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,6,1,96.0
+(none) > referral > (unknown) > referral > organic > referral,(direct) > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,311.0
+referral > (none) > referral,shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com,3,1,44.0
+referral > (data deleted) > referral > referral,<Other> > (data deleted) > <Other> > googlemerchandisestore.com,4,1,31.0
+(none) > referral,(direct) > mail.google.com,2,1,62.0
+<Other> > <Other> > (unknown) > referral,<Other> > <Other> > (unknown) > sites.google.com,4,1,
+<Other> > (data deleted) > organic,<Other> > (data deleted) > google,3,1,25.0
+<Other> > referral > referral > <Other>,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,4,2,56.0
+(none) > organic > organic > organic,(direct) > google > google > google,4,2,42.0
+referral > (data deleted),shop.googlemerchandisestore.com > <Other>,2,1,88.0
+(none) > referral > referral > affiliate,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > Partners,4,1,144.0
+organic > (data deleted) > referral,(direct) > (data deleted) > shop.googlemerchandisestore.com,3,1,50.0
+<Other> > (unknown) > referral > referral > referral,<Other> > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,61.0
+referral > referral,<Other> > googlemerchandisestore.com,2,1,43.0
+cpc > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,177.0
+(none) > referral > organic > organic,(direct) > shop.googlemerchandisestore.com > google > google,4,1,56.0
+referral > (unknown) > organic,<Other> > (unknown) > (data deleted),3,1,45.0
+organic > (unknown) > referral > organic > (unknown) > referral,google > (unknown) > shop.googlemerchandisestore.com > google > (unknown) > shop.googlemerchandisestore.com,6,1,25.0
+organic > organic > <Other>,google > google > <Other>,3,1,16.0
+referral > (none) > referral > (data deleted),<Other> > (direct) > <Other> > (data deleted),4,1,158.0
+email > referral > referral > (none),Newsletter_November_2020 > <Other> > shop.googlemerchandisestore.com > (direct),4,1,56.0
+organic > (data deleted),<Other> > (data deleted),2,1,17.0
+organic > (data deleted) > <Other>,google > (data deleted) > <Other>,3,1,107.0
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,5,1,44.0
+referral > referral,sites.google.com > googlemerchandisestore.com,2,1,17.0
+referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > mail.google.com,3,1,95.0
+organic > (data deleted) > referral,google > (data deleted) > googlemerchandisestore.com,3,1,8.0
+referral > organic > organic > (none),keep.google.com > google > google > (direct),4,1,94.0
+organic > organic,google > (data deleted),2,1,48.0
+referral > referral,creatoracademy.youtube.com > shop.googlemerchandisestore.com,2,1,31.0
+referral > (none) > referral,<Other> > (direct) > <Other>,3,3,48.0
+referral > referral > (none) > organic > (none) > <Other> > referral > referral > (none) > organic > (none),googlemerchandisestore.com > <Other> > (direct) > google > (direct) > <Other> > shop.googlemerchandisestore.com > <Other> > (direct) > google > (direct),11,1,
+referral > organic > referral > organic > referral > referral > referral,<Other> > google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,32.0
+organic > referral,shop.googlemerchandisestore.com > <Other>,2,2,74.0
+organic > (data deleted) > (data deleted) > (data deleted) > organic > referral > referral,google > (data deleted) > (data deleted) > (data deleted) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,69.0
+organic > referral > referral > referral > referral > organic > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,7,1,19.0
+organic > organic > referral > organic > referral > organic,google > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google,6,1,151.0
+(none) > referral > referral,(direct) > shop.googlemerchandisestore.com > googlemerchandisestore.com,3,1,21.0
+organic > organic > (none) > organic > organic > (data deleted) > organic > <Other>,google > google > (direct) > google > google > (data deleted) > google > <Other>,8,1,84.0
+organic > referral > (none) > (none),google > shop.googlemerchandisestore.com > (direct) > (direct),4,1,134.0
+organic > referral > organic > (data deleted) > referral > referral,google > shop.googlemerchandisestore.com > google > (data deleted) > <Other> > shop.googlemerchandisestore.com,6,1,170.0
+(unknown) > (none) > (none) > referral > referral > (none) > organic,(unknown) > (direct) > (direct) > support.google.com > shop.googlemerchandisestore.com > (direct) > google,7,1,48.0
+referral > organic,mail.google.com > google,2,2,177.0
+referral > referral > (unknown) > referral,<Other> > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,4,4,348.0
+organic > referral > referral > referral > referral,google > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com,5,1,157.0
+organic > (unknown) > organic > organic,google > (unknown) > google > google,4,3,79.0
+organic > referral > organic > referral > organic > referral,google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,41.0
+referral > (unknown) > organic > referral > organic > referral,shop.googlemerchandisestore.com > (unknown) > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,24.0
+referral > referral > (unknown) > (unknown) > referral,<Other> > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,5,1,50.0
+organic > organic > (data deleted) > referral > (data deleted) > (data deleted),google > google > (data deleted) > shop.googlemerchandisestore.com > (data deleted) > (data deleted),6,1,63.0
+(none) > organic > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,220.0
+(none) > (data deleted) > referral > organic > organic,(direct) > (data deleted) > shop.googlemerchandisestore.com > google > google,5,2,28.0
+referral > referral > referral > referral > referral > referral > organic > organic,<Other> > <Other> > <Other> > <Other> > <Other> > <Other> > google > google,8,1,66.0
+organic > referral > referral > referral > referral > referral > organic,google > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,7,1,
+referral > (none) > referral > organic,<Other> > (direct) > shop.googlemerchandisestore.com > google,4,1,24.0
+referral > referral > referral > (unknown) > (unknown) > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,6,1,80.0
+referral > <Other> > referral > referral > referral > (none),<Other> > <Other> > <Other> > <Other> > support.google.com > (direct),6,1,
+organic > referral > organic > referral > referral > (unknown) > referral > referral > organic > organic,google > <Other> > google > support.google.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,10,1,
+referral > (none) > referral > referral > referral > referral > referral,<Other> > (direct) > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,7,1,48.0
+<Other> > organic > referral > referral > organic > organic > referral > referral > referral > referral,<Other> > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,712.0
+(none) > (data deleted) > referral > referral > (data deleted) > organic > referral > referral > organic > referral > referral,(direct) > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,11,1,44.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other> > <Other>,9,1,
+organic > referral > referral > organic > (unknown) > organic > referral,google > shop.googlemerchandisestore.com > groups.google.com > google > (unknown) > google > <Other>,7,1,56.0
+referral > referral > organic > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > google > <Other> > <Other> > <Other>,6,1,176.0
+referral > referral > organic > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,86.0
+organic > (unknown) > referral > referral,google > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,133.0
+organic > organic > referral > organic > organic,google > google > shop.googlemerchandisestore.com > google > google,5,2,124.0
+referral > referral,googlemerchandisestore.com > <Other>,2,2,222.0
+referral > (none) > organic > organic,<Other> > (direct) > google > google,4,1,79.0
+organic > organic > referral > referral > (data deleted),google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted),5,1,18.0
+organic > organic > referral > (data deleted) > referral > organic > referral > referral > referral > referral,google > google > shop.googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,137.0
+referral > organic > organic > organic > organic,<Other> > google > google > google > google,5,1,48.0
+organic > referral > (none) > referral > referral,google > shop.googlemerchandisestore.com > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,
+(none) > (none) > referral > referral,(direct) > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,46.0
+(none) > (none) > (data deleted),(direct) > (direct) > (data deleted),3,1,86.0
+referral > referral > referral > referral > referral > referral,<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other>,6,1,29.0
+organic > referral > organic > referral > organic,google > <Other> > google > <Other> > google,5,1,113.0
+referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > mail.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,19.0
+referral > referral > referral > (data deleted),<Other> > <Other> > <Other> > (data deleted),4,1,106.0
+referral > referral > referral > referral > organic,shop.googlemerchandisestore.com > <Other> > <Other> > <Other> > google,5,1,32.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other>,4,1,35.0
+(none) > referral > organic > referral > organic > referral,(direct) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,2,128.0
+(unknown) > referral > email > referral > referral,(unknown) > shop.googlemerchandisestore.com > Newsletter_December_2020 > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,54.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,10.0
+referral > referral > (unknown) > organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > google > shop.googlemerchandisestore.com,5,1,32.0
+referral > referral > organic > referral,<Other> > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,4,1,75.0
+referral > referral > referral > referral > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,
+organic > referral > organic > organic > organic > referral > referral > (unknown) > referral,google > <Other> > google > google > google > <Other> > shop.googlemerchandisestore.com > (unknown) > <Other>,9,1,33.0
+organic > organic > organic > referral > referral,google > google > google > googlemerchandisestore.com > googlemerchandisestore.com,5,1,43.0
+organic > referral > referral > organic,google > <Other> > shop.googlemerchandisestore.com > google,4,1,
+referral > (none) > referral > referral > referral > referral,shop.googlemerchandisestore.com > (direct) > <Other> > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,32.0
+referral > referral > (none),googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct),3,1,76.0
+organic > referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,google > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,11,1,108.0
+(none) > (data deleted) > referral > (none) > organic > organic > referral > referral > <Other>,(direct) > (data deleted) > <Other> > (direct) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,9,1,8.0
+referral > (none) > referral > organic > (unknown) > cpc,<Other> > (direct) > <Other> > google > (unknown) > google,6,1,176.0
+organic > (data deleted) > referral > organic > referral > referral > referral > referral,google > (data deleted) > <Other> > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,362.0
+<Other> > (data deleted) > (unknown) > referral,<Other> > (data deleted) > (unknown) > shop.googlemerchandisestore.com,4,1,78.0
+referral > referral > (none) > referral > cpc,<Other> > <Other> > (direct) > <Other> > google,5,1,26.0
+referral > organic > referral > organic > referral > referral > referral,<Other> > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > <Other> > <Other>,7,1,42.0
+(unknown) > (unknown) > (unknown) > (unknown) > (unknown) > referral,(unknown) > (unknown) > (unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com,6,1,98.0
+organic > (data deleted) > organic > referral,google > (data deleted) > google > <Other>,4,1,82.0
+(data deleted) > organic,(data deleted) > google,2,1,55.0
+referral > referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,112.0
+(none) > (none) > referral > organic > organic,(direct) > (direct) > shop.googlemerchandisestore.com > google > google,5,1,145.0
+referral > referral > (data deleted) > (unknown) > referral > referral,shop.googlemerchandisestore.com > <Other> > (data deleted) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,263.0
+organic > (data deleted) > (data deleted) > organic,google > (data deleted) > (data deleted) > google,4,1,78.0
+<Other> > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com,3,2,57.0
+cpc > referral > referral > (none) > (unknown) > (unknown) > <Other>,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (direct) > (unknown) > (unknown) > <Other>,7,1,60.0
+(none) > (unknown) > (none) > referral,(direct) > (unknown) > (direct) > <Other>,4,1,40.0
+organic > (data deleted) > cpc > referral > (none) > organic > (data deleted) > organic > (data deleted),google > (data deleted) > google > <Other> > (direct) > google > (data deleted) > google > (data deleted),9,1,122.0
+organic > organic > referral > referral > referral > referral > referral > referral,google > google > <Other> > <Other> > <Other> > <Other> > <Other> > <Other>,8,1,48.0
+(unknown) > (unknown) > (unknown) > referral > referral,(unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,46.0
+organic > (none) > (unknown) > organic,google > (direct) > (unknown) > google,4,1,32.0
+(none) > (data deleted) > referral > referral,(direct) > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,139.0
+organic > organic > organic > referral,google > (unknown) > google > shop.googlemerchandisestore.com,4,1,60.0
+<Other> > organic > organic > referral,<Other> > google > google > shop.googlemerchandisestore.com,4,1,30.0
+referral > (data deleted) > referral > referral > referral > referral,<Other> > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,6,1,16.0
+referral > email > organic > (none) > referral,shop.googlemerchandisestore.com > Newsletter_December_2020 > google > (direct) > shop.googlemerchandisestore.com,5,1,219.0
+referral > referral > referral > referral > referral,<Other> > <Other> > moma.corp.google.com > shop.googlemerchandisestore.com > <Other>,5,1,111.0
+organic > referral,google > googlemerchandisestore.com,2,2,49.0
+referral > referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com,3,1,30.0
+<Other> > <Other> > referral > (none),<Other> > <Other> > <Other> > (direct),4,1,109.0
+organic > organic > referral,google > <Other> > shop.googlemerchandisestore.com,3,1,119.0
+(none) > referral > referral > referral,(direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,4,1,
+referral > organic > (unknown) > (data deleted) > (unknown) > (unknown) > (unknown) > (data deleted),<Other> > google > (unknown) > (data deleted) > (unknown) > (unknown) > (unknown) > (data deleted),8,1,
+referral > <Other> > referral > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,33.0
+organic > (data deleted) > referral > (data deleted) > organic > (none),google > (data deleted) > <Other> > (data deleted) > google > (direct),6,1,35.0
+referral > referral > referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,
+organic > (unknown) > <Other>,google > (unknown) > <Other>,3,1,55.0
+referral > referral > referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > mail.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,55.0
+organic > organic > organic > organic,bing > bing > bing > bing,4,1,37.0
+organic > referral > referral > organic > organic > organic > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,55.0
+(unknown) > referral > referral,(unknown) > shop.googlemerchandisestore.com > mail.google.com,3,1,18.0
+organic > referral > referral > referral > (unknown) > referral > (unknown) > (unknown) > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > <Other> > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,10,1,44.0
+organic > (data deleted) > referral,google > (data deleted) > <Other>,3,1,44.0
+(unknown) > referral > organic > referral > (unknown) > (unknown) > referral > referral,(unknown) > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,16.0
+organic > (data deleted) > referral > referral > referral > organic > referral,(unknown) > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com,7,1,46.0
+referral > referral > referral > referral > referral > referral > referral > referral > (unknown) > referral,shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com,10,1,840.0
+(none) > referral > (data deleted) > organic > organic > referral,(direct) > shop.googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com > google > <Other>,6,1,14.0
+organic > (data deleted) > referral > referral > referral > (data deleted) > referral > referral,google > (data deleted) > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,69.0
+organic > referral > referral > (unknown) > (unknown) > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > (unknown) > google,6,1,
+referral > referral > (unknown) > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,
+referral > <Other> > referral > referral > organic > (data deleted),<Other> > <Other> > <Other> > shop.googlemerchandisestore.com > google > (data deleted),6,1,12.0
+organic > referral > organic > organic > referral > organic,<Other> > shop.googlemerchandisestore.com > google > google > shop.googlemerchandisestore.com > <Other>,6,1,
+(none) > organic > organic > (none),(direct) > <Other> > google > (direct),4,1,103.0
+organic > referral > referral > referral > referral > referral > referral,google > mail.google.com > mail.google.com > mail.google.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,7,1,8.0
+referral > organic > organic > organic > referral > <Other>,<Other> > google > <Other> > google > <Other> > <Other>,6,1,
+organic > organic > organic,google > yahoo > yahoo,3,1,194.0
+referral > organic > organic > organic > referral > organic > organic > (unknown) > organic > referral > referral,shop.googlemerchandisestore.com > google > google > google > shop.googlemerchandisestore.com > google > google > (unknown) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,11,1,56.0
+(unknown) > (unknown) > referral > referral,(unknown) > (unknown) > <Other> > shop.googlemerchandisestore.com,4,2,246.0
+(unknown) > (data deleted) > organic > organic > organic > referral > referral,(unknown) > (data deleted) > google > google > google > shop.googlemerchandisestore.com > <Other>,7,1,326.0
+organic > (unknown) > (data deleted) > referral,google > (unknown) > (data deleted) > shop.googlemerchandisestore.com,4,1,181.0
+referral > referral > organic > referral,shop.googlemerchandisestore.com > <Other> > google > <Other>,4,1,20.0
+referral > organic > (data deleted) > organic,<Other> > google > (data deleted) > google,4,1,38.0
+organic > referral > referral > (unknown) > referral > referral > (unknown) > (unknown) > referral,google > <Other> > <Other> > (unknown) > <Other> > shop.googlemerchandisestore.com > (unknown) > (unknown) > shop.googlemerchandisestore.com,9,1,110.0
+organic > referral > referral > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,4,1,52.0
+organic > referral > referral > referral > referral > organic > referral > organic > referral,google > <Other> > shop.googlemerchandisestore.com > <Other> > <Other> > shop.googlemerchandisestore.com > <Other> > google > <Other>,9,1,92.0
+referral > (none) > organic > organic > (unknown) > referral,support.google.com > (direct) > google > google > (unknown) > shop.googlemerchandisestore.com,6,1,
+(none) > (none) > referral > (none) > (none) > organic,(direct) > (direct) > shop.googlemerchandisestore.com > (direct) > (direct) > google,6,1,86.0
+cpc > (none) > organic,google > (direct) > google,3,1,49.0
+cpc > organic > (unknown) > (unknown) > (unknown) > referral,google > google > (unknown) > (unknown) > (unknown) > shop.googlemerchandisestore.com,6,1,136.0
+organic > organic > referral > (none) > organic,google > google > shop.googlemerchandisestore.com > (direct) > google,5,1,42.0
+(none) > (data deleted) > (none) > (none) > organic,(direct) > (data deleted) > (direct) > (direct) > google,5,1,42.0
+organic > organic > organic > organic > <Other>,google > google > google > google > <Other>,5,1,5.0
+organic > organic > referral > (unknown) > organic > referral > referral,google > google > shop.googlemerchandisestore.com > (unknown) > google > shop.googlemerchandisestore.com > googlemerchandisestore.com,7,1,26.0
+organic > <Other> > referral > (data deleted),<Other> > <Other> > <Other> > (data deleted),4,1,29.0
+(none) > referral > referral > (none),(direct) > <Other> > <Other> > (direct),4,1,86.0
+referral > referral > referral > referral > referral,<Other> > <Other> > shop.googlemerchandisestore.com > <Other> > <Other>,5,1,
+referral > referral > referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other> > <Other> > <Other>,5,1,37.0
+organic > referral > referral > organic > referral > organic > referral,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > mail.google.com > google > shop.googlemerchandisestore.com,7,1,96.0
+<Other> > referral > (unknown) > referral > referral > referral,<Other> > shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,6,1,136.0
+cpc > referral > (unknown) > referral,google > shop.googlemerchandisestore.com > (unknown) > <Other>,4,1,
+referral > organic,fb24025fd545c9f0f64fcaa31379397e.safeframe.googlesyndication.com > google,2,1,342.0
+organic > organic > referral > referral > referral > organic,google > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google,6,1,
+referral > referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > <Other>,6,1,128.0
+organic > referral > referral > organic > (data deleted) > referral,google > shop.googlemerchandisestore.com > <Other> > google > (data deleted) > shop.googlemerchandisestore.com,6,1,
+referral > referral > referral > referral > referral,shop.googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,77.0
+referral > organic > referral > organic > organic,googlemerchandisestore.com > google > shop.googlemerchandisestore.com > google > google,5,1,21.0
+organic > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,2,1,62.0
+organic > (data deleted) > organic > referral > referral > (data deleted) > organic > cpc,google > (data deleted) > google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > (data deleted) > google > google,8,1,70.0
+(none) > (none) > referral > referral > organic > referral,(direct) > (direct) > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > shop.googlemerchandisestore.com,6,1,55.0
+cpc > referral > referral,google > <Other> > shop.googlemerchandisestore.com,3,3,463.0
+organic > referral > referral > referral > referral > organic > organic,google > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > google > google,7,1,14.0
+(none) > referral > organic > organic > organic > organic,(direct) > <Other> > google > google > google > google,6,1,256.0
+referral > cpc > referral,<Other> > google > <Other>,3,1,44.0
+(none) > organic > (unknown) > organic > referral,(direct) > google > (unknown) > google > shop.googlemerchandisestore.com,5,1,99.0
+organic > (none) > organic > referral > (unknown) > organic,google > (direct) > google > shop.googlemerchandisestore.com > (unknown) > google,6,1,46.0
+organic > (none) > referral > organic > organic,google > (direct) > shop.googlemerchandisestore.com > google > google,5,1,38.0
+organic > referral > referral > referral > referral,google > googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,5,1,53.0
+referral > (data deleted) > (none) > (data deleted),shop.googlemerchandisestore.com > (data deleted) > (direct) > <Other>,4,1,32.0
+referral > organic > referral,googlemerchandisestore.com > google > googlemerchandisestore.com,3,1,60.0
+<Other> > (unknown) > (unknown) > (unknown) > (unknown) > (none),<Other> > (unknown) > (unknown) > (unknown) > (unknown) > (direct),6,1,683.0
+<Other> > referral > <Other> > referral,<Other> > shop.googlemerchandisestore.com > <Other> > shop.googlemerchandisestore.com,4,1,55.0
+<Other> > (unknown) > organic,<Other> > (unknown) > google,3,1,83.0
+cpc > referral > organic > referral,google > <Other> > google > shop.googlemerchandisestore.com,4,1,139.0
+referral > organic > referral > referral,googlemerchandisestore.com > google > googlemerchandisestore.com > shop.googlemerchandisestore.com,4,1,65.0
+organic > referral > (unknown) > referral > organic > referral,google > shop.googlemerchandisestore.com > (unknown) > <Other> > google > <Other>,6,1,53.0
+referral > referral > referral > referral > referral,googlemerchandisestore.com > googlemerchandisestore.com > googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,5,1,49.0
+referral > (unknown) > referral > referral,shop.googlemerchandisestore.com > (unknown) > shop.googlemerchandisestore.com > l.messenger.com,4,1,38.0
+referral > referral > referral,googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com,3,1,43.0
+(unknown) > referral > referral,(unknown) > googlemerchandisestore.com > shop.googlemerchandisestore.com,3,1,182.0
+organic > referral > referral > referral > referral > referral > referral > referral,google > <Other> > <Other> > <Other> > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > shop.googlemerchandisestore.com,8,1,32.0
+cpc > organic > organic > organic > organic,google > google > (unknown) > (unknown) > shop.googlemerchandisestore.com,5,1,47.0
+referral > referral > referral > referral,shop.googlemerchandisestore.com > shop.googlemerchandisestore.com > googlemerchandisestore.com > <Other>,4,1,92.0
+organic,yahoo,1,1,30.0
+organic > <Other> > cpc > (none),google > <Other> > google > (direct),4,1,53.0
+(none) > (none) > (data deleted) > referral,(direct) > (direct) > (data deleted) > shop.googlemerchandisestore.com,4,1,162.0
