@@ -65,12 +65,15 @@ def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
     if len(core):
         top = core.iloc[0]
         if top["key"] != "spend" and len(spend_row):
-            out.append({"title": f"광고비를 늘리는 것보다 '{top['lever']}'을(를) 올리는 게 이익을 더 키웁니다.",
-                        "evidence": f"10% 좋아지면 1년 동안 남는 돈 — {top['lever']} {_signed(top['up'])}, 광고비 10% 증액 {_signed(spend_row.iloc[0]['up'])}",
-                        "action": "아래 '실험해 보기'의 단계 개선부터 시작"})
+            sp = spend_row.iloc[0]
+            out.append({"title": f"'{top['lever']}' 10% 개선은 비용을 모르지만, 1년 동안 최대 {won(top['up'])}까지 써도 이득입니다.",
+                        "evidence": f"광고비 10% 증액은 {won(sp['extra_spend'])}을 더 쓰고 남는 돈 {_signed(sp['up'])} · "
+                                    f"'{top['lever']}' 10% 개선은 남는 돈 {_signed(top['up'])} (개선 비용을 빼기 전)",
+                        "action": "이 금액보다 싸게 개선할 방법이 있으면 광고비 증액보다 먼저. 아래 실험 카드로 효과부터 확인"})
         else:
-            out.append({"title": "지금은 광고비를 늘리는 것이 이익을 가장 많이 키웁니다.",
-                        "evidence": f"광고비 10% 증액 → 1년 동안 남는 돈 {_signed(top['up'])}", "action": "예산을 조금씩 늘리면서 클릭당 비용이 너무 오르지 않는지 지켜보기"})
+            out.append({"title": "지금은 광고비를 늘리는 것이 이익을 가장 많이 키웁니다 (증액분을 뺀 뒤에도).",
+                        "evidence": f"광고비 10% 증액 ({won(top['extra_spend'])}) → 1년 동안 남는 돈 {_signed(top['up'])}",
+                        "action": "예산을 조금씩 늘리면서 클릭당 비용이 너무 오르지 않는지 지켜보기"})
     name, rate = biggest_drop(p)
     step = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
     best = step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "") if len(step) else name

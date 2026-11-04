@@ -62,3 +62,15 @@ def test_insight_cards_have_evidence_and_action():
     lv = lever_table([meta()], [1_000_000], FunnelParams())
     cards = insights(res, lv, {}, "12개월 누적 이익")
     assert cards and all(c["title"] and c["evidence"] and c["action"] for c in cards)
+
+
+def test_cvr_mult_single_owner():  # MECE #4: CSV > GA4 매체별 > 기본값, 하나만 채택
+    up = pd.DataFrame({"CVR": [0.02]}, index=["naver"])
+    m, src = dl.resolve_cvr_mult("naver", 1.0, 0.01, upload=up)
+    assert m == pytest.approx(2.0) and "CSV" in src
+    m, src = dl.resolve_cvr_mult("naver", 1.0, 0.01)
+    assert m == pytest.approx(dl.ga4_medium_cvr("cpc") / dl.ga4_medium_cvr()) and "GA4" in src
+    assert dl.ga4_medium_cvr("cpc") == pytest.approx(0.0119, abs=5e-4)
+    assert dl.resolve_cvr_mult("naver", 1.0, 0.01, funnel_medium="cpc")[0] == 1.0  # 퍼널이 이미 cpc면 다시 곱하지 않음
+    m, src = dl.resolve_cvr_mult("meta", D.META_CVR_MULT, 0.01)
+    assert m == D.META_CVR_MULT and "가정값" in src

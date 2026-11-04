@@ -245,9 +245,9 @@ with tabs[1]:
                                              help="메타 광고 관리자에서 보이는 'CPC(링크 클릭당 비용)'. 모르면 기본값 700원")
             meta_sat = st.slider("예산을 늘릴 때 클릭 단가가 오르는 정도", 0.0, 2.0, float(D.META_SATURATION), 0.05,
                                  help="0.3 = 광고비를 100만 원 늘릴 때마다 클릭당 비용이 30% 오름 (같은 사람에게 반복 노출되어 비싸짐)")
-            meta_cvr_mult = st.slider("메타 손님의 구매 확률 (네이버 검색 손님 = 1)", 0.1, 2.0, float(D.META_CVR_MULT), 0.05,
-                                      help="검색한 사람은 이미 사려는 마음이 있어 구매 확률이 높습니다. 0.7 = 네이버 손님의 70%")
-            meta_ret_mult = st.slider("메타 손님이 다시 오는 정도 (네이버 손님 = 1)", 0.1, 2.0, float(D.META_RETENTION_MULT), 0.05)
+            meta_cvr_mult = st.slider("메타 손님의 구매 확률 (기본 퍼널 손님 = 1, 가정값)", 0.1, 2.0, float(D.META_CVR_MULT), 0.05,
+                                      help="근거 데이터가 없는 가정값입니다. 0.7 = ③ 퍼널 평균 손님의 70%. 광고 성과 CSV를 올리면 실제 값으로 바뀝니다.")
+            meta_ret_mult = st.slider("메타 손님이 다시 오는 정도 (네이버 손님 = 1, 가정값)", 0.1, 2.0, float(D.META_RETENTION_MULT), 0.05)
         meta_cpc = meta_cpc_input * target_mult
         if upload is not None and "meta" in upload.index:
             meta_cpc = float(upload.loc["meta", "CPC"])  # 1단계: 내 실제 CPC가 타깃 배수보다 우선
@@ -355,13 +355,12 @@ with tabs[2]:
     if ret_table is None:
         st.caption("재구매 비율은 실제 쇼핑몰 거래 데이터(UCI) 분석 결과가 나오면 자동으로 바뀝니다. 지금은 임시값입니다.")
 
-# 1단계 CSV 보정: 퍼널이 정해진 뒤 채널별 전환율 배수 = 내 CVR / 퍼널 CVR
-naver_cvr_mult, naver_ret_mult = D.NAVER_CVR_MULT, D.NAVER_RETENTION_MULT
-if upload is not None and params.cvr > 0:
-    if "meta" in upload.index:
-        meta_cvr_mult = float(upload.loc["meta", "CVR"] / params.cvr)
-    if "naver" in upload.index:
-        naver_cvr_mult = float(upload.loc["naver", "CVR"] / params.cvr)
+# 채널 전환율 배수: CSV > GA4 매체별 > 기본값 중 하나만 (MECE #4)
+naver_ret_mult = D.NAVER_RETENTION_MULT
+naver_cvr_mult, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload)
+meta_cvr_mult, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_mult, params.cvr, medium, upload)
+if meta_cvr_src.startswith("가정값") and meta_cvr_mult != D.META_CVR_MULT:
+    meta_cvr_src = "직접 입력"
 channels = [
     Channel("naver", "네이버 검색", naver_curve, naver_cvr_mult, naver_ret_mult),
     Channel("meta", "메타", meta_curve, meta_cvr_mult, meta_ret_mult),
@@ -419,8 +418,8 @@ def verdict(s, opt_profit_spends):
 
 # ─────────────────────────── ④ 시뮬레이션 ───────────────────────────
 with tabs[3]:
-    if upload is not None:
-        st.caption(f"올린 광고 성과 파일로 보정함: 구매 확률 네이버 {naver_cvr_mult:.2f}배 / 메타 {meta_cvr_mult:.2f}배, 메타 클릭당 비용 {meta_cpc:,.0f}원")
+    st.caption(f"채널별 구매 확률 배수: 네이버 {naver_cvr_mult:.2f}배 ({naver_cvr_src}) · 메타 {meta_cvr_mult:.2f}배 ({meta_cvr_src}) · "
+               f"메타 재방문 배수 {meta_ret_mult:.2f}배 ({'가정값' if meta_ret_mult == D.META_RETENTION_MULT else '직접 입력'})")
     st.subheader("한눈에 결론")
     lvl, msg = verdict(res.summary, opt_profit["spends"])
     getattr(st, lvl)(msg)
@@ -510,8 +509,12 @@ with tabs[4]:
         for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs):
             with st.container(border=True):
                 st.markdown(f"**{card['title']}**  \n📊 근거: {card['evidence']}  \n🧪 해 볼 일: {card['action']}")
-        core = levers[levers["core"]][["lever", "up"]].rename(columns={"lever": "10% 좋아지면", "up": "1년 동안 남는 돈 변화"})
-        st.dataframe(core.style.format({"1년 동안 남는 돈 변화": "{:+,.0f}"}), hide_index=True, width="stretch")
+        core = levers[levers["core"]][["lever", "extra_spend", "up", "breakeven_cost"]].rename(columns={
+            "lever": "10% 좋아지면", "extra_spend": "더 쓰는 광고비", "up": "1년 동안 남는 돈 변화", "breakeven_cost": "이만큼까지 써도 이득"})
+        st.dataframe(core.style.format({"더 쓰는 광고비": "{:,.0f}", "1년 동안 남는 돈 변화": "{:+,.0f}", "이만큼까지 써도 이득": "{:,.0f}"},
+                                       na_rep="-"), hide_index=True, width="stretch")
+        st.caption("남는 돈은 모두 광고비를 뺀 뒤의 금액입니다. 개선 항목은 비용을 모르므로, 그 개선에 '이만큼까지 써도 이득'인 상한을 보여줍니다. "
+                   "전체 전환율·객단가·구매 횟수 10%는 계산상 효과가 같아 '손님 1명당 매출' 하나로 묶었습니다.")
         top_step = levers[levers["key"].str.startswith("step_")].sort_values("up", ascending=False)
         if len(top_step):
             name = top_step.iloc[0]["lever"].replace("단계: ", "").replace(" (이탈 감소)", "")

@@ -105,8 +105,21 @@ def test_profit_optimizer_can_leave_budget_unspent():
 
 def test_lever_table_has_core_levers():
     df = lever_table([meta()], [1_000_000], FunnelParams())
-    assert {"spend", "cvr", "retention", "aov"} <= set(df["key"])
-    assert (df.set_index("key").loc[["cvr", "retention", "aov"], "up"] > 0).all()
+    assert {"spend", "retention", "value"} <= set(df["key"])
+    assert (df.set_index("key").loc[["retention", "value"], "up"] > 0).all()
+    assert "cvr" not in set(df["key"]) and "aov" not in set(df["key"])  # 같은 효과 레버는 하나로
+
+
+def test_lever_costs_on_same_basis():
+    # 광고비 레버는 증액분이 이익에서 빠진 순증분, 개선 레버는 손익분기 비용 = 이익 증분 (MECE #3)
+    df = lever_table([meta(cpc=100)], [1_000_000], FunnelParams()).set_index("key")
+    assert df.loc["spend", "extra_spend"] == pytest.approx(1_000_000 * 0.1 * 12)
+    assert np.isnan(df.loc["spend", "breakeven_cost"])
+    assert df.loc["retention", "extra_spend"] == 0
+    assert df.loc["retention", "breakeven_cost"] == pytest.approx(df.loc["retention", "up"])
+    gross = simulate([meta(cpc=100)], [1_100_000], FunnelParams()).summary["gross_profit"] - \
+        simulate([meta(cpc=100)], [1_000_000], FunnelParams()).summary["gross_profit"]
+    assert df.loc["spend", "up"] == pytest.approx(gross - df.loc["spend", "extra_spend"])
 
 
 def test_naver_estimate_converted_to_month():

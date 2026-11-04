@@ -59,8 +59,18 @@ def optimize_allocation(channels: Sequence[Channel], budget: float, params: Funn
 
 def lever_table(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams,
                 pct: float = D.LEVER_PCT) -> pd.DataFrame:
-    """레버를 ±pct 바꿨을 때 12개월 이익 변화 (토네이도 차트용)."""
-    base = simulate(channels, spends, params).summary["profit_12m"]
+    """레버를 ±pct 바꿨을 때 12개월 이익 변화 (토네이도 차트용).
+
+    비용 기준 통일 (MECE #3): 이익은 모두 '광고비를 뺀 뒤'의 12개월 이익이다.
+    - 광고비 레버: 증액분(extra_spend)이 이미 이익에서 빠져 있음 → up = 순이익 증분
+    - 개선 레버: 개선에 드는 돈을 모르므로 up을 '손익분기 비용'으로 본다
+      (이 개선에 12개월 동안 이 금액 이하로 쓰면 이득)
+    전체 전환율·객단가·구매 빈도 +10%는 수식상 매출에 똑같이 곱해져 효과가 같으므로
+    '손님 1명당 매출' 하나로 묶고, 전환율 개선은 단계별 레버로만 보여준다 (MECE B5).
+    """
+    base_res = simulate(channels, spends, params)
+    base = base_res.summary["profit_12m"]
+    base_spend = base_res.summary["spend_total"]
 
     def run(sp, p):
         return simulate(channels, sp, p).summary["profit_12m"] - base
@@ -70,19 +80,10 @@ def lever_table(channels: Sequence[Channel], spends: Sequence[float], params: Fu
         steps = [(n, min(1 - (1 - r) * (2 - f), 1.0) if j == i else r) for j, (n, r) in enumerate(params.steps)]
         return params.with_changes(steps=steps)
 
-    def scale_all_steps(f):
-        # 전체 전환율을 f배: 마지막 단계에 몰아서 반영
-        steps = list(params.steps)
-        name, r = steps[-1]
-        steps[-1] = (name, min(r * f, 1.0))
-        return params.with_changes(steps=steps)
-
     levers = [
         ("spend", "광고비", lambda f: run([s * f for s in spends], params)),
-        ("cvr", "전환율 (클릭→목표 행동)", lambda f: run(spends, scale_all_steps(f))),
         ("retention", "재구매 (리텐션)", lambda f: run(spends, params.with_changes(retention_scale=params.retention_scale * f))),
-        ("aov", "1회 결제 금액 (객단가)", lambda f: run(spends, params.with_changes(aov=params.aov * f))),
-        ("freq", "한 달 구매 횟수", lambda f: run(spends, params.with_changes(purchase_freq=params.purchase_freq * f))),
+        ("value", "손님 1명당 매출 (객단가·구매 횟수)", lambda f: run(spends, params.with_changes(aov=params.aov * f))),
     ]
     for i, (name, _) in enumerate(params.steps):
         levers.append((f"step_{i}", f"단계: {name} (이탈 감소)", lambda f, i=i: run(spends, scale_step(i, f))))
@@ -91,7 +92,11 @@ def lever_table(channels: Sequence[Channel], spends: Sequence[float], params: Fu
 
     rows = [{"key": k, "lever": label, "up": fn(1 + pct), "down": fn(1 - pct)} for k, label, fn in levers]
     df = pd.DataFrame(rows)
-    df["core"] = df["key"].isin(["spend", "cvr", "retention", "aov"])
+    df["core"] = df["key"].isin(["spend", "retention", "value"])
+    df["kind"] = np.where(df["key"] == "spend", "budget", "improve")
+    up_spend = simulate(channels, [s * (1 + pct) for s in spends], params).summary["spend_total"]
+    df["extra_spend"] = np.where(df["key"] == "spend", up_spend - base_spend, 0.0)
+    df["breakeven_cost"] = np.where(df["kind"] == "improve", df["up"].clip(lower=0), np.nan)
     df["base_profit"] = base
     return df.sort_values("up", ascending=False).reset_index(drop=True)
 

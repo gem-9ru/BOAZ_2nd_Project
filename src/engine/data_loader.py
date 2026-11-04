@@ -136,3 +136,37 @@ def fit_retention(table: pd.DataFrame, fit_months: Optional[int] = None) -> Dict
             pred = _retention_model(test["months_since"].values, floor, decay)
             out["holdout_mae"] = float(np.mean(np.abs(pred - test["retention"].values)))
     return out
+
+
+# ── 채널 전환율 배수(cvr_mult) 소유권 (MECE #4) ─────────────────────────────
+# 하나만 채택: 사용자 성과 CSV > GA4 매체별 배수 > 기본값. 어트리뷰션 보정은 그 위에 한 번만 곱한다.
+GA4_CHANNEL_MEDIUM = {"naver": "cpc", "meta": None}  # GA4 샘플에는 소셜 유료 매체가 없음
+
+
+def ga4_medium_cvr(medium: str = GA4_ALL) -> Optional[float]:
+    """방문 → 구매 전환율. (data deleted)는 마스킹 편향으로 '전체'에서도 제외."""
+    df = _ga4_table()
+    if df is None or "medium" not in df.columns:
+        return None
+    df = df[df["medium"] != "(data deleted)"]
+    if medium != GA4_ALL:
+        df = df[df["medium"] == medium]
+    visit = float(df["visit_users"].sum())
+    return float(df["purchase_users"].sum()) / visit if visit > 0 else None
+
+
+def resolve_cvr_mult(channel: str, default: float, funnel_cvr: float, funnel_medium: str = GA4_ALL,
+                     upload: Optional[pd.DataFrame] = None, use_ga4: bool = True) -> Tuple[float, str]:
+    """(배수, 출처). 퍼널 자체가 그 매체 기준이면 GA4 배수는 1 (이중 계산 방지)."""
+    if upload is not None and channel in upload.index and funnel_cvr > 0:
+        cvr = float(upload.loc[channel, "CVR"])
+        if cvr == cvr and cvr > 0:
+            return cvr / funnel_cvr, "내 광고 성과 CSV"
+    medium = GA4_CHANNEL_MEDIUM.get(channel)
+    if use_ga4 and medium:
+        if funnel_medium == medium:
+            return 1.0, f"GA4 '{medium}' 퍼널을 이미 사용 중"
+        num, den = ga4_medium_cvr(medium), ga4_medium_cvr(funnel_medium)
+        if num and den:
+            return num / den, f"GA4 매체별 ('{medium}' ÷ '{funnel_medium}' 방문→구매)"
+    return default, "기본값" if default == 1.0 else "가정값 (근거 데이터 없음)"
