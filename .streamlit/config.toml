@@ -8,4 +8,3 @@ gatherUsageStats = false
 
 [client]
 toolbarMode = "minimal"
-showErrorDetails = "full"  # 임시: 배포 오류 원인 확인용, 확인 후 되돌림
