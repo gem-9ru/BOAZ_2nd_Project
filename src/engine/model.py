@@ -28,6 +28,8 @@ class FunnelParams:
     invite_rate: float = D.INVITE_RATE
     invite_conv: float = D.INVITE_CONV
     months: int = D.MONTHS
+    retention_bonus: Tuple[float, ...] = ()        # 자동화: 경과 t개월 리텐션에 더할 값 (t = 인덱스, t ≥ 1)
+    reactivation: Optional[Tuple[int, float]] = None  # 자동화(휴면 복귀): (N, q) → t ≥ N이면 떠난 비율 (1 − r)의 q가 돌아옴
 
     @property
     def cvr(self) -> float:
@@ -38,6 +40,12 @@ class FunnelParams:
         t = np.arange(n, dtype=float)
         r = self.retention_floor + (1 - self.retention_floor) * np.exp(-self.retention_decay * t)
         r = np.clip(r * self.retention_scale * mult, 0.0, 1.0)
+        for i, b in enumerate(self.retention_bonus[:n]):
+            if i >= 1:
+                r[i] = min(r[i] + b, 1.0)
+        if self.reactivation is not None:
+            start, q = self.reactivation
+            r[start:] = r[start:] + q * (1 - r[start:])
         r[0] = 1.0
         return r
 
@@ -60,8 +68,10 @@ class SimResult:
     customer_cum_profit: Optional[np.ndarray] = None  # 유료 고객 1명의 누적 매출총이익 (36개월, 회수 기간 차트용)
 
 
-def simulate(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams) -> SimResult:
-    """spends: 채널별 월 광고비 (12개월 동일하게 집행)."""
+def simulate(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams,
+             extra_cost_m: Optional[Sequence[float]] = None) -> SimResult:
+    """spends: 채널별 월 광고비 (12개월 동일하게 집행).
+    extra_cost_m: 광고비 외 월 비용 (자동 메시지 발송비·쿠폰 할인 등). 길이 M 배열 또는 매달 같은 금액."""
     M = params.months
     freq, aov, margin = params.purchase_freq, params.aov, params.margin
     k_ref = params.invite_rate * params.invite_conv
@@ -115,14 +125,15 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
     new_rev_m = new_m * freq * aov
     repeat_rev_m = revenue_m - new_rev_m
     gp_m = revenue_m * margin
-    profit_m = gp_m - spend_m
+    extra_m = np.zeros(M) if extra_cost_m is None else np.broadcast_to(np.asarray(extra_cost_m, dtype=float), (M,)).copy()
+    profit_m = gp_m - spend_m - extra_m
 
     monthly = pd.DataFrame({
         "month": np.arange(1, M + 1), "spend": spend_m, "clicks": clicks_m,
         "paid_new": paid_new_m, "referral_new": ref_new_m, "new_customers": new_m,
         "active": active_m, "orders": orders_m, "revenue": revenue_m,
         "new_revenue": new_rev_m, "repeat_revenue": repeat_rev_m,
-        "gross_profit": gp_m, "profit": profit_m, "cum_profit": np.cumsum(profit_m),
+        "gross_profit": gp_m, "extra_cost": extra_m, "profit": profit_m, "cum_profit": np.cumsum(profit_m),
     })
     by_channel = pd.DataFrame(ch_rows)
 
@@ -158,6 +169,7 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
         "new_revenue": float(new_rev_m.sum()),
         "repeat_revenue": float(repeat_rev_m.sum()),
         "gross_profit": float(gp_m.sum()),
+        "extra_cost": float(extra_m.sum()),
         "profit_12m": float(profit_m.sum()),
         "roas": paid_first_rev / spend_total if spend_total > 0 else None,
         "ltv_12m": ltv,
