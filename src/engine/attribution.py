@@ -56,11 +56,17 @@ def _channel(token: str) -> str:
     return token
 
 
+def _is_self(medium: str, source: str, domains: set) -> bool:
+    """자기 참조: referral 접점인데 소스가 내 도메인 (GA4 형식), 또는 접점 이름 자체가 내 도메인 (업로드 형식)."""
+    m = medium.strip().lower()
+    return (m == "referral" and source.strip().lower() in domains) or m in domains
+
+
 def clean_paths(df: pd.DataFrame, self_domains: Iterable[str] = SELF_DOMAINS, clean: bool = True,
                 lookback_days: Optional[int] = None) -> pd.DataFrame:
     """접점 목록(touches) 컬럼을 만든다.
 
-    clean=True: 자기 도메인에서 온 접점(결제·로그인 페이지 복귀) 삭제 = GA4 '원치 않는 추천' 처리.
+    clean=True: 자기 도메인에서 온 referral 접점(결제·로그인 페이지 복귀) 삭제 = GA4 '원치 않는 추천' 처리.
     접점이 모두 지워진 경로는 GA4처럼 direct 한 접점으로 남긴다 (전환 수 보존).
     lookback_days: 전환 인정 기간. 경로 CSV에 접점 시각이 없어 지금은 적용하지 않는다 (GA4 샘플은 3개월치).
     """
@@ -70,8 +76,7 @@ def clean_paths(df: pd.DataFrame, self_domains: Iterable[str] = SELF_DOMAINS, cl
         meds, srcs = path.split(SEP), src.split(SEP)
         if len(srcs) != len(meds):
             srcs = meds
-        t = [_channel(m) for m, s in zip(meds, srcs)
-             if not (clean and (s.strip().lower() in domains or m.strip().lower() in domains))]
+        t = [_channel(m) for m, s in zip(meds, srcs) if not (clean and _is_self(m, s, domains))]
         touches.append(t or [DIRECT])
     out = df.copy()
     out["touches"] = touches

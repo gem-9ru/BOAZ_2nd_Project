@@ -1,4 +1,4 @@
-"""M3 어트리뷰션 (명세 4장). GA4 샘플 기대값은 기획 세션 수치 기준, 정제 규칙 차이로 ±2.5%p 허용."""
+"""M3 어트리뷰션 (명세 4장). GA4 샘플 기대값은 기획 세션 재계산 값 (자기 도메인 2개 제거, 11/5)."""
 import sys
 from pathlib import Path
 
@@ -37,18 +37,30 @@ def test_self_referral_removed():
     assert CLEAN["conversions"].sum() == pytest.approx(5692)
     domains = set(A.SELF_DOMAINS)
     for path, src, t in zip(CLEAN["path"], CLEAN["source_path"], CLEAN["touches"]):
-        kept = [s for s in src.split(A.SEP) if s not in domains]
+        kept = [m for m, s in zip(path.split(A.SEP), src.split(A.SEP)) if not (m == "referral" and s in domains)]
         assert len(t) == max(len(kept), 1)
     assert A.self_ref_share(RAW) == pytest.approx(0.618, abs=1e-3)
+    both = A.self_ref_share(RAW) + A.self_ref_share(RAW, domain=A.SELF_DOMAINS[1])
+    assert both == pytest.approx(0.652, abs=1e-3)
+
+
+EXPECTED = {  # 첫 클릭 / 마지막 클릭 / 마지막 비직접 / 선형 / U자형 (구매 가중 %)
+    "organic": (45.5, 43.6, 45.2, 43.7, 44.2),
+    "referral": (25.6, 26.2, 26.9, 25.4, 25.7),
+    "direct": (16.7, 16.5, 12.8, 16.6, 16.6),
+    A.UNKNOWN: (10.1, 11.8, 13.2, 12.3, 11.5),
+    "cpc": (1.7, 1.3, 1.3, 1.5, 1.5),
+    "email": (0.4, 0.5, 0.5, 0.4, 0.4),
+}
 
 
 def test_ga4_sample_matches_plan():
-    assert A.single_touch_share(CLEAN) == pytest.approx(0.585, abs=0.025)
-    for ch, first, last in [("organic", 45.1, 43.2), ("referral", 27.8, 28.4), ("direct", 15.1, 15.0), ("cpc", 1.7, 1.3)]:
-        assert TAB.loc[ch, "first"] == pytest.approx(first, abs=2.5)
-        assert TAB.loc[ch, "last"] == pytest.approx(last, abs=2.5)
+    assert A.single_touch_share(CLEAN) == pytest.approx(0.599, abs=1e-3)
+    for ch, vals in EXPECTED.items():
+        for model, v in zip(A.MODELS, vals):
+            assert TAB.loc[ch, model] == pytest.approx(v, abs=0.051), (ch, model)
     raw_tab = A.credit_table(A.clean_paths(RAW, clean=False))
-    assert raw_tab.loc["referral", "last"] == pytest.approx(51.4, abs=0.5)   # 정제 전 referral 절반
+    assert raw_tab.loc["referral", "last"] == pytest.approx(51.4, abs=0.05)   # 정제 전 referral 절반
     assert "데이터 정제" in A.verdict(TAB)
 
 
