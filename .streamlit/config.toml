@@ -1,8 +1,11 @@
 [server]
 headless = true
+# push 뒤 바뀐 엔진 모듈(src/engine)도 다시 읽도록 (11/5 예전 모듈이 남아 TypeError 발생)
+fileWatcherType = "poll"
 
 [browser]
 gatherUsageStats = false
 
 [client]
 toolbarMode = "minimal"
+showErrorDetails = "full"  # 임시: 배포 오류 원인 확인용, 확인 후 되돌림
