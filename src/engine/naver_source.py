@@ -175,10 +175,12 @@ def bid_estimate(keyword: str, device: str = "MOBILE", online: bool = True) -> O
 
 
 def recommend_keywords(kw: pd.DataFrame, seeds=(), n: int = 5) -> pd.DataFrame:
-    """세부 키워드 기회: 월 검색수 1천~3만(세부) & 경쟁 낮음·중간.
+    """세부 키워드 기회: 월 검색수 300~1만(세부, 분석 Q1 기준) & 경쟁 낮음·중간.
     입력 키워드가 있으면 그 키워드를 포함한 것만 (연관 검색어에 섞인 무관 키워드 제외), 검색수 순."""
     seeds = [x for x in seeds if x]
+    if kw is None or kw.empty or not {"tier", "comp", "keyword", "total_qc"} <= set(kw.columns):
+        return pd.DataFrame(columns=["keyword", "total_qc"])   # 검색어 결과가 없으면 추천도 없음
     d = kw[(kw["tier"] == "세부") & (kw["comp"].isin(["낮음", "중간"])) & (~kw["keyword"].isin(seeds))].copy()
     if seeds:
-        d = d[d["keyword"].map(lambda k: any(x in k for x in seeds))]
+        d = d[d["keyword"].map(lambda k: any(x in k for x in seeds)).astype(bool)]   # 빈 표에서도 행 필터로 동작하게
     return d.sort_values("total_qc", ascending=False).head(n)

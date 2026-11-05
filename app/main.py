@@ -232,7 +232,7 @@ if price and profit and max_budget and not input_error:
     elif naver_cpc:
         cpc, cpc_src = naver_cpc, f"네이버 예상 실적 '{kw}' (최근 4주 → 한 달)" + ("" if "네이버" in ch_name else ", 이 채널 대신 참고")
     else:
-        cpc, cpc_src = float(D.META_BASE_CPC), "대략값 (검색어를 넣으면 네이버 예상치로 바뀜)"
+        cpc, cpc_src = float(D.NAVER_FALLBACK_CPC), "네이버 대략값 (공개 키워드 63개 중앙값, 검색어를 넣으면 네이버 예상치로 바뀜)"
     need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
     light, _ = CO.signal(need)
     options = CO.budget_options(be.first, max_budget)
@@ -635,7 +635,7 @@ with tabs[1]:
         recs = ns.recommend_keywords(kw_df, seeds=list(base_hints))
         if len(recs):
             st.success("💡 **추천 검색어**: " + ", ".join(f"`{k}`" for k in recs["keyword"])
-                       + "  \n검색하는 사람이 적당히 많고(월 1천~3만 회) 경쟁 광고주가 적은 단어입니다.")
+                       + "  \n검색하는 사람이 적당히 있고(월 300~1만 회) 경쟁 광고주가 적은 단어입니다.")
         with st.spinner("입찰가별 예상 실적을 불러오는 중…"):
             for kw in selected:
                 est = load_estimate(kw, online and not fallback)
@@ -868,10 +868,15 @@ with tabs[4]:
                 hold = dl.fit_retention(ret_table, fit_months=min(6, int(ret_table["months_since"].max()) - 1))
                 fit = dl.fit_retention(ret_table)
                 ret_src = f"UCI 코호트 적합 ({rseg or '전체'}) · 이후 기간 오차 MAE {hold.get('holdout_mae', float('nan')):.3f}"
-            floor = st.slider("오래 지나도 꾸준히 오는 단골 비율", 0.0, 0.6, round(fit["floor"], 3) if fit else float(D.RETENTION_FLOOR), 0.005,
-                              key=f"floor_{rseg}_{fit is not None}")
-            decay = st.slider("첫 구매 후 손님이 떠나는 속도", 0.1, 5.0, round(fit["decay"], 2) if fit else float(D.RETENTION_DECAY), 0.05,
-                              key=f"decay_{rseg}_{fit is not None}")
+            if fit:
+                p_floor, p_decay, rkey = fit["floor"], fit["decay"], f"{rseg}_fit"
+            else:   # 처리된 코호트 파일이 없으면 프리셋 (분석 Q4)
+                rpreset = st.segmented_control("재구매 곡선", list(D.RETENTION_PRESETS), default=list(D.RETENTION_PRESETS)[0],
+                                               key="ret_preset") or list(D.RETENTION_PRESETS)[0]
+                p_floor, p_decay, ret_src = D.RETENTION_PRESETS[rpreset]
+                rkey = rpreset
+            floor = st.slider("오래 지나도 꾸준히 오는 단골 비율", 0.0, 0.6, round(float(p_floor), 3), 0.005, key=f"floor_{rkey}")
+            decay = st.slider("첫 구매 후 손님이 떠나는 속도", 0.1, 5.0, round(float(p_decay), 2), 0.05, key=f"decay_{rkey}")
             st.caption(f"출처: {ret_src}")
             if coach:
                 st.caption(f"코치에서 고른 '{coach['repurchase']}'(1년 동안 {CO.REPURCHASE_PRESETS[coach['repurchase']]:g}번 다시 삼, **가정값**)에 맞춰 "
@@ -1068,6 +1073,8 @@ def kpis(s):
     cols[1].metric("새 손님 (1년)", f"{s['new_customers']:,.0f}명", help=HELP["new"])
     cols[2].metric("손님 1명 데려오는 비용 (CAC)", won(s["paid_cac"]), help=HELP["paid_cac"])
     cols[3].metric("손님 1명이 1년간 남기는 돈 (LTV)", won(s["ltv_12m"]), help=HELP["ltv"])
+    st.caption(f"참고: 재구매가 많은 업종(UCI 선물·도매 데이터)에서는 1년 매출의 {D.REPEAT_REVENUE_SHARE_UCI:.0%}가 재구매에서 나왔습니다. "
+               "첫 구매 매출(ROAS)만 보면 1년 매출의 일부만 보는 셈입니다.")
     cols[4].metric("남기는 돈 ÷ 데려오는 비용", f"{s['ltv_cac']:.2f}배" if s["ltv_cac"] else "-", help=HELP["ltv_cac"])
     cols[5].metric("광고비 본전 찾는 기간", f"{s['payback_month']}개월" if s["payback_month"] else "36개월 넘음", help=HELP["payback"])
     cols[6].metric("광고비 1원당 첫 매출 (ROAS)", f"{s['roas']:.2f}원" if s["roas"] else "-", help=HELP["roas"])

@@ -18,11 +18,11 @@ def meta(cpc=1000.0):
     return Channel("meta", "메타", MetaCurve(cpc, 0.0))
 
 
-def test_keyword_tiers_by_monthly_search():  # 결정 6
-    assert dl.keyword_tier(30_000) == "대표"
-    assert dl.keyword_tier(29_999) == "세부"
-    assert dl.keyword_tier(1_000) == "세부"
-    assert dl.keyword_tier(999) == "롱테일"
+def test_keyword_tiers_by_monthly_search():  # 결정 6, 기준은 분석 Q1에 맞춤 (대표 ≥ 1만, 세부 ≥ 300)
+    assert dl.keyword_tier(10_000) == "대표"
+    assert dl.keyword_tier(9_999) == "세부"
+    assert dl.keyword_tier(300) == "세부"
+    assert dl.keyword_tier(299) == "롱테일"
 
 
 def test_pmf_warning_uses_ltv_cac():  # 결정 5

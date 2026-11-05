@@ -137,3 +137,15 @@ def test_today_kst_uses_seoul_date():
     # UTC 11/5 15:30 = 한국 11/6 00:30
     assert C.today_kst(datetime(2026, 11, 5, 15, 30, tzinfo=timezone.utc)).isoformat() == "2026-11-06"
     assert C.today_kst(datetime(2026, 11, 5, 14, 59, tzinfo=timezone.utc)).isoformat() == "2026-11-05"
+
+
+def test_naver_fallback_cpc_from_q1():
+    from src.engine import defaults as D
+    assert D.NAVER_FALLBACK_CPC == 1_300.0 > D.META_BASE_CPC
+
+
+def test_retention_presets_include_uci():
+    from src.engine import defaults as D
+    floor, decay, _ = D.RETENTION_PRESETS["재구매 많은 업종 (UCI 선물·도매 예시)"]
+    assert (floor, decay) == (0.176, 3.37)
+    assert D.RETENTION_PRESETS["보통 (일반 쇼핑몰 가정)"][:2] == (D.RETENTION_FLOOR, D.RETENTION_DECAY)
