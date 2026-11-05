@@ -92,3 +92,35 @@ def test_retention_preset_passes_to_next_stage(preset):
     scale = C.retention_scale_for(r, D.RETENTION_FLOOR, D.RETENTION_DECAY, D.PURCHASE_FREQ)
     p = FunnelParams(retention_scale=scale)
     assert float(p.retention(12)[1:].sum()) * p.purchase_freq == pytest.approx(r)
+
+
+# ── v0.9 UX 개편 ─────────────────────────────────────────────
+
+def test_budget_options_three_with_recommended_middle():
+    opts = C.budget_options(14_000, 1_000_000)
+    assert [o["label"] for o in opts] == ["작게 시작", "권장", "최대"]
+    assert [o["amount"] for o in opts] == [140_000, 420_000, 1_000_000]
+    assert opts[1]["key"] == "recommended" and opts[1]["error"] == "±18%"
+
+
+def test_budget_options_when_recommended_exceeds_max():
+    opts = C.budget_options(14_000, 300_000)            # 권장 42만 > 최대 30만 → 최대로 맞춤, 작게 시작만 남김
+    assert [o["key"] for o in opts] == ["small", "recommended"]
+    assert opts[-1]["amount"] == 300_000
+    only = C.budget_options(14_000, 100_000)             # 작게 시작 14만도 최대보다 큼 → 최대 하나
+    assert len(only) == 1 and only[0]["amount"] == 100_000
+
+
+def test_expected_and_realized_loss():
+    sales, loss = C.expected_loss(420_000, 2_331, 14_000)
+    assert sales == pytest.approx(420_000 / 2_331 * 0.0119)
+    assert loss == pytest.approx(420_000 - sales * 14_000)
+    assert C.expected_loss(140_000, 100, 14_000)[1] < 0      # 음수 = 이익 예상
+    assert C.realized_loss(420_000, 12, 14_000) == 420_000 - 12 * 14_000
+
+
+def test_biggest_drop_from_store_totals():
+    labels = {"visits": "방문", "views": "상품 조회", "cart": "장바구니", "orders": "구매"}
+    d = C.biggest_drop({"visits": 2000, "views": 1000, "cart": 100, "orders": 20}, labels, list(labels))
+    assert d == ("상품 조회", "장바구니", pytest.approx(0.1))
+    assert C.biggest_drop({"visits": 100}, labels, list(labels)) is None

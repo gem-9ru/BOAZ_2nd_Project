@@ -196,3 +196,52 @@ def _preset_name(repurchases: float) -> str:
         if abs(v - repurchases) < 1e-9:
             return k
     return f"1년에 {repurchases:g}번"
+
+
+# ── v0.9 UX 개편 (UX_개편안.md 3-3 ~ 3-6): 계산 규칙은 그대로, 보여 주는 방식만 ──────────────
+SIGNAL_WORDS = {"🟢": "광고해 볼 만해요", "🟡": "작게 시험해 보세요", "🔴": "광고만으로는 어려워요"}
+LOSS_REFERENCE_RATE = REFERENCE_RATES["GA4 공개 샘플 유료 검색 유입"]   # 손실 예상에 쓰는 보통 구매 비율 (참고 기준)
+INTERVIEW_QUESTIONS = [
+    "상품을 보고도 사지 않았던 이유가 뭐였나요? (가격, 배송, 믿음, 정보 부족 중에서)",
+    "사기 전에 더 알고 싶었던 게 있었나요? (맛·크기·사용법·후기 등)",
+    "비슷한 상품을 산다면 어디서 사나요? 그곳이 더 좋은 점은?",
+]
+
+
+def budget_options(be_first: float, max_budget: float) -> List[Dict]:
+    """시험 예산 3안 (타협 효과, 가운데 = 권장 기본 선택). 권장이 최대보다 크면 최대로 맞추고 작게 시작만 남김."""
+    small = be_first * MIN_SALES
+    rec = be_first * TEST_SALES
+    if rec > max_budget:
+        opts = []
+        if small < max_budget:
+            opts.append({"key": "small", "label": "작게 시작", "amount": small, "error": "±32%", "why": f"판매 {MIN_SALES}건: 판단할 수 있는 최소"})
+        opts.append({"key": "recommended", "label": "권장 (= 최대)", "amount": max_budget, "error": None,
+                     "why": f"권장(판매 {TEST_SALES}건, {rec:,.0f}원)이 최대보다 커서 최대로 맞춤"})
+        return opts
+    return [
+        {"key": "small", "label": "작게 시작", "amount": small, "error": "±32%", "why": f"판매 {MIN_SALES}건: 판단할 수 있는 최소"},
+        {"key": "recommended", "label": "권장", "amount": rec, "error": "±18%", "why": f"판매 {TEST_SALES}건: 판단이 꽤 정확해짐"},
+        {"key": "max", "label": "최대", "amount": max_budget, "error": None, "why": "사장님이 정한 한 달 상한"},
+    ]
+
+
+def expected_loss(budget: float, cpc: float, profit_per_sale: float, rate: float = LOSS_REFERENCE_RATE) -> Tuple[float, float]:
+    """(예상 판매 수, 예상 손해). 예상 판매 = 예산 ÷ 클릭 비용 × 보통 구매 비율, 손해 = 예산 − 예상 판매 × 남는 돈 (음수면 이익)."""
+    sales = budget / cpc * rate if cpc > 0 else 0.0
+    return sales, budget - sales * profit_per_sale
+
+
+def realized_loss(spend: float, sales: float, profit_per_sale: float) -> float:
+    """지난달 실제 손해 = 쓴 돈 − 광고로 온 판매 × 남는 돈 (첫 구매 기준)."""
+    return spend - sales * profit_per_sale
+
+
+def biggest_drop(totals: Dict[str, Optional[float]], labels: Dict[str, str], order: List[str]) -> Optional[Tuple[str, str, float]]:
+    """판매처 통계 합계에서 가장 많이 빠지는 구간 (이전 단계, 다음 단계, 통과율). 로그 분석 탭과 같은 계산(단계 전환율의 최솟값)."""
+    steps = [k for k in order if totals.get(k)]
+    pairs = [(a, b, totals[b] / totals[a]) for a, b in zip(steps, steps[1:]) if totals[a] > 0]
+    if not pairs:
+        return None
+    a, b, r = min(pairs, key=lambda x: x[2])
+    return labels[a], labels[b], r
