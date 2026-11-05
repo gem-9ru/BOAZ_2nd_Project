@@ -1,0 +1,94 @@
+
+======================================================================
+## UCI Online Retail II (거래 행 단위)
+======================================================================
+rows=1,067,371 cols=8  기간 2009-12-01 07:45:00 ~ 2011-12-09 12:50:00
+null rate: {'Invoice': 0.0, 'StockCode': 0.0, 'Description': 0.41, 'Quantity': 0.0, 'InvoiceDate': 0.0, 'Price': 0.0, 'Customer ID': 22.77, 'Country': 0.0}
+distinct: {'Invoice': 53628, 'StockCode': 5305, 'Description': 5698, 'Quantity': 1057, 'InvoiceDate': 47635, 'Price': 2807, 'Customer ID': 5942, 'Country': 43}
+exact duplicate rows: 34335
+Quantity: min=-80,995.00 p25=1.00 median=3.00 mean=9.94 p75=10.00 p95=30.00 p99=100.00 max=80,995.00 zeros=0 neg=22,950
+Price: min=-53,594.36 p25=1.25 median=2.10 mean=4.65 p75=4.15 p95=9.95 p99=18.00 max=38,970.00 zeros=6,202 neg=5
+invoice prefix: {'digit': 1047871, 'C': 19494, 'A': 6}
+country top 8: {'United Kingdom': 0.919, 'EIRE': 0.017, 'Germany': 0.017, 'France': 0.013, 'Netherlands': 0.005, 'Spain': 0.004, 'Switzerland': 0.003, 'Belgium': 0.003}
+월별 행 수 (최소/최대): 25526 2011-12-01 / 84711 2011-11-01
+
+======================================================================
+## Kaggle 페이스북 광고 (광고 단위)
+======================================================================
+rows=1,143 cols=11  ad_id 고유=True
+Impressions: min=87.00 p25=6,503.50 median=51,509.00 mean=186,732.13 p75=221,769.00 p95=894,449.40 p99=1,331,683.26 max=3,052,003.00 zeros=0 neg=0
+Clicks: min=0.00 p25=1.00 median=8.00 mean=33.39 p75=37.50 p95=161.90 p99=262.06 max=421.00 zeros=207 neg=0
+Spent: min=0.00 p25=1.48 median=12.37 mean=51.36 p75=60.02 p95=248.51 p99=378.59 max=639.95 zeros=207 neg=0
+Total_Conversion: min=0.00 p25=1.00 median=1.00 mean=2.86 p75=3.00 p95=11.00 p99=23.00 max=60.00 zeros=8 neg=0
+Approved_Conversion: min=0.00 p25=0.00 median=1.00 mean=0.94 p75=1.00 p95=4.00 p99=9.00 max=21.00 zeros=559 neg=0
+approved>total: 0  clicks>impressions: 0  spent>0 & clicks=0: 0
+상관(Spent, Impressions, Clicks, Approved):
+                     Spent  Impressions  Clicks  Approved_Conversion
+Spent                 1.00         0.97    0.99                 0.59
+Impressions           0.97         1.00    0.95                 0.68
+Clicks                0.99         0.95    1.00                 0.56
+Approved_Conversion   0.59         0.68    0.56                 1.00
+interest 광고 수 분포: {'count': 40.0, 'mean': 28.6, 'std': 27.5, 'min': 5.0, '25%': 7.0, '50%': 24.0, '75%': 41.5, 'max': 140.0}
+
+======================================================================
+## GA4 샘플 (BigQuery 쿼리 결과 4개)
+======================================================================
+이벤트: {'page_view': 269792, 'session_start': 267116, 'first_visit': 257314, 'user_engagement': 213004, 'scroll': 138098, 'view_promotion': 102443, 'view_item': 61252, 'view_search_results': 14449, 'select_item': 13180, 'add_to_cart': 12545, 'begin_checkout': 9715, 'add_shipping_info': 9714, 'select_promotion': 8164, 'add_payment_info': 5751, 'purchase': 4419, 'click': 1010, 'view_item_list': 44}
+
+funnel rows=18 (medium × device), 사용자 합=270,154
+medium: {'organic': 98618, '(none)': 63486, '<Other>': 44662, 'referral': 42581, 'cpc': 13416, '(data deleted)': 7391}
+device: {'desktop': 156956, 'mobile': 107132, 'tablet': 6066}
+전체 퍼널: {'visit_users': 267116, 'view_users': 61252, 'cart_users': 12545, 'checkout_users': 9715, 'purchase_users': 4419}
+단계가 늘어나는 행(순서 위반): 0
+
+transactions rows=4,451 고유 거래=4,451 고유 사용자=3,704
+revenue: min=1.00 p25=27.00 median=48.00 mean=69.24 p75=84.00 p95=185.50 p99=375.50 max=1,530.00 zeros=0 neg=0
+purchase_events 분포: {1: 4125, 2: 318, 3: 7, 4: 1}
+medium 비중: {'organic': 0.279, 'referral': 0.222, '(none)': 0.217, '(data deleted)': 0.147, '<Other>': 0.106, 'cpc': 0.029}
+사용자당 거래: {1: 3268, 2: 298, 3: 77, 4: 22, 5: 11, 6: 13}  2회 이상 비율= 0.118
+주문일 범위: 20201111 ~ 20210130
+
+attribution paths rows=1,253 세션 합=6,253 구매 합=5,692
+경로 길이: {'count': 1253.0, 'mean': 5.1, 'std': 2.3, 'min': 1.0, '25%': 3.0, '50%': 5.0, '75%': 6.0, 'max': 12.0}
+
+======================================================================
+## 네이버 검색광고 캐시 (키워드 도구 + 입찰가별 예상 실적)
+======================================================================
+[keywordstool] hint=원두커피 fetched=2026-11-02 01:35:15 연관=1039 '<10' 모바일=189 compIdx={'높음': 884, '중간': 133, '낮음': 22}
+[keywordstool] hint=필라테스 fetched=2026-11-02 01:35:15 연관=1187 '<10' 모바일=90 compIdx={'높음': 834, '중간': 301, '낮음': 52}
+keyword device  bids    fetched  first_click_bid  max_clicks  max_cost  monotonic
+    드립백 MOBILE    56 2026-11-02             2400          57    142329       True
+ 필라테스기구 MOBILE    56 2026-11-02              600         230    791430       True
+   원두커피 MOBILE    56 2026-11-02             2300         413   2517235       True
+   필라테스 MOBILE    56 2026-11-02             1400        1869  11856936       True
+     바벨 MOBILE    56 2026-11-02              250          73     92783       True
+   커피원두 MOBILE    56 2026-11-02             2200         714   2901696       True
+ 필라테스가격 MOBILE    56 2026-11-02             1000          72    241704       True
+   운동기구 MOBILE    56 2026-11-02             1200         227    683724       True
+ 기구필라테스 MOBILE    56 2026-11-02             1600         126    902916       True
+   얼그레이 MOBILE    56 2026-11-02              500          48     54720       True
+   요구르트 MOBILE    56 2026-11-02              800         719    767173       True
+WORKOUT MOBILE    56 2026-11-02              150          33      4290       True
+   로잉머신 MOBILE    56 2026-11-02              600         286    478192       True
+전자동커피머신 MOBILE    56 2026-11-02              900         169   1084473       True
+   생수2L MOBILE    56 2026-11-02              400         562    631688       True
+  시나몬가루 MOBILE    56 2026-11-02              400         342    267786       True
+
+[industry_compare.csv]
+  industry  seed_search_total  related_keywords  related_qc_ge_1000  mid_tail_low_mid_comp  share_high_comp  median_mobile_ctr
+반려동물 사료·간식              86750              1200                 136                     56             0.79               1.41
+      원두커피              50160              1200                 182                     72             0.81               1.69
+    건강기능식품             340590              1200                 193                     65             0.73               1.17
+      스킨케어              63280              1200                 132                     50             0.72               1.25
+      캠핑용품             151280              1200                 361                    141             0.69               2.15
+ 필라테스복·요가복              56810              1200                 150                     16             0.85               2.53
+
+[industry_compare_beauty.csv]
+  industry  seed_search_total  related_keywords  related_qc_ge_1000  mid_tail_low_mid_comp  share_high_comp  median_mobile_ctr
+   기초 스킨케어              49700              1200                 150                     45             0.74               1.13
+       선케어              38500               828                  68                     31             0.68               1.69
+       클렌징              33200               712                  75                     30             0.71               1.14
+색조 (베이스·립)              36180              1159                  99                     38             0.67               1.52
+      마스크팩              44920               696                  64                     31             0.75               1.39
+     헤어·바디             151440              1200                 181                     75             0.74               1.71
+   올리브영 연관            1984240                65                  18                      5             0.74               1.21
