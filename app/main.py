@@ -1,4 +1,4 @@
-"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.6.
+"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.8.
 
 실행: streamlit run app/main.py
 
@@ -38,6 +38,7 @@ from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_sca
                         lever_table, optimize_allocation, simulate)
 from src.engine import attribution as A  # noqa: E402
 from src.engine import coach as CO  # noqa: E402
+from src.engine import measure as MS  # noqa: E402
 from src.engine import automation as AU  # noqa: E402
 from src.engine import data_loader as dl  # noqa: E402
 from src.engine import defaults as D  # noqa: E402
@@ -144,7 +145,7 @@ with st.sidebar:
 st.title("📈 광고 예산 시뮬레이터")
 st.caption("광고를 처음 하는 사장님의 첫 광고를 함께 정하는 코치입니다. 손님 1명에 쓸 수 있는 돈, 첫 채널, 첫 달 예산을 알려 주고, "
            "한 달 뒤 결과로 계속할지 판정합니다. 데이터가 쌓이면 다음 단계 탭에서 채널 배분·퍼널·자동화까지 같은 기준으로 비교합니다. "
-           "(AARRR 프레임워크 · 고객 밸류체인 · 프로토타입 v0.7)")
+           "(AARRR 프레임워크 · 고객 밸류체인 · 프로토타입 v0.8)")
 
 _all_tabs = st.tabs(["🧭 광고 코치"] + [f"{n} · 다음 단계" if i == 0 else n for i, n in enumerate(TAB_NAMES)])
 coach_tab, tabs = _all_tabs[0], _all_tabs[1:]
@@ -252,6 +253,30 @@ with coach_tab:
             st.checkbox("광고 전용 링크나 쿠폰 코드 하나 만들기 (광고로 팔린 것만 따로 세려고)", key="prep_2",
                         help="이게 없으면 한 달 뒤 광고 없이 팔린 것까지 섞여 결과가 좋아 보일 수 있습니다.")
             st.checkbox("판매처 통계 화면 찾아 두기 (쓴 돈·클릭·판매 수를 볼 곳)", key="prep_3")
+        with st.expander("🔗 광고 링크·쿠폰 바로 만들기 (준비 ②를 앱이 대신 해 드립니다)", expanded=False):
+            st.caption("광고마다 꼬리표가 붙은 링크와 쿠폰 코드를 만들어, 한 달 뒤 '어느 광고로 팔렸나'를 셀 수 있게 합니다. GA4가 없어도 됩니다.")
+            l1, l2 = st.columns(2)
+            link_store = l1.selectbox("이 광고가 보낼 곳", stores or ["자사몰"], key="link_store")
+            default_ch = next((v for k, v in MS.FIRST_CHANNEL_KEY.items() if ch_name.startswith(k)), "meta")
+            ch_keys = list(MS.CHANNELS)
+            link_ch = l2.selectbox("광고 채널", ch_keys, index=ch_keys.index(default_ch), format_func=lambda k: MS.CHANNELS[k][0], key="link_ch")
+            l3, l4, l5 = st.columns([2, 1, 1])
+            page_url = l3.text_input("상품 페이지 주소", placeholder="예: smartstore.naver.com/내가게/products/123", key="link_url")
+            product_en = l4.text_input("상품 이름 (영문)", placeholder="예: coffee", key="link_product")
+            detail = l5.text_input("광고 소재 이름 (선택)", placeholder="예: 릴스A", key="link_detail")
+            month = pd.Timestamp.today().strftime("%y%m")
+            camp = MS.campaign_name(month, product_en)
+            link = MS.build_link(page_url, link_ch, link_store, camp, detail)
+            if link:
+                st.markdown("**광고에 넣을 링크**")
+                st.code(link, language=None)
+            elif link_store == "쿠팡":
+                st.info("쿠팡은 링크 꼬리표로 손님을 나눠 볼 수 없어 쿠폰 코드만 만듭니다.")
+            else:
+                st.caption("상품 페이지 주소를 넣으면 링크를 만듭니다.")
+            st.markdown("**이 광고 전용 쿠폰 코드** (판매처에서 이 이름으로 쿠폰을 만드세요)")
+            st.code(MS.coupon_code(link_ch, month, product_en), language=None)
+            st.caption(MS.STORE_NOTES.get(link_store, "") + f" 같은 채널은 늘 같은 이름(캠페인 '{camp}')으로 써야 나중에 합쳐 볼 수 있습니다.")
 
         st.divider()
         st.markdown("#### 한 달 뒤: 숫자 3개만 넣으면 계속할지 알려 드립니다")
@@ -260,10 +285,35 @@ with coach_tab:
         spent = m2.number_input("쓴 돈 (원)", 0, 1_000_000_000, value=None, step=10_000)
         clicks_in = m3.number_input("클릭 수", 0, 100_000_000, value=None, step=10)
         m4.caption("광고 관리자 화면에서 그대로 옮겨 적으세요.")
+        store_file = st.file_uploader("판매처 통계 파일 (선택, CSV·엑셀): 스마트스토어·쿠팡·쇼핑몰 관리자에서 내려받은 일별 통계",
+                                      type=["csv", "xlsx", "xls"], key="store_file")
+        store_tot = None
+        if store_file is not None:
+            try:
+                sdf = pd.read_csv(store_file) if store_file.name.lower().endswith(".csv") else pd.read_excel(store_file)
+                guess = MS.detect_columns(list(sdf.columns))
+                with st.expander("열 맞추기 (자동으로 짐작했어요. 틀리면 고쳐 주세요)", expanded=not all(guess[k] for k in ("visits", "orders"))):
+                    opts = ["(없음)"] + list(sdf.columns)
+                    mcols = st.columns(len(MS.FIELDS))
+                    mapping = {}
+                    for c, (k, (label, _)) in zip(mcols, MS.FIELDS.items()):
+                        pick = c.selectbox(label, opts, index=opts.index(guess[k]) if guess[k] else 0, key=f"store_map_{k}")
+                        mapping[k] = None if pick == "(없음)" else pick
+                store_tot = MS.store_totals(sdf, mapping)
+                ss["store_funnel_df"] = MS.store_funnel(store_tot)
+                summary = [f"{MS.FIELDS[k][0]} {v:,.0f}" for k, v in store_tot.items() if v]
+                st.caption("파일 합계: " + " · ".join(summary)
+                           + (f" → 방문 100명 중 {store_tot['orders'] / store_tot['visits'] * 100:.1f}명이 샀습니다 (광고 외 손님 포함)."
+                              if store_tot.get("visits") and store_tot.get("orders") else "")
+                           + " 이 퍼널은 다음 단계 '로그 분석'에도 채워집니다.")
+            except Exception as e:  # noqa: BLE001
+                st.error(f"통계 파일을 읽지 못했습니다: {e}")
         s1, s2, s3 = st.columns(3)
         coupon_n = s1.number_input("쿠폰·전용 링크로 팔린 수", 0, 10_000_000, value=None, step=1)
         report_n = s2.number_input("광고 화면에 나온 판매(전환) 수", 0, 10_000_000, value=None, step=1)
-        total_n = s3.number_input("이번 달 전체 판매 수", 0, 10_000_000, value=None, step=1)
+        total_default = int(store_tot["orders"]) if store_tot and store_tot.get("orders") else None
+        total_n = s3.number_input("이번 달 전체 판매 수", 0, 10_000_000, value=total_default, step=1,
+                                  help="판매처 통계 파일을 올리면 자동으로 채워집니다.")
         if spent is not None and clicks_in is not None and any(v is not None for v in (coupon_n, report_n, total_n)):
             basis = CO.ad_sales(coupon_n, report_n, total_n, baseline)
             v = CO.judge(int(days), float(spent), float(clicks_in), basis, be, cpc, ch_name)
@@ -528,6 +578,9 @@ with tabs[2]:
                 fun_df = pd.read_csv(fun_file)
             except Exception as e:  # noqa: BLE001
                 st.error(f"퍼널 CSV를 읽지 못했습니다: {e}")
+        elif ss.get("store_funnel_df") is not None:
+            fun_df = ss["store_funnel_df"]   # 광고 코치 '한 달 뒤'에 올린 판매처 통계 합계
+            st.caption("광고 코치에 올린 판매처 통계 파일의 합계로 퍼널을 채웠습니다.")
         if fun_df is not None:
             cols = list(fun_df.columns)
             numeric = [c for c in cols if pd.to_numeric(fun_df[c].astype(str).str.replace(",", ""), errors="coerce").notna().mean() > 0.9]
@@ -543,7 +596,8 @@ with tabs[2]:
                 medium = st.selectbox("퍼널 기본값으로 쓸 세그먼트", [dl.GA4_ALL] + [i for i in up_tab.index if i != dl.GA4_ALL])
                 base_steps, src = dl.upload_funnel(fun_df, step_cols, seg_col, medium)
                 overall = up_tab.columns[len(step_cols)]
-                seg_cvr = lambda m: float(up_tab.loc[m, overall]) if m in up_tab.index else None  # noqa: E731
+                # 값을 만들 때 고정 (아래 세그먼트 비교가 같은 이름 overall을 GA4 표 값으로 덮어써도 영향 없게)
+                seg_cvr = lambda m, tab=up_tab, col=overall: float(tab.loc[m, col]) if m in tab.index else None  # noqa: E731
                 seg_label = "내 퍼널 CSV"
                 if unit == "세션 수":
                     st.caption("세션 기준 전환율은 같은 사람이 여러 번 방문하면 사용자 기준보다 낮게 나옵니다.")

@@ -8,7 +8,7 @@
 ## 버전별 주소
 | 버전 | 앱 | 코드 |
 |---|---|---|
-| 현재 (main) | https://ad-budget-simulator.streamlit.app/ | [main](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/main) |
+| v0.8 (현재, main): 코치 + 측정 키트(광고 링크·쿠폰, 판매처 통계 파일) | https://ad-budget-simulator.streamlit.app/ | [v0.8](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.8) |
 | v0.7: 초보자 광고 코치 (고정) | https://ad-budget-simulator-v07.streamlit.app/ (`release/v0.7` 브랜치, Python 3.12) | [v0.7](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.7) |
 | v0.6.1 (밸류체인·공동구매, 코치 전) | — | [v0.6.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.6.1) |
 | v0.5.1 (11/5 밸류체인 반영 전) | — | [v0.5.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.5.1) |
