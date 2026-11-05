@@ -133,8 +133,10 @@ class RevShareCurve:
     budgeted = False
     capacity = 0.0
 
-    def __init__(self, rate: float, sales_per_campaign: float, campaigns_per_month: float = 1.0, upfront: float = 0.0):
-        self.rate = float(rate)                          # 판매액 대비 수수료율 (0~1)
+    def __init__(self, rate: float, sales_per_campaign: float, campaigns_per_month: float = 1.0, upfront: float = 0.0,
+                 fee_per_sale: float = 0.0):
+        self.rate = float(rate)                          # 수수료형: 판매액 대비 수수료율 (0~1)
+        self.fee_per_sale = float(fee_per_sale)          # 건당 고정형(구매 CPA): 판매 1건당 금액 (원)
         self.sales_per_campaign = float(sales_per_campaign)  # 1회 판매량 (= 상한)
         self.campaigns = float(campaigns_per_month)
         self.upfront = float(upfront)                    # 회당 착수금 (콘텐츠 제작비 등)
@@ -143,8 +145,9 @@ class RevShareCurve:
         return max(self.sales_per_campaign, 0.0) * max(self.campaigns, 0.0)
 
     def cost(self, sales: float, aov: float) -> float:
-        """한 달 비용 = 수수료율 × 판매 매출 + 착수금 × 횟수."""
-        return self.rate * sales * aov + self.upfront * self.campaigns
+        """한 달 비용 = 수수료율 × 판매 매출 + 건당 금액 × 판매 수 + 착수금 × 횟수.
+        수수료형: 구매당 비용 = 수수료율 × 객단가 + 착수금 ÷ 판매 수 / 건당 고정형: 건당 금액 + 착수금 ÷ 판매 수 (밸류체인 v3 4-1)"""
+        return self.rate * sales * aov + self.fee_per_sale * sales + self.upfront * self.campaigns
 
     def cost_per_purchase(self, aov: float) -> float:
         s = self.sales()

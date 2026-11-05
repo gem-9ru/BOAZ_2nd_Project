@@ -27,7 +27,7 @@ from src.engine import automation as AU  # noqa: E402
 from src.engine import data_loader as dl  # noqa: E402
 from src.engine import defaults as D  # noqa: E402
 from src.engine import naver_source as ns  # noqa: E402
-from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, cpc_from_cpm, learning_check  # noqa: E402
+from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
 from src.engine.optimize import compare_options  # noqa: E402
@@ -86,6 +86,27 @@ def pct(v):
 
 def signed(v):
     return ("+" if v >= 0 else "−") + won(abs(v))
+
+
+# 과금 방식별로 체인 각 단계 숫자를 어디서 받나 (밸류체인 v3 3장·8장, 조사 00-3 "카드 아래 체인 막대")
+# ("got", 출처) 매체·정산이 직접 줌 / ("fill", 메우는 방법) 우리가 UTM·쿠폰·주문으로 메워야 함 / ("skip", 이유) 거치지 않음
+CHAIN_COVER = {
+    "click": [("got", "매체"), ("got", "매체"), ("fill", "UTM"), ("fill", "UTM·주문"), ("fill", "주문"), ("fill", "추천 코드")],
+    "impression": [("got", "매체"), ("got", "매체"), ("fill", "UTM"), ("fill", "UTM·주문"), ("fill", "주문"), ("fill", "추천 코드")],
+    "purchase": [("fill", "캡처"), ("fill", "캡처·링크"), ("skip", "바로 ④"), ("got", "정산서·쿠폰"), ("fill", "주문 (자사몰만)"), ("fill", "추천 코드")],
+}
+
+
+def chain_bar(billing: str) -> str:
+    """①~⑥ 칸: 받는 칸은 실선, 메워야 하는 칸은 점선, 💰는 돈을 내는 단계."""
+    pay = D.BILLING[billing][1][:1]
+    cells = []
+    for (num, name, _), (state, src) in zip(D.CHAIN, CHAIN_COVER.get(billing, CHAIN_COVER["click"])):
+        border = "2px solid #4C78A8" if state == "got" else "2px dashed rgba(127,127,127,.6)"
+        cells.append(f'<div style="flex:1;min-width:0;border:{border};border-radius:6px;padding:2px 5px;font-size:12px;'
+                     f'opacity:{0.45 if state == "skip" else 1}">{num} {name}{" 💰" if num == pay else ""}'
+                     f'<br><span style="font-size:11px;opacity:.75">{src}</span></div>')
+    return '<div style="display:flex;gap:4px;margin:2px 0 10px">' + "".join(cells) + "</div>"
 
 
 # ───────────────────────────── 플로팅 도움말 ─────────────────────────────
@@ -245,6 +266,7 @@ with tabs[1]:
         meta_cpc_input = st.number_input("메타 클릭 1번당 비용 (원, CPC)", 50.0, 20_000.0, float(D.META_BASE_CPC), step=50.0,
                                          help="메타 광고 관리자의 'CPC(링크 클릭당 비용)'. 타깃을 쪼개지 않는 캠페인 하나(Advantage+ 판매 캠페인) 기준")
     learn_slot = st.container()
+    chain_slot = st.container()
     with st.expander("고급 설정 (메타 세부 설정 · 가이드 · 검색어 전체 보기)"):
         g1, g2 = st.columns(2)
         with g1:
@@ -262,6 +284,10 @@ with tabs[1]:
             meta_cvr_in = st.slider("메타 손님의 구매 확률 (③ 퍼널 평균 손님 = 1)", 0.1, 2.0, float(D.META_CVR_MULT), 0.05,
                                     help="가정값입니다. 광고 성과 CSV를 올리면 실제 값으로 바뀝니다.")
             meta_ret_mult = st.slider("메타 손님이 다시 오는 정도 (네이버 손님 = 1)", 0.1, 2.0, float(D.META_RETENTION_MULT), 0.05)
+            st.markdown("**증분 계수** (광고가 없었어도 왔을 손님을 뺀 비율, 모르면 1)")
+            i1, i2 = st.columns(2)
+            naver_incr = i1.number_input("네이버", 0.0, 1.0, 1.0, 0.05, help="메타 전환 상승 테스트·지역 실험 같은 증분 실험 결과가 있을 때만 바꾸세요.")
+            meta_incr = i2.number_input("메타", 0.0, 1.0, 1.0, 0.05)
         with g2:
             targets_df = dl.meta_targets()
             meta_targets = st.multiselect("연령·성별을 나눠 볼 때 (선택)", targets_df["target"].tolist(),
@@ -286,6 +312,10 @@ with tabs[1]:
         meta_cpc = float(upload.loc["meta", "CPC"])  # 1단계: 내 실제 CPC가 우선
     meta_curve = MetaCurve(meta_cpc, meta_sat)
     meta_billing = "impression" if use_cpm else "click"   # 매체 × 과금 설정 (밸류체인 v3 4-1)
+    with chain_slot:
+        st.markdown(f"**네이버 검색 · {D.BILLING['click'][0]}**" + chain_bar("click"), unsafe_allow_html=True)
+        st.markdown(f"**메타 · {D.BILLING[meta_billing][0]}**" + chain_bar(meta_billing), unsafe_allow_html=True)
+        st.caption("채널마다 어디까지 숫자를 잴 수 있는지: 실선 = 매체가 숫자를 줌 · 점선 = UTM·쿠폰·자사 주문으로 메워야 함 · 💰 = 돈을 내는 단계")
     spends = [naver_budget, meta_budget]
     alloc = None
     with st.expander("곡선과 검색어별 예산 보기", expanded=True):
@@ -300,6 +330,43 @@ with tabs[1]:
                                               "marginal_cpc": "클릭 1번 더 얻는 비용", "cpc": "평균 클릭당 비용", "saturated": "상태"})
                          .style.format({"한 달 광고비": "{:,.0f}", "한 달 클릭": "{:,.0f}", "권장 입찰가": "{:,.0f}",
                                         "클릭 1번 더 얻는 비용": "{:,.0f}", "평균 클릭당 비용": "{:,.0f}"}, na_rep="-"), hide_index=True)
+
+    st.subheader("공동구매·판매 수수료 (구매당, 선택)")
+    st.caption("인플루언서 공동구매, 라이브커머스, 제휴처럼 **팔린 만큼 돈을 내는** 방식입니다. 월 광고 예산을 나눠 쓰지 않고, 켜면 따로 더해집니다. "
+               "숫자는 모두 직접 넣는 값입니다 (기본값을 지어내지 않음).")
+    gonggu = None
+    if st.toggle("공동구매(구매당)도 함께 계산", key="gg_on"):
+        gtype = st.radio("돈 내는 방식", ["판매액의 %", "판매 1건당 금액 (구매 CPA)"], horizontal=True)
+        q1, q2, q3, q4 = st.columns(4)
+        if gtype.startswith("판매액"):
+            gg_rate = q1.number_input("수수료율 (%)", 0.0, 90.0, value=None, step=1.0,
+                                      help="판매액 중 인플루언서·플랫폼에 주는 비율. 공구는 보통 20~50%라는 업계 자료가 있습니다 (대행사·블로그 자료).")
+            gg_fee = 0.0
+        else:
+            gg_fee = q1.number_input("판매 1건당 금액 (원)", 0.0, 10_000_000.0, value=None, step=1_000.0)
+            gg_rate = 0.0
+        gg_sales = q2.number_input("1회 예상 판매량 (건)", 0, 1_000_000, value=None, step=10, help="한 번 진행할 때 팔릴 주문 수. 이 수가 상한입니다.")
+        gg_n = q3.number_input("한 달 진행 횟수", 0.0, 10.0, 1.0, step=0.5)
+        gg_up = q4.number_input("회당 착수금 (원)", 0, 100_000_000, 0, step=50_000, help="콘텐츠 제작비처럼 판매와 무관하게 먼저 주는 돈")
+        r1, r2 = st.columns(2)
+        gg_store = r1.radio("판매가 일어나는 곳", ["우리 쇼핑몰 (자사몰)", "외부 몰·인플루언서 몰"],
+                            help="외부 몰에서 팔면 그 손님의 재구매(⑤)를 우리가 볼 수 없어 재구매 0으로 계산합니다.")
+        gg_incr = r2.number_input("증분 계수 (공구가 없었어도 샀을 손님 빼기, 모르면 1)", 0.0, 1.0, 1.0, 0.05)
+        if not st.checkbox("전용 링크(UTM)나 쿠폰 코드를 만들었다", key="gg_track"):
+            st.warning("전용 링크나 쿠폰 코드가 없으면 다음 달 검토에서 이 채널의 ③·④ 실적이 0으로 나옵니다. 판매 정산서만으로는 우리 쪽 주문과 이을 수 없습니다.")
+        price_ok = (gg_rate is not None) and (gg_fee is not None)
+        if price_ok and gg_sales:
+            gonggu = Channel("gonggu", "공동구매", RevShareCurve((gg_rate or 0) / 100, gg_sales, gg_n, gg_up, fee_per_sale=gg_fee or 0),
+                             1.0, 1.0 if gg_store.startswith("우리") else 0.0, billing="purchase", incr_mult=gg_incr)
+            gm1, gm2 = st.columns(2)
+            gm1.metric("구매 1건당 비용", won(gonggu.curve.cost_per_purchase(aov)),
+                       help="수수료형 = 수수료율 × 객단가 + 착수금 ÷ 판매 수 / 건당 고정형 = 건당 금액 + 착수금 ÷ 판매 수")
+            gm2.metric("한 달 비용 (팔린 만큼)", won(gonggu.curve.cost(gonggu.curve.sales(), aov)),
+                       help=f"판매 {gonggu.curve.sales():,.0f}건 기준. ⑥에서 공동구매를 켰을 때와 껐을 때를 비교합니다.")
+            spends.append(0.0)
+        else:
+            st.caption("돈 내는 금액과 1회 예상 판매량을 넣으면 계산합니다.")
+        st.markdown("**공동구매는 어디까지 잴 수 있나**" + chain_bar("purchase"), unsafe_allow_html=True)
 
 # ─────────────────────────── ③ 로그 분석 ───────────────────────────
 with tabs[2]:
@@ -341,7 +408,7 @@ with tabs[2]:
                                   help="'전체'가 기본입니다. 'cpc'를 고르면 검색광고로 들어온 방문자만의 비율을 씁니다.")
             base_steps, src = dl.funnel_steps(medium)
         steps_df = pd.DataFrame([{"단계": n, "전환율": round(r, 3)} for n, r in base_steps])
-        steps_df.loc[len(steps_df) - 1, "단계"] = f"{task} 완료"
+        steps_df.loc[len(steps_df) - 1, "단계"] = "④ 구매" if task == "구매" else f"④ 구매({task})"   # 라벨만 교체 (밸류체인 D3)
         edited = st.data_editor(steps_df, num_rows="dynamic", hide_index=True, key=f"steps_editor_{src}",
                                 column_config={"전환율": st.column_config.NumberColumn(
                                     "다음 단계로 가는 비율", min_value=0.0, max_value=1.0, step=0.01, format="%.2f")})
@@ -424,9 +491,9 @@ meta_cvr_base, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_in, params.cv
 if meta_cvr_src.startswith("가정값") and meta_cvr_in != D.META_CVR_MULT:
     meta_cvr_src = "직접 입력"
 base_channels = [
-    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base, D.NAVER_RETENTION_MULT, billing="click"),
-    Channel("meta", "메타", meta_curve, meta_cvr_base, meta_ret_mult, billing=meta_billing),
-]
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base, D.NAVER_RETENTION_MULT, billing="click", incr_mult=naver_incr),
+    Channel("meta", "메타", meta_curve, meta_cvr_base, meta_ret_mult, billing=meta_billing, incr_mult=meta_incr),
+] + ([gonggu] if gonggu else [])
 
 # ─────────────────────────── ④ 어트리뷰션 ───────────────────────────
 with tabs[3]:
@@ -492,9 +559,9 @@ with tabs[3]:
             st.markdown(f"- {item}")
 
 channels = [
-    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base * k_naver, D.NAVER_RETENTION_MULT, billing="click"),
-    Channel("meta", "메타", meta_curve, meta_cvr_base * k_meta, meta_ret_mult, billing=meta_billing),
-]
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base * k_naver, D.NAVER_RETENTION_MULT, billing="click", incr_mult=naver_incr),
+    Channel("meta", "메타", meta_curve, meta_cvr_base * k_meta, meta_ret_mult, billing=meta_billing, incr_mult=meta_incr),
+] + ([gonggu] if gonggu else [])
 corrected = abs(k_naver - 1) > 1e-9 or abs(k_meta - 1) > 1e-9
 
 # ─────────────────────────── ⑤ 자동화: 시나리오 ───────────────────────────
@@ -553,7 +620,7 @@ with tabs[4]:
 
 # ─────────────────────── 계산 (입력이 바뀔 때만 최적화 재계산) ───────────────────────
 res = simulate(channels, spends, params)
-ckey = repr((omtm, budget, spends, params, [(c.key, c.cvr_mult, c.retention_mult) for c in channels], sorted(estimates), meta_cpc, meta_sat))
+ckey = repr((omtm, budget, spends, params, [(c.key, c.cvr_mult, c.retention_mult, c.incr_mult, c.billing, None if c.budgeted else vars(c.curve)) for c in channels], sorted(estimates), meta_cpc, meta_sat))
 opt, opt_profit, opt_roas, levers, scan = cached("opt", ckey, lambda: (
     optimize_allocation(channels, budget, params, omtm),
     optimize_allocation(channels, budget, params, "profit"),
@@ -641,6 +708,10 @@ def exp_card(row):
         st.markdown(f"통과율 **{base_rate:.1%} → {s['p2']:.1%}** 확인에 A·B 각각 **{s['n_per_group']:,.0f}명** · 광고로 이 단계에 한 달 {monthly_in:,.0f}명 → "
                     + (f"약 **{days:,.0f}일**" if days < 10_000 else "지금 손님 수로는 어려움")
                     + (" (너무 길면 광고 외 방문자까지 포함해 실험하세요)" if days > 60 else ""))
+    elif name.startswith("공동구매"):
+        st.markdown("**전용 쿠폰으로 실제 판매 확인**: 공구마다 전용 쿠폰 코드나 링크를 만들어 자사 주문에서 그 코드의 구매 수·재구매를 셉니다. "
+                    "외부 몰에서 팔면 정산서로 판매 수만 확인하고, 재구매는 볼 수 없다는 점을 표시합니다. "
+                    "증분은 공구 기간 전후의 같은 상품 자연 판매와 비교해 대략 확인합니다.")
     else:
         st.markdown("**대조군(홀드아웃) 실험**: 대상의 10%에게는 보내지 않고 두 그룹의 구매율 차이(증분 반응률)를 잽니다. "
                     "필요한 인원·기간은 ⑤ 시나리오 카드의 '대조군 실험 설계'에서 계산합니다.")
@@ -682,7 +753,8 @@ with tabs[5]:
     st.subheader("지금 계획의 주요 숫자")
     st.caption(f"채널별 구매 확률 배수: 네이버 {channels[0].cvr_mult:.2f}배 ({naver_cvr_src}{f' × 어트리뷰션 {k_naver:.2f}' if k_naver != 1 else ''}) · "
                f"메타 {channels[1].cvr_mult:.2f}배 ({meta_cvr_src}{f' × 어트리뷰션 {k_meta:.2f}' if k_meta != 1 else ''}) · "
-               f"메타 재방문 배수 {meta_ret_mult:.2f}배 ({'가정값' if meta_ret_mult == D.META_RETENTION_MULT else '직접 입력'})")
+               f"메타 재방문 배수 {meta_ret_mult:.2f}배 ({'가정값' if meta_ret_mult == D.META_RETENTION_MULT else '직접 입력'}) · "
+               f"증분 계수 네이버 {naver_incr:.2f} · 메타 {meta_incr:.2f}" + ("" if naver_incr < 1 or meta_incr < 1 else " (측정값 없음, 기본 1)"))
     kpis(res.summary)
     with st.expander("계획별 비교와 그래프"):
         def plan_row(name, sp_, r):
@@ -740,7 +812,7 @@ with heads[1]:
               delta=("포화: " + ", ".join(f"'{k}'" for k in sat)) if sat else "포화된 검색어 없음", delta_color="off")
     base_p = res.summary["profit_12m"]
     nxt = {c.label: simulate(channels, [s + (10_000 if i == j else 0) for j, s in enumerate(spends)], params).summary["profit_12m"] - base_p
-           for i, c in enumerate(channels)}
+           for i, c in enumerate(channels) if c.budgeted}
     best_ch = max(nxt, key=nxt.get)
     st.caption(f"다음 1만 원(매달)을 어디에 쓰면 가장 많이 남나: **{best_ch}** (1년 {signed(nxt[best_ch])}). "
                "채널별 한계 이익이 같아질 때까지 나누는 것이 최적입니다.")

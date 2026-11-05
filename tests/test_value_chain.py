@@ -103,3 +103,11 @@ def test_billing_names_attach_to_media_and_setting():
     r = simulate([m_imp, gonggu()], [1_000_000, 0], P)
     assert r.by_channel["billing"].tolist() == ["노출당", "구매당"]
     assert D.BILLING["impression"][1].startswith("①") and D.BILLING["click"][1].startswith("②")
+
+
+def test_rev_share_fixed_fee_per_sale():
+    # 건당 고정형(구매 CPA): 구매당 비용 = 건당 금액 + 착수금 ÷ 판매 수 (밸류체인 v3 4-1)
+    c = RevShareCurve(0.0, 100, 1, upfront=200_000, fee_per_sale=8_000)
+    assert c.cost_per_purchase(60_000) == pytest.approx(8_000 + 200_000 / 100)
+    r = simulate([Channel("cpa", "구매 CPA", c)], [0], P)
+    assert r.by_channel.iloc[0]["spend"] == pytest.approx(8_000 * 100 + 200_000)
