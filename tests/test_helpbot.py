@@ -11,7 +11,7 @@ from src.engine.insights import won  # noqa: E402
 
 CTX = {"profit": -25_830_000, "ltv": 43_000, "cac": 124_000, "ltv_cac": 0.35, "roas": 0.53, "payback": None,
        "cvr": 0.0141, "aov": 60_000, "margin": 0.35, "pmf": True, "verdict": "🔴 지금 조건이면 광고를 할수록 손해입니다",
-       "top_option": ("퍼널 개선", 3_940_000, "ceiling", 3_940_000), "best_step": ("과업 시작", 3_940_000, "버튼을 위로"),
+       "top_option": ("퍼널 개선", 3_940_000, "ceiling", 3_940_000), "best_step": ("③ 장바구니", 3_940_000, "버튼을 위로"),
        "attribution": "모델보다 데이터 정제가 중요합니다."}
 
 
@@ -42,7 +42,7 @@ def test_definition_and_personal_number():
 def test_intents():
     assert "퍼널 개선" in ask("뭐부터 해야 해?") and "보류" in ask("뭐부터 해야 해?")
     assert "손해" in ask("왜 손해라고 나와?")
-    assert "과업 시작" in ask("손님이 어디서 제일 많이 새?")
+    assert "③ 장바구니" in ask("손님이 어디서 제일 많이 새?")
     assert "데이터 정제" in ask("어트리뷰션 결과 믿어도 돼?")
     assert "GA4 샘플 구매" in ask("이 숫자 어디서 나와?", "④ 어트리뷰션")
     assert "네이버 검색광고 API" in ask("포화는 어디서 나온 숫자야?", "① 시작")   # 용어가 속한 화면의 출처
@@ -56,7 +56,7 @@ def test_every_suggestion_gets_a_real_answer():
 
 
 def test_new_customer_is_not_leak():
-    assert "과업 시작" not in ask("새 손님이 뭐야?")
+    assert "③ 장바구니" not in ask("새 손님이 뭐야?")
 
 
 def test_profit_sign_wording():

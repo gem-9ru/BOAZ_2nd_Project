@@ -5,6 +5,8 @@
   여러 키워드는 한계 CPC가 낮은 구간부터 채우는 방식으로 합친다 (= 네이버 안에서의 최적 배분).
   일 예산 상한으로 한 입찰가의 일부만 쓰는 것이 가능하므로 점 사이 선형 보간을 허용한다.
 - 메타: CPC(s) = base_cpc × (1 + saturation × s / 100만 원). 클릭 = s / CPC(s).
+- 판매 수수료(rev_share, 과금 유형 D: 공동구매·라이브커머스·제휴): 광고 예산을 쓰지 않고, 팔린 만큼 수수료를 낸다.
+  구매당 비용 = 수수료율 × 객단가 + 착수금 ÷ 판매 수, 상한 = 1회 판매량 (밸류체인_정의.md 4-1, 조사 00-3)
 """
 from dataclasses import dataclass
 from typing import Dict, List, Optional
@@ -125,6 +127,40 @@ class MetaCurve:
         return pd.DataFrame({"spend": s, "clicks": [self.clicks(x) for x in s]})
 
 
+class RevShareCurve:
+    """과금 유형 D. 고객은 ④ 구매로 바로 들어오고(①② 매체 숫자는 캡처뿐), 비용은 매출에 비례한다.
+    예산 배분 대상이 아니라 켜거나 끄는 채널이다 (budgeted = False)."""
+    budgeted = False
+    capacity = 0.0
+
+    def __init__(self, rate: float, sales_per_campaign: float, campaigns_per_month: float = 1.0, upfront: float = 0.0):
+        self.rate = float(rate)                          # 판매액 대비 수수료율 (0~1)
+        self.sales_per_campaign = float(sales_per_campaign)  # 1회 판매량 (= 상한)
+        self.campaigns = float(campaigns_per_month)
+        self.upfront = float(upfront)                    # 회당 착수금 (콘텐츠 제작비 등)
+
+    def sales(self) -> float:
+        return max(self.sales_per_campaign, 0.0) * max(self.campaigns, 0.0)
+
+    def cost(self, sales: float, aov: float) -> float:
+        """한 달 비용 = 수수료율 × 판매 매출 + 착수금 × 횟수."""
+        return self.rate * sales * aov + self.upfront * self.campaigns
+
+    def cost_per_purchase(self, aov: float) -> float:
+        s = self.sales()
+        return self.cost(s, aov) / s if s > 0 else float("nan")
+
+    # 예산 곡선 인터페이스 (예산을 받지 않음)
+    def spendable(self, spend: float) -> float:
+        return 0.0
+
+    def clicks(self, spend: float) -> float:
+        return 0.0
+
+    def marginal_cpc(self, spend: float) -> float:
+        return float("nan")
+
+
 @dataclass
 class Channel:
     key: str            # "naver", "meta", ...
@@ -132,6 +168,12 @@ class Channel:
     curve: object       # NaverCurve | MetaCurve (clicks(), spendable(), marginal_cpc())
     cvr_mult: float = 1.0        # 이 채널 클릭의 최종 전환율 배수 (구매 의도 차이)
     retention_mult: float = 1.0  # 이 채널 고객의 리텐션 배수
+    incr_mult: float = 1.0       # 증분 계수: 광고가 없었어도 왔을 고객을 뺀 비율 (기본 1, cvr_mult와 분리. 밸류체인 D6)
+
+    @property
+    def budgeted(self) -> bool:
+        """월 광고 예산을 나눠 받는 채널인가 (클릭당·노출당). 판매 수수료 채널은 False."""
+        return getattr(self.curve, "budgeted", True)
 
 
 # ── 메타 실무 보강 (명세 2장) ──────────────────────────────────

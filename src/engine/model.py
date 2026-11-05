@@ -33,7 +33,7 @@ class FunnelParams:
 
     @property
     def cvr(self) -> float:
-        """클릭 → 핵심 과업 완료 (단계별 전환율의 곱)."""
+        """클릭 → ④ 구매(핵심 과업) (단계별 전환율의 곱)."""
         return float(np.prod([min(max(r, 0.0), 1.0) for _, r in self.steps])) if self.steps else 0.0
 
     def retention(self, n: int, mult: float = 1.0) -> np.ndarray:
@@ -84,11 +84,20 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
     paid_first_rev = 0.0
     ch_rows, ltv_weights, gp_curves = [], [], []
 
+    direct_new = 0.0  # ③을 거치지 않고 ④로 바로 오는 고객 (판매 수수료 채널)
     for ch, alloc in zip(channels, spends):
-        alloc = max(float(alloc), 0.0)
-        actual = ch.curve.spendable(alloc)
-        clicks = ch.curve.clicks(alloc)
-        new = clicks * cvr * ch.cvr_mult
+        if not ch.budgeted:
+            # 과금 유형 D: 예산과 무관하게 1회 판매량 × 횟수만큼 ④ 구매. 비용은 판매 매출의 수수료 + 착수금
+            alloc = 0.0
+            new = ch.curve.sales() * ch.incr_mult
+            clicks = 0.0
+            actual = ch.curve.cost(ch.curve.sales(), aov)
+            direct_new += new
+        else:
+            alloc = max(float(alloc), 0.0)
+            actual = ch.curve.spendable(alloc)
+            clicks = ch.curve.clicks(alloc)
+            new = clicks * cvr * ch.cvr_mult * ch.incr_mult
         r_ch = params.retention(M, ch.retention_mult)
         cohorts = np.full(M, new)
         active = np.convolve(cohorts, r_ch)[:M]
@@ -102,9 +111,9 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
         gp_curves.append(params.retention(36, ch.retention_mult) * params.value_per_active())
         ch_rows.append({
             "channel": ch.key, "label": ch.label, "budget": alloc, "spend": actual,
-            "unspent": alloc - actual, "clicks": clicks,
+            "unspent": max(alloc - actual, 0.0), "clicks": clicks,
             "cpc": actual / clicks if clicks > 0 else np.nan,
-            "marginal_cpc": ch.curve.marginal_cpc(actual) if actual > 0 else np.nan,
+            "marginal_cpc": ch.curve.marginal_cpc(actual) if (actual > 0 and ch.budgeted) else np.nan,
             "new_customers": new, "cac": actual / new if new > 0 else np.nan,
             "ltv_12m": ltv,
         })
@@ -178,21 +187,22 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
         "breakeven_month": breakeven,
         "cvr": cvr,
         "viral_k": k_ref,
+        "direct_new": direct_new * M,
     }
 
-    # AARRR 퍼널 (12개월 합계). 채널 배수는 마지막 단계(과업 완료)에 반영
+    # AARRR 퍼널 (12개월 합계). 채널 배수는 마지막 단계(④ 구매)에 반영
     clicks_by_ch = by_channel["clicks"].values if len(by_channel) else np.zeros(0)
-    mult = np.array([c.cvr_mult for c in channels])
-    stages = [("획득", "클릭", float(clicks_m.sum()))]
+    mult = np.array([c.cvr_mult * c.incr_mult for c in channels])
+    stages = [("획득", "② 반응 (클릭)", float(clicks_m.sum()))]
     cum = 1.0
     for i, (name, rate) in enumerate(params.steps):
         cum *= min(max(rate, 0.0), 1.0)
         last = i == len(params.steps) - 1
-        cnt = float((clicks_by_ch * cum * (mult if last else 1.0)).sum()) * M
+        cnt = float((clicks_by_ch * cum * (mult if last else 1.0)).sum()) * M + (direct_new * M if last else 0.0)
         stages.append(("활성화", name, cnt))
     retained = float(sum(paid_new_m[c] * params.retention(M)[M - 1 - c] for c in range(M - 1)))
-    stages.append(("유지", "12개월차 재구매 고객", retained))
-    stages.append(("추천", "추천 신규 고객", float(ref_new_m.sum())))
+    stages.append(("유지", "⑤ 재구매 (12개월차 고객)", retained))
+    stages.append(("추천", "⑥ 추천 (신규 고객)", float(ref_new_m.sum())))
     funnel = pd.DataFrame(stages, columns=["aarrr", "stage", "count"])
 
     return SimResult(list(channels), params, monthly, by_channel, summary, funnel, np.cumsum(gp_curve))

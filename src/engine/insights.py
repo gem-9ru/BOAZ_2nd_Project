@@ -22,8 +22,8 @@ def won(x: Optional[float]) -> str:
 def prescription(step_name: str) -> str:
     if step_name in D.STEP_PRESCRIPTIONS:
         return D.STEP_PRESCRIPTIONS[step_name]
-    if step_name.endswith("완료"):
-        return D.STEP_PRESCRIPTIONS["과업 완료"]
+    if step_name.startswith("④"):
+        return D.STEP_PRESCRIPTIONS["④ 구매"]
     return "이 단계 화면의 이탈 원인을 세션 녹화·사용자 인터뷰로 먼저 확인하기"
 
 

@@ -5,7 +5,7 @@
 - 대상 수는 엔진 코호트(광고로 온 손님 기준)에서 계산한다.
 
 시나리오 → 엔진
-- cart:      매달 '과업 시작'까지 왔지만 완료하지 않은 사람 → 마지막 단계 전환율 상승 (과업 진행·완료 이탈 감소)
+- cart:      매달 '③ 장바구니'까지 왔지만 완료하지 않은 사람 → 마지막 단계 전환율 상승 (③ 결제 시작·④ 구매 이탈 감소)
 - repeat:    첫 구매 후 1·2개월차 손님에게 한 번씩 → 리텐션 t=1, 2 상승
 - dormant:   첫 구매 후 N개월 이상 지나 그달 구매하지 않은 손님에게 매달 → t ≥ N에서 떠난 비율 중 일부 복귀 (바닥값 상승)
 """
@@ -20,8 +20,8 @@ from .model import FunnelParams, simulate
 SCENARIOS = {
     "cart": {
         "label": "장바구니 이탈",
-        "target": "과업을 시작했지만 완료하지 않은 손님 (매달)",
-        "effect": "과업 진행·완료 단계 이탈 감소",
+        "target": "장바구니에 담았지만 구매하지 않은 손님 (매달)",
+        "effect": "③ 결제 시작·④ 구매 단계 이탈 감소",
         "message": "브랜드 메시지 (광고성). 알림톡은 장바구니 안내를 보낼 수 없음",
     },
     "repeat": {
@@ -64,7 +64,7 @@ def breakeven_rate(cost_per_send: float, aov: float, margin: float, discount: fl
 
 
 def _cart_rates(steps) -> tuple:
-    """(R, C): 클릭 1회당 '과업 시작' 통과 비율과 '과업 완료' 비율. 단계가 3개 미만이면 마지막 단계 하나만 대상."""
+    """(R, C): 클릭 1회당 '③ 장바구니' 통과 비율과 '④ 구매' 비율. 단계가 3개 미만이면 마지막 단계 하나만 대상."""
     rates = [min(max(r, 0.0), 1.0) for _, r in steps]
     k = max(len(rates) - 2, 0)
     return float(np.prod(rates[:k])) if k else 1.0, float(np.prod(rates))

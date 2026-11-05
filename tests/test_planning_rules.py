@@ -35,10 +35,10 @@ def test_pmf_warning_uses_ltv_cac():  # 결정 5
 def test_ga4_funnel_defaults_match_plan():  # 기획안 3-2 GA4 표
     steps, _ = dl.funnel_steps()
     rates = dict(steps)
-    assert rates["관심 행동"] == pytest.approx(0.229, abs=1e-3)
-    assert rates["과업 시작"] == pytest.approx(0.205, abs=1e-3)
-    assert rates["과업 진행"] == pytest.approx(0.774, abs=1e-3)
-    assert rates["과업 완료"] == pytest.approx(0.455, abs=1e-3)
+    assert rates["③ 상품 조회"] == pytest.approx(0.229, abs=1e-3)
+    assert rates["③ 장바구니"] == pytest.approx(0.205, abs=1e-3)
+    assert rates["③ 결제 시작"] == pytest.approx(0.774, abs=1e-3)
+    assert rates["④ 구매"] == pytest.approx(0.455, abs=1e-3)
 
 
 def test_meta_target_multiplier():  # 결정 3: 상대 배수만 사용
@@ -87,7 +87,7 @@ def test_meta_learning_and_cpm():
 def test_segment_table_and_ztest():
     t = dl.segment_table("medium")
     assert "(data deleted)" not in t.index
-    assert t.loc["cpc", "방문→완료"] == pytest.approx(0.0119, abs=5e-4)
+    assert t.loc["cpc", "방문→구매"] == pytest.approx(0.0119, abs=5e-4)
     z, p = dl.two_prop_z(t.loc["referral", "purchases"], t.loc["referral", "visitors"], t.loc["cpc", "purchases"], t.loc["cpc", "visitors"])
     assert z > 0 and p < 0.05
     assert dl.two_prop_z(10, 1000, 10, 1000)[1] == pytest.approx(1.0)
@@ -108,14 +108,14 @@ def test_upload_funnel_matches_ga4_defaults():  # 명세 3-1 1단계: 내 GA4 �
     raw = pd.read_csv(dl.ROOT / "data" / "raw" / "ga4" / "ga4_funnel.csv")
     steps, src = dl.upload_funnel(raw, D.GA4_EVENTS)
     assert [n for n, _ in steps] == [n for n, _ in D.FUNNEL_STEPS]
-    assert dict(steps)["과업 시작"] == pytest.approx(0.205, abs=1e-3)
+    assert dict(steps)["③ 장바구니"] == pytest.approx(0.205, abs=1e-3)
     cpc, _ = dl.upload_funnel(raw, D.GA4_EVENTS, "medium", "cpc")
-    assert dict(cpc)["과업 완료"] == pytest.approx(0.427, abs=1e-3)
+    assert dict(cpc)["④ 구매"] == pytest.approx(0.427, abs=1e-3)
     tab = dl.segment_rates(raw, "device", D.GA4_EVENTS)
     assert set(tab.index) >= {"desktop", "mobile", dl.GA4_ALL}
     my = pd.DataFrame({"채널": ["a", "b"], "방문": ["1,000", "500"], "상담": [100, 25], "계약": [10, 5]})
     steps, _ = dl.upload_funnel(my, ["방문", "상담", "계약"], "채널", "b")
-    assert [n for n, _ in steps] == ["랜딩 도착", "상담", "계약"] and dict(steps)["상담"] == pytest.approx(0.05)
+    assert [n for n, _ in steps] == ["③ 방문", "상담", "계약"] and dict(steps)["상담"] == pytest.approx(0.05)
 
 
 def test_resolver_uses_uploaded_segments():

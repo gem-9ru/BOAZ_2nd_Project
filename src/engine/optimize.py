@@ -34,12 +34,19 @@ def optimize_allocation(channels: Sequence[Channel], budget: float, params: Funn
     - 12개월 이익: 예산 이하로 써도 됨 (손해 구간이면 덜 쓰는 것이 최적). full_budget=True면 예산을 모두 배분
     격자 탐색으로 시작점을 잡고 scipy SLSQP로 다듬는다 (네이버 곡선이 꺾은선이라 격자가 안전장치).
     """
-    n = len(channels)
+    idx = [i for i, c in enumerate(channels) if c.budgeted]   # 판매 수수료 채널은 예산을 받지 않음
+    n = len(idx)
     if n == 0 or budget <= 0:
-        return {"spends": [0.0] * n, "value": 0.0}
+        return {"spends": [0.0] * len(channels), "value": omtm_value(channels, [0.0] * len(channels), params, omtm)}
+
+    def full(x):
+        out = np.zeros(len(channels))
+        out[idx] = np.asarray(x) * budget
+        return out
+
     allow_under = omtm == "profit" and not full_budget
     steps = 50 if n <= 2 else (20 if n == 3 else 10)
-    f = lambda x: omtm_value(channels, np.asarray(x) * budget, params, omtm)  # noqa: E731
+    f = lambda x: omtm_value(channels, full(x), params, omtm)  # noqa: E731
 
     best_x, best_v = None, -np.inf
     for x in _grid(n, steps, allow_under):
@@ -55,7 +62,7 @@ def optimize_allocation(channels: Sequence[Channel], budget: float, params: Funn
             best_x, best_v = np.clip(res.x, 0, 1), -res.fun
     except Exception:
         pass
-    return {"spends": [float(v) for v in best_x * budget], "value": float(best_v)}
+    return {"spends": [float(v) for v in full(best_x)], "value": float(best_v)}
 
 
 def lever_table(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams,
@@ -119,7 +126,7 @@ def budget_scan(channels: Sequence[Channel], spends: Sequence[float], params: Fu
 def compare_options(channels: Sequence[Channel], spends: Sequence[float], params: FunnelParams,
                     levers: pd.DataFrame, budget: float, corrected: Sequence[Channel] = None,
                     auto_params: FunnelParams = None, auto_cost_m=None, pmf_warning: bool = False) -> pd.DataFrame:
-    """⑥ 4개 선택지를 12개월 이익 증분(광고비·발송비를 뺀 뒤) 하나의 기준으로 (명세 6장).
+    """⑥ 4개 선택지(+ 판매 수수료 채널이 있으면 공동구매)를 12개월 이익 증분(광고비·발송비·수수료를 뺀 뒤) 하나의 기준으로 (명세 6장).
 
     cost_kind: known(비용이 이미 빠짐) / zero(같은 예산) / ceiling(비용 모름 → 이만큼까지 써도 이득)
     """
@@ -146,6 +153,14 @@ def compare_options(channels: Sequence[Channel], spends: Sequence[float], params
     else:
         rows.append({"option": "자동 메시지", "detail": "⑤에서 증분 반응률을 넣으면 계산", "gain": np.nan,
                      "cost": np.nan, "cost_kind": "known", "disabled": False})
+    rs = [i for i, c in enumerate(channels) if not c.budgeted]
+    if rs:
+        # 판매 수수료 채널(공동구매 등): 켰을 때와 껐을 때의 차이. 수수료·착수금은 이미 이익에서 빠짐
+        keep = [i for i in range(len(channels)) if i not in rs]
+        without = simulate([channels[i] for i in keep], [spends[i] for i in keep], params).summary["profit_12m"]
+        cost = sum(c.curve.cost(c.curve.sales(), params.aov) for i, c in enumerate(channels) if i in rs) * params.months
+        rows.append({"option": "공동구매 (판매 수수료)", "detail": " · ".join(channels[i].label for i in rs) + " 켜기",
+                     "gain": base - without, "cost": cost, "cost_kind": "known", "disabled": False})
     df = pd.DataFrame(rows)
     df["rank_gain"] = np.where(df["disabled"], -np.inf, df["gain"].fillna(-np.inf))
     return df.sort_values("rank_gain", ascending=False).drop(columns="rank_gain").reset_index(drop=True)

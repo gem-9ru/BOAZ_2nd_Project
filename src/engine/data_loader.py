@@ -37,7 +37,7 @@ def ga4_mediums() -> List[str]:
 
 
 def funnel_steps(medium: str = GA4_ALL) -> Tuple[List[Tuple[str, float]], str]:
-    """(단계 목록, 출처 설명). 첫 단계 '랜딩 도착'은 GA4에 없어 기본값 유지."""
+    """(단계 목록, 출처 설명). 첫 단계 '③ 방문'(광고 클릭 → 방문)은 GA4에 없어 기본값 유지."""
     df = _ga4_table()
     if df is None:
         return list(D.FUNNEL_STEPS), "기본값 (GA4 파일 없음)"
@@ -159,7 +159,7 @@ def resolve_cvr_mult(channel: str, default: float, funnel_cvr: float, funnel_med
                      upload: Optional[pd.DataFrame] = None, use_ga4: bool = True,
                      seg_cvr=None, seg_label: str = "GA4 매체별") -> Tuple[float, str]:
     """(배수, 출처). 퍼널 자체가 그 매체 기준이면 GA4 배수는 1 (이중 계산 방지).
-    seg_cvr: 세그먼트 이름 → 방문→완료 전환율 함수. 기본은 GA4 샘플, 내 퍼널 CSV를 올리면 그 표."""
+    seg_cvr: 세그먼트 이름 → 방문→구매 전환율 함수. 기본은 GA4 샘플, 내 퍼널 CSV를 올리면 그 표."""
     seg_cvr = seg_cvr or ga4_medium_cvr
     if upload is not None and channel in upload.index and funnel_cvr > 0:
         cvr = float(upload.loc[channel, "CVR"])
@@ -171,13 +171,13 @@ def resolve_cvr_mult(channel: str, default: float, funnel_cvr: float, funnel_med
             return 1.0, f"'{medium}' 퍼널을 이미 사용 중"
         num, den = seg_cvr(medium), seg_cvr(funnel_medium)
         if num and den:
-            return num / den, f"{seg_label} ('{medium}' ÷ '{funnel_medium}' 방문→완료)"
+            return num / den, f"{seg_label} ('{medium}' ÷ '{funnel_medium}' 방문→구매)"
     return default, "기본값" if default == 1.0 else "가정값 (근거 데이터 없음)"
 
 
 # ── M2 세그먼트 비교 (명세 3-2) ───────────────────────────────────
 SEGMENT_MIN_USERS = 1_000  # 이보다 방문자가 적으면 비교에서 회색 처리 (명세 9장 #3, 팀 결정 대기)
-STEP_LABELS = ["방문→관심", "관심→과업 시작", "과업 시작→진행", "진행→완료", "방문→완료"]
+STEP_LABELS = ["방문→상품 조회", "상품 조회→장바구니", "장바구니→결제 시작", "결제 시작→구매", "방문→구매"]
 
 
 def segment_rates(df: pd.DataFrame, seg_col: Optional[str], step_cols: List[str],
@@ -209,8 +209,8 @@ def upload_funnel(df: pd.DataFrame, step_cols: List[str], seg_col: Optional[str]
                   segment: str = GA4_ALL) -> Tuple[List[Tuple[str, float]], str]:
     """내 GA4 유입경로 CSV(명세 3-1: segment, step_1_users, …, step_n_users) → 퍼널 단계.
 
-    단계 열이 5개(방문·관심·과업 시작·진행·완료)면 엔진의 일반 단계 이름을 쓰고, 아니면 열 이름을 쓴다.
-    첫 단계 '랜딩 도착'(광고 클릭 → 방문)은 분석 도구에 없어 기본값을 유지한다.
+    단계 열이 5개(방문·상품 조회·장바구니·결제 시작·구매)면 엔진의 일반 단계 이름을 쓰고, 아니면 열 이름을 쓴다.
+    첫 단계 '③ 방문'(광고 클릭 → 방문)은 분석 도구에 없어 기본값을 유지한다.
     """
     if len(step_cols) < 2:
         raise ValueError("단계 열을 2개 이상 골라 주세요.")
