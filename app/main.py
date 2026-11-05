@@ -384,7 +384,7 @@ with coach_tab:
                 now_m = CO.today_kst().month
                 now_v = SE.normalize(a["season_idx"])[now_m - 1]
                 st.markdown(f"📅 '{a['kw']}'은(는) **{pk}월**에 가장 많이, **{lo}월**에 가장 적게 검색돼요. "
-                            f"이번 달({now_m}월)은 평소의 **{now_v:.0%}**예요.")
+                            f"이번 달({now_m}월)은 평소의 **{now_v:.0%}** 수준이에요.")
                 st.caption(f"출처: {a['season_src']}. 최근 3년 월별 검색량을 해마다 평균 1로 맞춘 값이에요. "
                            "검색이 많은 달엔 같은 광고비로 클릭도 많을 수 있어요.")
             elif a["kw"]:
