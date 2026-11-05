@@ -72,3 +72,23 @@ def test_judge_conservative_when_total_only():
 def test_learning_period_hint_for_meta():
     v = judge(days=5, channel="메타 광고 (인스타그램·페이스북)")
     assert v.step == 0 and "학습" in v.detail
+
+
+def test_detail_page_verdict_pauses_and_restarts_at_minimum():
+    # 판매 1건마다 손해라 절반으로 줄여도 손해 → 멈추고, 고친 뒤 첫 구매 손익분기 × 10건으로 재시험 (기획 수정 1)
+    v = judge(spend=900_000, clicks=3_000)
+    assert v.step == 3 and v.paused
+    assert v.next_budget == pytest.approx(BE.first * C.MIN_SALES)
+    assert "멈추" in v.title and f"{BE.first * C.MIN_SALES:,.0f}원" in v.detail
+    assert not judge(spend=400_000).paused
+
+
+@pytest.mark.parametrize("preset", list(C.REPURCHASE_PRESETS))
+def test_retention_preset_passes_to_next_stage(preset):
+    # 코치 프리셋 = 다음 단계 엔진에서 손님 1명의 12개월 재구매 횟수 (기획 수정 2)
+    from src.engine import FunnelParams
+    from src.engine import defaults as D
+    r = C.REPURCHASE_PRESETS[preset]
+    scale = C.retention_scale_for(r, D.RETENTION_FLOOR, D.RETENTION_DECAY, D.PURCHASE_FREQ)
+    p = FunnelParams(retention_scale=scale)
+    assert float(p.retention(12)[1:].sum()) * p.purchase_freq == pytest.approx(r)

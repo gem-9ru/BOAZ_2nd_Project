@@ -116,9 +116,10 @@ class Verdict:
     level: str            # info / success / warning / error (화면 색)
     title: str
     detail: str
-    next_budget: Optional[float] = None
+    next_budget: Optional[float] = None   # 다음 달 제안 예산. paused면 "고친 뒤 다시 시험할 금액"
     cpa: Optional[float] = None
     rate: Optional[float] = None
+    paused: bool = False                  # 고칠 때까지 광고를 멈춰야 하는가
 
 
 def judge(days: int, spend: float, clicks: float, sales: SalesBasis, be: Breakeven,
@@ -165,16 +166,29 @@ def judge(days: int, spend: float, clicks: float, sales: SalesBasis, be: Breakev
                        f"다시 사는 손님이 '{_preset_name(be.repurchases)}' 정도라면 {be.year:,.0f}원까지 남습니다 (가정값에 기댄 판정). "
                        "재구매 쿠폰·메시지로 다시 오게 만드세요.", spend, cpa, rate)
 
-    # 3. 들어온 사람이 안 삼
+    # 3. 들어온 사람이 안 삼 → 판매 1건마다 손해이므로 줄여도 손해가 이어짐: 멈추고, 고친 뒤 판단 가능한 최소 금액으로 재시험
     if rate is not None and rate < need:
-        return Verdict(3, "error", "광고를 줄이고 상세페이지부터 고치세요",
+        restart = be.first * MIN_SALES
+        return Verdict(3, "error", "상세페이지를 고칠 때까지 광고를 멈추세요",
                        f"눌러 들어온 사람 100명 중 {rate * 100:.1f}명이 샀습니다. 남으려면 {need * 100:.1f}명이 사야 합니다. "
-                       "사진·후기·가격 안내를 고친 뒤 다시 시작하세요.", spend * 0.5, cpa, rate)
+                       f"지금은 판매 1건마다 손해라 예산을 줄여도 손해가 이어집니다. 사진·후기·가격 안내를 고친 뒤 "
+                       f"**{restart:,.0f}원**으로 다시 시험하세요 (판매 {MIN_SALES}건을 볼 수 있는 최소 금액).",
+                       restart, cpa, rate, paused=True)
 
     # 4. 그 밖: 클릭이 비쌈
     return Verdict(4, "warning", "검색어나 광고 소재를 바꿔 클릭 비용을 낮추세요",
                    f"들어온 사람은 잘 사지만(100명 중 {(rate or 0) * 100:.1f}명), 클릭 1번에 {spend / max(clicks, 1):,.0f}원으로 비쌉니다. "
                    "더 구체적인 검색어(예: 상품명 + 특징)나 다른 사진·문구로 바꿔 보세요.", spend, cpa, rate)
+
+
+def retention_scale_for(repurchases: float, floor: float, decay: float, purchase_freq: float, months: int = 12) -> float:
+    """코치 재구매 프리셋(12개월 동안 다시 사는 횟수)을 다음 단계 엔진의 리텐션 곡선 높이로 바꾼다.
+    엔진에서 손님 1명의 12개월 재구매 횟수 = 월 구매 횟수 × Σ r(t), t = 1..11 → 이 값이 프리셋과 같아지는 배수.
+    곡선 모양(바닥값·감소 속도)은 다음 단계 슬라이더를 따르고, 높이만 맞춘다 (가정값)."""
+    from .model import FunnelParams
+    base = FunnelParams(retention_floor=floor, retention_decay=decay, purchase_freq=purchase_freq, months=months)
+    per_customer = float(base.retention(months)[1:].sum()) * purchase_freq
+    return max(repurchases, 0.0) / per_customer if per_customer > 0 else 0.0
 
 
 def _preset_name(repurchases: float) -> str:

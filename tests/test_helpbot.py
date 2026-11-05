@@ -15,7 +15,7 @@ CTX = {"profit": -25_830_000, "ltv": 43_000, "cac": 124_000, "ltv_cac": 0.35, "r
        "attribution": "모델보다 데이터 정제가 중요합니다."}
 
 
-def ask(q, screen="⑥ 결과·우선순위"):
+def ask(q, screen="결과·우선순위"):
     return H.answer(q, CTX, screen, won)
 
 
@@ -44,8 +44,8 @@ def test_intents():
     assert "손해" in ask("왜 손해라고 나와?")
     assert "③ 장바구니" in ask("손님이 어디서 제일 많이 새?")
     assert "데이터 정제" in ask("어트리뷰션 결과 믿어도 돼?")
-    assert "GA4 샘플 구매" in ask("이 숫자 어디서 나와?", "④ 어트리뷰션")
-    assert "네이버 검색광고 API" in ask("포화는 어디서 나온 숫자야?", "① 시작")   # 용어가 속한 화면의 출처
+    assert "GA4 샘플 구매" in ask("이 숫자 어디서 나와?", "어트리뷰션")
+    assert "네이버 검색광고 API" in ask("포화는 어디서 나온 숫자야?", "시작")   # 용어가 속한 화면의 출처
 
 
 def test_every_suggestion_gets_a_real_answer():
