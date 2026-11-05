@@ -12,7 +12,7 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import pandas as pd
@@ -20,6 +20,9 @@ import requests
 
 ROOT = Path(__file__).resolve().parents[2]
 CACHE_DIR = ROOT / "data" / "interim" / "naver_hub_cache"
+# 예시 지수 파일 자리 (배포 앱용). 네이버 API HUB 약관(캐시 기간·출처 표기) 확인 뒤 넣을지 결정 → 지금은 비어 있음
+# 형식: <검색어>.csv, 열 month(1~12), index(평균 1)
+EXAMPLE_DIR = ROOT / "data" / "examples" / "seasonality"
 BASE = "https://naverapihub.apigw.ntruss.com"
 SEARCH_TREND = "/search-trend/v1/search"
 SHOPPING_CATEGORIES = "/shopping/v1/categories"
@@ -100,6 +103,10 @@ def seasonality(keyword: str, years: int = 3, end: Optional[str] = None, online:
     end_ts = pd.Timestamp(end) if end else (pd.Timestamp.today().normalize() - pd.offsets.MonthEnd(1))
     start_ts = (end_ts - pd.DateOffset(years=years)) + pd.offsets.MonthBegin(1)
     df = search_trend({keyword: [keyword]}, start_ts.strftime("%Y-%m-%d"), end_ts.strftime("%Y-%m-%d"), "month", online)
+    return _index_from_frame(df)
+
+
+def _index_from_frame(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
     if df is None or df.empty:
         return None
     s = df.iloc[:, 0]
@@ -118,3 +125,49 @@ def shopping_category_trend(categories: Dict[str, str], start: str, end: str, ti
     body.update({k: v for k, v in filters.items() if v})
     data = post(SHOPPING_CATEGORIES, body, online)
     return None if data is None else _results_frame(data)
+
+
+def _from_saved(keyword: str) -> Optional[pd.Series]:
+    """저장된 검색어 트렌드 응답 중 이 검색어 하나·월 단위인 가장 최근 것 (기간이 달라도 씀)."""
+    best = None
+    for f in sorted(CACHE_DIR.glob("search-trend_v1_search_*.json")) if CACHE_DIR.exists() else []:
+        try:
+            saved = json.loads(f.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        req = saved.get("request", {})
+        groups = req.get("keywordGroups", [])
+        if req.get("timeUnit") == "month" and len(groups) == 1 and groups[0].get("keywords") == [keyword]:
+            if best is None or saved.get("fetched_at", "") > best.get("fetched_at", ""):
+                best = saved
+    return None if best is None else _index_from_frame(_results_frame(best["response"]))
+
+
+def _from_example(keyword: str) -> Optional[pd.Series]:
+    f = EXAMPLE_DIR / f"{keyword}.csv"
+    if not f.exists():
+        return None
+    d = pd.read_csv(f).set_index("month")["index"].reindex(range(1, 13)).fillna(1.0)
+    return d / d.mean()
+
+
+def seasonality_safe(keyword: str, online: Optional[bool] = None) -> Tuple[Optional[pd.Series], str]:
+    """(1~12월 지수 또는 None, 출처). 실시간 → 저장된 응답 → 예시 파일 → 없음. 어떤 오류도 앱을 멈추지 않는다."""
+    keyword = (keyword or "").strip().replace(" ", "")
+    if not keyword:
+        return None, "계절성 미반영 (검색어 없음)"
+    online = available() if online is None else online
+    if online:
+        try:
+            idx = seasonality(keyword, online=True)
+            if idx is not None:
+                return idx, "네이버 데이터랩 (검색어 트렌드)"
+        except Exception:  # noqa: BLE001  (연결 실패·HTTP 오류: 아래 저장본으로)
+            pass
+    idx = _from_saved(keyword)
+    if idx is not None:
+        return idx, "네이버 데이터랩 (검색어 트렌드, 저장된 응답)"
+    idx = _from_example(keyword)
+    if idx is not None:
+        return idx, "네이버 데이터랩 (검색어 트렌드, 예시 지수 파일)"
+    return None, "계절성 미반영 (" + ("검색어 트렌드를 불러오지 못함" if online else "검색어 트렌드 키·저장본 없음") + ")"

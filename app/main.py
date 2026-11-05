@@ -44,6 +44,8 @@ from src.engine import automation as AU  # noqa: E402
 from src.engine import data_loader as dl  # noqa: E402
 from src.engine import defaults as D  # noqa: E402
 from src.engine import naver_source as ns  # noqa: E402
+from src.engine import naver_hub as NH  # noqa: E402
+from src.engine import seasonal as SE  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -76,6 +78,13 @@ def _load_keywords(hints: tuple, online: bool):
 @st.cache_data(show_spinner=False)
 def _load_estimate(keyword: str, online: bool):
     return ns.bid_estimate(keyword, device=D.NAVER_DEVICE, online=online)
+
+
+@st.cache_data(show_spinner=False, ttl=86_400)
+def load_season(keyword: str):
+    """(1~12월 계절 지수 리스트 또는 None, 출처). 실패해도 None으로 계속 (앱 멈춤 없음)."""
+    idx, src = NH.seasonality_safe(keyword)
+    return (None if idx is None else [float(v) for v in idx.values]), src
 
 
 NAVER_FAILED = []   # 이번 실행에서 네이버 연결이 실패했는지 (실패는 캐시하지 않아 다음 실행에 다시 시도)
@@ -256,7 +265,8 @@ if price and profit and max_budget and not input_error:
     pick_key = ss["q_budget_pick"]
     # 광고 안 함이면 다음 단계 탭에는 권장 예산을 넘김 (시뮬레이션용)
     budget0 = next(o["amount"] for o in options if o["key"] == (pick_key if pick_key != "none" else "recommended"))
-    ans = dict(be=be, kw=kw, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, ch_reason=ch_reason,
+    season_idx, season_src = load_season(kw) if kw else (None, "계절성 미반영 (검색어 없음)")
+    ans = dict(be=be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, ch_reason=ch_reason,
                cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, light=light, options=options, budget0=budget0,
                default_pick=default_pick)
     coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
@@ -363,6 +373,16 @@ with coach_tab:
                 st.markdown(f"광고 대신 **공동구매·제휴**(팔린 만큼만 냄)라면 판매액의 **{profit / price:.0%} 이하** 수수료일 때 남습니다.")
             if be.year > be.first:
                 st.caption(f"다시 사는 손님까지 치면 손님 1명에 {won(be.year)}, 100명 중 {a['need_year'] * 100:.1f}명이면 됩니다 (재구매 '{repurchase}' 가정값).")
+            if a["season_idx"]:   # 계절성 (네이버 데이터랩): 꼭 알아야 하는 정보라 캡션으로 (툴팁 아님)
+                pk, lo = SE.peak_low(a["season_idx"])
+                now_m = CO.today_kst().month
+                now_v = SE.normalize(a["season_idx"])[now_m - 1]
+                st.markdown(f"📅 '{a['kw']}'은(는) **{pk}월**에 가장 많이, **{lo}월**에 가장 적게 검색돼요. "
+                            f"이번 달({now_m}월)은 평소의 **{now_v:.0%}**예요.")
+                st.caption(f"출처: {a['season_src']}. 최근 3년 월별 검색량을 해마다 평균 1로 맞춘 값이에요. "
+                           "검색이 많은 달엔 같은 광고비로 클릭도 많을 수 있어요.")
+            elif a["kw"]:
+                st.caption(f"📅 {a['season_src']}")
             if a["naver_failed"]:
                 st.warning("네이버 예상치를 못 불러와 대략값을 썼어요. 잠시 뒤 새로고침하면 다시 시도해요.", icon="📡")
             if a["kw_missing"]:
@@ -532,6 +552,10 @@ with coach_tab:
                     if lost > 0 and basis.value:
                         notes.insert(0, f"지난달 판매 1건마다 {won(lost / basis.value)}씩, 모두 {won(lost)} 손해 "
                                         f"(계산: 쓴 돈 {won(float(spent))} − 판매 {basis.value:,.0f}건 × 남는 돈 {won(profit)})")
+                if a["season_idx"]:   # 판정 기준은 그대로, 참고 문장만 (집행한 달 = 시작일의 달)
+                    s_note = SE.season_note(float(SE.normalize(a["season_idx"])[start_day.month - 1]))
+                    if s_note:
+                        st.caption("📅 " + s_note + " 판정 기준은 그대로예요.")
                 with st.expander("왜 이렇게 판정했나요?"):
                     st.markdown(v.detail)
                     st.caption("  \n".join(notes))
@@ -580,6 +604,17 @@ with tabs[0]:
         budget = st.number_input("한 달 광고비 (원)", min_value=0, max_value=1_000_000_000, value=int(coach.get("budget", D.MONTHLY_BUDGET)),
                                  step=100_000, format="%d")
         st.caption(f"= 한 달 {won(budget)}, 1년이면 {won(budget * 12)}")
+        season_kw = coach.get("keyword") or ns.SAMPLE_KEYWORD
+        ns_idx, ns_src = load_season(season_kw)
+        use_season = st.toggle(f"계절성 반영 (검색어 '{season_kw}')", value=ns_idx is not None, disabled=ns_idx is None,
+                               key=f"use_season_{ns_idx is not None}")
+        if ns_idx is not None:
+            season_mult = SE.monthly_multipliers(ns_idx, CO.today_kst().month, D.MONTHS) if use_season else ()
+            st.caption(f"출처: {ns_src}. 켜면 검색이 많은 달엔 같은 광고비로 클릭·새 손님이 늘고, 적은 달엔 줄어요 (1년 합계는 같음). "
+                       "끄면 매달 같다고 봐요.")
+        else:
+            season_mult = ()
+            st.caption(f"{ns_src}. 매달 같다고 보고 계산해요.")
     with c2:
         st.subheader("데이터 준비 체크리스트")
         st.caption("현업 마케팅의 첫 단계는 '측정 준비'입니다. 해 둔 것에 체크하면 쓸 수 있는 기능을 자동으로 정합니다.")
@@ -916,7 +951,7 @@ coach_ret_scale = (CO.retention_scale_for(CO.REPURCHASE_PRESETS[coach["repurchas
                    if coach else 1.0)
 params = FunnelParams(steps=steps, retention_floor=floor, retention_decay=decay, purchase_freq=freq,
                       aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv, referral_reward=referral_reward,
-                      retention_scale=coach_ret_scale)
+                      retention_scale=coach_ret_scale, season=tuple(season_mult))
 
 # 채널 전환율 배수: CSV > GA4 매체별 > 기본값 중 하나만 (MECE #4). 어트리뷰션 보정은 '어트리뷰션' 탭에서 그 위에 한 번만
 naver_cvr_base, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload,

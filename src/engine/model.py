@@ -34,6 +34,14 @@ class FunnelParams:
     months: int = D.MONTHS
     retention_bonus: Tuple[float, ...] = ()        # 자동화: 경과 t개월 리텐션에 더할 값 (t = 인덱스, t ≥ 1)
     reactivation: Optional[Tuple[int, float]] = None  # 자동화(휴면 복귀): (N, q) → t ≥ N이면 떠난 비율 (1 − r)의 q가 돌아옴
+    season: Tuple[float, ...] = ()    # 월별 클릭 배수 (계절 지수, 시뮬레이션 1달째부터, 평균 1). 비면 매달 1.0
+
+    def season_m(self, n: int) -> np.ndarray:
+        """n개월 클릭 배수. 짧으면 반복, 비면 1.0. 광고비는 같고 클릭(→ 신규 고객)만 오르내림."""
+        if not self.season:
+            return np.ones(n)
+        s = np.asarray(self.season, dtype=float)
+        return np.resize(s, n)
 
     @property
     def cvr(self) -> float:
@@ -86,6 +94,7 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
     paid_new_m = np.zeros(M)
     paid_active_m = np.zeros(M)
     paid_first_rev = 0.0
+    season = params.season_m(M)
     ch_rows, ltv_weights, gp_curves = [], [], []
 
     direct_new = 0.0  # ③을 거치지 않고 ④로 바로 오는 고객 (판매 수수료 채널)
@@ -103,13 +112,14 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
             clicks = ch.curve.clicks(alloc)
             new = clicks * cvr * ch.cvr_mult * ch.incr_mult
         r_ch = params.retention(M, ch.retention_mult)
-        cohorts = np.full(M, new)
+        # 계절성: 예산형 채널의 클릭·신규만 달마다 배수. 구매당 채널(판매량 고정)은 그대로
+        cohorts = np.full(M, new) * (season if ch.budgeted else 1.0)
         active = np.convolve(cohorts, r_ch)[:M]
         spend_m += actual
-        clicks_m += clicks
+        clicks_m += clicks * (season if ch.budgeted else 1.0)
         paid_new_m += cohorts
         paid_active_m += active
-        paid_first_rev += new * M * freq * aov
+        paid_first_rev += float(cohorts.sum()) * freq * aov
         ltv = float(r_ch.sum() * params.value_per_active())
         ltv_weights.append(new)
         gp_curves.append(params.retention(36, ch.retention_mult) * params.value_per_active())

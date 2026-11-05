@@ -57,6 +57,7 @@ python3 -m venv .venv
 | `src/engine/automation.py` | 자동 메시지 시나리오 3종, 손익분기 반응률 |
 | `src/engine/data_loader.py` | 기본값 로더, 퍼널 CSV 파서, 세그먼트 비교, 채널 전환율 배수 우선순위(CSV > 매체별 > 기본값) |
 | `src/engine/` 그 밖 | `insights`(경고·인사이트), `experiment`(표본 크기), `naver_source`(API·캐시, 28일 → 월 환산), `defaults`(기본값·출처) |
+| `src/engine/naver_hub.py`, `seasonal.py` | 네이버 API HUB 데이터랩 검색어 트렌드 → 월별 계절 지수(평균 1), 실패 시 저장본 → 예시 파일(`data/examples/seasonality/`) → 미반영 |
 | `app/` | 화면 (`main.py`), 차트 (`charts.py`), 도우미 챗봇 (`helpbot.py`), 광고 성과 CSV 예시 |
 | `src/collect/` | 네이버 API 수집 스크립트 |
 | `data/raw/ga4/` | GA4 공개 샘플 쿼리 결과 (퍼널, 구매 경로) |
