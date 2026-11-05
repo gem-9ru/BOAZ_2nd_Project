@@ -1,4 +1,4 @@
-"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.5.
+"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.6.
 
 실행: streamlit run app/main.py
 
@@ -143,7 +143,7 @@ with st.sidebar:
 st.title("📈 광고 예산 시뮬레이터")
 st.caption("광고비를 쓰면 손님이 얼마나 오고, 다시 오고, 1년 뒤 얼마가 남는지 미리 계산하고, "
            "광고비 증액 · 채널 재배분 · 퍼널 개선 · 자동 메시지 중 무엇을 먼저 할지 같은 기준으로 비교합니다. "
-           "(AARRR 프레임워크 · 프로토타입 v0.5)")
+           "(AARRR 프레임워크 · 고객 밸류체인 · 프로토타입 v0.6)")
 
 tabs = st.tabs(TAB_NAMES)
 heads = []

@@ -8,10 +8,11 @@
 ## 버전별 주소
 | 버전 | 앱 | 코드 |
 |---|---|---|
-| v0.5.1 (현재, main) | https://ad-budget-simulator.streamlit.app/ | [v0.5.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.5.1) |
+| v0.6.1 (현재, main) | https://ad-budget-simulator.streamlit.app/ | [v0.6.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.6.1) |
+| v0.5.1 (11/5 밸류체인 반영 전) | — | [v0.5.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.5.1) |
 | v0.4 (11/5 기획 반영 전) | https://ad-budget-simulator-v04.streamlit.app/ (`release/v0.4` 브랜치) | [v0.4](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.4) |
 
-전체 버전 목록은 [Tags](https://github.com/gem-9ru/BOAZ_2nd_Project/tags), v0.4 → v0.5.1 변경은 [비교](https://github.com/gem-9ru/BOAZ_2nd_Project/compare/v0.4...v0.5.1).
+전체 버전 목록은 [Tags](https://github.com/gem-9ru/BOAZ_2nd_Project/tags), v0.4 → v0.5.1 변경은 [비교](https://github.com/gem-9ru/BOAZ_2nd_Project/compare/v0.4...v0.5.1), v0.5.1 → v0.6.1은 [비교](https://github.com/gem-9ru/BOAZ_2nd_Project/compare/v0.5.1...v0.6.1).
 
 ## 화면
 
