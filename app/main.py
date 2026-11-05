@@ -435,7 +435,7 @@ with coach_tab:
             st.caption(f"광고 시작일 {start_day:%Y-%m-%d} · 오늘 {since}일째 · "
                        + ("판정할 수 있어요." if since >= CO.MIN_DAYS else f"{ready_day}부터 판정할 수 있어요 (그 전 숫자는 참고만)."))
             m1, m2, m3 = st.columns(3)
-            days = m1.number_input("광고를 며칠 돌렸나요?", 0, 366, max(since, 1) if since else 30)
+            days = m1.number_input("광고를 며칠 돌렸나요?", 0, 366, max(since, 1))   # 시작일부터 센 날 (한국 날짜)
             with m2:
                 spent = _num_input("쓴 돈 (원)", "q_spent", min_value=0, max_value=1_000_000_000, step=10_000)
             with m3:
