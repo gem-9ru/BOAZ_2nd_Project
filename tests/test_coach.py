@@ -124,3 +124,16 @@ def test_biggest_drop_from_store_totals():
     d = C.biggest_drop({"visits": 2000, "views": 1000, "cart": 100, "orders": 20}, labels, list(labels))
     assert d == ("상품 조회", "장바구니", pytest.approx(0.1))
     assert C.biggest_drop({"visits": 100}, labels, list(labels)) is None
+
+
+def test_default_budget_pick_follows_signal():
+    assert C.default_budget_pick("🔴") == "none"
+    assert C.default_budget_pick("🟡") == "recommended"
+    assert C.default_budget_pick("🟢") == "recommended"
+
+
+def test_today_kst_uses_seoul_date():
+    from datetime import datetime, timezone
+    # UTC 11/5 15:30 = 한국 11/6 00:30
+    assert C.today_kst(datetime(2026, 11, 5, 15, 30, tzinfo=timezone.utc)).isoformat() == "2026-11-06"
+    assert C.today_kst(datetime(2026, 11, 5, 14, 59, tzinfo=timezone.utc)).isoformat() == "2026-11-05"

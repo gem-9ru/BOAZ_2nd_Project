@@ -236,10 +236,16 @@ if price and profit and max_budget and not input_error:
     need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
     light, _ = CO.signal(need)
     options = CO.budget_options(be.first, max_budget)
-    pick_key = ss.get("q_budget_pick") if ss.get("q_budget_pick") in [o["key"] for o in options] else "recommended"
-    budget0 = next(o["amount"] for o in options if o["key"] == pick_key)
+    # 기본 선택은 신호등에 따라 (🔴 = 광고 안 함). 사장님이 직접 고르기 전까지는 신호등이 바뀌면 기본도 따라감
+    default_pick = CO.default_budget_pick(light)
+    if not ss.get("_budget_touched") or ss.get("q_budget_pick") not in [o["key"] for o in options] + ["none"]:
+        ss["q_budget_pick"] = default_pick
+    pick_key = ss["q_budget_pick"]
+    # 광고 안 함이면 다음 단계 탭에는 권장 예산을 넘김 (시뮬레이션용)
+    budget0 = next(o["amount"] for o in options if o["key"] == (pick_key if pick_key != "none" else "recommended"))
     ans = dict(be=be, kw=kw, kw_missing=kw_missing, monthly_search=monthly_search, ch_name=ch_name, ch_reason=ch_reason,
-               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, light=light, options=options, budget0=budget0)
+               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, light=light, options=options, budget0=budget0,
+               default_pick=default_pick)
     coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
                  channel=ch_name, repurchase=repurchase)
 
@@ -272,7 +278,7 @@ with coach_tab:
             if e2.button("내 숫자로 시작"):
                 for k in _KEEP:
                     ss.pop(k, None)
-                for k in ("coach_started", "coach_prev_rate", "coach_seen"):
+                for k in ("coach_started", "coach_prev_rate", "coach_seen", "_budget_touched"):
                     ss.pop(k, None)
                 ss["coach_mode"], ss["coach_step"] = "mine", 0
                 st.rerun()
@@ -355,12 +361,14 @@ with coach_tab:
             with st.container(border=True):
                 st.markdown(f"**첫 광고: {a['ch_name']}**  \n{a['ch_reason']}"
                             + (f"  \n(검색어 '{a['kw']}' 네이버 월 검색 {a['monthly_search']:,.0f}회)" if a["monthly_search"] is not None else ""))
-            st.markdown("**첫 달 시험 예산** (권장안을 추천해요. 근거는 카드 아래에)")
+            no_ad_first = a["default_pick"] == "none"
+            st.markdown("**첫 달 시험 예산** " + ("(지금은 손해가 예상돼 '광고 안 함'을 추천해요. 광고를 하려면 다른 안을 골라도 돼요)"
+                                                if no_ad_first else "(권장안을 추천해요. 근거는 카드 아래에)"))
             opts = a["options"] + [dict(key="none", label="광고 안 함", amount=0, error=None,
-                                        why="이번 달은 광고 없이 상세페이지·후기부터 다듬기")]
+                                        why="이번 달은 상세페이지·후기부터 (추천)" if no_ad_first else "이번 달은 광고 없이 상세페이지·후기부터 다듬기")]
             ocols = st.columns(len(opts))
             for c, o in zip(ocols, opts):
-                rec = o["key"] == "recommended"
+                rec = o["key"] == a["default_pick"]
                 with c.container(border=True):
                     st.markdown(("⭐ " if rec else "") + f"**{o['label']}**")
                     color = "color:#4C9BE8;" if rec else ""
@@ -369,7 +377,7 @@ with coach_tab:
             st.caption(f"근거: 권장 = 손님 1명 한도 {won(a['be'].first)} × 판매 30건 (30건이면 손님 1명 비용의 오차가 약 ±18%). "
                        "작게 시작 = × 10건 (오차 ±32%). 최대 = 한 달 최대 광고비.")
             st.radio("고를 예산", [o["key"] for o in opts], format_func=lambda k, _o=tuple(opts): next(o["label"] for o in _o if o["key"] == k),
-                     index=[o["key"] for o in opts].index("recommended"), horizontal=True, key="q_budget_pick")
+                     horizontal=True, key="q_budget_pick", on_change=lambda: ss.__setitem__("_budget_touched", True))
             no_ad = ss.get("q_budget_pick") == "none"
             if a["light"] == "🔴" and not no_ad:
                 sales, loss = CO.expected_loss(a["budget0"], a["cpc"], profit)
@@ -393,7 +401,7 @@ with coach_tab:
                 page_url = l3.text_input("상품 페이지 주소", placeholder="예: smartstore.naver.com/내가게/products/123", key="link_url")
                 product_en = l4.text_input("상품 이름 (영문)", placeholder="예: coffee", key="link_product")
                 detail = l5.text_input("광고 소재 이름 (선택)", placeholder="예: 릴스A", key="link_detail")
-                month = pd.Timestamp.today().strftime("%y%m")
+                month = CO.today_kst().strftime("%y%m")
                 camp = MS.campaign_name(month, product_en)
                 link = MS.build_link(page_url, link_ch, link_store, camp, detail)
                 if link:
@@ -411,7 +419,7 @@ with coach_tab:
             if no_ad:
                 st.info("광고 없이 이번 달은 준비 3가지부터 해 보세요. 준비가 끝나면 예산을 다시 골라 시작하면 돼요.", icon="🛠️")
             elif st.button("광고를 시작했어요 ▶", type="primary"):
-                ss["coach_started"] = pd.Timestamp.today().strftime("%Y-%m-%d")
+                ss["coach_started"] = CO.today_kst().isoformat()   # 한국 날짜 (서버는 UTC)
                 ss["coach_step"] = 3
                 st.toast(f"시작일 {ss['coach_started']}을 기억해 둘게요. {CO.MIN_DAYS}일 뒤부터 판정할 수 있어요.", icon="📅")
                 st.rerun()
@@ -421,7 +429,7 @@ with coach_tab:
             a = ans
             be = a["be"]
             start_day = pd.Timestamp(ss["coach_started"])
-            since = max((pd.Timestamp.today().normalize() - start_day).days, 0)
+            since = max((pd.Timestamp(CO.today_kst()) - start_day).days, 0)
             ready_day = (start_day + pd.Timedelta(days=CO.MIN_DAYS)).strftime("%m월 %d일")
             st.markdown("#### 한 달 뒤: 숫자 3개만 넣으면 계속할지 알려 드려요")
             st.caption(f"광고 시작일 {start_day:%Y-%m-%d} · 오늘 {since}일째 · "

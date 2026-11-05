@@ -6,7 +6,9 @@
 ③ 첫 달 계획(첫 채널, 시험 예산) ④ 한 달 뒤 판정(순서형)을 만든다.
 """
 from dataclasses import dataclass
+from datetime import date, datetime
 from typing import Dict, List, Optional, Tuple
+from zoneinfo import ZoneInfo
 
 # ── 확정 값 (8장) ─────────────────────────────────────────────
 SIGNAL_GREEN = 0.01       # 필요한 구매 비율 ≤ 1% 🟢
@@ -245,3 +247,16 @@ def biggest_drop(totals: Dict[str, Optional[float]], labels: Dict[str, str], ord
         return None
     a, b, r = min(pairs, key=lambda x: x[2])
     return labels[a], labels[b], r
+
+
+KST = ZoneInfo("Asia/Seoul")   # 광고 시작일·경과일·판정 가능일은 한국 날짜 기준 (서버는 UTC)
+
+
+def today_kst(now: Optional[datetime] = None) -> date:
+    """한국 시간 오늘 날짜. now는 시간대가 있는 시각 (테스트용)."""
+    return (now or datetime.now(KST)).astimezone(KST).date()
+
+
+def default_budget_pick(light: str) -> str:
+    """시험 예산 기본 선택 = 실제로 권하는 값 (UX 설계원칙 4장). 🔴이면 손해가 예상되므로 '광고 안 함', 그 밖엔 권장."""
+    return "none" if light == "🔴" else "recommended"
