@@ -29,6 +29,7 @@ META_BASE_CPC = 700.0               # PLACEHOLDER 원: 사용자 입력 CPC. 타
 # 네이버 예상 실적을 못 받을 때 코치가 쓰는 클릭 1번 대략값 ✅ 분석 Q1 (2026-11-06 수집, 4개 업종 63개 키워드)
 # 최대 클릭의 50% 지점 CPC 중앙값: 세부 1,300원 · 대표 1,624원 → 보수적으로 세부 값 (메타 700원보다 높음)
 NAVER_FALLBACK_CPC = 1_300.0
+GA4_MASKED_MEDIUM = "(data deleted)"   # 퍼널 '전체'에서 빼는 마스킹 매체
 META_SATURATION = 0.3               # PLACEHOLDER: 광고비 100만 원 늘 때마다 CPC가 30% 상승 (사용자 노브)
 META_CVR_MULT = 0.7                 # PLACEHOLDER: 소셜 클릭은 검색보다 구매 의도 낮음 → Kaggle CVR vs GA4 CVR 비교로 교체
 META_RETENTION_MULT = 0.9           # PLACEHOLDER: 충동 유입 고객의 재구매 낮음 가정 → 1단계 CSV/2단계 데이터로 보정
@@ -47,16 +48,17 @@ META_TARGETS = {
 }
 
 # ── 활성화: 퍼널 단계별 전환율 ────────────────────────────────
-# ✅ GA4 샘플 사용자 기준 퍼널 (2020-11 ~ 2021-01, data/raw/ga4/ga4_funnel.csv 전체 합계, 방문 대비 구매 1.65%)
+# ✅ GA4 샘플 사용자 기준 퍼널 (2020-11 ~ 2021-01, data/raw/ga4/ga4_funnel.csv 합계, 방문 대비 구매 1.49%)
+# 유입 매체가 지워진 '(data deleted)'는 뺌 (구매율 8% 마스킹 이상값). 넣으면 22.9/20.5/77.4/45.5%, 방문 대비 1.65% (분석 보고서 Q3 표)
 # 단계 이름은 밸류체인 정의 v2(밸류체인_정의.md)를 따름: ③ 행동(방문·상품 조회·장바구니·결제 시작) → ④ 구매.
 # 기본 표기는 쇼핑몰 기준이고, 화면에서 ④는 사용자가 고른 핵심 과업으로 라벨만 바꿈 (예: "④ 구매(상담 신청)"). 계산은 이름과 무관.
 # "③ 방문"(광고 클릭 → 방문)은 GA4에 없는 단계라 PLACEHOLDER.
 FUNNEL_STEPS = [
     ("③ 방문", 0.85),         # PLACEHOLDER: 클릭 → session_start
-    ("③ 상품 조회", 0.229),   # ✅ session_start → view_item
-    ("③ 장바구니", 0.205),    # ✅ view_item → add_to_cart
-    ("③ 결제 시작", 0.774),   # ✅ add_to_cart → begin_checkout
-    ("④ 구매", 0.455),        # ✅ begin_checkout → purchase
+    ("③ 상품 조회", 0.222),   # ✅ session_start → view_item
+    ("③ 장바구니", 0.199),    # ✅ view_item → add_to_cart
+    ("③ 결제 시작", 0.769),   # ✅ add_to_cart → begin_checkout
+    ("④ 구매", 0.438),        # ✅ begin_checkout → purchase
 ]
 # 고객 밸류체인 6단계 (밸류체인_정의.md 1·3장): (번호 표시, 이름, AARRR)
 CHAIN = [("①", "접촉", "획득"), ("②", "반응", "획득"), ("③", "행동", "활성화"),

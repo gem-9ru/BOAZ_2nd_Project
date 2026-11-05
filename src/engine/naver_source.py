@@ -69,6 +69,10 @@ def _secret_keys() -> Optional[dict]:
     return keys if all(keys.values()) else None
 
 
+class NaverUnavailable(Exception):
+    """네이버 API에 연결하지 못함 (네트워크 오류·타임아웃). 화면은 이걸 잡아 대략값으로 내려감."""
+
+
 def _env_call(keys: dict):
     """naver_api_test.call과 같은 서명 방식. 키는 출력하지 않는다."""
     def call(method: str, uri: str, params=None, body=None):
@@ -78,8 +82,11 @@ def _env_call(keys: dict):
         headers = {"Content-Type": "application/json; charset=UTF-8", "X-Timestamp": timestamp,
                    "X-API-KEY": keys["NAVER_AD_API_KEY"], "X-Customer": str(keys["NAVER_AD_CUSTOMER_ID"]),
                    "X-Signature": signature}
-        r = requests.request(method, "https://api.searchad.naver.com" + uri, params=params, json=body,
-                             headers=headers, timeout=20)
+        try:
+            r = requests.request(method, "https://api.searchad.naver.com" + uri, params=params, json=body,
+                                 headers=headers, timeout=20)
+        except requests.RequestException as e:
+            raise NaverUnavailable(type(e).__name__) from e
         try:
             return r.json()
         except ValueError:
@@ -98,6 +105,16 @@ def _api_call():
     except Exception:
         keys = _secret_keys()
         return _env_call(keys) if keys else None
+
+
+def _safe(call, *args, **kw):
+    """수집 모듈(src/collect)의 call이 내는 연결 오류도 NaverUnavailable 하나로 모음."""
+    try:
+        return call(*args, **kw)
+    except NaverUnavailable:
+        raise
+    except Exception as e:  # noqa: BLE001  (requests 오류, 수집 모듈 내부 오류)
+        raise NaverUnavailable(type(e).__name__) from e
 
 
 def api_available() -> bool:
@@ -129,7 +146,7 @@ def keyword_tool(hints: List[str], online: bool = True) -> Optional[pd.DataFrame
         if call is None:
             return None
         params = {"hintKeywords": key, "showDetail": 1}
-        data = call("GET", "/keywordstool", params=params)
+        data = _safe(call, "GET", "/keywordstool", params=params)
         if not (isinstance(data, dict) and "keywordList" in data):
             return None
         _write_cache("keywordstool", key, params, data)
@@ -161,7 +178,7 @@ def bid_estimate(keyword: str, device: str = "MOBILE", online: bool = True) -> O
         if call is None:
             return None
         body = {"device": device, "keywordplus": True, "key": keyword, "bids": BIDS}
-        data = call("POST", "/estimate/performance/keyword", body=body)
+        data = _safe(call, "POST", "/estimate/performance/keyword", body=body)
         if not (isinstance(data, dict) and "estimate" in data):
             return None
         _write_cache("estimate", key, body, data)

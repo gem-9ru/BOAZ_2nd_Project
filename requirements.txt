@@ -6,3 +6,5 @@ scipy==1.13.1
 requests==2.32.5
 pytest==8.4.2
 openpyxl==3.1.5
+xlrd==2.0.1
+# 앱 실행용만 둡니다. 분석 재현용 패키지(statsmodels 등)는 analysis/ 쪽 별도 파일로 관리합니다.

@@ -35,10 +35,10 @@ def test_pmf_warning_uses_ltv_cac():  # 결정 5
 def test_ga4_funnel_defaults_match_plan():  # 기획안 3-2 GA4 표
     steps, _ = dl.funnel_steps()
     rates = dict(steps)
-    assert rates["③ 상품 조회"] == pytest.approx(0.229, abs=1e-3)
-    assert rates["③ 장바구니"] == pytest.approx(0.205, abs=1e-3)
-    assert rates["③ 결제 시작"] == pytest.approx(0.774, abs=1e-3)
-    assert rates["④ 구매"] == pytest.approx(0.455, abs=1e-3)
+    assert rates["③ 상품 조회"] == pytest.approx(0.222, abs=1e-3)
+    assert rates["③ 장바구니"] == pytest.approx(0.199, abs=1e-3)
+    assert rates["③ 결제 시작"] == pytest.approx(0.769, abs=1e-3)
+    assert rates["④ 구매"] == pytest.approx(0.438, abs=1e-3)
 
 
 def test_meta_target_multiplier():  # 결정 3: 상대 배수만 사용

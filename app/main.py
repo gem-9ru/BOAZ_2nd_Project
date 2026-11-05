@@ -1,4 +1,4 @@
-"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.8.
+"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.9 (첫 탭: 초보 사장님용 광고 코치).
 
 실행: streamlit run app/main.py
 
@@ -69,13 +69,32 @@ ss = st.session_state
 
 
 @st.cache_data(show_spinner=False)
-def load_keywords(hints: tuple, online: bool):
+def _load_keywords(hints: tuple, online: bool):
     return ns.keyword_tool(list(hints), online=online)
 
 
 @st.cache_data(show_spinner=False)
-def load_estimate(keyword: str, online: bool):
+def _load_estimate(keyword: str, online: bool):
     return ns.bid_estimate(keyword, device=D.NAVER_DEVICE, online=online)
+
+
+NAVER_FAILED = []   # 이번 실행에서 네이버 연결이 실패했는지 (실패는 캐시하지 않아 다음 실행에 다시 시도)
+
+
+def load_keywords(hints: tuple, online: bool):
+    try:
+        return _load_keywords(hints, online)
+    except ns.NaverUnavailable:
+        NAVER_FAILED.append("keywords")
+        return None
+
+
+def load_estimate(keyword: str, online: bool):
+    try:
+        return _load_estimate(keyword, online)
+    except ns.NaverUnavailable:
+        NAVER_FAILED.append("estimate")
+        return None
 
 
 @st.cache_data(show_spinner=False)
@@ -225,14 +244,8 @@ if price and profit and max_budget and not input_error:
         ss["_kw_loaded"].add(kw)
         skel.empty()
     ch_name, ch_reason = CO.first_channel(stores, monthly_search)
-    if ss.get("q_cpc"):
-        cpc, cpc_src = float(ss["q_cpc"]), "직접 입력"
-    elif "메타" in ch_name:
-        cpc, cpc_src = float(D.META_BASE_CPC), "메타 대략값 (가정)"
-    elif naver_cpc:
-        cpc, cpc_src = naver_cpc, f"네이버 예상 실적 '{kw}' (최근 4주 → 한 달)" + ("" if "네이버" in ch_name else ", 이 채널 대신 참고")
-    else:
-        cpc, cpc_src = float(D.NAVER_FALLBACK_CPC), "네이버 대략값 (공개 키워드 63개 중앙값, 검색어를 넣으면 네이버 예상치로 바뀜)"
+    naver_failed = bool(kw) and bool(NAVER_FAILED)
+    cpc, cpc_src = CO.pick_cpc(ch_name, naver_cpc, ss.get("q_cpc"), D.NAVER_FALLBACK_CPC, kw)
     need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
     light, _ = CO.signal(need)
     options = CO.budget_options(be.first, max_budget)
@@ -243,7 +256,7 @@ if price and profit and max_budget and not input_error:
     pick_key = ss["q_budget_pick"]
     # 광고 안 함이면 다음 단계 탭에는 권장 예산을 넘김 (시뮬레이션용)
     budget0 = next(o["amount"] for o in options if o["key"] == (pick_key if pick_key != "none" else "recommended"))
-    ans = dict(be=be, kw=kw, kw_missing=kw_missing, monthly_search=monthly_search, ch_name=ch_name, ch_reason=ch_reason,
+    ans = dict(be=be, kw=kw, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, ch_reason=ch_reason,
                cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, light=light, options=options, budget0=budget0,
                default_pick=default_pick)
     coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
@@ -340,6 +353,8 @@ with coach_tab:
                 f"### {a['light']} {word}\n"
                 f"보통은 100명 중 {CO.REFERENCE_RATES['GA4 공개 샘플 유료 검색 유입'] * 100:.2f}~{CO.REFERENCE_RATES['GA4 공개 샘플 전체'] * 100:.2f}명이 삽니다 "
                 "(참고 기준: GA4 공개 샘플 쇼핑몰의 검색광고 손님·전체 손님, 업종 평균 아님).")
+            st.caption("참고 비율은 가게에 **들어온** 손님 기준이고, 위 '몇 명이 사야 남나'는 광고를 **누른** 손님 기준이에요. "
+                       "누른 사람이 모두 들어오진 않아서 실제로는 조금 더 어려워요.")
             if a["light"] == "🔴":
                 sales, loss = CO.expected_loss(a["budget0"], a["cpc"], profit)
                 if loss > 0:
@@ -348,6 +363,8 @@ with coach_tab:
                 st.markdown(f"광고 대신 **공동구매·제휴**(팔린 만큼만 냄)라면 판매액의 **{profit / price:.0%} 이하** 수수료일 때 남습니다.")
             if be.year > be.first:
                 st.caption(f"다시 사는 손님까지 치면 손님 1명에 {won(be.year)}, 100명 중 {a['need_year'] * 100:.1f}명이면 됩니다 (재구매 '{repurchase}' 가정값).")
+            if a["naver_failed"]:
+                st.warning("네이버 예상치를 못 불러와 대략값을 썼어요. 잠시 뒤 새로고침하면 다시 시도해요.", icon="📡")
             if a["kw_missing"]:
                 st.info(f"'{a['kw']}'로는 예상 클릭 비용을 못 찾았어요. 더 넓은 단어(예: 커피)로 바꿔 보세요. 지금은 대략값으로 계산했어요.", icon="🔎")
             with st.expander(f"클릭 비용 출처: {a['cpc_src']} · 알면 직접 넣기"):
@@ -361,6 +378,9 @@ with coach_tab:
             with st.container(border=True):
                 st.markdown(f"**첫 광고: {a['ch_name']}**  \n{a['ch_reason']}"
                             + (f"  \n(검색어 '{a['kw']}' 네이버 월 검색 {a['monthly_search']:,.0f}회)" if a["monthly_search"] is not None else ""))
+            _, short_warn = CO.test_budget(max_budget, a["be"].first)
+            if short_warn:   # 설계안 8-1 #5
+                st.warning(short_warn, icon="⏳")
             no_ad_first = a["default_pick"] == "none"
             st.markdown("**첫 달 시험 예산** " + ("(지금은 손해가 예상돼 '광고 안 함'을 추천해요. 광고를 하려면 다른 안을 골라도 돼요)"
                                                 if no_ad_first else "(권장안을 추천해요. 근거는 카드 아래에)"))
@@ -470,7 +490,7 @@ with coach_tab:
                         st.toast(f"통계 파일에서 전체 판매 {int(store_tot['orders'])}건을 넣었어요.", icon="📥")
                 except Exception as e:  # noqa: BLE001
                     st.error("통계 파일을 읽지 못했어요. 판매처 관리자에서 CSV나 엑셀로 다시 내려받아 위 칸에 다시 올려 주세요.", icon="📄")
-                    st.caption(f"자세한 오류: {e}")
+                    st.caption(f"자세한 오류: {type(e).__name__}")
             s1, s2, s3 = st.columns(3)
             with s1:
                 coupon_n = _num_input("쿠폰·전용 링크로 팔린 수", "q_coupon", min_value=0, max_value=10_000_000, step=1)
@@ -553,7 +573,7 @@ with tabs[0]:
         st.caption(f"→ 1회 결제당 남는 돈 {won(aov * margin)}. 기본값(6만 원·35%)은 예시라, 우리 가게 숫자로 꼭 바꿔 주세요.")
         with st.expander("더 알면 바꾸기: 한 달 구매 횟수"):
             freq = st.number_input("단골이 한 달에 사는 횟수", 0.1, 10.0, float(D.PURCHASE_FREQ), step=0.1,
-                                   help="그달에 다시 온 손님이 평균 몇 번 결제하는지 (월 구매 빈도). UCI 분석 후 교체 예정인 임시값")
+                                   help="그달에 다시 온 손님이 평균 몇 번 결제하는지 (월 구매 빈도). 임시값이라 내 가게 숫자로 바꾸세요")
         st.subheader("목표와 예산")
         omtm = st.radio("가장 중요한 목표 하나 (OMTM)", list(D.OMTM_OPTIONS), horizontal=True, format_func=OMTM_PLAIN.get, index=1,
                         help="'더 나은 예산안'을 찾을 때 이 목표를 기준으로 삼습니다. 잘 모르겠으면 '1년 동안 남는 돈'.")
@@ -605,7 +625,8 @@ with tabs[0]:
                     upload = g
                     st.caption("매체 이름이 naver·meta인 행의 클릭당 비용·전환율이 기본값보다 우선합니다.")
             except Exception as e:  # noqa: BLE001
-                st.error(f"CSV를 읽지 못했습니다: {e}")
+                st.error("광고 성과 CSV를 읽지 못했어요. 매체 관리자에서 CSV(UTF-8)로 다시 내려받아 올려 주세요. 첫 줄은 열 이름이어야 해요.", icon="📄")
+                st.caption(f"자세한 오류: {type(e).__name__}")
 
 # ─────────────────────────── 광고 관리자 ───────────────────────────
 with tabs[1]:
@@ -776,7 +797,8 @@ with tabs[2]:
             try:
                 fun_df = pd.read_csv(fun_file)
             except Exception as e:  # noqa: BLE001
-                st.error(f"퍼널 CSV를 읽지 못했습니다: {e}")
+                st.error("유입경로 CSV를 읽지 못했어요. 첫 열은 세그먼트 이름, 다음 열들은 단계별 사람 수(숫자)로 맞춰 다시 올려 주세요.", icon="📄")
+                st.caption(f"자세한 오류: {type(e).__name__}")
         elif ss.get("store_funnel_df") is not None:
             fun_df = ss["store_funnel_df"]   # 광고 코치 '한 달 뒤'에 올린 판매처 통계 합계
             st.caption("광고 코치에 올린 판매처 통계 파일의 합계로 퍼널을 채웠습니다.")
@@ -859,7 +881,7 @@ with tabs[4]:
     with st.expander("지금 재구매·추천 가정 (자동화 전)"):
         r1, r2 = st.columns(2)
         with r1:
-            ret_src, fit = "임시값 (UCI 코호트 결과 대기)", None
+            ret_src, fit = "재구매 곡선 프리셋", None
             segments = dl.retention_segments()
             retail = [i for i, x in enumerate(segments) if "소매" in x or "제외" in x]
             rseg = st.selectbox("재구매 기본값으로 쓸 손님 유형", segments, index=retail[0] if retail else 0) if segments else None
@@ -920,7 +942,8 @@ with tabs[3]:
                 paths = A.from_upload(pd.read_csv(path_file))
                 path_src = f"올린 파일 ({len(paths):,}개 경로)"
             except Exception as e:  # noqa: BLE001
-                st.error(f"경로 CSV를 읽지 못했습니다: {e}")
+                st.error("전환 경로 CSV를 읽지 못했어요. path(접점을 ' > '로 연결)와 conversions 열이 있는지 확인하고 다시 올려 주세요.", icon="📄")
+                st.caption(f"자세한 오류: {type(e).__name__}")
         if paths is None:
             paths = load_paths()
             path_src = "GA4 샘플 (구매 5,692건)"
@@ -1295,7 +1318,7 @@ with heads[5]:
 
 st.divider()
 st.caption("데이터: 네이버 검색광고 API(예측값, 최근 4주 → 월 환산), GA4 공개 샘플(퍼널·구매 경로), Kaggle Sales Conversion Optimization(상대 배수만). "
-           "리텐션·구매 빈도는 UCI Online Retail II 분석 후 교체 예정. 결과는 출발점을 잡기 위한 추정치이며, 내 숫자를 넣을수록 정확해집니다.")
+           "UCI Online Retail II(재구매 많은 업종 예시 곡선, 재구매 매출 비중). 구매 빈도는 임시값. 결과는 출발점을 잡기 위한 추정치이며, 내 숫자를 넣을수록 정확해집니다.")
 
 # ─────────────────────── 플로팅 도움말 챗봇 (규칙 기반) ───────────────────────
 top_row = top_opt.iloc[0] if len(top_opt) else None

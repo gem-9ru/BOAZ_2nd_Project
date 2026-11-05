@@ -149,3 +149,50 @@ def test_retention_presets_include_uci():
     floor, decay, _ = D.RETENTION_PRESETS["재구매 많은 업종 (UCI 선물·도매 예시)"]
     assert (floor, decay) == (0.176, 3.37)
     assert D.RETENTION_PRESETS["보통 (일반 쇼핑몰 가정)"][:2] == (D.RETENTION_FLOOR, D.RETENTION_DECAY)
+
+
+# ── 서비스 진단 6-1 수정 ──
+def test_coupang_has_own_channel_key_and_coupon_prefix():
+    from src.engine import measure as MS
+    assert MS.FIRST_CHANNEL_KEY["쿠팡"] == "coupang"
+    assert MS.coupon_code("coupang", "2611", "coffee").startswith("CP")
+
+
+def test_coach_cpc_fallbacks():
+    fb = 1_300.0
+    # 쿠팡은 네이버 예상치가 있어도 빌리지 않음
+    cpc, src = C.pick_cpc("쿠팡 광고 (AI 스마트 광고)", 900.0, None, fb, "원두커피")
+    assert cpc == fb and "쿠팡 출처 없음" in src
+    # 자사몰 + 검색어 없음 → 메타: 임시값 700원 대신 1,300원
+    cpc, src = C.pick_cpc("메타 광고 (인스타그램·페이스북)", None, None, fb)
+    assert cpc == fb and "메타" in src
+    assert C.pick_cpc("네이버 쇼핑검색광고", 2_000.0, None, fb, "x")[0] == 2_000.0
+    assert C.pick_cpc("메타 광고", None, 500, fb)[0] == 500.0
+
+
+def test_short_budget_warning_for_banner():
+    _, warn = C.test_budget(max_budget=100_000, be_first=14_000)    # 14,000 × 10 = 140,000 > 100,000
+    assert warn and "판매 10건" in warn
+    assert C.test_budget(max_budget=1_000_000, be_first=14_000)[1] is None
+
+
+def test_naver_connection_error_raises_unavailable(monkeypatch):
+    import requests
+    from src.engine import naver_source as ns
+
+    def broken(*a, **k):
+        raise requests.ConnectionError("down")
+    monkeypatch.setattr(ns, "_read_cache", lambda *a, **k: None)
+    monkeypatch.setattr(ns, "_api_call", lambda: broken)
+    with pytest.raises(ns.NaverUnavailable):
+        ns.bid_estimate("테스트검색어", online=True)
+    with pytest.raises(ns.NaverUnavailable):
+        ns.keyword_tool(["테스트검색어"], online=True)
+
+
+def test_reference_rate_matches_engine_funnel():
+    from src.engine import data_loader as dl
+    import numpy as np
+    steps, _ = dl.funnel_steps()
+    visit_to_purchase = float(np.prod([r for _, r in steps[1:]]))
+    assert C.REFERENCE_RATES["GA4 공개 샘플 전체"] == pytest.approx(visit_to_purchase, abs=5e-4)

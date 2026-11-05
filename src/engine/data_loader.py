@@ -43,6 +43,8 @@ def funnel_steps(medium: str = GA4_ALL) -> Tuple[List[Tuple[str, float]], str]:
         return list(D.FUNNEL_STEPS), "기본값 (GA4 파일 없음)"
     if medium != GA4_ALL and "medium" in df.columns:
         df = df[df["medium"] == medium]
+    elif "medium" in df.columns:   # 전체 = 마스킹 매체 제외 (코치 참고 기준 1.49%와 같은 범위)
+        df = df[df["medium"] != D.GA4_MASKED_MEDIUM]
     s = df[D.GA4_EVENTS].sum()
     if s.iloc[0] <= 0:
         return list(D.FUNNEL_STEPS), "기본값"

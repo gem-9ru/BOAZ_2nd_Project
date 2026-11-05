@@ -24,10 +24,11 @@ CHANNELS = {
     "blog": ("블로그·체험단", "blog", "review", "BL"),
     "message": ("카카오 메시지·문자", "crm", "message", "MS"),
     "place": ("네이버 플레이스·당근", "local", "local", "LC"),
+    "coupang": ("쿠팡 광고", "coupang", "cpc", "CP"),
 }
 # 코치의 첫 채널 이름 → 채널 키
 FIRST_CHANNEL_KEY = {"네이버 쇼핑검색광고": "naver_search", "네이버 검색광고": "naver_search", "메타": "meta",
-                     "쿠팡": "naver_search", "네이버 플레이스": "place"}
+                     "쿠팡": "coupang", "네이버 플레이스": "place"}
 STORE_NOTES = {
     "스마트스토어": "스마트스토어는 NT 꼬리표를 씁니다. 결과는 스마트스토어 통계 → 마케팅분석 → 사용자정의채널에서 봅니다. "
                 "네이버 검색·쇼핑검색광고처럼 네이버 안에서 들어오는 손님은 꼬리표 없이도 스마트스토어가 따로 셉니다.",

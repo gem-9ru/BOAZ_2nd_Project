@@ -13,7 +13,9 @@ from zoneinfo import ZoneInfo
 # ── 확정 값 (8장) ─────────────────────────────────────────────
 SIGNAL_GREEN = 0.01       # 필요한 구매 비율 ≤ 1% 🟢
 SIGNAL_YELLOW = 0.03      # 1~3% 🟡, 3% 초과 🔴
-REFERENCE_RATES = {"GA4 공개 샘플 유료 검색 유입": 0.0119, "GA4 공개 샘플 전체": 0.0165}  # 참고 기준 (한 쇼핑몰 값, 업종 평균 아님)
+# 참고 기준 (한 쇼핑몰 값, 업종 평균 아님). 방문한 손님 중 산 비율 = 방문 기준 (필요한 비율은 클릭 기준)
+# '전체'는 유입 매체가 지워진 손님 '(data deleted)'를 뺀 값 (그 묶음만 구매율 8%로 튀는 마스킹 이상값, 분석 보고서 4장). 엔진 퍼널과 같은 범위
+REFERENCE_RATES = {"GA4 공개 샘플 유료 검색 유입": 0.0119, "GA4 공개 샘플 전체": 0.0149}
 REPURCHASE_PRESETS = {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0}   # 12개월 동안 다시 사는 횟수, 모두 가정값
 # '자주' 2회는 분석 Q4(UCI) 범위 안: 매출 기준 약 1.5회분(LTV = 첫 주문 2.45배), 리텐션 곡선 기준 약 2.2회 (도매 섞임). '가끔' 0.5회는 근거 약함 (GA4 3개월 안 재구매 11.8%)
 TEST_SALES = 30           # 시험 예산 = 첫 구매 손익분기 × 30 (판매 30건이면 CPA 오차 약 ±18% = 1/√30)
@@ -261,3 +263,18 @@ def today_kst(now: Optional[datetime] = None) -> date:
 def default_budget_pick(light: str) -> str:
     """시험 예산 기본 선택 = 실제로 권하는 값 (UX 설계원칙 4장). 🔴이면 손해가 예상되므로 '광고 안 함', 그 밖엔 권장."""
     return "none" if light == "🔴" else "recommended"
+
+
+def pick_cpc(ch_name: str, naver_cpc: Optional[float], user_cpc: Optional[float], fallback: float,
+             keyword: str = "") -> Tuple[float, str]:
+    """코치가 쓸 클릭 1번 비용과 출처. 직접 입력 > 쿠팡·메타는 근거 있는 대략값 > 네이버 예상치 > 대략값.
+    쿠팡은 네이버 예상치를 빌리지 않고, 메타의 임시값(700원)은 근거가 없어 코치에서는 쓰지 않음 (서비스 진단 5-3)."""
+    if user_cpc:
+        return float(user_cpc), "직접 입력"
+    if ch_name.startswith("쿠팡"):
+        return float(fallback), "쿠팡 출처 없음, 대략값 (네이버 키워드 63개 중앙값)"
+    if "메타" in ch_name:
+        return float(fallback), "메타 출처 없음, 대략값 (네이버 키워드 63개 중앙값)"
+    if naver_cpc:
+        return float(naver_cpc), f"네이버 예상 실적 '{keyword}' (최근 4주 → 한 달)" + ("" if "네이버" in ch_name else ", 이 채널 대신 참고")
+    return float(fallback), "네이버 대략값 (공개 키워드 63개 중앙값, 검색어를 넣으면 네이버 예상치로 바뀜)"
