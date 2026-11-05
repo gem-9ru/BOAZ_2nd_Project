@@ -3,7 +3,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
-AARRR_COLORS = {"획득": "#4C78A8", "활성화": "#59A14F", "유지": "#F28E2B", "수익": "#B07AA1", "추천": "#E15759"}
+AARRR_COLORS = {"획득": "#4C78A8", "활성화": "#59A14F", "유지": "#F28E2B", "추천": "#E15759"}  # 행동 축 (밸류체인 v3)
+MONEY_COLOR = "#B07AA1"  # 돈 축 (매출·남는 돈). 수익은 단계가 아님
 CUR, OPT = "#4C78A8", "#F28E2B"
 
 
@@ -152,7 +153,7 @@ def meta_target_bars(targets: pd.DataFrame, selected):
 def payback(curve, cac, months=24):
     x = list(range(1, months + 1))
     fig = go.Figure(go.Scatter(x=x, y=curve[:months], mode="lines+markers", name="손님 1명이 남겨 준 돈 (누적)",
-                               line=dict(color=AARRR_COLORS["수익"])))
+                               line=dict(color=MONEY_COLOR)))
     if cac:
         fig.add_hline(y=cac, line_dash="dash", line_color="#E15759", annotation_text=f"손님 1명 데려오는 비용 {cac:,.0f}원")
     fig.update_xaxes(title="첫 구매 후 개월", dtick=2)

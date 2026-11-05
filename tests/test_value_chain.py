@@ -69,3 +69,37 @@ def test_chain_step_names():
     assert names[0].startswith("③") and names[-1] == "④ 구매"
     assert [c[1] for c in D.CHAIN] == ["접촉", "반응", "행동", "구매", "재구매", "추천"]
     assert [c[2] for c in D.CHAIN] == ["획득", "획득", "활성화", "활성화", "유지", "추천"]
+
+
+# ── 밸류체인 v3 ──────────────────────────────────────────────
+
+def test_referral_has_no_revenue_only_reward_cost():
+    # ⑥ 추천에는 매출이 없다: 추천 고객 매출은 그 고객의 ④·⑤에서만 셈 (이중 집계 금지)
+    p = FunnelParams(invite_rate=0.5, invite_conv=0.2)
+    a = simulate([meta()], [1_000_000], p).summary
+    b = simulate([meta()], [1_000_000], p.with_changes(referral_reward=5_000)).summary
+    assert a["referral_new"] > 0
+    assert b["revenue"] == pytest.approx(a["revenue"])
+    assert a["profit_12m"] - b["profit_12m"] == pytest.approx(5_000 * a["referral_new"])
+    assert b["referral_reward"] == pytest.approx(5_000 * a["referral_new"])
+
+
+def test_referral_revenue_counted_once():
+    p = FunnelParams(invite_rate=0.5, invite_conv=0.2)
+    r = simulate([meta()], [1_000_000], p)
+    s, m = r.summary, r.monthly
+    assert s["revenue"] == pytest.approx(s["new_revenue"] + s["repeat_revenue"])
+    # ④ 첫 구매 매출 = (광고 신규 + 추천 신규) × 월 구매 횟수 × 객단가
+    assert s["new_revenue"] == pytest.approx((m["paid_new"] + m["referral_new"]).sum() * p.purchase_freq * p.aov)
+    assert "⑥" in r.funnel.iloc[-1]["stage"] and r.funnel.iloc[-1]["aarrr"] == "추천"
+    assert "수익" not in set(r.funnel["aarrr"])   # 수익은 단계가 아니라 돈 축
+
+
+def test_billing_names_attach_to_media_and_setting():
+    assert [v[0] for v in D.BILLING.values()] == ["노출당", "클릭·시청당", "행동당", "구매당", "메시지 발송", "고정비", "실행비", "혜택비"]
+    assert Channel("n", "네이버", MetaCurve(300, 0)).billing == "click"
+    assert gonggu().billing == "purchase"
+    m_imp = Channel("meta", "메타", MetaCurve(300, 0), billing="impression")   # 같은 메타라도 노출당이면 ①
+    r = simulate([m_imp, gonggu()], [1_000_000, 0], P)
+    assert r.by_channel["billing"].tolist() == ["노출당", "구매당"]
+    assert D.BILLING["impression"][1].startswith("①") and D.BILLING["click"][1].startswith("②")

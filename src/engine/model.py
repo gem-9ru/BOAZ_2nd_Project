@@ -1,10 +1,13 @@
-"""AARRR 엔진 v0: 채널별 월 단위 12개월 코호트 시뮬레이션.
+"""엔진: 채널별 월 단위 12개월 코호트 시뮬레이션. 고객 밸류체인 v3 (밸류체인_정의.md)를 따른다.
 
-획득   광고비 → 클릭                       (acquisition.py 포화 곡선)
-활성화 클릭 × 단계별 전환율 × 채널 배수      → 유료 신규 고객
-유지   r(t) = floor + (1 − floor)·e^(−decay·t), r(0) = 1 (첫 구매 달)
-수익   활성 고객 × 월 구매 빈도 × 객단가 × 마진 − 광고비
-추천   활성 고객(t) × 초대율 × 초대 전환율 → t+1달 신규 고객 (기본 0)
+행동 축 (AARRR: ①② 획득, ③④ 활성화, ⑤ 유지, ⑥ 추천)
+  ①② 접촉·반응  광고비 → 클릭                       (acquisition.py 곡선. 구매당 채널은 ④로 바로)
+  ③④ 행동·구매  클릭 × 단계별 전환율 × 채널 배수 × 증분 계수 → 신규 고객 (첫 구매)
+  ⑤ 재구매      r(t) = floor + (1 − floor)·e^(−decay·t), r(0) = 1 (첫 구매 달)
+  ⑥ 추천        활성 고객(t) × 초대율 × 초대 전환율 → t+1달 신규 고객 (기본 0)
+돈 축 (수익은 단계가 아니라 이 축으로 따로 셈)
+  매출 = ④ 첫 구매 + ⑤ 재구매. 추천으로 온 고객의 매출도 그 고객의 ④·⑤에서만 센다 → ⑥에는 매출이 없다 (이중 집계 방지)
+  남는 돈 = 매출 × 마진 − 광고비(구매당 수수료 포함) − 메시지 발송비 등 − 추천 보상(혜택비)
 """
 from dataclasses import dataclass, field, replace
 from typing import Dict, List, Optional, Sequence, Tuple
@@ -27,6 +30,7 @@ class FunnelParams:
     margin: float = D.MARGIN
     invite_rate: float = D.INVITE_RATE
     invite_conv: float = D.INVITE_CONV
+    referral_reward: float = 0.0      # 혜택비: 추천으로 온 신규 고객 1명당 보상 (원). ⑥의 유일한 돈 항목
     months: int = D.MONTHS
     retention_bonus: Tuple[float, ...] = ()        # 자동화: 경과 t개월 리텐션에 더할 값 (t = 인덱스, t ≥ 1)
     reactivation: Optional[Tuple[int, float]] = None  # 자동화(휴면 복귀): (N, q) → t ≥ N이면 떠난 비율 (1 − r)의 q가 돌아옴
@@ -87,7 +91,7 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
     direct_new = 0.0  # ③을 거치지 않고 ④로 바로 오는 고객 (판매 수수료 채널)
     for ch, alloc in zip(channels, spends):
         if not ch.budgeted:
-            # 과금 유형 D: 예산과 무관하게 1회 판매량 × 횟수만큼 ④ 구매. 비용은 판매 매출의 수수료 + 착수금
+            # 과금 방식 '구매당': 예산과 무관하게 1회 판매량 × 횟수만큼 ④ 구매. 비용은 판매 매출의 수수료 + 착수금
             alloc = 0.0
             new = ch.curve.sales() * ch.incr_mult
             clicks = 0.0
@@ -110,7 +114,7 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
         ltv_weights.append(new)
         gp_curves.append(params.retention(36, ch.retention_mult) * params.value_per_active())
         ch_rows.append({
-            "channel": ch.key, "label": ch.label, "budget": alloc, "spend": actual,
+            "channel": ch.key, "label": ch.label, "billing": D.BILLING[ch.billing][0], "budget": alloc, "spend": actual,
             "unspent": max(alloc - actual, 0.0), "clicks": clicks,
             "cpc": actual / clicks if clicks > 0 else np.nan,
             "marginal_cpc": ch.curve.marginal_cpc(actual) if (actual > 0 and ch.budgeted) else np.nan,
@@ -135,14 +139,15 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
     repeat_rev_m = revenue_m - new_rev_m
     gp_m = revenue_m * margin
     extra_m = np.zeros(M) if extra_cost_m is None else np.broadcast_to(np.asarray(extra_cost_m, dtype=float), (M,)).copy()
-    profit_m = gp_m - spend_m - extra_m
+    reward_m = ref_new_m * params.referral_reward          # ⑥ 추천: 매출 없이 보상 비용만
+    profit_m = gp_m - spend_m - extra_m - reward_m
 
     monthly = pd.DataFrame({
         "month": np.arange(1, M + 1), "spend": spend_m, "clicks": clicks_m,
         "paid_new": paid_new_m, "referral_new": ref_new_m, "new_customers": new_m,
         "active": active_m, "orders": orders_m, "revenue": revenue_m,
         "new_revenue": new_rev_m, "repeat_revenue": repeat_rev_m,
-        "gross_profit": gp_m, "extra_cost": extra_m, "profit": profit_m, "cum_profit": np.cumsum(profit_m),
+        "gross_profit": gp_m, "extra_cost": extra_m, "referral_reward": reward_m, "profit": profit_m, "cum_profit": np.cumsum(profit_m),
     })
     by_channel = pd.DataFrame(ch_rows)
 
@@ -179,6 +184,7 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
         "repeat_revenue": float(repeat_rev_m.sum()),
         "gross_profit": float(gp_m.sum()),
         "extra_cost": float(extra_m.sum()),
+        "referral_reward": float(reward_m.sum()),
         "profit_12m": float(profit_m.sum()),
         "roas": paid_first_rev / spend_total if spend_total > 0 else None,
         "ltv_12m": ltv,
@@ -202,7 +208,7 @@ def simulate(channels: Sequence[Channel], spends: Sequence[float], params: Funne
         stages.append(("활성화", name, cnt))
     retained = float(sum(paid_new_m[c] * params.retention(M)[M - 1 - c] for c in range(M - 1)))
     stages.append(("유지", "⑤ 재구매 (12개월차 고객)", retained))
-    stages.append(("추천", "⑥ 추천 (신규 고객)", float(ref_new_m.sum())))
+    stages.append(("추천", "⑥ 추천 (데려온 신규 고객 수, 매출은 그 고객의 ④·⑤에서 셈)", float(ref_new_m.sum())))
     funnel = pd.DataFrame(stages, columns=["aarrr", "stage", "count"])
 
     return SimResult(list(channels), params, monthly, by_channel, summary, funnel, np.cumsum(gp_curve))

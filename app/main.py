@@ -238,6 +238,7 @@ with tabs[1]:
         naver_budget = budget * naver_share / 100
         meta_budget = budget - naver_budget
         st.markdown(f"**네이버** 월 {won(naver_budget)} · **메타** 월 {won(meta_budget)}")
+        st.caption("과금 방식: 네이버 검색 = {} ({}) · 메타 = 입력 방식에 따라 노출당(① 접촉) 또는 클릭·시청당(② 반응)".format(*D.BILLING["click"]))
         if naver_curve.capacity > 0:
             st.caption(f"고른 검색어로 네이버에 쓸 수 있는 돈은 한 달 최대 {won(naver_curve.capacity)}입니다.")
     with m2:
@@ -284,6 +285,7 @@ with tabs[1]:
     if upload is not None and "meta" in upload.index:
         meta_cpc = float(upload.loc["meta", "CPC"])  # 1단계: 내 실제 CPC가 우선
     meta_curve = MetaCurve(meta_cpc, meta_sat)
+    meta_billing = "impression" if use_cpm else "click"   # 매체 × 과금 설정 (밸류체인 v3 4-1)
     spends = [naver_budget, meta_budget]
     alloc = None
     with st.expander("곡선과 검색어별 예산 보기", expanded=True):
@@ -406,10 +408,13 @@ with tabs[4]:
         with r2:
             invite_rate = st.slider("단골 1명이 한 달에 소개하는 사람 수", 0.0, 2.0, float(D.INVITE_RATE), 0.05, help="모르면 0")
             invite_conv = st.slider("소개받은 사람이 실제 손님이 되는 비율", 0.0, 1.0, float(D.INVITE_CONV), 0.01)
+            referral_reward = st.number_input("추천 1명당 보상 (원, 혜택비)", 0, 1_000_000, 0, step=1_000,
+                                              help="추천한 사람·추천받은 사람에게 주는 적립금·쿠폰. ⑥ 추천에는 매출이 없고 이 비용만 있습니다. "
+                                                   "추천으로 온 손님의 매출은 그 손님의 ④ 구매·⑤ 재구매에서 셉니다.")
         ret_chart_slot = st.container()
 
 params = FunnelParams(steps=steps, retention_floor=floor, retention_decay=decay, purchase_freq=freq,
-                      aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv)
+                      aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv, referral_reward=referral_reward)
 
 # 채널 전환율 배수: CSV > GA4 매체별 > 기본값 중 하나만 (MECE #4). 어트리뷰션 보정은 ④에서 그 위에 한 번만
 naver_cvr_base, naver_cvr_src = dl.resolve_cvr_mult("naver", D.NAVER_CVR_MULT, params.cvr, medium, upload,
@@ -419,8 +424,8 @@ meta_cvr_base, meta_cvr_src = dl.resolve_cvr_mult("meta", meta_cvr_in, params.cv
 if meta_cvr_src.startswith("가정값") and meta_cvr_in != D.META_CVR_MULT:
     meta_cvr_src = "직접 입력"
 base_channels = [
-    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base, D.NAVER_RETENTION_MULT),
-    Channel("meta", "메타", meta_curve, meta_cvr_base, meta_ret_mult),
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base, D.NAVER_RETENTION_MULT, billing="click"),
+    Channel("meta", "메타", meta_curve, meta_cvr_base, meta_ret_mult, billing=meta_billing),
 ]
 
 # ─────────────────────────── ④ 어트리뷰션 ───────────────────────────
@@ -487,8 +492,8 @@ with tabs[3]:
             st.markdown(f"- {item}")
 
 channels = [
-    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base * k_naver, D.NAVER_RETENTION_MULT),
-    Channel("meta", "메타", meta_curve, meta_cvr_base * k_meta, meta_ret_mult),
+    Channel("naver", "네이버 검색", naver_curve, naver_cvr_base * k_naver, D.NAVER_RETENTION_MULT, billing="click"),
+    Channel("meta", "메타", meta_curve, meta_cvr_base * k_meta, meta_ret_mult, billing=meta_billing),
 ]
 corrected = abs(k_naver - 1) > 1e-9 or abs(k_meta - 1) > 1e-9
 
@@ -709,16 +714,16 @@ with tabs[5]:
         for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs):
             st.markdown(f"**{card['title']}**  \n📊 근거: {card['evidence']}  \n🧪 해 볼 일: {card['action']}")
     with st.expander("자세히 보기: 채널별·월별 표 (CSV 다운로드)"):
-        bc = res.by_channel[["label", "budget", "spend", "clicks", "cpc", "marginal_cpc", "new_customers", "cac", "ltv_12m"]].rename(columns={
-            "label": "채널", "budget": "배정한 돈", "spend": "실제로 쓸 수 있는 돈", "clicks": "클릭", "cpc": "평균 클릭당 비용",
+        bc = res.by_channel[["label", "billing", "budget", "spend", "clicks", "cpc", "marginal_cpc", "new_customers", "cac", "ltv_12m"]].rename(columns={
+            "label": "채널", "billing": "과금 방식", "budget": "배정한 돈", "spend": "실제로 쓸 수 있는 돈", "clicks": "클릭", "cpc": "평균 클릭당 비용",
             "marginal_cpc": "클릭 1번 더 얻는 비용", "new_customers": "새 손님", "cac": "손님 1명 데려오는 비용", "ltv_12m": "손님 1명이 1년간 남기는 돈"})
-        st.dataframe(bc.style.format("{:,.0f}", subset=[c for c in bc.columns if c not in ("채널", "새 손님")], na_rep="-")
+        st.dataframe(bc.style.format("{:,.0f}", subset=[c for c in bc.columns if c not in ("채널", "과금 방식", "새 손님")], na_rep="-")
                      .format("{:,.1f}", subset=["새 손님"], na_rep="-"), hide_index=True, width="stretch")
         monthly = res.monthly.rename(columns={
             "month": "개월", "spend": "광고비", "clicks": "클릭", "paid_new": "광고로 온 새 손님", "referral_new": "추천으로 온 새 손님",
             "new_customers": "새 손님 합계", "active": "그달 구매한 손님", "orders": "주문 수", "revenue": "매출",
             "new_revenue": "새 손님 매출", "repeat_revenue": "재구매 매출", "gross_profit": "남는 돈(광고비 전)",
-            "extra_cost": "메시지 비용", "profit": "남는 돈(광고비 후)", "cum_profit": "누적 남는 돈"})
+            "extra_cost": "메시지 비용", "referral_reward": "추천 보상", "profit": "남는 돈(광고비 후)", "cum_profit": "누적 남는 돈"})
         st.dataframe(monthly.style.format("{:,.0f}"), hide_index=True, width="stretch")
         st.download_button("월별 표 CSV 내려받기", monthly.to_csv(index=False).encode("utf-8-sig"), "monthly.csv", "text/csv")
 
