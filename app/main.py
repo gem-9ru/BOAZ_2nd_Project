@@ -17,6 +17,20 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "app"))
 
+
+def _drop_stale_modules():
+    """배포 서버는 push 뒤 이 파일만 다시 읽고, 이미 불러온 엔진·차트 모듈은 예전 것을 계속 쓴다 (11/5 두 번 발생).
+    엔진·앱 파일의 수정 시각이 바뀌었으면 그 모듈들을 지워서 새 코드로 다시 불러오게 한다."""
+    files = list((ROOT / "src").rglob("*.py")) + [ROOT / "app" / "charts.py", ROOT / "app" / "helpbot.py"]
+    stamp = max(f.stat().st_mtime for f in files)
+    if getattr(sys, "_aarrr_code_stamp", None) != stamp:
+        for name in [m for m in sys.modules if m in ("src", "charts", "helpbot") or m.startswith("src.")]:
+            del sys.modules[name]
+        sys._aarrr_code_stamp = stamp
+
+
+_drop_stale_modules()
+
 import charts  # noqa: E402
 import helpbot  # noqa: E402
 from helpbot import SCREEN_HELP  # noqa: E402
