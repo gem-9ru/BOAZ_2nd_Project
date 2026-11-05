@@ -1073,7 +1073,7 @@ def kpis(s):
     cols[1].metric("새 손님 (1년)", f"{s['new_customers']:,.0f}명", help=HELP["new"])
     cols[2].metric("손님 1명 데려오는 비용 (CAC)", won(s["paid_cac"]), help=HELP["paid_cac"])
     cols[3].metric("손님 1명이 1년간 남기는 돈 (LTV)", won(s["ltv_12m"]), help=HELP["ltv"])
-    st.caption(f"참고: 재구매가 많은 업종(UCI 선물·도매 데이터)에서는 1년 매출의 {D.REPEAT_REVENUE_SHARE_UCI:.0%}가 재구매에서 나왔습니다. "
+    st.caption(f"참고: 재구매가 많은 업종(UCI 선물·도매 데이터)에서는 1년 매출의 {D.REPEAT_REVENUE_SHARE_UCI:.0%}가 재구매에서 나왔습니다 (전체 매출 합계 기준, 중간 고객 1명 기준으로는 약 59%). "
                "첫 구매 매출(ROAS)만 보면 1년 매출의 일부만 보는 셈입니다.")
     cols[4].metric("남기는 돈 ÷ 데려오는 비용", f"{s['ltv_cac']:.2f}배" if s["ltv_cac"] else "-", help=HELP["ltv_cac"])
     cols[5].metric("광고비 본전 찾는 기간", f"{s['payback_month']}개월" if s["payback_month"] else "36개월 넘음", help=HELP["payback"])
