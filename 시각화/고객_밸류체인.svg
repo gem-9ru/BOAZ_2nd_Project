@@ -1,0 +1,143 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" font-family="Apple SD Gothic Neo, Noto Sans KR, sans-serif">
+  <defs>
+    <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#5b6472"/>
+    </marker>
+    <marker id="arp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8e5a8a"/>
+    </marker>
+  </defs>
+  <rect width="1600" height="900" fill="#ffffff"/>
+
+  <!-- 제목 -->
+  <text x="60" y="58" font-size="30" font-weight="700" fill="#1f2430">고객 밸류체인: 모든 광고는 이 6단계 위에서 움직인다</text>
+  <text x="60" y="90" font-size="17" fill="#5b6472">광고 방법마다 다른 것은 "어디서 돈을 내나"와 "어디까지 숫자를 주나"뿐이다</text>
+
+  <!-- 입구 -->
+  <text x="165" y="128" font-size="15" font-weight="700" fill="#1f2430" text-anchor="middle">입구: 광고 신규 · 재접촉</text>
+  <text x="165" y="148" font-size="13" fill="#5b6472" text-anchor="middle">(메시지·리타기팅)</text>
+  <line x1="165" y1="156" x2="165" y2="186" stroke="#5b6472" stroke-width="2" marker-end="url(#ar)"/>
+  <text x="677" y="128" font-size="15" font-weight="700" fill="#1f2430" text-anchor="middle">입구: 자연 유입 · 추천 링크</text>
+  <text x="677" y="148" font-size="13" fill="#5b6472" text-anchor="middle">· 기존 고객 자발 재방문</text>
+  <line x1="677" y1="156" x2="677" y2="186" stroke="#5b6472" stroke-width="2" marker-end="url(#ar)"/>
+
+  <!-- ④ → ⑥ 분기 (위) -->
+  <path d="M 960 188 Q 1200 110 1420 188" fill="none" stroke="#8e5a8a" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arp)"/>
+  <text x="1190" y="134" font-size="14" fill="#8e5a8a" text-anchor="middle">첫 구매 고객도 추천한다</text>
+
+  <!-- 단계 상자 -->
+  <g font-size="15" text-anchor="middle">
+    <rect x="60" y="190" width="210" height="140" rx="14" fill="#e8f0fa" stroke="#4c78a8" stroke-width="2"/>
+    <text x="165" y="236" font-size="26" font-weight="700" fill="#1f2430">① 접촉</text>
+    <text x="165" y="270" fill="#1f2430">광고·메시지를 봤다</text>
+    <text x="165" y="296" font-size="13" fill="#5b6472">노출 · 도달 · 발송</text>
+
+    <rect x="316" y="190" width="210" height="140" rx="14" fill="#e8f0fa" stroke="#4c78a8" stroke-width="2"/>
+    <text x="421" y="236" font-size="26" font-weight="700" fill="#1f2430">② 반응</text>
+    <text x="421" y="270" fill="#1f2430">눌렀다 · 시청했다</text>
+    <text x="421" y="296" font-size="13" fill="#5b6472">클릭 · CTR · 30초 시청</text>
+
+    <rect x="572" y="190" width="210" height="140" rx="14" fill="#fdf0e2" stroke="#d9822b" stroke-width="2"/>
+    <text x="677" y="236" font-size="26" font-weight="700" fill="#1f2430">③ 행동</text>
+    <text x="677" y="270" fill="#1f2430">우리 사이트에서 둘러봤다</text>
+    <text x="677" y="296" font-size="13" fill="#5b6472">방문 · 상품 조회 · 장바구니</text>
+
+    <rect x="828" y="190" width="210" height="140" rx="14" fill="#fdf0e2" stroke="#d9822b" stroke-width="2"/>
+    <text x="933" y="236" font-size="26" font-weight="700" fill="#1f2430">④ 구매</text>
+    <text x="933" y="270" fill="#1f2430">처음 샀다</text>
+    <text x="933" y="296" font-size="13" fill="#5b6472">첫 구매 (핵심 과업)</text>
+
+    <rect x="1084" y="190" width="210" height="140" rx="14" fill="#e6f4e4" stroke="#54a24b" stroke-width="2"/>
+    <text x="1189" y="236" font-size="26" font-weight="700" fill="#1f2430">⑤ 재구매</text>
+    <text x="1189" y="270" fill="#1f2430">또 샀다</text>
+    <text x="1189" y="296" font-size="13" fill="#5b6472">두 번째 이후 구매</text>
+
+    <rect x="1340" y="190" width="210" height="140" rx="14" fill="#f4e9f3" stroke="#8e5a8a" stroke-width="2"/>
+    <text x="1445" y="236" font-size="26" font-weight="700" fill="#1f2430">⑥ 추천</text>
+    <text x="1445" y="270" fill="#1f2430">다른 사람을 데려왔다</text>
+    <text x="1445" y="296" font-size="13" fill="#5b6472">추천 코드 · 리뷰</text>
+  </g>
+
+  <!-- 단계 사이 화살표 -->
+  <g stroke="#5b6472" stroke-width="2.5" marker-end="url(#ar)">
+    <line x1="272" y1="260" x2="312" y2="260"/>
+    <line x1="528" y1="260" x2="568" y2="260"/>
+    <line x1="784" y1="260" x2="824" y2="260"/>
+    <line x1="1040" y1="260" x2="1080" y2="260"/>
+    <line x1="1296" y1="260" x2="1336" y2="260"/>
+  </g>
+
+  <!-- ⑥ → ③ 되돌아옴 (아래) -->
+  <path d="M 1445 332 Q 1061 420 690 334" fill="none" stroke="#8e5a8a" stroke-width="2" stroke-dasharray="6 5" marker-end="url(#arp)"/>
+  <text x="1061" y="398" font-size="14" fill="#8e5a8a" text-anchor="middle">추천받은 사람은 새 고객으로 ③에 들어온다</text>
+
+  <!-- 행 1: 행동 축 -->
+  <text x="60" y="436" font-size="14" font-weight="700" fill="#5b6472">행동 축 (AARRR)</text>
+  <g font-size="16" font-weight="700" text-anchor="middle">
+    <rect x="60" y="444" width="466" height="40" rx="8" fill="#4c78a8"/>
+    <text x="293" y="470" fill="#ffffff">획득 (Acquisition)</text>
+    <rect x="572" y="444" width="466" height="40" rx="8" fill="#d9822b"/>
+    <text x="805" y="470" fill="#ffffff">활성화 (Activation)</text>
+    <rect x="1084" y="444" width="210" height="40" rx="8" fill="#54a24b"/>
+    <text x="1189" y="470" fill="#ffffff">유지 (Retention)</text>
+    <rect x="1340" y="444" width="210" height="40" rx="8" fill="#8e5a8a"/>
+    <text x="1445" y="470" fill="#ffffff">추천 (Referral)</text>
+  </g>
+
+  <!-- 행 2: 숫자 받는 곳 -->
+  <text x="60" y="514" font-size="14" font-weight="700" fill="#5b6472">숫자를 받는 곳</text>
+  <g font-size="15" text-anchor="middle" fill="#1f2430">
+    <rect x="60" y="522" width="466" height="40" rx="8" fill="#f1f3f6" stroke="#c9ced6"/>
+    <text x="293" y="548">매체 리포트 (광고 관리자)</text>
+    <rect x="572" y="522" width="210" height="40" rx="8" fill="#f1f3f6" stroke="#c9ced6"/>
+    <text x="677" y="548">GA4 · 픽셀</text>
+    <rect x="828" y="522" width="466" height="40" rx="8" fill="#f1f3f6" stroke="#c9ced6"/>
+    <text x="1061" y="548">자사 주문 데이터 (기준)</text>
+    <rect x="1340" y="522" width="210" height="40" rx="8" fill="#f1f3f6" stroke="#c9ced6"/>
+    <text x="1445" y="548">추천 코드</text>
+  </g>
+
+  <!-- 행 3: 돈 내는 곳 -->
+  <text x="60" y="592" font-size="14" font-weight="700" fill="#5b6472">광고비를 내는 곳 (과금 방식)</text>
+  <g font-size="15" text-anchor="middle" fill="#1f2430">
+    <rect x="60" y="600" width="210" height="44" rx="8" fill="#fff7db" stroke="#e0c35a"/>
+    <text x="165" y="628">노출당 · 메시지 발송</text>
+    <rect x="316" y="600" width="210" height="44" rx="8" fill="#fff7db" stroke="#e0c35a"/>
+    <text x="421" y="628">클릭·시청당</text>
+    <rect x="572" y="600" width="210" height="44" rx="8" fill="#fff7db" stroke="#e0c35a"/>
+    <text x="677" y="628">행동당 (설치·가입)</text>
+    <rect x="828" y="600" width="210" height="44" rx="8" fill="#fff7db" stroke="#e0c35a"/>
+    <text x="933" y="628">구매당 (공동구매 등)</text>
+    <rect x="1084" y="600" width="466" height="44" rx="8" fill="#ffffff" stroke="#c9ced6" stroke-dasharray="5 4"/>
+    <text x="1317" y="628" fill="#5b6472">광고비 없음 → 혜택비(적립금·추천 보상)만</text>
+  </g>
+
+  <!-- 행 4: 돈 축 -->
+  <text x="60" y="674" font-size="14" font-weight="700" fill="#5b6472">돈 축 (수익)</text>
+  <g font-size="15" text-anchor="middle">
+    <rect x="60" y="682" width="722" height="40" rx="8" fill="#f1f3f6" stroke="#c9ced6"/>
+    <text x="421" y="708" fill="#5b6472">비용만 발생</text>
+    <rect x="828" y="682" width="466" height="40" rx="8" fill="#2f7d4f"/>
+    <text x="1061" y="708" fill="#ffffff" font-weight="700">매출 발생: 첫 구매 + 재구매</text>
+    <rect x="1340" y="682" width="210" height="40" rx="8" fill="#f1f3f6" stroke="#c9ced6"/>
+    <text x="1445" y="708" fill="#5b6472">매출 없음 (④에서 셈)</text>
+  </g>
+
+  <!-- ROAS vs LTV 괄호 -->
+  <g stroke="#c0392b" stroke-width="2.5" fill="none">
+    <path d="M 828 738 v 10 h 210 v -10"/>
+  </g>
+  <text x="933" y="770" font-size="15" font-weight="700" fill="#c0392b" text-anchor="middle">ROAS가 보는 곳</text>
+  <g stroke="#2f7d4f" stroke-width="2.5" fill="none">
+    <path d="M 828 784 v 10 h 466 v -10"/>
+  </g>
+  <text x="1061" y="816" font-size="15" font-weight="700" fill="#2f7d4f" text-anchor="middle">고객 가치(LTV)가 보는 곳</text>
+
+  <!-- 핵심 메시지 -->
+  <rect x="60" y="738" width="722" height="96" rx="12" fill="#1f2430"/>
+  <text x="84" y="776" font-size="19" font-weight="700" fill="#ffffff">ROAS만 보고 예산을 나누면 ⑤ 재구매가 안 보인다</text>
+  <text x="84" y="808" font-size="15" fill="#d5d9e0">우리 도구는 체인 전체(①~⑥)를 보고 이번 달 예산을 어디에 쓸지 정한다</text>
+
+  <!-- 각주 -->
+  <text x="60" y="868" font-size="13" fill="#5b6472">체인 밖 비용: 고정비(브랜드검색·인플루언서 원고료·박람회), 실행비(체험단·SEO 운영). 혜택비(쿠폰·적립금·추천 보상)는 매출에서 차감. 업종이 다르면 라벨만 바뀜 (예: ④ 구매 → 상담 신청).</text>
+</svg>
