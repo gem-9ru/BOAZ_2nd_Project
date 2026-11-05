@@ -5,7 +5,13 @@
 마케터가 쓰는 4개 도구(광고 관리자, 로그 분석, 어트리뷰션, 마케팅 자동화)를 다시 만들지 않고, 각 도구에서 나온 숫자를 받아 예산 결정 하나로 잇습니다.
 기획은 [기획안.md](기획안.md), 기능 명세는 [기능명세_4개도구.md](기능명세_4개도구.md), 기준 문서는 [프로젝트_실행계획.md](프로젝트_실행계획.md).
 
-배포: https://ad-budget-simulator.streamlit.app/ (프로토타입 v0.5)
+## 버전별 주소
+| 버전 | 앱 | 코드 |
+|---|---|---|
+| v0.5.1 (현재, main) | https://ad-budget-simulator.streamlit.app/ | [v0.5.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.5.1) |
+| v0.4 (11/5 기획 반영 전) | https://ad-budget-simulator-v04.streamlit.app/ (`release/v0.4` 브랜치) | [v0.4](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.4) |
+
+전체 버전 목록은 [Tags](https://github.com/gem-9ru/BOAZ_2nd_Project/tags), v0.4 → v0.5.1 변경은 [비교](https://github.com/gem-9ru/BOAZ_2nd_Project/compare/v0.4...v0.5.1).
 
 ## 화면
 
