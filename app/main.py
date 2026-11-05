@@ -81,10 +81,16 @@ def _load_estimate(keyword: str, online: bool):
 
 
 @st.cache_data(show_spinner=False, ttl=86_400)
-def load_season(keyword: str):
-    """(1~12월 계절 지수 리스트 또는 None, 출처). 실패해도 None으로 계속 (앱 멈춤 없음)."""
+def _load_season(keyword: str, example_stamp: float):
     idx, src = NH.seasonality_safe(keyword)
     return (None if idx is None else [float(v) for v in idx.values]), src
+
+
+def load_season(keyword: str):
+    """(1~12월 계절 지수 리스트 또는 None, 출처). 실패해도 None으로 계속 (앱 멈춤 없음).
+    예시 지수 파일이 바뀌면 캐시도 새로 (파일 수정 시각을 캐시 키에 넣음)."""
+    f = NH.EXAMPLE_DIR / f"{(keyword or '').strip().replace(' ', '')}.csv"
+    return _load_season(keyword, f.stat().st_mtime if f.exists() else 0.0)
 
 
 NAVER_FAILED = []   # 이번 실행에서 네이버 연결이 실패했는지 (실패는 캐시하지 않아 다음 실행에 다시 시도)
