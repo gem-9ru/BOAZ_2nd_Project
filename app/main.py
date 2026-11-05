@@ -37,6 +37,7 @@ from helpbot import SCREEN_HELP  # noqa: E402
 from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_scan,  # noqa: E402
                         lever_table, optimize_allocation, simulate)
 from src.engine import attribution as A  # noqa: E402
+from src.engine import coach as CO  # noqa: E402
 from src.engine import automation as AU  # noqa: E402
 from src.engine import data_loader as dl  # noqa: E402
 from src.engine import defaults as D  # noqa: E402
@@ -132,25 +133,155 @@ help_fab = st.container(key="help_fab")  # 내용은 계산이 끝난 뒤 맨 �
 
 with st.sidebar:
     st.header("처음이신가요?")
-    st.markdown("1. **① 시작**: 무엇을 팔고, 1회 결제 금액·남는 비율·월 광고비를 적어요\n"
-                "2. **② 광고 관리자**: 네이버 검색어와 메타 예산을 정해요\n"
-                "3. **③ 로그 분석**: 손님이 어디서 그만두는지 봐요\n"
-                "4. **④ 어트리뷰션**: 매체가 보고한 숫자를 믿어도 되는지 봐요\n"
-                "5. **⑤ 자동화**: 메시지가 광고비보다 나은지 봐요\n"
-                "6. **⑥ 결과·우선순위**: 무엇을 먼저 할지 정해요")
-    st.caption("②~⑤는 건너뛰어도 기본값으로 결과가 나옵니다. 모르는 말은 오른쪽 아래 💬 도우미에게 물어보세요.")
+    st.markdown("**🧭 광고 코치**부터 시작하세요. 아는 숫자 몇 개만 넣으면\n"
+                "1. 손님 1명 데려오는 데 **최대 얼마까지** 써도 되는지\n"
+                "2. **광고가 맞는 상품**인지\n"
+                "3. **첫 달에 무엇을** 할지 알려 드립니다.\n\n"
+                "한 달 광고해 본 뒤 숫자 3개를 넣으면 계속할지·줄일지 판정해 드립니다.")
+    st.caption("오른쪽 ①~⑥ 탭은 데이터가 생기면 여는 **다음 단계**입니다. 코치에 넣은 숫자로 미리 채워집니다. "
+               "모르는 말은 오른쪽 아래 💬 도우미에게 물어보세요.")
 
 st.title("📈 광고 예산 시뮬레이터")
-st.caption("광고비를 쓰면 손님이 얼마나 오고, 다시 오고, 1년 뒤 얼마가 남는지 미리 계산하고, "
-           "광고비 증액 · 채널 재배분 · 퍼널 개선 · 자동 메시지 중 무엇을 먼저 할지 같은 기준으로 비교합니다. "
-           "(AARRR 프레임워크 · 고객 밸류체인 · 프로토타입 v0.6)")
+st.caption("광고를 처음 하는 사장님의 첫 광고를 함께 정하는 코치입니다. 손님 1명에 쓸 수 있는 돈, 첫 채널, 첫 달 예산을 알려 주고, "
+           "한 달 뒤 결과로 계속할지 판정합니다. 데이터가 쌓이면 다음 단계(①~⑥)에서 채널 배분·퍼널·자동화까지 같은 기준으로 비교합니다. "
+           "(AARRR 프레임워크 · 고객 밸류체인 · 프로토타입 v0.7)")
 
-tabs = st.tabs(TAB_NAMES)
+_all_tabs = st.tabs(["🧭 광고 코치"] + [f"{n} · 다음 단계" if i == 0 else n for i, n in enumerate(TAB_NAMES)])
+coach_tab, tabs = _all_tabs[0], _all_tabs[1:]
 heads = []
 for t in tabs:
     with t:
         heads.append(st.container())
         st.divider()
+
+# ───────────────────────────── 🧭 광고 코치 (주 사용자: 광고를 처음 하는 사장님) ─────────────────────────────
+# 기준: 초보자_코치_설계안.md 8장 확정 값. 계산 규칙은 src/engine/coach.py
+coach = {}
+with coach_tab:
+    st.markdown("#### ❓ 광고를 처음 하시나요? 아는 숫자만 넣어 주세요")
+    st.caption("손님 흐름: " + " → ".join(CO.PLAIN_STEPS) + ". 광고는 앞쪽(봤다·눌렀다)에 돈을 내고, 남는 돈은 '샀다'와 '다시 샀다'에서 생깁니다.")
+    q1, q2 = st.columns(2)
+    category = q1.selectbox("무엇을 파나요?", CO.CATEGORIES)
+    stores = q2.multiselect("어디서 파나요? (여러 곳이면 모두)", CO.STORES, default=["스마트스토어"])
+    q3, q4 = st.columns(2)
+    price = q3.number_input("1개 팔면 받는 돈 (원)", min_value=0, max_value=100_000_000, value=None, step=1_000,
+                            placeholder="예: 35000", help="손님이 한 번 결제하는 평균 금액")
+    profit = q4.number_input("1개 팔면 남는 돈 (원)", min_value=0, max_value=100_000_000, value=None, step=1_000,
+                             placeholder="예: 14000", help="받는 돈에서 원가·포장·배송비·판매 수수료를 뺀 금액")
+    q5, q6, q7 = st.columns(3)
+    repurchase = q5.radio("한 번 산 손님이 다시 사나요?", list(CO.REPURCHASE_PRESETS), index=1,
+                          help="1년 동안 다시 사는 횟수로 바꿔 계산합니다: 거의 안 삼 0번 / 가끔 0.5번 / 자주 2번 (모두 가정값)")
+    max_budget = q6.number_input("한 달에 광고에 쓸 수 있는 최대 금액 (원)", min_value=0, max_value=1_000_000_000, value=None,
+                                 step=100_000, placeholder="예: 1000000")
+    baseline = q7.number_input("광고 없이 한 달에 보통 몇 개 팔리나요? (모르면 비워 두기)", min_value=0, max_value=10_000_000,
+                               value=None, step=1, help="한 달 뒤 판정에서 광고 없이도 팔렸을 판매를 빼는 데 씁니다.")
+    keyword = st.text_input("손님이 이 상품을 찾을 때 검색할 만한 단어 (선택)", placeholder="예: 원두커피",
+                            help="네이버에서 한 달에 몇 번 검색되는지, 클릭 1번이 대략 얼마인지 가져옵니다.")
+    if any(s in stores for s in ("스마트스토어", "쿠팡")):
+        st.caption("오픈마켓에서 팔면 판매 수는 마켓 통계 화면에서 보고, 같은 손님이 다시 샀는지는 확인하기 어렵습니다.")
+
+    if not (price and profit and max_budget):
+        st.info("**1개 팔면 받는 돈, 남는 돈, 한 달 최대 광고비**를 넣으면 답이 나옵니다.", icon="✏️")
+    elif profit > price:
+        st.error("남는 돈이 받는 돈보다 클 수 없습니다. 다시 확인해 주세요.")
+    else:
+        be = CO.breakeven(profit, CO.REPURCHASE_PRESETS[repurchase])
+        # 네이버 검색 데이터 (선택): 월 검색수 → 자사몰 첫 채널, 예상 클릭 비용 → 신호등
+        monthly_search, naver_cpc = None, None
+        kw = keyword.strip().replace(" ", "")
+        if kw:
+            _online = ns.api_available()
+            kdf = load_keywords((kw,), _online)
+            if kdf is not None and kw in set(kdf["keyword"]):
+                monthly_search = float(kdf.set_index("keyword").loc[kw, "total_qc"])
+            est = load_estimate(kw, _online)
+            if est is not None and (est["clicks"] > 0).any():
+                nc = NaverCurve({kw: est})
+                spend0 = min(CO.test_budget(max_budget, be.first)[0], nc.capacity) or nc.capacity
+                if nc.clicks(spend0) > 0:
+                    naver_cpc = spend0 / nc.clicks(spend0)
+        ch_name, ch_reason = CO.first_channel(stores, monthly_search)
+        if "메타" in ch_name:
+            cpc_guess, cpc_src = float(D.META_BASE_CPC), "메타 대략값 (가정)"
+        elif naver_cpc:
+            cpc_guess, cpc_src = naver_cpc, f"네이버 예상 실적 '{kw}' (최근 4주 → 한 달)" + ("" if "네이버" in ch_name else ", 이 채널 대신 참고")
+        else:
+            cpc_guess, cpc_src = float(D.META_BASE_CPC), "대략값 (검색어를 넣으면 네이버 예상치로 바뀜)"
+        cpc_in = st.number_input("클릭 1번 비용을 알면 넣으세요 (원, 모르면 비워 두기)", min_value=0, max_value=100_000, value=None, step=50)
+        cpc = float(cpc_in) if cpc_in else cpc_guess
+        if cpc_in:
+            cpc_src = "직접 입력"
+        need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
+        light, light_msg = CO.signal(need)
+        budget0, budget_warn = CO.test_budget(max_budget, be.first)
+        coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
+                     channel=ch_name, repurchase=repurchase)
+
+        st.divider()
+        st.markdown("#### 답 1. 손님 1명 데려오는 데 최대 얼마까지 써도 되나요?")
+        a1, a2 = st.columns([1, 2])
+        a1.metric("첫 구매만으로도 남는 한도", won(be.first))
+        a2.markdown(f"손님 1명을 데려오는 데 **{won(be.first)}**까지는 첫 구매만으로도 남습니다.  \n"
+                    + (f"다시 사는 손님이 '{repurchase}' 정도라면 **{won(be.year)}**까지도 괜찮습니다. "
+                       "다만 이 값은 **가정**입니다 (실제 재구매 기록이 생기면 바뀝니다)." if be.year > be.first else
+                       "다시 사는 손님이 거의 없다면 이 금액이 그대로 한도입니다."))
+
+        st.markdown("#### 답 2. 광고가 맞는 상품인가요?")
+        getattr(st, {"🟢": "success", "🟡": "warning", "🔴": "error"}[light])(
+            f"{light} 클릭 1번에 약 **{won(cpc)}**이면, 눌러 들어온 **100명 중 {need * 100:.1f}명**이 사야 남습니다. {light_msg}  \n"
+            f"참고 기준: 공개 샘플 쇼핑몰에서 검색광고로 온 손님은 100명 중 {CO.REFERENCE_RATES['GA4 공개 샘플 유료 검색 유입'] * 100:.2f}명, "
+            f"전체는 {CO.REFERENCE_RATES['GA4 공개 샘플 전체'] * 100:.2f}명이 샀습니다 (한 쇼핑몰 값이라 업종 평균은 아님)."
+            + (f"  \n다시 사는 손님까지 치면 100명 중 {need_year * 100:.1f}명이면 됩니다 (가정값)." if be.year > be.first else ""))
+        st.caption(f"클릭 비용 출처: {cpc_src}")
+
+        st.markdown("#### 답 3. 첫 달에 무엇을 할까요?")
+        c1, c2 = st.columns(2)
+        with c1.container(border=True):
+            st.markdown(f"**첫 광고: {ch_name}**  \n{ch_reason}"
+                        + (f"  \n(검색어 '{kw}' 네이버 월 검색 {monthly_search:,.0f}회)" if monthly_search is not None else ""))
+            st.metric("첫 달 시험 예산", won(budget0), help=f"월 최대 금액과 '손님 1명 한도 × {CO.TEST_SALES}건' 중 작은 쪽. "
+                      f"판매 {CO.TEST_SALES}건이면 손님 1명 비용을 ±18% 정도로 잴 수 있습니다.")
+            if budget_warn:
+                st.warning(budget_warn)
+            if light == "🔴":
+                st.markdown(f"**광고 대신 해 볼 것: 공동구매·제휴** (팔린 만큼만 냄)  \n"
+                            f"판매액의 **{profit / price:.0%} 이하**를 수수료로 주는 공동구매라면 남습니다.")
+        with c2.container(border=True):
+            st.markdown("**광고 전에 준비할 것 3가지**")
+            st.checkbox("상세페이지에 후기 3개 이상, 사진·가격·배송 안내 정리", key="prep_1")
+            st.checkbox("광고 전용 링크나 쿠폰 코드 하나 만들기 (광고로 팔린 것만 따로 세려고)", key="prep_2",
+                        help="이게 없으면 한 달 뒤 광고 없이 팔린 것까지 섞여 결과가 좋아 보일 수 있습니다.")
+            st.checkbox("판매처 통계 화면 찾아 두기 (쓴 돈·클릭·판매 수를 볼 곳)", key="prep_3")
+
+        st.divider()
+        st.markdown("#### 한 달 뒤: 숫자 3개만 넣으면 계속할지 알려 드립니다")
+        m1, m2, m3, m4 = st.columns(4)
+        days = m1.number_input("광고를 며칠 돌렸나요?", 0, 366, 30)
+        spent = m2.number_input("쓴 돈 (원)", 0, 1_000_000_000, value=None, step=10_000)
+        clicks_in = m3.number_input("클릭 수", 0, 100_000_000, value=None, step=10)
+        m4.caption("광고 관리자 화면에서 그대로 옮겨 적으세요.")
+        s1, s2, s3 = st.columns(3)
+        coupon_n = s1.number_input("쿠폰·전용 링크로 팔린 수", 0, 10_000_000, value=None, step=1)
+        report_n = s2.number_input("광고 화면에 나온 판매(전환) 수", 0, 10_000_000, value=None, step=1)
+        total_n = s3.number_input("이번 달 전체 판매 수", 0, 10_000_000, value=None, step=1)
+        if spent is not None and clicks_in is not None and any(v is not None for v in (coupon_n, report_n, total_n)):
+            basis = CO.ad_sales(coupon_n, report_n, total_n, baseline)
+            v = CO.judge(int(days), float(spent), float(clicks_in), basis, be, cpc, ch_name)
+            getattr(st, v.level)(f"**{v.title}**  \n{v.detail}")
+            notes = [f"광고로 온 판매: {basis.value:,.0f}건 ({basis.source})"]
+            if basis.side_by_side:
+                notes.append(f"쿠폰 {basis.side_by_side[0]:,.0f}건 · 광고 화면 {basis.side_by_side[1]:,.0f}건 "
+                             "(쿠폰은 쿠폰을 안 쓴 손님을 놓치고, 광고 화면은 광고 없이 샀을 손님이 섞입니다. 실제는 둘 사이일 가능성이 큽니다.)")
+            if basis.warning:
+                notes.append(basis.warning)
+            if v.cpa:
+                notes.append(f"손님 1명 데려오는 데 든 돈 {won(v.cpa)} (한도 {won(be.first)}, 재구매 포함 가정 {won(be.year)})")
+            if v.next_budget is not None and v.step in (1, 2, 3, 4):
+                notes.append(f"다음 달 예산 제안: {won(v.next_budget)}")
+            st.caption("  \n".join(notes))
+        else:
+            st.caption("쓴 돈, 클릭 수, 판매 수(셋 중 아는 것)를 넣으면 판정합니다.")
+    st.info("더 알고 싶으면 오른쪽 **① 시작 · 다음 단계**부터 보세요. 위에 넣은 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있습니다.", icon="➡️")
 
 # ───────────────────────────── ① 시작 ─────────────────────────────
 with tabs[0]:
@@ -163,9 +294,10 @@ with tabs[0]:
         if task == "직접 입력":
             task = st.text_input("행동 이름", value="전환") or "전환"
         a1, a2 = st.columns(2)
-        aov = a1.number_input("1회 평균 결제 금액 (원, 객단가)", 1_000.0, 10_000_000.0, float(D.AOV), step=1_000.0,
+        aov = a1.number_input("1회 평균 결제 금액 (원, 객단가)", 1_000.0, 10_000_000.0,
+                              max(1_000.0, coach.get("price", float(D.AOV))), step=1_000.0,
                               help="손님이 한 번 결제할 때 평균 금액. 결과를 가장 크게 바꾸는 숫자입니다.")
-        margin = a2.slider("매출 중 남는 비율 (마진율)", 0.0, 1.0, float(D.MARGIN), 0.01,
+        margin = a2.slider("매출 중 남는 비율 (마진율)", 0.0, 1.0, round(coach.get("margin", float(D.MARGIN)), 2), 0.01,
                            help="1만 원어치 팔면 원가·배송비·수수료를 빼고 얼마가 남는지. 0.35 = 3,500원")
         st.caption(f"→ 1회 결제당 남는 돈 {won(aov * margin)}. 기본값(6만 원·35%)은 예시라, 우리 가게 숫자로 꼭 바꿔 주세요.")
         with st.expander("더 알면 바꾸기: 한 달 구매 횟수"):
@@ -174,7 +306,7 @@ with tabs[0]:
         st.subheader("목표와 예산")
         omtm = st.radio("가장 중요한 목표 하나 (OMTM)", list(D.OMTM_OPTIONS), horizontal=True, format_func=OMTM_PLAIN.get, index=1,
                         help="'더 나은 예산안'을 찾을 때 이 목표를 기준으로 삼습니다. 잘 모르겠으면 '1년 동안 남는 돈'.")
-        budget = st.number_input("한 달 광고비 (원)", min_value=0, max_value=1_000_000_000, value=D.MONTHLY_BUDGET,
+        budget = st.number_input("한 달 광고비 (원)", min_value=0, max_value=1_000_000_000, value=int(coach.get("budget", D.MONTHLY_BUDGET)),
                                  step=100_000, format="%d")
         st.caption(f"= 한 달 {won(budget)}, 1년이면 {won(budget * 12)}")
     with c2:
@@ -229,7 +361,7 @@ with tabs[1]:
     api_ok = ns.api_available()
     top = st.columns([2, 1])
     with top[0]:
-        hint_text = st.text_input("손님이 검색할 만한 단어 (쉼표로 최대 5개)", value=ns.SAMPLE_KEYWORD,
+        hint_text = st.text_input("손님이 검색할 만한 단어 (쉼표로 최대 5개)", value=coach.get("keyword") or ns.SAMPLE_KEYWORD,
                                   help="예: 필라테스, 원두커피. 이 단어와 비슷한 검색어도 함께 찾아 줍니다.")
     with top[1]:
         online = st.toggle("네이버에서 지금 바로 조회", value=api_ok, disabled=not api_ok,
