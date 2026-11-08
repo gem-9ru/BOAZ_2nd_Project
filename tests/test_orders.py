@@ -78,4 +78,5 @@ def test_errors_say_how_to_fix():
 def test_demo_orders_measure(ex):
     df = O.read_orders(ROOT / "data" / "examples" / "demo_store" / ex / "orders.csv")
     res = O.measure(O.clean(df, O.detect(list(df.columns))), PARAMS)
-    assert res["extended"] and res["customers"] > 50 and 0 < res["repeats_observed"] < res["repeats_year"] < 6
+    assert res["extended"] and res["customers"] > 50 and 0 < res["repeats_observed"] < res["repeats_year"]
+    assert 3 <= res["repeats_year"] <= 9          # 가상 데이터는 엔진 곡선(1년 6번)으로 만듦 → 3개월·손님 70~100명이라 오차 있음

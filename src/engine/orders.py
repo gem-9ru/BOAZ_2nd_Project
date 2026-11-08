@@ -88,13 +88,14 @@ def clean(df: pd.DataFrame, mapping: Dict[str, Optional[str]]) -> pd.DataFrame:
 
 
 def _repeats_expected(params, scale: float, exposure: np.ndarray) -> float:
-    """손님마다 첫 구매 뒤 exposure개월 동안 엔진 곡선(배수 scale)으로 기대되는 재구매 횟수의 합."""
+    """손님마다 첫 구매 뒤 exposure개월 동안 엔진 곡선(배수 scale)으로 기대되는 재구매 횟수의 합.
+    엔진의 r(k)는 첫 구매 뒤 k번째 달(경과 k ~ k+1개월)의 몫이라, 경과 e개월이면 재구매가 쌓인 시간은 e − 1개월."""
     r = params.with_changes(retention_scale=scale).retention(13)
-    cum = np.concatenate([[0.0], np.cumsum(r[1:] * params.purchase_freq)])        # cum[k] = 1..k개월 합
-    e = np.clip(exposure, 0, 12)
-    k = np.floor(e).astype(int)
-    frac = e - k
-    nxt = np.minimum(k + 1, 12)
+    cum = np.concatenate([[0.0], np.cumsum(r[1:] * params.purchase_freq)])        # cum[k] = 1..k번째 달 합
+    x = np.clip(exposure - 1.0, 0, 11)
+    k = np.floor(x).astype(int)
+    frac = x - k
+    nxt = np.minimum(k + 1, 11)
     return float((cum[k] + frac * (cum[nxt] - cum[k])).sum())
 
 
@@ -112,6 +113,10 @@ def measure(orders: pd.DataFrame, params, end: Optional[pd.Timestamp] = None) ->
     def fit(rep_total: float, exp: np.ndarray) -> float:
         if rep_total <= 0 or _repeats_expected(base, 1.0, exp) <= 0:
             return 0.0
+        # 곡선이 첫 달들에서 100%에 닿으면(재구매가 아주 많은 가게) 배수를 키워도 관찰 기간 기대값이 거의 늘지 않아
+        # 맞추기가 끝없이 커질 수 있다 → 곡선이 설명할 수 있는 최대의 97%까지만 맞춤 (가장 작은 배수)
+        ceiling = _repeats_expected(base, 1e4, exp)
+        rep_total = min(rep_total, 0.97 * ceiling)
         lo, hi = 0.0, 1.0
         while _repeats_expected(base, hi, exp) < rep_total and hi < 1e4:
             hi *= 2

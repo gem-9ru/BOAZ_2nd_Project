@@ -2,8 +2,8 @@
  "spend": 234900,
  "clicks": 159,
  "ad_orders": 3,
- "coupon_orders": 2,
+ "coupon_orders": 0,
  "report_conversions": 4,
- "orders_total": 212,
- "repeat_share": 0.488
+ "orders_total": 187,
+ "repeat_share": 0.442
 }

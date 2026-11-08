@@ -10,9 +10,10 @@
 - naver_report.csv  네이버 검색광고 다차원 보고서 항목 이름 (△ 공식 양식 미확인), 10월 일별
 - meta_report.csv   메타 광고 관리자 한국어 내보내기 열 이름 (✅ 실제 내보내기 열, 숫자는 가상), 10월 일별
 - plan.json         코치 계획 파일 (10월 1일 시작, 예측값은 코치 계산과 같은 수준)
-재구매: 두 예시 모두 '매달(정기)' 프리셋(1년 6번)에 맞춰, 산 적 있는 손님이 하루 6/365 확률로 다시 삼.
+재구매: 두 예시 모두 '매달(정기)' 프리셋(1년 6번)을 엔진 재구매 곡선 모양대로 (첫 구매 뒤 k번째 달 하루 확률 = r(k) × 월 구매 횟수 ÷ 30.4).
 """
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -23,6 +24,8 @@ SEED = 20261109
 DAYS = pd.date_range("2026-08-01", "2026-10-31", freq="D")
 AD_DAYS = pd.date_range("2026-10-01", "2026-10-31", freq="D")
 REPEATS_PER_YEAR = 6.0          # '매달(정기)' 프리셋
+# 재구매는 엔진 곡선 모양을 따름 (사용자 결정 11/9 "곡선 모양 유지"): 첫 구매 뒤 k개월째 기대 주문 = 월 구매 횟수 × r(k),
+# r(k) = 바닥값 + (1 − 바닥값)·e^(−감소·k)를 1년 6번이 되게 높이만 맞춤 → 주문 내역으로 재면 1년 약 6번이 나옴
 
 EXAMPLES = {
     "coffee": dict(
@@ -58,7 +61,12 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
     out.mkdir(exist_ok=True)
     buyers, orders, stats, naver_rows, meta_rows = [], [], [], [], []
     oid = {"coffee": 2026080100000, "protein": 2026080200000}[name]
-    p_repeat = REPEATS_PER_YEAR / 365
+    sys.path.insert(0, str(OUT.parents[2]))
+    from src.engine import coach as C, defaults as D
+    from src.engine.model import FunnelParams
+    scale = C.retention_scale_for(REPEATS_PER_YEAR, D.RETENTION_FLOOR, D.RETENTION_DECAY, D.PURCHASE_FREQ)
+    monthly = FunnelParams(retention_scale=scale).retention(14) * D.PURCHASE_FREQ   # k개월째 기대 주문 수 (k ≥ 1)
+    first_day = {}
     naver_daily, meta_daily = cfg["naver"] / len(AD_DAYS), cfg["meta"] / len(AD_DAYS)
     # 광고 달의 클릭은 매일 무작위, 광고 주문·메타 리포트 전환 '합계'는 정해진 비율로 (시연 숫자가 늘 같은 이야기를 하게)
     n_clicks = rng.poisson(naver_daily / cfg["naver_cpc"], len(AD_DAYS))
@@ -77,16 +85,22 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
         i = AD_DAYS.get_loc(day) if ad else None
         n_clk, m_clk = (int(n_clicks[i]), int(m_clicks[i])) if ad else (0, 0)
         n_buy, m_buy = (int(n_buys[i]), int(m_buys[i])) if ad else (0, 0)
-        repeat = rng.binomial(len(buyers), p_repeat) if buyers else 0
-        sources = (["organic"] * rng.poisson(cfg["organic_new"]) + ["repeat"] * repeat
-                   + ["naver"] * n_buy + ["meta"] * m_buy)
+        repeaters = []
+        if buyers:   # 손님마다 첫 구매 뒤 경과 개월 k의 하루 재구매 확률 = 기대 주문 r(k) × 월 구매 횟수 ÷ 30.4
+            ages = np.array([(day - first_day[c]).days / 30.4 for c in buyers])
+            k = np.floor(ages).astype(int)
+            p = np.where(k >= 1, monthly[np.minimum(k, 13)] / 30.4, 0.0)
+            repeaters = [c for c, hit in zip(buyers, rng.random(len(buyers)) < p) if hit]
+        sources = ([("organic", None)] * rng.poisson(cfg["organic_new"]) + [("repeat", c) for c in repeaters]
+                   + [("naver", None)] * n_buy + [("meta", None)] * m_buy)
         day_orders = 0
-        for src in sources:
+        for src, rcid in sources:
             if src == "repeat":
-                cid = buyers[rng.integers(0, len(buyers))]
+                cid = rcid
             else:
                 cid = f"DEMO{name[0].upper()}{len(buyers) + 1:05d}"
                 buyers.append(cid)
+                first_day[cid] = day
             pid, pname, price = cfg["products"][rng.integers(0, len(cfg["products"]))]
             qty = 1 if rng.random() < 0.9 else 2
             coupon = f"{rng.integers(10**9, 10**10)}" if src in ("naver", "meta") and rng.random() < cfg["coupon_share"] else ""
