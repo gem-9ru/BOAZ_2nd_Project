@@ -177,8 +177,12 @@ with st.sidebar:
 st.title("📈 광고 예산 시뮬레이터")
 st.caption("광고를 처음 하는 사장님이 첫 광고비를 정하고, 한 달 뒤 계속할지 판단하도록 돕는 코치입니다. (프로토타입 v0.9)")
 
-_all_tabs = st.tabs(["🧭 광고 코치"] + [f"{n} · 다음 단계" if i == 0 else n for i, n in enumerate(TAB_NAMES)])
-coach_tab, tabs = _all_tabs[0], _all_tabs[1:]
+# 첫 화면은 광고 코치 하나 (MVP_기능정의.md 5장 4번). 다음 단계 탭 6개는 코치 아래 접힌 '더 보기' 안에 (코드·기능·코치 값 연결은 그대로)
+coach_tab = st.container()
+_more = st.expander("더 보기: 광고를 몇 달 해 본 분이 자기 데이터로 더 깊게 보는 곳 (시작 · 광고 관리자 · 로그 분석 · 어트리뷰션 · 자동화 · 결과·우선순위)")
+with _more:
+    st.caption("12개월 시뮬레이션, 채널별 예산 최적화, 퍼널·어트리뷰션 분석, 자동 메시지 비교예요. 위 코치 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있어요.")
+    tabs = st.tabs(TAB_NAMES)
 heads = []
 def _closable_banner(key: str, text: str, icon: str = "ℹ️", kind: str = "info"):
     """옆에 머무는 배너 (UX 설계원칙 P12): 계속 알아야 하는 정보, 닫기 버튼으로 숨김."""
@@ -932,7 +936,7 @@ with coach_tab:
                 st.caption("쓴 돈, 클릭 수, 판매 수(셋 중 아는 것)를 넣으면 판정합니다.")
             report_section(a)
         if ans is not None:
-            st.caption("더 알고 싶으면 오른쪽 **시작 · 다음 단계** 탭부터 보세요. 위 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있어요.")
+            st.caption("광고를 몇 달 해 보고 더 깊게 보고 싶으면 아래 **더 보기**를 펼쳐 보세요. 위 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있어요.")
 
 # ───────────────────────────── 시작 ─────────────────────────────
 with tabs[0]:
