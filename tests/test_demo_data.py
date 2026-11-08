@@ -56,3 +56,18 @@ def test_demo_over_count_is_realistic():
         assert s["ad_orders"] > 0
         rate = R.over_count_rate(s["report_conversions"], s["ad_orders"])
         assert 0.3 <= rate <= 1.0, (ex, rate)
+
+
+def test_demo_ad_or_store_line_differs():
+    """예시 1은 광고 클릭률이 낮아 '광고 쪽부터', 예시 2는 클릭률은 정상인데 가게 안에서 빠져 '가게 쪽' (7a)."""
+    from src.engine import measure as MS
+    lines = {}
+    for ex in ("coffee", "protein"):
+        reps = []
+        for f, pf in (("naver_report.csv", "naver"), ("meta_report.csv", "meta")):
+            d = pd.read_csv(BASE / ex / f)
+            reps.append(R.totals(d, R.map_columns(list(d.columns), pf), pf))
+        ctr = sum(r["clicks"] for r in reps) / sum(r["impressions"] for r in reps)
+        s = pd.read_csv(BASE / ex / "store_stats.csv")
+        lines[ex] = MS.ad_or_store(ctr, MS.diagnose_funnel(MS.store_totals(s, MS.detect_columns(list(s.columns)))))
+    assert "광고 쪽부터" in lines["coffee"] and "가게 쪽" in lines["protein"] and "담고 삼" in lines["protein"]

@@ -32,6 +32,8 @@ EXAMPLES = {
         naver_tracking=True,
         meta_overcount=0.7,              # 메타가 자기 광고 주문 1건마다 0.7건을 더 셈(조회 후 구매·다른 경로 구매) → 과대 집계
         meta_reach=(900, 1_400), meta_freq=(2.6, 3.4), coupon_share=0.6,
+        cart_rate=(0.07, 0.11),          # 상품 본 사람 중 담는 비율이 낮음 → 퍼널 진단: 상품 보고 안 담음
+        meta_ctr=(0.004, 0.008),         # 메타 링크 클릭률이 낮음 → '광고 쪽부터'
         prediction=dict(budget=210_000, naver=68_000, meta=142_000, clicks=145.0, cpc=1_450.0, new=1.4, cvr=0.0126,
                         wins=0, p10=-190_000, p90=-110_000),
         campaign=("원두_쇼핑검색", "원두커피_상품", "원두_판매_10월"),
@@ -42,6 +44,8 @@ EXAMPLES = {
         naver=120_600, meta=379_400, naver_cpc=1_450, meta_cpc=1_300, cvr=0.05,   # 실제 광고 성과가 가정(1.26%)보다 좋음
         naver_tracking=True, meta_overcount=0.6,
         meta_reach=(1_800, 2_600), meta_freq=(1.6, 2.2), coupon_share=0.9,
+        cart_rate=(0.25, 0.32),          # 담기는 잘 되는데 결제까지 덜 감 → 퍼널 진단: 담고 안 삼
+        meta_ctr=(0.010, 0.015),         # 메타 링크 클릭률은 정상 → '광고보다 가게 쪽'
         prediction=dict(budget=500_000, naver=120_600, meta=379_400, clicks=375.0, cpc=1_333.0, new=4.2, cvr=0.0126,
                         wins=85, p10=-63_000, p90=1_010_000),
         campaign=("프로틴_파워링크", "프로틴쉐이크_상품", "프로틴_판매_10월"),
@@ -109,7 +113,7 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
         visits = int(max(day_orders, 1) / 0.03) + n_clk + m_clk + int(rng.integers(0, 15))
         views = int(visits * rng.uniform(0.55, 0.7))
         stats.append({"날짜": day.strftime("%Y-%m-%d"), "유입수": visits, "상품상세조회수": views,
-                      "장바구니수": max(int(views * rng.uniform(0.07, 0.11)), day_orders), "결제수": day_orders,
+                      "장바구니수": max(int(views * rng.uniform(*cfg["cart_rate"])), day_orders), "결제수": day_orders,
                       "결제금액": day_orders * cfg["price"]})
         n_imp = int(n_clk / rng.uniform(0.008, 0.014)) if n_clk else int(rng.integers(150, 400))
         n_conv = n_buy if cfg["naver_tracking"] else 0
@@ -118,8 +122,9 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
                            "클릭률(%)": round(100 * n_clk / n_imp, 2) if n_imp else 0,
                            "평균클릭비용(VAT포함,원)": cfg["naver_cpc"] if n_clk else 0, "총비용(VAT포함,원)": n_clk * cfg["naver_cpc"],
                            "전환수": n_conv, "전환매출액(원)": n_conv * cfg["price"]})
-        reach = int(rng.integers(*cfg["meta_reach"]))
-        m_imp = int(reach * rng.uniform(*cfg["meta_freq"]))
+        rng.integers(*cfg["meta_reach"])                 # (난수 순서를 지키려고 남겨 둔 뽑기)
+        m_imp = max(int(m_clk / rng.uniform(*cfg["meta_ctr"])), 200)   # 노출 = 링크 클릭 ÷ 클릭률
+        reach = max(int(m_imp / (sum(cfg["meta_freq"]) / 2)), 1)        # 도달 = 노출 ÷ 평균 빈도
         results = int(m_results[i])
         spend = m_clk * cfg["meta_cpc"]
         meta_rows.append({

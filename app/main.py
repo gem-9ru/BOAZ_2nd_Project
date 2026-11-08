@@ -405,6 +405,23 @@ def ads_guide(a: dict):
         st.caption("확인 표시: ✅ 공식 문서로 확인 · △ 다른 자료나 코치 판단 · ❓ 공식 확인 못 함 · 🧮 이 앱이 계산한 값. "
                    "실제 광고 집행은 사장님 계정에서 직접 하세요(이 앱은 광고 계정에 쓰지 않아요).")
 
+def funnel_box(diag):
+    """퍼널 진단 (MVP 7a): 들어온 100명 → 상품 본 ○명 → 담은 ○명 → 산 ○명, 기준보다 가장 많이 빠지는 단계 하나와 할 일."""
+    ss["store_diag"] = diag
+    if not diag:
+        return
+    with st.container(border=True):
+        st.markdown("**손님이 어디서 빠지나요?**  \n" + " → ".join(f"{n} {v:,.1f}명" if n != "들어온" else "들어온 100명" for n, v in diag["per100"]))
+        if diag["hold"]:
+            st.markdown(f"들어온 사람이 {diag['visits']:,.0f}명이라 아직 어디서 빠지는지 판단하기 일러요. {MS.FUNNEL_MIN_VISITS}명 넘게 모인 뒤 다시 보세요.")
+        elif diag["worst"]:
+            w = diag["worst"]
+            st.markdown(f"가장 많이 빠지는 곳: **{w['name']}** (100명 중 {w['rate'] * 100:.1f}명, 기준 {w['base'] * 100:.1f}명)  \n👉 {w['action']}")
+        else:
+            st.markdown("모든 단계가 기준보다 좋아요. 가게 안보다는 광고로 더 많이 데려오는 쪽을 보세요.")
+        st.caption("기준: GA4 공개 샘플 쇼핑몰의 단계별 비율(등급 C, 업종 평균 아님). 판매처 통계에는 광고 외 손님도 섞여 있어요.")
+
+
 def plan_download(a: dict, key: str):
     """내 계획 파일 받기 (가정 A4: 로그인 없이 JSON). 입력·예측·시작일만 담고 개인정보는 없음."""
     data = RP.plan_to_json({k: ss.get(k) for k in RP.PLAN_INPUT_KEYS}, a["prediction"], ss.get("coach_started"))
@@ -493,6 +510,11 @@ def report_section(a: dict):
     for r in reps:
         if r.get("conversions_note"):
             st.caption(f"{r['file']}: {r['conversions_note']}")
+    # 가게 퍼널(판매처 통계)과 광고 클릭률을 합친 한 줄 (7a)
+    imp_all, clk_all = sumk(reps, "impressions"), sumk(reps, "clicks")
+    combo = MS.ad_or_store(clk_all / imp_all if imp_all else None, ss.get("store_diag"))
+    if combo:
+        st.markdown("🧭 " + combo)
     # 진단
     findings = [d for r in reps for d in RP.diagnose(r, pred.get("cvr") or cparams.cvr)]
     st.markdown("**무엇이 문제인가요?**" if findings else "**규칙에 걸린 문제는 없어요.**")
@@ -914,6 +936,7 @@ with coach_tab:
             store_file = st.file_uploader("판매처 통계 파일 (선택, CSV·엑셀): 스마트스토어·쿠팡·쇼핑몰 관리자에서 내려받은 일별 통계",
                                           type=["csv", "xlsx", "xls"], key="store_file")
             store_tot = None
+            ss.pop("store_diag", None)
             if store_file is not None:
                 try:
                     sdf = RP.read_report(store_file)   # BOM 있는 CSV도
@@ -944,6 +967,7 @@ with coach_tab:
                                + (f" → 방문 100명 중 {store_tot['orders'] / store_tot['visits'] * 100:.1f}명이 샀습니다 (광고 외 손님 포함)."
                                   if store_tot.get("visits") and store_tot.get("orders") else "")
                                + " 이 퍼널은 다음 단계 '로그 분석'에도 채워집니다.")
+                    funnel_box(MS.diagnose_funnel(store_tot))
                     if store_tot.get("orders") and ss.get("_toasted_file") != (store_file.name, ss.get("store_month")):
                         ss["q_total"] = int(store_tot["orders"])
                         ss["_toasted_file"] = (store_file.name, ss.get("store_month"))

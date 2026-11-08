@@ -141,3 +141,55 @@ def months_in(df: pd.DataFrame, col: str) -> List[str]:
 def only_month(df: pd.DataFrame, col: str, month: str) -> pd.DataFrame:
     """month = 'YYYY-MM'인 행만."""
     return df[parse_dates(df[col]).dt.strftime("%Y-%m") == month]
+
+
+# ── 퍼널 진단 (MVP 7a): 판매처 통계로 "들어온 100명 → 상품 본 ○명 → 담은 ○명 → 산 ○명" ─────────────
+FUNNEL_MIN_VISITS = 100     # 들어온 사람이 이보다 적으면 판단 보류
+# 단계: (키, 이전 키, 화면 이름, 빠질 때 할 일)
+FUNNEL_DIAG_STEPS = [
+    ("views", "visits", "들어와서 상품을 봄", "들어와서 바로 나가요. 광고 문구·사진과 실제 상품·첫 화면이 맞는지 먼저 보세요."),
+    ("cart", "views", "상품을 보고 담음", "상품을 보고도 안 담아요. 상세페이지·가격·후기를 먼저 고치세요."),
+    ("orders", "cart", "담고 삼", "담고도 안 사요. 배송비·결제 단계를 먼저 보세요 (공개 샘플에서도 장바구니 뒤 이탈이 큰 구간이에요)."),
+]
+
+
+def funnel_baseline() -> Dict[str, float]:
+    """기준값: defaults.FUNNEL_STEPS의 GA4 공개 샘플 단계 전환율 (등급 C). 담고 삼 = 결제 시작 × 구매."""
+    from . import defaults as D
+    r = dict(D.FUNNEL_STEPS)
+    return {"views": r["③ 상품 조회"], "cart": r["③ 장바구니"], "orders": r["③ 결제 시작"] * r["④ 구매"]}
+
+
+def diagnose_funnel(totals: Dict[str, Optional[float]]) -> Optional[Dict]:
+    """→ {"per100": [...], "steps": [{name, rate, base, ratio}], "worst": 단계 또는 None, "action", "hold"}.
+    있는 단계만 계산. 기준 대비 비율(실측 ÷ 기준)이 가장 낮은 단계 하나만 짚는다."""
+    visits = totals.get("visits")
+    if not visits:
+        return None
+    base = funnel_baseline()
+    per100, steps, prev_count = [("들어온", 100.0)], [], visits
+    for key, prev, name, action in FUNNEL_DIAG_STEPS:
+        cur, before = totals.get(key), totals.get(prev)
+        if not cur or not before:
+            continue
+        rate = cur / before
+        steps.append({"key": key, "name": name, "rate": rate, "base": base[key], "ratio": rate / base[key], "action": action})
+        per100.append(({"views": "상품 본", "cart": "담은", "orders": "산"}[key], 100 * cur / visits))
+    if not steps:
+        return None
+    hold = visits < FUNNEL_MIN_VISITS
+    worst = min(steps, key=lambda s: s["ratio"])
+    if worst["ratio"] >= 1:
+        worst = None                                  # 모든 단계가 기준보다 좋음
+    return {"per100": per100, "steps": steps, "worst": None if hold else worst, "hold": hold, "visits": visits}
+
+
+def ad_or_store(ctr: Optional[float], diag: Optional[Dict], ctr_ok: float = 0.01) -> Optional[str]:
+    """광고 리포트(클릭률)와 퍼널 진단을 합친 한 줄."""
+    if ctr is None or not diag or diag["hold"]:
+        return None
+    if ctr < ctr_ok:
+        return f"광고 클릭률이 {ctr:.1%}로 낮아요 → **광고 쪽부터** (문구·사진·타깃)."
+    if diag["worst"]:
+        return f"광고 클릭률은 {ctr:.1%}로 괜찮은데 가게 안에서 빠져요 → **광고보다 가게 쪽** ({diag['worst']['name']} 단계)."
+    return f"광고 클릭률 {ctr:.1%}, 가게 안 단계도 기준보다 좋아요 → 예산을 늘려 볼 만해요."

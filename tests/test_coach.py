@@ -236,3 +236,28 @@ def test_store_stats_one_month():
     oct_ = MS.only_month(df, col, "2026-10")
     assert oct_["결제수"].sum() == 5
     assert MS.detect_date_column(pd.DataFrame({"유입수": [1], "결제수": [1]})) is None
+
+
+def test_funnel_diagnosis_on_both_demo_examples():
+    import pandas as pd
+    from pathlib import Path
+    from src.engine import measure as MS
+    base = Path(__file__).resolve().parents[1] / "data" / "examples" / "demo_store"
+    got = {}
+    for ex in ("coffee", "protein"):
+        df = pd.read_csv(base / ex / "store_stats.csv")
+        d = MS.diagnose_funnel(MS.store_totals(df, MS.detect_columns(list(df.columns))))
+        assert not d["hold"] and d["per100"][0] == ("들어온", 100.0) and len(d["per100"]) == 4
+        got[ex] = d["worst"]["key"]
+    assert got == {"coffee": "cart", "protein": "orders"}          # 예시마다 다른 단계가 짚힘
+
+
+def test_funnel_hold_and_ad_or_store():
+    from src.engine import measure as MS
+    small = MS.diagnose_funnel({"visits": 50, "views": 20, "cart": 2, "orders": 1})
+    assert small["hold"] and small["worst"] is None and MS.ad_or_store(0.02, small) is None
+    d = MS.diagnose_funnel({"visits": 1000, "views": 220, "cart": 10, "orders": 4})
+    assert d["worst"]["key"] == "cart" and "상세페이지" in d["worst"]["action"]
+    assert "가게 쪽" in MS.ad_or_store(0.015, d) and "광고 쪽부터" in MS.ad_or_store(0.004, d)
+    assert MS.funnel_baseline()["orders"] == pytest.approx(0.769 * 0.438, abs=1e-3)
+    assert MS.diagnose_funnel({"visits": None}) is None
