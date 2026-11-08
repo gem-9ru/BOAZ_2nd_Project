@@ -47,7 +47,7 @@ def test_same_seed_same_result_and_fast():
     a = MC.run(sp["channels"], sp["spends"], params, g)
     assert time.time() - t < 1.0
     b = MC.run(sp["channels"], sp["spends"], params, g)
-    assert a["wins"] == b["wins"] and a["p10"] == b["p10"] and a["n"] == 1_000
+    assert a["wins"] == b["wins"] and a["p10"] == b["p10"] and a["n"] == 10_000
     assert a["p10"] < a["p50"] < a["p90"]
     assert a["wins_first"] <= a["wins"]          # 첫 구매만 보면 남는 경우가 더 적거나 같음
 

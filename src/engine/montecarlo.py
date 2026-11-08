@@ -11,7 +11,7 @@ import numpy as np
 
 from . import defaults as D
 
-N_RUNS = 1_000
+N_RUNS = 10_000         # 1만 번 (MVP 7c, 벡터 계산이라 약 1ms)
 SEED = 20261109
 
 
