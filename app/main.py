@@ -49,6 +49,7 @@ from src.engine import seasonal as SE  # noqa: E402
 from src.engine import montecarlo as MC  # noqa: E402
 from src.engine import report as RP  # noqa: E402
 from src.engine import guide as GD  # noqa: E402
+from src.engine import chat_intake as CI  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -223,6 +224,66 @@ def _num_input(label, key, **kw):
     if key not in ss:
         kw["value"] = None
     return st.number_input(label, key=key, **kw)
+
+
+def chat_intake():
+    """챗봇 입구 (Phase 7): 대화 → 정해진 필드 → '이렇게 이해했어요' 확인 카드 → 사용자가 고친 값만 코치에 반영."""
+    st.markdown("#### 무엇을 파는지 편하게 말해 주세요")
+    st.caption("예: '원두를 스마트스토어에서 2만 원에 팔고, 하나 팔면 7천 원쯤 남아요. 광고비는 한 달 30만 원까지.' "
+               "이름·전화번호 같은 개인정보는 적지 마세요(보내기 전에 지워요). 대화 내용은 Claude(Anthropic)로 보내 숫자만 뽑아요.")
+    hist = ss.setdefault("chat_hist", [])
+    fields = ss.setdefault("chat_fields", {})
+    if not hist:
+        with st.chat_message("assistant"):
+            st.markdown("안녕하세요! 무엇을, 어디서, 얼마에 파시나요?")
+    for m in hist:
+        with st.chat_message(m["role"]):
+            st.markdown(m["content"])
+    said = st.chat_input("여기에 적어 주세요")
+    if said:
+        hist.append({"role": "user", "content": said})
+        try:
+            with st.spinner("이해하는 중…"):
+                out = CI.ask(CI.make_client(), hist)
+        except CI.IntakeUnavailable as e:
+            hist.pop()
+            ss["chat_error"] = str(e)
+        else:
+            ss.pop("chat_error", None)
+            hist.append({"role": "assistant", "content": out["reply"] or "조금 더 알려 주세요."})
+            fields.update({k: v for k, v in out.items() if k in CI.FIELD_KEYS and v is not None})
+            fields["done"] = out["done"]
+        st.rerun()
+    if ss.get("chat_error"):
+        st.warning(f"지금은 대화로 받을 수 없어요 ({ss['chat_error']}). 아래 질문 폼으로 이어서 넣어 주세요. 지금까지 알아낸 숫자는 옮겨 드려요.", icon="📝")
+    if fields or ss.get("chat_error"):
+        with st.container(border=True):
+            st.markdown("**이렇게 이해했어요** · 틀린 숫자는 고쳐 주세요 (확인 전에는 반영하지 않아요)")
+            c1, c2, c3 = st.columns(3)
+            price_v = c1.number_input("판매가 (원)", 0, 100_000_000, int(fields.get("price") or 0), 1_000, key="cf_price")
+            profit_v = c2.number_input("1개 팔면 남는 돈 (원)", 0, 100_000_000, int(fields.get("profit") or 0), 1_000, key="cf_profit")
+            budget_v = c3.number_input("한 달 최대 광고비 (원)", 0, 1_000_000_000, int(fields.get("budget") or 0), 10_000, key="cf_budget")
+            c4, c5 = st.columns(2)
+            kw_v = c4.text_input("검색어", fields.get("keyword") or "", key="cf_kw")
+            c5.text_input("광고로 바라는 것", fields.get("goal") or "", disabled=True, key="cf_goal",
+                          help="코치는 지금 '판매'를 기준으로 계산해요.")
+            if profit_v and price_v and profit_v > price_v:
+                st.markdown(":red[남는 돈은 판매가보다 작아야 해요. 원가·배송비·수수료를 뺀 금액을 넣어 주세요.]")
+            vals, missing = CI.to_coach_inputs({"price": price_v, "profit": profit_v, "budget": budget_v, "keyword": kw_v})
+            if missing:
+                st.caption("아직 필요한 숫자: " + ", ".join(missing))
+            go = st.button("이대로 시작 ▶", type="primary", disabled=bool(missing) or (profit_v > price_v))
+            if go or st.button("질문 폼으로 넣기", type="tertiary"):
+                for k, v in vals.items():
+                    ss[k] = v
+                ss["coach_mode"] = "mine"
+                ss["coach_step"] = 1 if go else 0
+                ss["coach_seen"] = ss["coach_step"]
+                st.rerun()
+    elif not hist:
+        if st.button("대화 말고 질문 폼으로", type="tertiary"):
+            ss["coach_mode"] = "mine"
+            st.rerun()
 
 
 def ads_guide(a: dict):
@@ -519,8 +580,12 @@ with coach_tab:
     if mode is None and ans is None:
         # 첫 사용 빈 화면: 다음 행동 하나 + 예시 체험 (UX 3-2)
         st.markdown("### 판매가와 1개 팔면 남는 돈만 넣으면, 광고비를 얼마까지 써도 되는지 알려 드려요.")
-        b1, b2, _ = st.columns([1, 1.4, 1])
-        if b1.button("내 가게 숫자 넣기", type="primary"):
+        chat_ok = CI.make_client() is not None     # 키가 없으면 대화 입구를 숨기고 질문 폼만 (가정 A3)
+        b0, b1, b2 = st.columns([1.2, 1, 1.4]) if chat_ok else (None, *st.columns([1, 1.4]))
+        if chat_ok and b0.button("💬 대화로 시작하기", type="primary"):
+            ss["coach_mode"], ss["chat_hist"], ss["chat_fields"] = "chat", [], {}
+            st.rerun()
+        if b1.button("내 가게 숫자 넣기", type="secondary" if chat_ok else "primary"):
             ss["coach_mode"] = "mine"
             st.rerun()
         if b2.button("예시로 먼저 보기: 원두 쇼핑몰"):
@@ -532,6 +597,8 @@ with coach_tab:
         st.caption("예시: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 한 달 최대 광고비 30만 원, 검색어 '원두커피'")
         with st.expander("한 달 전에 계획을 세웠나요? 계획 파일 불러오기"):
             plan_upload("plan_up_empty")
+    elif mode == "chat":
+        chat_intake()
     else:
         if mode == "example" and not ss.get("_closed_example"):
             e1, e2, e3 = st.columns([10, 2, 0.6])
