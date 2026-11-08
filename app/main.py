@@ -882,9 +882,16 @@ with coach_tab:
                 basis = CO.ad_sales(coupon_n, report_n, total_n, baseline)
                 v = CO.judge(int(days), float(spent), float(clicks_in), basis, be, a["cpc"], a["ch_name"])
                 if v.step == 0:
-                    todo = f"같은 예산으로 2주 더 돌린 뒤 다시 와 주세요 ({ready_day} 이후)."
+                    # 보류 이유를 나눠 안내: 기간이 짧은지, 판매 수가 적은지 (이미 14일이 지났는데 날짜를 말하지 않게)
+                    short_days = int(days) < CO.MIN_DAYS
+                    if short_days:
+                        todo = f"같은 예산으로 계속 돌리고 {ready_day} 이후 다시 와 주세요."
+                        why_hold = f"광고한 지 {CO.MIN_DAYS}일이 안 됐어요. {ready_day} 이후 다시 와 주세요."
+                    else:
+                        todo = f"같은 예산으로 2주 더 돌려 광고 판매를 {CO.MIN_SALES}건 넘게 모은 뒤 다시 와 주세요."
+                        why_hold = f"광고로 온 판매가 {CO.MIN_SALES}건이 안 돼서 우연일 수 있어요. 2주 더 모은 뒤 다시 와 주세요."
                     with hold_slot:
-                        _closable_banner("hold", f"판단 보류: {CO.MIN_DAYS}일 뒤 다시 와 주세요. 판매가 {CO.MIN_SALES}건 이상 모이면 판정할 수 있어요.", "⏸️")
+                        _closable_banner("hold", f"판단 보류: {why_hold}", "⏸️")
                 elif v.paused:
                     todo = f"상세페이지 사진·후기부터 고치기 → 고친 뒤 {won(v.next_budget)}으로 다시 시험"
                 elif v.step == 4:
