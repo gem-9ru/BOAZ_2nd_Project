@@ -141,3 +141,31 @@ META_GUIDE = {
         META_GUIDE_PRODUCTS[2]: "실제 공간·사람 사진, 위치·예약 방법을 문구에 명시",
     },
 }
+
+# ── 데이터 신뢰 등급 (노션 11/9, plans/pending/notion-v2-alignment.md 2.1) ─────────────
+# A 실측(사장님 장부·내 광고 리포트) · B 플랫폼 예측(네이버 예상 실적 등) · C 공개 데이터(GA4·Kaggle·UCI) · D 가정
+GRADE_LABELS = {"A": "실측", "B": "플랫폼 예측", "C": "공개 데이터", "D": "가정"}
+# 몬테카를로 불확실성 폭 (가정 A2 초안): 로그정규, 표준편차 = ln(1 + 폭)
+GRADE_WIDTH = {"A": 0.10, "B": 0.25, "C": 0.40, "D": 0.60}
+# 엔진 입력별 등급 (값 → 등급, 근거)
+INPUT_GRADES = {
+    "MONTHLY_BUDGET": ("A", "사장님 입력"),
+    "AOV": ("A", "사장님 입력 (판매가)"),
+    "MARGIN": ("A", "사장님 입력 (남는 돈 ÷ 판매가)"),
+    "CHANNEL_SHARES": ("D", "초기 배분 가정 (코치는 split_budget으로 계산)"),
+    "NAVER_CVR_MULT": ("D", "검색 의도 기준 1.0 가정"),
+    "NAVER_RETENTION_MULT": ("D", "가정"),
+    "NAVER_FALLBACK_CPC": ("C", "분석 Q1 공개 키워드 63개 중앙값"),
+    "META_BASE_CPC": ("D", "임시값"),
+    "META_SATURATION": ("D", "임시값"),
+    "META_CVR_MULT": ("D", "가정"),
+    "META_RETENTION_MULT": ("D", "가정"),
+    "META_TARGETS": ("C", "Kaggle Sales Conversion Optimization"),
+    "FUNNEL_STEPS": ("C", "GA4 공개 샘플 (첫 단계 클릭 → 방문 0.85는 가정)"),
+    "RETENTION_FLOOR": ("D", "일반 쇼핑몰 가정"),
+    "RETENTION_DECAY": ("D", "일반 쇼핑몰 가정"),
+    "PURCHASE_FREQ": ("D", "임시값"),
+    "INVITE_RATE": ("D", "사용자 입력, 기본 0"),
+    "INVITE_CONV": ("D", "가정"),
+    "SATURATION_RATIO": ("C", "분석 Q1 포화 비율"),
+}

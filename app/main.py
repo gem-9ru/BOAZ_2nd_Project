@@ -46,6 +46,7 @@ from src.engine import defaults as D  # noqa: E402
 from src.engine import naver_source as ns  # noqa: E402
 from src.engine import naver_hub as NH  # noqa: E402
 from src.engine import seasonal as SE  # noqa: E402
+from src.engine import montecarlo as MC  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -222,6 +223,29 @@ def _num_input(label, key, **kw):
     return st.number_input(label, key=key, **kw)
 
 
+def hundred_bar(wins: int) -> str:
+    """100칸 막대 (자연 빈도 표현): 남는 경우는 초록, 손해는 회색. 색은 보조라 숫자 문장이 먼저 나옴."""
+    cells = "".join(f"<div style='width:9px;height:9px;border-radius:2px;background:{'#2e9e5b' if i < wins else 'rgba(127,127,127,.35)'}'></div>"
+                    for i in range(100))
+    return (f"<div role='img' aria-label='100번 중 {wins}번 남음' style='display:grid;grid-template-columns:repeat(50,9px);gap:3px;"
+            f"margin:4px 0 10px'>{cells}</div>")
+
+
+def grade_rows(a: dict) -> list:
+    g = a["grades"]
+    sp = a["split"]
+    rows = [{"숫자": "판매가", "값": won(price), "등급": "A 실측", "출처": "사장님 입력"},
+            {"숫자": "1개 팔면 남는 돈", "값": won(profit), "등급": "A 실측", "출처": "사장님 입력"}]
+    if sp["has_naver"]:
+        rows.append({"숫자": "네이버 클릭 비용", "값": won(sp["spends"][0] / max(sp["channels"][0].curve.clicks(sp["spends"][0]), 1e-9)) if sp["naver"] > 0 else "-",
+                     "등급": "B 플랫폼 예측", "출처": f"네이버 검색광고 예상 실적 '{a['kw']}'"})
+    rows.append({"숫자": "메타 클릭 비용", "값": won(sp["meta_cpc"]), "등급": f"{g['cpc_meta']} {D.GRADE_LABELS[g['cpc_meta']]}",
+                 "출처": "직접 입력" if g["cpc_meta"] == "A" else "대략값 (공개 키워드 중앙값)"})
+    rows.append({"숫자": "누른 사람 중 사는 비율", "값": f"{cparams.cvr * 100:.2f}%", "등급": "C 공개 데이터", "출처": "GA4 공개 샘플 퍼널"})
+    rows.append({"숫자": "1년 재구매", "값": f"{CO.REPURCHASE_PRESETS[repurchase]:g}번 ('{repurchase}')", "등급": "D 가정", "출처": "재구매 프리셋"})
+    return rows
+
+
 def split_card(a: dict, budget_label: bool = False):
     """네이버·메타 배분 카드 (노션 Q1): 금액, 근거(키워드 포화 지점), 비율별 비교 표."""
     sp = a["split"]
@@ -294,16 +318,19 @@ if price and profit and max_budget and not input_error:
     split = CO.split_budget(amount_of("recommended"), naver_curve, meta_cpc, cparams)
     cpc = split["cpc"]
     need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
-    light, _ = CO.signal(need)
-    # 기본 선택은 신호등에 따라 (🔴 = 광고 안 함). 사장님이 직접 고르기 전까지는 신호등이 바뀌면 기본도 따라감
-    default_pick = CO.default_budget_pick(light)
+    grades = CO.mc_grades(bool(ss.get("q_cpc")))
+    mc_rec = MC.run(split["channels"], split["spends"], cparams, grades)   # 권장 예산으로 100번
+    # 기본 선택은 결론 문장에 따라 (100번 중 50번 미만 = 광고 안 함). 사장님이 직접 고르기 전까지는 결론이 바뀌면 기본도 따라감
+    default_pick = CO.default_budget_pick(MC.action(mc_rec["wins"]))
     if not ss.get("_budget_touched") or ss.get("q_budget_pick") not in [o["key"] for o in options] + ["none"]:
         ss["q_budget_pick"] = default_pick
     pick_key = ss["q_budget_pick"]
     # 광고 안 함이면 다음 단계 탭에는 권장 예산을 넘김 (시뮬레이션용)
     budget0 = amount_of(pick_key if pick_key != "none" else "recommended")
+    mc = mc_rec
     if budget0 != amount_of("recommended"):
         split = CO.split_budget(budget0, naver_curve, meta_cpc, cparams)
+        mc = MC.run(split["channels"], split["spends"], cparams, grades)
     cpc_src = ("네이버 예상 실적 '" + kw + "' + 메타 대략값, 배분한 예산의 평균" if split["has_naver"]
                else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
     if ss.get("q_cpc"):
@@ -311,7 +338,7 @@ if price and profit and max_budget and not input_error:
     ch_name = "메타 광고" if split["meta"] > 0 else "네이버 검색광고"   # 판정의 학습 구간 경고용 (메타가 있으면 7일 학습)
     season_idx, season_src = load_season(kw) if kw else (None, "계절성 미반영 (검색어 없음)")
     ans = dict(be=be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, split=split,
-               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, light=light, options=options, budget0=budget0,
+               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, mc=mc, grades=grades, options=options, budget0=budget0,
                default_pick=default_pick)
     coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
                  channel=ch_name, repurchase=repurchase)
@@ -376,6 +403,8 @@ with coach_tab:
                     st.markdown(":red[남는 돈은 판매가보다 작아야 해요. 원가·배송비·수수료를 뺀 금액을 넣어 주세요.]")
             st.segmented_control("한 번 산 손님이 다시 사나요?", list(CO.REPURCHASE_PRESETS), key="q_repurchase")
             st.caption("1년 동안 다시 사는 횟수로 계산해요: 거의 안 삼 0번 · 가끔 0.5번 · 자주 2번 (모두 가정값)")
+            st.caption("믿을 만한 정도(등급): 판매가·남는 돈·최대 광고비는 사장님이 아는 숫자라 **A 실측**, 재구매는 감으로 고르는 값이라 **D 가정**이에요. "
+                       "답은 등급이 낮은 숫자일수록 넓게 흔들어 계산해요.")
             c3, c4 = st.columns(2)
             with c3:
                 _num_input("한 달에 광고에 쓸 수 있는 최대 금액 (원)", "q_budget", min_value=0, max_value=1_000_000_000, step=100_000,
@@ -395,28 +424,39 @@ with coach_tab:
         elif cur == 1:
             a = ans
             be = a["be"]
-            st.markdown("#### 손님 1명에 얼마까지 쓸 수 있고, 광고가 맞는 상품인가요?")
-            r1, r2, r3, r4, r5 = st.columns([3, 0.6, 3, 0.6, 4])
-            r1.metric("손님 1명에 최대 (첫 구매만)", won(be.first))
-            r2.markdown("<div style='font-size:28px;text-align:center;padding-top:22px'>÷</div>", unsafe_allow_html=True)
-            r3.metric("클릭 1번 비용 (평균)", won(a["cpc"]))
-            r4.markdown("<div style='font-size:28px;text-align:center;padding-top:22px'>→</div>", unsafe_allow_html=True)
-            r5.metric("100명 중 몇 명이 사야 남나", f"{a['need'] * 100:.1f}명")
-            word = CO.SIGNAL_WORDS[a["light"]]
-            getattr(st, {"🟢": "success", "🟡": "warning", "🔴": "error"}[a["light"]])(
-                f"### {a['light']} {word}\n"
-                f"보통은 100명 중 {CO.REFERENCE_RATES['GA4 공개 샘플 유료 검색 유입'] * 100:.2f}~{CO.REFERENCE_RATES['GA4 공개 샘플 전체'] * 100:.2f}명이 삽니다 "
-                "(참고 기준: GA4 공개 샘플 쇼핑몰의 검색광고 손님·전체 손님, 업종 평균 아님).")
-            st.caption("참고 비율은 가게에 **들어온** 손님 기준이고, 위 '몇 명이 사야 남나'는 광고를 **누른** 손님 기준이에요. "
-                       "누른 사람이 모두 들어오진 않아서 실제로는 조금 더 어려워요.")
-            if a["light"] == "🔴":
-                sales, loss = CO.expected_loss(a["budget0"], a["cpc"], profit)
-                if loss > 0:
-                    st.markdown(f"**이대로 시험 예산 {won(a['budget0'])}을 쓰면 약 {won(loss)} 손해가 예상돼요.**")
-                    st.caption(f"계산: 예산 {won(a['budget0'])} ÷ 클릭 {won(a['cpc'])} × 구매 비율 {CO.LOSS_REFERENCE_RATE * 100:.2f}% = 판매 약 {sales:.0f}건, 예산 − 판매 × 남는 돈 {won(profit)} = 손해. 구매 비율 출처: GA4 공개 샘플 쇼핑몰 검색광고 손님 (참고 기준)")
+            mc = a["mc"]
+            wins, act = mc["wins"], MC.action(mc["wins"])
+            st.markdown(f"#### 시험 예산 {won(a['budget0'])}으로 한 달 광고하면 남을까요?")
+            st.markdown(f"### 100번 해 보면 1년 동안 {wins}번은 남고, {100 - wins}번은 손해예요")
+            st.markdown(hundred_bar(wins), unsafe_allow_html=True)
+            st.markdown(f"1년 동안 남는 돈: 보통 **{won(mc['p10'])} ~ {won(mc['p90'])}** (100번 중 가운데 80번의 범위)")
+            getattr(st, {"go": "success", "small": "warning", "prep": "error"}[act])(
+                f"**{MC.ACTION_TEXT[act]}.** " + {
+                    "go": "100번 중 80번 넘게 남아요. 권장 예산으로 시작하고 한 달 뒤 실제 숫자로 다시 계산하세요.",
+                    "small": "남는 경우가 손해보다 많지만 확실하진 않아요. 작게 시작해서 실제 숫자를 먼저 확인하세요.",
+                    "prep": "100번 중 절반도 남지 않아요. 상세페이지·후기·가격 구성을 먼저 다듬거나, 팔린 만큼만 내는 방식을 보세요.",
+                }[act])
+            st.markdown(f"첫 구매만 보면 100번 중 **{mc['wins_first']}번** 남아요. "
+                        "다시 사는 손님까지 봐야 광고의 진짜 값이 보여요.")
+            if act == "prep":
                 st.markdown(f"광고 대신 **공동구매·제휴**(팔린 만큼만 냄)라면 판매액의 **{profit / price:.0%} 이하** 수수료일 때 남습니다.")
-            if be.year > be.first:
-                st.caption(f"다시 사는 손님까지 치면 손님 1명에 {won(be.year)}, 100명 중 {a['need_year'] * 100:.1f}명이면 됩니다 (재구매 '{repurchase}' 가정값).")
+            with st.expander("왜 이렇게 나왔나요?"):
+                r1, r2, r3, r4, r5 = st.columns([3, 0.6, 3, 0.6, 4])
+                r1.metric("손님 1명에 최대 (첫 구매만)", won(be.first))
+                r2.markdown("<div style='font-size:28px;text-align:center;padding-top:22px'>÷</div>", unsafe_allow_html=True)
+                r3.metric("클릭 1번 비용 (평균)", won(a["cpc"]))
+                r4.markdown("<div style='font-size:28px;text-align:center;padding-top:22px'>→</div>", unsafe_allow_html=True)
+                r5.metric("100명 중 몇 명이 사야 남나", f"{a['need'] * 100:.1f}명")
+                st.caption(f"보통은 100명 중 {CO.REFERENCE_RATES['GA4 공개 샘플 유료 검색 유입'] * 100:.2f}~{CO.REFERENCE_RATES['GA4 공개 샘플 전체'] * 100:.2f}명이 삽니다 "
+                           "(참고 기준: GA4 공개 샘플 쇼핑몰의 검색광고 손님·전체 손님, 업종 평균 아님). 참고 비율은 가게에 들어온 손님 기준이고, "
+                           "'몇 명이 사야 남나'는 광고를 누른 손님 기준이에요.")
+                if be.year > be.first:
+                    st.caption(f"다시 사는 손님까지 치면 손님 1명에 {won(be.year)}, 100명 중 {a['need_year'] * 100:.1f}명이면 됩니다 (재구매 '{repurchase}' 가정값).")
+                st.markdown("**이 답에 쓴 숫자와 믿을 만한 정도**")
+                st.dataframe(pd.DataFrame(grade_rows(a)), hide_index=True, use_container_width=True)
+                st.caption("등급: A 실측(사장님 장부·내 광고 리포트) · B 플랫폼 예측(네이버 예상 실적) · C 공개 데이터(GA4 등) · D 가정. "
+                           f"'100번'은 이 숫자들을 등급만큼 흔들어(A ±10%, B ±25%, C ±40%, D ±60%) {mc['n']:,}번 계산해 센 값이에요 "
+                           "(한 달 광고 → 그 달에 온 손님이 1년 동안 남기는 돈 − 광고비). 같은 입력이면 늘 같은 결과가 나와요.")
             split_card(a)
             if a["season_idx"]:   # 계절성 (네이버 데이터랩): 꼭 알아야 하는 정보라 캡션으로 (툴팁 아님)
                 pk, lo = SE.peak_low(a["season_idx"])
@@ -463,7 +503,7 @@ with coach_tab:
             st.radio("고를 예산", [o["key"] for o in opts], format_func=lambda k, _o=tuple(opts): next(o["label"] for o in _o if o["key"] == k),
                      horizontal=True, key="q_budget_pick", on_change=lambda: ss.__setitem__("_budget_touched", True))
             no_ad = ss.get("q_budget_pick") == "none"
-            if a["light"] == "🔴" and not no_ad:
+            if MC.action(a["mc"]["wins"]) == "prep" and not no_ad:
                 sales, loss = CO.expected_loss(a["budget0"], a["cpc"], profit)
                 if loss > 0:
                     st.warning(f"고른 예산 {won(a['budget0'])}이면 약 {won(loss)} 손해가 예상돼요. 작게 시작하거나 상세페이지부터 다듬어 보세요.")

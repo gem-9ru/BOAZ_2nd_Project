@@ -12,8 +12,6 @@ from typing import Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
 # ── 확정 값 (8장) ─────────────────────────────────────────────
-SIGNAL_GREEN = 0.01       # 필요한 구매 비율 ≤ 1% 🟢
-SIGNAL_YELLOW = 0.03      # 1~3% 🟡, 3% 초과 🔴
 # 참고 기준 (한 쇼핑몰 값, 업종 평균 아님). 방문한 손님 중 산 비율 = 방문 기준 (필요한 비율은 클릭 기준)
 # '전체'는 유입 매체가 지워진 손님 '(data deleted)'를 뺀 값 (그 묶음만 구매율 8%로 튀는 마스킹 이상값, 분석 보고서 4장). 엔진 퍼널과 같은 범위
 REFERENCE_RATES = {"GA4 공개 샘플 유료 검색 유입": 0.0119, "GA4 공개 샘플 전체": 0.0149}
@@ -47,14 +45,6 @@ def breakeven(profit_per_sale: float, repurchases: float) -> Breakeven:
 def required_rate(cpc: float, be_cpa: float) -> float:
     """필요한 구매 비율 = 클릭 1번 비용 ÷ 손익분기 CPA (클릭한 사람 중 몇 %가 사야 남나)."""
     return cpc / be_cpa if be_cpa > 0 else float("inf")
-
-
-def signal(rate: float) -> Tuple[str, str]:
-    if rate <= SIGNAL_GREEN:
-        return "🟢", "광고로 남길 수 있는 상품입니다."
-    if rate <= SIGNAL_YELLOW:
-        return "🟡", "평균보다 잘 팔려야 남습니다. 상세페이지와 후기를 먼저 갖추고 작게 시작하세요."
-    return "🔴", "광고만으로는 남기기 어렵습니다. 공동구매처럼 팔린 만큼만 내는 방식이나 가격·구성 조정을 먼저 보세요."
 
 
 def test_budget(max_budget: float, be_first: float) -> Tuple[float, Optional[str]]:
@@ -185,7 +175,6 @@ def _preset_name(repurchases: float) -> str:
 
 
 # ── v0.9 UX 개편 (UX_개편안.md 3-3 ~ 3-6): 계산 규칙은 그대로, 보여 주는 방식만 ──────────────
-SIGNAL_WORDS = {"🟢": "광고해 볼 만해요", "🟡": "작게 시험해 보세요", "🔴": "광고만으로는 어려워요"}
 LOSS_REFERENCE_RATE = REFERENCE_RATES["GA4 공개 샘플 유료 검색 유입"]   # 손실 예상에 쓰는 보통 구매 비율 (참고 기준)
 INTERVIEW_QUESTIONS = [
     "상품을 보고도 사지 않았던 이유가 뭐였나요? (가격, 배송, 믿음, 정보 부족 중에서)",
@@ -241,9 +230,16 @@ def today_kst(now: Optional[datetime] = None) -> date:
     return (now or datetime.now(KST)).astimezone(KST).date()
 
 
-def default_budget_pick(light: str) -> str:
-    """시험 예산 기본 선택 = 실제로 권하는 값 (UX 설계원칙 4장). 🔴이면 손해가 예상되므로 '광고 안 함', 그 밖엔 권장."""
-    return "none" if light == "🔴" else "recommended"
+def default_budget_pick(action: str) -> str:
+    """시험 예산 기본 선택 = 실제로 권하는 값 (UX 설계원칙 4장). 결론이 '준비가 먼저'(100번 중 50번 미만)면 '광고 안 함'."""
+    return "none" if action == "prep" else "recommended"
+
+
+def mc_grades(meta_cpc_measured: bool) -> Dict[str, str]:
+    """코치 몬테카를로에서 흔드는 입력과 등급: 판매가·마진은 사장님 입력(A), 네이버 클릭은 예상 실적(B),
+    메타 클릭은 직접 넣으면 A·아니면 가정(D), 구매 비율은 GA4 공개 샘플(C), 재구매는 프리셋 가정(D)."""
+    return {"aov": "A", "margin": "A", "cpc_naver": "B", "cpc_meta": "A" if meta_cpc_measured else "D",
+            "cvr": "C", "retention": "D"}
 
 
 # ── 네이버·메타 예산 배분 (노션 Q1) ──────────────────────────────

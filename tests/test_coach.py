@@ -17,12 +17,6 @@ def test_breakeven_first_and_year():
     assert C.REPURCHASE_PRESETS == {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0}
 
 
-@pytest.mark.parametrize("cpc,light", [(140, "🟢"), (141, "🟡"), (420, "🟡"), (421, "🔴")])
-def test_signal_thresholds_on_first_purchase(cpc, light):
-    # 필요한 구매 비율 = 클릭 비용 ÷ 첫 구매 손익분기 → 🟢 ≤1% / 🟡 1~3% / 🔴 >3%
-    assert C.signal(C.required_rate(cpc, BE.first))[0] == light
-
-
 def test_test_budget_and_warning():
     b, w = C.test_budget(3_000_000, 14_000)
     assert b == 14_000 * 30 and w is None
@@ -117,10 +111,10 @@ def test_biggest_drop_from_store_totals():
     assert C.biggest_drop({"visits": 100}, labels, list(labels)) is None
 
 
-def test_default_budget_pick_follows_signal():
-    assert C.default_budget_pick("🔴") == "none"
-    assert C.default_budget_pick("🟡") == "recommended"
-    assert C.default_budget_pick("🟢") == "recommended"
+def test_default_budget_pick_follows_action():
+    assert C.default_budget_pick("prep") == "none"
+    assert C.default_budget_pick("small") == "recommended"
+    assert C.default_budget_pick("go") == "recommended"
 
 
 def test_today_kst_uses_seoul_date():
