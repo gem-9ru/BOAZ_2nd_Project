@@ -51,6 +51,7 @@ from src.engine import report as RP  # noqa: E402
 from src.engine import guide as GD  # noqa: E402
 from src.engine import chat_intake as CI  # noqa: E402
 from src.engine import setup_rag as SR  # noqa: E402
+from src.engine import orders as OR  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -422,6 +423,54 @@ def funnel_box(diag):
         st.caption("기준: GA4 공개 샘플 쇼핑몰의 단계별 비율(등급 C, 업종 평균 아님). 판매처 통계에는 광고 외 손님도 섞여 있어요.")
 
 
+def orders_section():
+    """주문 내역 → 재구매 실측 (MVP 7b). 개인정보 열은 읽자마자 버리고, 결과(숫자)만 세션에 남긴다. 파일은 저장하지 않음."""
+    st.divider()
+    st.markdown("#### 주문 내역으로 재구매 재기 (선택)")
+    f = st.file_uploader("스마트스토어 주문 내역 (커머스API 주문 CSV·엑셀)", type=["csv", "xlsx", "xls"], key="orders_file")
+    st.caption("이름·전화번호·주소 같은 개인정보 열은 읽자마자 버리고, 주문자 번호는 알아볼 수 없게 바꿔 이번 계산에만 써요. 파일은 저장하지 않아요.")
+    if f is None:
+        if ss.get("repurchase_measured"):
+            st.caption("앞서 올린 주문 내역으로 잰 값이 재구매 선택지 '내 가게 실측'에 들어 있어요.")
+        return
+    try:
+        df = OR.read_orders(f)
+        guess = OR.detect(list(df.columns))
+        need = not (guess["customer"] and guess["date"])
+        with st.expander("열 맞추기 (자동으로 짐작했어요. 틀리면 고쳐 주세요)", expanded=need):
+            opts = ["(없음)"] + list(df.columns)
+            cols = st.columns(len(OR.FIELDS))
+            mapping = {}
+            for c, (k, (label, _)) in zip(cols, OR.FIELDS.items()):
+                pick = c.selectbox(label, opts, index=opts.index(guess[k]) if guess[k] in opts else 0, key=f"ord_map_{k}")
+                mapping[k] = None if pick == "(없음)" else pick
+        res = OR.measure(OR.clean(df, mapping), CO.coach_params(price or 1, profit or 0, 0.0))
+    except OR.OrdersError as e:
+        st.error(str(e), icon="📄")
+        return
+    except Exception as e:  # noqa: BLE001
+        st.error("주문 파일을 읽지 못했어요. 스마트스토어센터에서 CSV나 엑셀로 다시 내려받아 올려 주세요.", icon="📄")
+        st.caption(f"자세한 오류: {type(e).__name__}")
+        return
+    ss["repurchase_measured"] = {k: res[k] for k in ("customers", "orders", "observed_months", "repeat_share", "repeats_observed",
+                                                    "repeats_year", "extended")}
+    with st.container(border=True):
+        st.markdown(f"**{res['observed_months']:.1f}개월 실측**: 손님 {res['customers']:,}명 중 {res['repeat_share']:.0%}가 다시 샀고, "
+                    f"1명당 {res['repeats_observed']:.2f}번 더 샀어요 (등급 A).")
+        if res["extended"]:
+            st.markdown(f"→ 1년은 지금 재구매 곡선 모양으로 늘려 **1년 동안 {res['repeats_year']:.1f}번** (늘린 부분 등급 C).")
+        else:
+            st.markdown(f"→ **1년 동안 {res['repeats_year']:.1f}번** (12개월 넘게 관찰, 등급 A).")
+        st.dataframe(pd.DataFrame([{"첫 구매 유입 경로": r["inflow"], "손님": r["customers"], "다시 산 비율": f"{r['repeat_share']:.0%}",
+                                    "관찰 기간 재구매": f"{r['repeats_observed']:.2f}번", "1년으로 늘리면": f"{r['repeats_year']:.1f}번"}
+                                   for r in res["by_inflow"]]), hide_index=True, use_container_width=True)
+        st.caption("취소·반품은 뺐어요. 관찰 기간이 짧으면 늘린 값은 곡선 가정에 따라 달라져요. 손님 수가 적은 유입 경로는 참고만 하세요.")
+        if st.button("이 값으로 다시 계산 (재구매: 내 가게 실측)", key="use_measured", type="primary"):
+            ss["q_repurchase"] = MEASURED
+            st.toast(f"재구매를 내 가게 실측 {res['repeats_year']:.1f}번으로 바꿨어요. '답 보기'에서 100번 중 몇 번인지 다시 보세요.", icon="🔁")
+            st.rerun()
+
+
 def plan_download(a: dict, key: str):
     """내 계획 파일 받기 (가정 A4: 로그인 없이 JSON). 입력·예측·시작일만 담고 개인정보는 없음."""
     data = RP.plan_to_json({k: ss.get(k) for k in RP.PLAN_INPUT_KEYS}, a["prediction"], ss.get("coach_started"))
@@ -579,7 +628,9 @@ def grade_rows(a: dict) -> list:
     rows.append({"숫자": "메타 클릭 비용", "값": won(sp["meta_cpc"]), "등급": f"{g['cpc_meta']} {D.GRADE_LABELS[g['cpc_meta']]}",
                  "출처": "직접 입력" if g["cpc_meta"] == "A" else "대략값 (공개 키워드 중앙값)"})
     rows.append({"숫자": "누른 사람 중 사는 비율", "값": f"{cparams.cvr * 100:.2f}%", "등급": "C 공개 데이터", "출처": "GA4 공개 샘플 퍼널"})
-    rows.append({"숫자": "1년 재구매", "값": f"{CO.REPURCHASE_PRESETS[repurchase]:g}번 ('{repurchase}')", "등급": "D 가정", "출처": "재구매 프리셋"})
+    rows.append({"숫자": "1년 재구매", "값": f"{rep_value(repurchase):.1f}번 ('{rep_word(repurchase)}')",
+                 "등급": "A 실측 + C 곡선" if repurchase == MEASURED else "D 가정",
+                 "출처": "주문 내역 (관찰 기간 뒤는 곡선으로 늘림)" if repurchase == MEASURED else "재구매 프리셋"})
     return rows
 
 
@@ -622,12 +673,28 @@ def _go(step: int):
 # 답 계산 (어느 단계를 보든 먼저 계산: 다음 단계 탭 미리 채우기·단계 열림 판단에 씀)
 price, profit, max_budget = ss.get("q_price"), ss.get("q_profit"), ss.get("q_budget")
 stores = ss.get("q_stores") or []
+MEASURED = "실측"   # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (MVP 7b)
+if ss.get("q_repurchase") == MEASURED and not ss.get("repurchase_measured"):
+    ss["q_repurchase"] = "가끔"
 repurchase = ss.get("q_repurchase") or "가끔"
+
+
+def rep_value(name: str) -> float:
+    """재구매 선택지 → 1년 동안 다시 사는 횟수. '실측'이면 주문 내역에서 잰 값."""
+    if name == MEASURED and ss.get("repurchase_measured"):
+        return float(ss["repurchase_measured"]["repeats_year"])
+    return CO.REPURCHASE_PRESETS.get(name, CO.REPURCHASE_PRESETS["가끔"])
+
+
+def rep_word(name: str) -> str:
+    if name == MEASURED and ss.get("repurchase_measured"):
+        return f"내 가게 실측 ({ss['repurchase_measured']['repeats_year']:.1f}번)"
+    return REPURCHASE_WORDS.get(name, name)
 baseline = ss.get("q_baseline")
 coach, ans = {}, None
 input_error = (price is not None and profit is not None and profit > price)
 if price and profit and max_budget and not input_error:
-    be = CO.breakeven(profit, CO.REPURCHASE_PRESETS[repurchase])
+    be = CO.breakeven(profit, rep_value(repurchase))
     monthly_search, naver_curve, kw_missing = None, None, False
     kw = (ss.get("q_keyword") or "").strip().replace(" ", "")
     if kw:
@@ -649,7 +716,7 @@ if price and profit and max_budget and not input_error:
         ss["_kw_loaded"].add(kw)
         skel.empty()
     naver_failed = bool(kw) and bool(NAVER_FAILED)
-    cparams = CO.coach_params(price, profit, CO.REPURCHASE_PRESETS[repurchase])
+    cparams = CO.coach_params(price, profit, rep_value(repurchase))
     meta_cpc = float(ss.get("q_cpc") or D.NAVER_FALLBACK_CPC)   # 메타 클릭 비용: 근거 있는 값이 없어 대략값 (등급 D)
     options = CO.budget_options(be.first, max_budget)
     amount_of = lambda k: next(o["amount"] for o in options if o["key"] == k)  # noqa: E731
@@ -658,6 +725,8 @@ if price and profit and max_budget and not input_error:
     cpc = split["cpc"]
     need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
     grades = CO.mc_grades(bool(ss.get("q_cpc")))
+    if repurchase == MEASURED:
+        grades["retention"] = "C"     # 관찰분은 실측(A)이지만 1년으로 늘린 부분이 곡선(C)이라 보수적으로 C
     mc_rec = MC.run(split["channels"], split["spends"], cparams, grades)   # 권장 예산으로 100번
     # 기본 선택은 결론 문장에 따라 (100번 중 50번 미만 = 광고 안 함). 사장님이 직접 고르기 전까지는 결론이 바뀌면 기본도 따라감
     default_pick = CO.default_budget_pick(MC.action(mc_rec["wins"]))
@@ -756,8 +825,9 @@ with coach_tab:
                            help="받는 돈에서 원가·포장·배송비·판매 수수료를 뺀 금액")
                 if input_error:
                     st.markdown(":red[남는 돈은 판매가보다 작아야 해요. 원가·배송비·수수료를 뺀 금액을 넣어 주세요.]")
-            st.segmented_control("한 번 산 손님이 다시 사나요?", list(CO.REPURCHASE_PRESETS), key="q_repurchase",
-                                 format_func=REPURCHASE_WORDS.get)
+            st.segmented_control("한 번 산 손님이 다시 사나요?",
+                                 list(CO.REPURCHASE_PRESETS) + ([MEASURED] if ss.get("repurchase_measured") else []),
+                                 key="q_repurchase", format_func=rep_word)
             st.caption("1년 동안 다시 사는 횟수로 계산해요: 거의 안 사요 0번 · 가끔 0.5번 · 자주 2번 · 매달(정기) 6번 (모두 가정값, 등급 D)")
             st.caption("믿을 만한 정도(등급): 판매가·남는 돈·최대 광고비는 사장님이 아는 숫자라 **A 실측**, 재구매는 감으로 고르는 값이라 **D 가정**이에요. "
                        "답은 등급이 낮은 숫자일수록 넓게 흔들어 계산해요.")
@@ -795,11 +865,11 @@ with coach_tab:
             st.markdown(f"첫 구매만 보면 100번 중 **{mc['wins_first']}번** 남아요. "
                         "다시 사는 손님까지 봐야 광고의 진짜 값이 보여요.")
             cpa_now = a["budget0"] / max(a["prediction"]["new"], 1e-9)
-            bg = CO.breakeven_grid(price, profit / price, cpa_now, CO.REPURCHASE_PRESETS[repurchase])
+            bg = CO.breakeven_grid(price, profit / price, cpa_now, rep_value(repurchase))
             with st.expander("어떻게 하면 남을까요? 판매가 × 재구매 지도", expanded=act == "prep"):
                 st.plotly_chart(charts.breakeven_map(bg), use_container_width=True)
                 st.markdown(f"지금 판매가 {won(price)}에서는 손님 1명이 1년 동안 **{bg['need_here']:.1f}번 더 사야** 본전이에요 "
-                            f"(지금 가정 '{repurchase}' = {CO.REPURCHASE_PRESETS[repurchase]:g}번).")
+                            f"(지금 '{rep_word(repurchase)}' = {rep_value(repurchase):.1f}번).")
                 st.caption(f"손님 1명을 데려오는 데 드는 돈(CPA) 약 {won(cpa_now)} = 시험 예산 ÷ 예상 새 손님. "
                            f"선 위(초록)면 남고 아래(빨강)면 손해예요. 손님 1명이 남기는 돈 = 판매가 × 마진 {profit / price:.0%} × (1 + 재구매 횟수). "
                            "판매가를 올리거나 묶음 구성으로 객단가를 높이면 오른쪽으로, 다시 사게 만들면 위로 움직여요.")
@@ -1047,6 +1117,7 @@ with coach_tab:
             else:
                 st.caption("쓴 돈, 클릭 수, 판매 수(셋 중 아는 것)를 넣으면 판정합니다.")
             report_section(a)
+            orders_section()
         if ans is not None:
             st.caption("광고를 몇 달 해 보고 더 깊게 보고 싶으면 아래 **더 보기**를 펼쳐 보세요. 위 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있어요.")
 
@@ -1408,7 +1479,8 @@ with tabs[4]:
             decay = st.slider("첫 구매 후 손님이 떠나는 속도", 0.1, 5.0, round(float(p_decay), 2), 0.05, key=f"decay_{rkey}")
             st.caption(f"출처: {ret_src}")
             if coach:
-                st.caption(f"코치에서 고른 '{coach['repurchase']}'(1년 동안 {CO.REPURCHASE_PRESETS[coach['repurchase']]:g}번 다시 삼, **가정값**)에 맞춰 "
+                st.caption(f"코치에서 고른 '{rep_word(coach['repurchase'])}'(1년 동안 {rep_value(coach['repurchase']):.1f}번 다시 삼, "
+                           f"**{'실측 + 곡선' if coach['repurchase'] == MEASURED else '가정값'}**)에 맞춰 "
                            "곡선 높이를 조정했습니다. 위 두 슬라이더는 곡선 모양만 바꿉니다.")
         with r2:
             invite_rate = st.slider("단골 1명이 한 달에 소개하는 사람 수", 0.0, 2.0, float(D.INVITE_RATE), 0.05, help="모르면 0")
@@ -1419,7 +1491,7 @@ with tabs[4]:
         ret_chart_slot = st.container()
 
 # 코치에서 고른 재구매 프리셋(12개월 재구매 횟수)으로 곡선 높이를 맞춤 → 코치 답과 다음 단계가 같은 재구매 가정으로 계산
-coach_ret_scale = (CO.retention_scale_for(CO.REPURCHASE_PRESETS[coach["repurchase"]], floor, decay, freq)
+coach_ret_scale = (CO.retention_scale_for(rep_value(coach["repurchase"]), floor, decay, freq)
                    if coach else 1.0)
 params = FunnelParams(steps=steps, retention_floor=floor, retention_decay=decay, purchase_freq=freq,
                       aov=aov, margin=margin, invite_rate=invite_rate, invite_conv=invite_conv, referral_reward=referral_reward,
