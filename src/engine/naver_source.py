@@ -177,7 +177,7 @@ def bid_estimate(keyword: str, device: str = "MOBILE", online: bool = True) -> O
         call = _api_call()
         if call is None:
             return None
-        body = {"device": device, "keywordplus": True, "key": keyword, "bids": BIDS}
+        body = {"device": device, "key": keyword, "bids": BIDS}   # keywordplus는 2024-07-16 API 공지로 없어진 항목 (naver-api-003)
         data = _safe(call, "POST", "/estimate/performance/keyword", body=body)
         if not (isinstance(data, dict) and "estimate" in data):
             return None

@@ -185,7 +185,7 @@ class Channel:
 
 
 # ── 메타 실무 보강 (명세 2장) ──────────────────────────────────
-LEARNING_EVENTS_PER_WEEK = 50  # 광고 세트당 7일 약 50건 (메타 비즈니스 도움말 검색 요약 기준, 원문 미확인 → '약'으로 표기)
+LEARNING_EVENTS_PER_WEEK = 50  # ✅ 머신 러닝 단계: 광고 세트당 마지막 큰 수정 뒤 7일 안에 결과 약 50개 (메타 도움말, 세팅 카드 meta-lrn-001). 샵 광고는 기준 다름
 
 
 def cpc_from_cpm(cpm: float, ctr: float) -> float:
@@ -194,7 +194,7 @@ def cpc_from_cpm(cpm: float, ctr: float) -> float:
 
 
 def learning_check(monthly_budget: float, ad_sets: int, cpa: float) -> dict:
-    """학습 가능 예산 점검: 광고 세트 수 × 주 50건 × 예상 CPA > 주 예산이면 경고."""
+    """머신 러닝 단계 예산 점검: 광고 세트 수 × 주 50건 × 예상 CPA > 주 예산이면 '제한된 머신 러닝' 경고."""
     weekly = monthly_budget * 7 / 30.4
     need = ad_sets * LEARNING_EVENTS_PER_WEEK * cpa
     return {"weekly_budget": weekly, "weekly_needed": need, "ok": weekly >= need,

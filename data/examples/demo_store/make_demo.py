@@ -124,7 +124,7 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
         spend = m_clk * cfg["meta_cpc"]
         meta_rows.append({
             "보고 시작": day.strftime("%Y-%m-%d"), "보고 종료": day.strftime("%Y-%m-%d"), "캠페인 이름": cfg["campaign"][2],
-            "캠페인 게재": "active", "기여 설정": "클릭 후 7일 또는 조회 후 1일", "결과": results,
+            "캠페인 게재": "active", "기여 설정": "클릭 후 7일, 조회 후 1일 또는 참여한 조회 후 1일", "결과": results,
             "결과 표시 도구": "actions:offsite_conversion.fb_pixel_purchase", "도달": reach, "빈도": round(m_imp / reach, 2),
             "결과당 비용": round(spend / results) if results else "", "광고 세트 예산": round(meta_daily), "광고 세트 예산 유형": "일일",
             "지출 금액 (KRW)": spend, "종료": "진행 중", "노출": m_imp,

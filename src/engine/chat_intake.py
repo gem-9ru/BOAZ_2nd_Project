@@ -107,11 +107,18 @@ def ask(client, history: List[Dict[str, str]]) -> Dict:
         raise IntakeUnavailable("대화가 길어짐")
     messages = [{"role": m["role"], "content": scrub(m["content"]) if m["role"] == "user" else m["content"]}
                 for m in history]
+    return validate(call_json(client, SYSTEM, messages, SCHEMA))
+
+
+def call_json(client, system: str, messages: List[Dict], schema: Dict, max_tokens: int = 2_048) -> Dict:
+    """구조화 출력(JSON 스키마)으로 한 번 부르고 dict로. 어떤 실패든 IntakeUnavailable (화면은 대안으로)."""
+    if client is None:
+        raise IntakeUnavailable("키 없음")
     try:
         import anthropic
         response = client.messages.create(
-            model=MODEL, max_tokens=2_048, system=SYSTEM, messages=messages,
-            output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
+            model=MODEL, max_tokens=max_tokens, system=system, messages=messages,
+            output_config={"effort": "low", "format": {"type": "json_schema", "schema": schema}},
         )
     except ImportError as e:
         raise IntakeUnavailable("SDK 없음") from e
@@ -125,9 +132,12 @@ def ask(client, history: List[Dict[str, str]]) -> Dict:
         raise IntakeUnavailable("응답 거절")
     text = next((b.text for b in response.content if b.type == "text"), None)
     try:
-        return validate(json.loads(text or ""))
+        out = json.loads(text or "")
     except (TypeError, ValueError) as e:
         raise IntakeUnavailable("응답 형식 오류") from e
+    if not isinstance(out, dict):
+        raise IntakeUnavailable("응답 형식 오류")
+    return out
 
 
 def to_coach_inputs(fields: Dict) -> Tuple[Dict, List[str]]:

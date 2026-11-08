@@ -50,6 +50,7 @@ from src.engine import montecarlo as MC  # noqa: E402
 from src.engine import report as RP  # noqa: E402
 from src.engine import guide as GD  # noqa: E402
 from src.engine import chat_intake as CI  # noqa: E402
+from src.engine import setup_rag as SR  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -297,9 +298,76 @@ def chat_intake():
             st.rerun()
 
 
+SETUP_EXAMPLES = ["네이버 하루 예산 어디에 넣어?", "메타 목표 뭐 골라?", "머신 러닝 단계가 뭐야?", "구매가 보고서에 잡히게 하려면?"]
+
+
+def card_source_md(c) -> str:
+    links = " · ".join(f"[출처 {i + 1}]({u})" for i, u in enumerate(c.sources) if u.startswith("http"))
+    return f"{c.check} {SR.CHECK_WORDS.get(c.check, '')} · `{c.id}` {c.title}" + (f" · {links}" if links else "")
+
+
+def setup_helper(a: dict):
+    """세팅 챗봇 (MVP 7번): 세팅 카드(data/rag)를 찾아, 키가 있으면 Claude가 카드·코치 숫자만으로 답하고, 없으면 카드 요약."""
+    st.markdown("#### 🙋 세팅하다 막히면 물어보세요")
+    chip = st.pills("이런 걸 물어볼 수 있어요", SETUP_EXAMPLES, key="setup_chip")
+    if chip and ss.get("_setup_chip_used") != chip:
+        ss["setup_q"], ss["_setup_chip_used"] = chip, chip
+    q = st.text_input("광고 관리자에서 막힌 곳", key="setup_q", placeholder="예: 네이버 하루 예산 어디에 넣어?")
+    client = CI.make_client()
+    img = None
+    if client is not None:
+        img = st.file_uploader("화면 캡처 (선택, png·jpg 5MB 이하)", type=["png", "jpg", "jpeg"], key="setup_img")
+        st.caption("계정 이름·카드 정보는 가리고 올려 주세요. 질문과 캡처는 답을 만들기 위해 Anthropic으로 보내집니다. 캡처는 저장하지 않아요.")
+    if st.button("물어보기", key="setup_ask", disabled=not q):
+        found = SR.find(q)
+        sp = a["split"]
+        ctx = {"naver": sp["naver"], "meta": sp["meta"], "keyword": a["kw"], "price": price, "wins": a["mc"]["wins"], "stores": stores}
+        res = {"q": q, "found": [c.id for c, _ in found], "answer": None, "used": [], "note": None}
+        if found and client is not None:
+            try:
+                image = (img.getvalue(), img.name) if img is not None else None
+                out = SR.answer(client, q, found, ctx, image)
+                res["answer"], res["used"] = out["answer"], [c.id for c in out["cards"]]
+            except ValueError as e:                      # 캡처 크기·형식
+                res["note"] = str(e)
+            except CI.IntakeUnavailable as e:
+                res["note"] = f"지금은 답을 만들 수 없어 자료를 그대로 보여 드려요 ({e})."
+        ss["setup_last"] = res
+    res = ss.get("setup_last")
+    if not res:
+        return
+    if not res["found"]:
+        st.info("자료에 없어요. 네이버 검색광고·메타 광고 관리자 세팅에 관한 질문으로 다시 물어봐 주세요.", icon="🔎")
+        return
+    if res["note"]:
+        st.warning(res["note"], icon="📝")
+    if res["answer"]:
+        with st.container(border=True):
+            st.markdown(res["answer"])
+            for cid in res["used"]:
+                c = SR.by_id(cid)
+                if c:
+                    st.caption(card_source_md(c))
+        return
+    st.caption("찾은 세팅 자료예요 (답을 만드는 AI는 아직 연결 전이라 자료를 그대로 보여 드려요).")
+    for s in SR.summaries([(SR.by_id(i), 0) for i in res["found"] if SR.by_id(i)]):
+        with st.container(border=True):
+            st.markdown(f"**{s['title']}** {s['check']}  \n{s['body']}")
+            if s["screen"]:
+                st.caption("화면에서 찾을 곳: " + s["screen"])
+            c = SR.by_id(s["id"])
+            st.caption(card_source_md(c))
+
+
 def ads_guide(a: dict):
-    """광고 관리자 설정 가이드 (노션 11/9). ✅ 공식 확인 / △ 대행사 안내·경험 기준 / 🧮 이 앱의 계산."""
+    """광고 관리자 설정 가이드. ✅ 공식 확인 / △ 다른 자료·코치 판단 / ❓ 확인 못 함 / 🧮 이 앱의 계산. 근거는 세팅 카드(data/rag)."""
     sp = a["split"]
+
+    def src(card_id):
+        c = SR.by_id(card_id) if card_id else None
+        u = next((x for x in (c.sources if c else []) if x.startswith("http")), "")
+        return f" · [출처]({u})" if u else ""
+
     with st.expander("🛠️ 광고 관리자에서 이렇게 설정하세요 (네이버 첫 세팅 · 메타 목적 · 자동 vs 수동)"):
         g_n, g_m, g_a = st.tabs(["네이버 첫 세팅", "메타 목적 고르기", "자동 vs 수동"])
         with g_n:
@@ -308,22 +376,34 @@ def ads_guide(a: dict):
             else:
                 bid = GD.naver_bid_at(sp["channels"][0].curve, sp["naver"]) if sp["has_naver"] else None
                 for i, it in enumerate(GD.naver_checklist(sp["naver"], bid, a["kw"], stores), 1):
-                    st.markdown(f"{i}. **{it['step']}** {it['check']}  \n{it['detail']}")
+                    st.markdown(f"{i}. **{it['step']}** {it['check']}{src(it.get('card'))}  \n{it['detail']}")
         with g_m:
-            pixel = st.toggle("메타 픽셀(또는 전환 API)에 구매 이벤트를 설치했다", key="pixel_ready")
-            mp = GD.meta_plan(sp["meta"], a["budget0"] / max(a["prediction"]["new"], 1e-9), pixel)
+            only_ss = "스마트스토어" in stores and "자사몰" not in stores
+            pixel = st.toggle("내 사이트(자사몰)에 메타 픽셀 구매 이벤트를 설치했다", key="pixel_ready", disabled=only_ss,
+                              help="스마트스토어에 픽셀을 달 수 있는지는 공식 확인 못 함이라, 스마트스토어만 쓰면 이 설정과 관계없이 트래픽을 권해요.")
+            new = max(a["prediction"]["new"], 1e-9)
+            mp = GD.meta_plan(sp["meta"], a["budget0"] / new, pixel, stores, sp["meta_cpc"])
             if mp["objective"]:
                 st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{mp['why']}")
+                if mp["recommended_daily"]:
+                    st.markdown(f"- 하루 예산 {won(mp['daily'])} (월 ÷ 30.4). 메타 권장은 결과 1개 평균 비용의 {GD.DAILY_BUDGET_X}배 이상 "
+                                f"= **{won(mp['recommended_daily'])}** ✅{src('meta-bud-003')}"
+                                + ("" if mp["daily_ok"] else " → 지금 예산은 권장보다 작아요. 결과가 고르게 안 나올 수 있어요."))
+                st.markdown(f"- 어떤 날은 하루 예산보다 최대 75% 더 써서 하루 최대 약 {won(mp['daily_max'])}까지 나갈 수 있어요. "
+                            f"한 주 합계는 하루 예산 × 7을 넘지 않아요. ✅{src('meta-bud-001')}")
             else:
                 st.caption(mp["why"])
             st.dataframe(pd.DataFrame([{"목적": o, "메타가 찾아 주는 사람": who, "맞을 때": when, "확인": chk}
                                        for o, who, when, chk in GD.META_OBJECTIVES]), hide_index=True, use_container_width=True)
+            st.caption("목표 설명 ✅" + src("meta-obj-001") + " · 스마트스토어 픽셀 ❓" + src("meta-obj-003"))
+            for note, chk, cid in GD.META_NOTES:
+                st.markdown(f"- {note} {chk}{src(cid)}")
         with g_a:
             st.dataframe(pd.DataFrame([{"항목": k, "자동(어드밴티지+)": auto, "수동": man, "처음엔": first, "확인": chk}
                                        for k, auto, man, first, chk in GD.AUTO_VS_MANUAL]), hide_index=True, use_container_width=True)
-        st.caption("확인 표시: ✅ 공식 문서로 확인 · △ 광고 대행사 안내·업계 경험 기준(공식 문서 미확인, 화면 이름은 바뀔 수 있어요) · 🧮 이 앱이 계산한 값. "
+            st.caption("근거: " + " · ".join(f"{k}{src(c)}" for k, c in GD.AUTO_CARDS.items()))
+        st.caption("확인 표시: ✅ 공식 문서로 확인 · △ 다른 자료나 코치 판단 · ❓ 공식 확인 못 함 · 🧮 이 앱이 계산한 값. "
                    "실제 광고 집행은 사장님 계정에서 직접 하세요(이 앱은 광고 계정에 쓰지 않아요).")
-
 
 def plan_download(a: dict, key: str):
     """내 계획 파일 받기 (가정 A4: 로그인 없이 JSON). 입력·예측·시작일만 담고 개인정보는 없음."""
@@ -802,6 +882,7 @@ with coach_tab:
                 st.code(MS.coupon_code(link_ch, month, product_en), language=None)
                 st.caption(MS.STORE_NOTES.get(link_store, "") + f" 같은 채널은 늘 같은 이름(캠페인 '{camp}')으로 써야 나중에 합쳐 볼 수 있습니다.")
             ads_guide(a)
+            setup_helper(a)
             if n_prep == 3:   # 모두 완료 빈 화면 (UX 6-2)
                 st.success("준비 끝! 광고를 시작했다면 아래 버튼을 눌러 주세요.", icon="✅")
             if no_ad:
@@ -1661,7 +1742,7 @@ with learn_slot:
     if meta_budget > 0 and meta_cvr > 0:
         lc = learning_check(meta_budget, int(ad_sets), meta_cpc / meta_cvr)
         if not lc["ok"]:
-            st.warning(f"메타 학습 가능 예산 부족: 광고 세트 {int(ad_sets)}개 × 주 약 {LEARNING_EVENTS_PER_WEEK}건 × 예상 CPA {won(meta_cpc / meta_cvr)} "
+            st.warning(f"메타 머신 러닝 단계를 끝내기엔 예산 부족('제한된 머신 러닝' 예상): 광고 세트 {int(ad_sets)}개 × 주 약 {LEARNING_EVENTS_PER_WEEK}건 × 예상 CPA {won(meta_cpc / meta_cvr)} "
                        f"= 주 {won(lc['weekly_needed'])}이 필요한데, 주 예산은 {won(lc['weekly_budget'])}입니다 (세트당 주 {lc['events_per_set']:.1f}건). "
                        "광고 세트를 합치거나 최적화 이벤트를 앞 단계(장바구니 등)로 바꾸세요. (50건은 메타 도움말 검색 요약 기준)")
 
