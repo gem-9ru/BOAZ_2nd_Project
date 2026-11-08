@@ -26,6 +26,7 @@ def test_demo_files_feed_the_coach():
 
 def test_demo_orders_have_no_personal_data():
     orders = pd.read_csv(DEMO / "orders.csv", dtype=str)
-    banned = ("ordererName", "ordererTel", "ordererId", "shippingAddress", "name", "tel", "address")
+    # 커머스API 개인정보 항목 (커머스API_주문데이터_매핑.md 3장)
+    banned = ("ordererName", "ordererTel", "ordererId", "shippingAddress", "pickupLocationContent", "entryMethodContent")
     assert not [c for c in orders.columns if any(b.lower() in c.lower() for b in banned)]
     assert orders["order.ordererNo"].str.startswith("DEMO").all()
