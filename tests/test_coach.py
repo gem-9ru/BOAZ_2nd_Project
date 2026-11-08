@@ -14,7 +14,7 @@ BE = C.breakeven(14_000, C.REPURCHASE_PRESETS["가끔"])   # 첫 구매 1.4만 �
 def test_breakeven_first_and_year():
     assert BE.first == 14_000 and BE.year == pytest.approx(21_000)
     assert C.breakeven(14_000, 0).year == 14_000
-    assert C.REPURCHASE_PRESETS == {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0}
+    assert C.REPURCHASE_PRESETS == {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0, "매달(정기)": 6.0}
 
 
 def test_test_budget_and_warning():
@@ -206,3 +206,22 @@ def test_breakeven_grid_boundary_matches_formula():
     i_lo = np.searchsorted(g["reps"], 1.0)          # 재구매 1번이면 지금 판매가에서 7,000 × 2 = 14,000 < 21,000 → 손해
     j = int(np.argmin(abs(g["prices"] - 20_000)))
     assert g["profit"][i_lo, j] < 0 and g["profit"][-1, j] > 0
+
+
+def test_split_table_uses_one_month_cohort():
+    from src.engine import montecarlo as MC
+    params = C.coach_params(20_000, 7_000, 0.5)
+    sp = C.split_budget(210_000, _naver_curve(), 1_300.0, params)
+    row = next(r for r in sp["table"] if r["share"] == 0.5)
+    det = MC.one_month(sp["channels"], [row["naver"], row["meta"]], params)
+    assert row["profit_cohort"] == pytest.approx(det["profit"]) and row["profit_first"] <= row["profit_cohort"]
+    assert row["profit_cohort"] > -210_000 - 1      # 한 달 광고비보다 크게 잃지 않음 (12개월 집행 기준이 아님)
+
+
+@pytest.mark.parametrize("rep", [0.5, 2.0, 6.0])
+def test_retention_scale_hits_preset_even_with_clipping(rep):
+    from src.engine import defaults as D
+    from src.engine.model import FunnelParams
+    s = C.retention_scale_for(rep, D.RETENTION_FLOOR, D.RETENTION_DECAY, D.PURCHASE_FREQ)
+    got = FunnelParams(retention_scale=s).retention(12)[1:].sum() * D.PURCHASE_FREQ
+    assert got == pytest.approx(rep, rel=1e-3)

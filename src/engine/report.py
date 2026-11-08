@@ -75,8 +75,21 @@ WORDS = {
 EXCLUDE = ("률", "당", "비율", "CPC", "CPM", "CTR")   # '클릭률', '결과당 비용' 같은 파생 열은 합계 대상 아님
 
 
+def _clean(name) -> str:
+    """BOM(엑셀에서 저장한 UTF-8 CSV 첫 열 앞의 \ufeff)과 앞뒤 공백 제거."""
+    return str(name).replace("\ufeff", "").strip()
+
+
+def read_report(f) -> pd.DataFrame:
+    """CSV(BOM 있어도)·엑셀 읽기. 열 이름의 BOM·공백도 정리."""
+    name = getattr(f, "name", str(f)).lower()
+    df = pd.read_csv(f, encoding="utf-8-sig") if name.endswith(".csv") else pd.read_excel(f)
+    df.columns = [_clean(c) for c in df.columns]
+    return df
+
+
 def detect_platform(columns: List[str]) -> Optional[str]:
-    cols = " ".join(map(str, columns))
+    cols = " ".join(_clean(c) for c in columns)
     if "지출 금액" in cols or "링크 클릭" in cols or "결과 표시 도구" in cols:
         return "meta"
     if "노출수" in cols and "클릭수" in cols:
@@ -92,7 +105,7 @@ def map_columns(columns: List[str], platform: str) -> Dict[str, Optional[str]]:
             exact = w.startswith("=")
             word = w.lstrip("=")
             for c in columns:
-                name = str(c).strip()
+                name = _clean(c)
                 if c in used:
                     continue
                 if exact and name != word:
@@ -123,7 +136,7 @@ def totals(df: pd.DataFrame, mapping: Dict[str, Optional[str]], platform: str) -
         objective = str(df[obj_col].dropna().astype(str).mode().iloc[0])
     out["objective"] = objective
     out["objective_is_purchase"] = objective is None or bool(re.search(r"purchase|구매", objective, re.I))
-    if platform == "meta" and mapping.get("conversions") is not None and str(mapping["conversions"]).strip() == "결과" \
+    if platform == "meta" and mapping.get("conversions") is not None and _clean(mapping["conversions"]) == "결과" \
             and not out["objective_is_purchase"]:
         out["conversions_note"] = f"'결과'가 구매가 아니라 '{objective}'라서 전환으로 세지 않았어요"
         out["conversions"] = 0.0

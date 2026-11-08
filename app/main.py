@@ -206,8 +206,15 @@ for _i, t in enumerate(tabs):
 #  4단계(내 가게 → 답 보기 → 광고 준비 → 한 달 뒤), 앞 단계가 채워져야 다음이 열림, 한 달 뒤는 "광고를 시작했어요" 뒤에 열림
 COACH_STEPS = ["내 가게", "답 보기", "광고 준비", "한 달 뒤"]
 # 예시 페르소나 (노션 11/9): 스마트스토어 원두 로스터리, 판매가 2만·마진 35%(남는 돈 7천)·월 최대 30만
-EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 20_000, "q_profit": 7_000, "q_repurchase": "가끔",
+EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 20_000, "q_profit": 7_000, "q_repurchase": "매달(정기)",
            "q_budget": 300_000, "q_baseline": None, "q_keyword": "원두커피"}
+REPURCHASE_WORDS = {"거의 안 삼": "거의 안 사요", "가끔": "가끔 다시 사요", "자주": "자주 다시 사요",
+                    "매달(정기)": "다 쓰면 매달 다시 사요(정기)"}
+# 예시 2 (사용자 결정 11/9): 광고가 맞는 경우. 엔진 가정(사는 비율 1.26% 등)은 그대로, 판매가·마진·재구매·검색어만 다름
+# 단백질 쉐이크 정기구매: 판매가 7.9만, 남는 돈 3.95만(50%), 매달(정기), 월 최대 50만 → 100번 중 약 85번 (README 근거)
+EXAMPLE2 = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 79_000, "q_profit": 39_500, "q_repurchase": "매달(정기)",
+            "q_budget": 500_000, "q_baseline": None, "q_keyword": "프로틴쉐이크"}
+EXAMPLES = {"coffee": ("원두 로스터리", EXAMPLE), "protein": ("단백질 쉐이크 정기구매", EXAMPLE2)}
 _Q_KEYS = list(EXAMPLE) + ["q_cpc", "q_budget_pick", "q_spent", "q_clicks", "q_coupon", "q_report", "q_total"]
 _KEEP = _Q_KEYS + ["prep_1", "prep_2", "prep_3", "link_store", "link_ch", "link_url", "link_product", "link_detail"]
 for _k in _KEEP:            # 화면에 안 그린 단계의 입력값도 남도록 (Streamlit은 그리지 않은 위젯 값을 지움)
@@ -361,7 +368,7 @@ def report_section(a: dict):
     reps = []
     for i, f in enumerate(files or []):
         try:
-            df = pd.read_csv(f) if f.name.lower().endswith(".csv") else pd.read_excel(f)
+            df = RP.read_report(f)
         except Exception as e:  # noqa: BLE001
             st.error(f"'{f.name}'을(를) 읽지 못했어요. 광고 관리자에서 CSV나 엑셀로 다시 내려받아 올려 주세요.", icon="📄")
             st.caption(f"자세한 오류: {type(e).__name__}")
@@ -492,9 +499,11 @@ def split_card(a: dict, budget_label: bool = False):
                        "메타 클릭 비용은 가정값(등급 D)이에요.")
             with st.expander("네이버 비율을 바꾸면?"):
                 st.dataframe(pd.DataFrame([{"네이버 비율": f"{r['share']:.0%}", "네이버": won(r["naver"]), "메타": won(r["meta"]),
-                                            "1년 새 손님": f"{r['new_customers']:.1f}명", "1년 남는 돈": won(r["profit_12m"])}
+                                            "새 손님 (한 달 광고)": f"{r['new_customers']:.1f}명",
+                                            "1년 남는 돈 (재구매 포함)": won(r["profit_cohort"]), "첫 구매만": won(r["profit_first"])}
                                            for r in sp["table"]]), hide_index=True, use_container_width=True)
-                st.caption("네이버에 예상 실적보다 많이 배정하면 다 쓰지 못하고 남아요(1년 남는 돈은 쓴 돈 기준).")
+                st.caption("한 달 광고를 하고, 그 달에 온 손님이 1년 동안 남기는 돈 − 그 한 달 광고비예요(가운데 값, 흔들기 전). "
+                           "네이버에 예상 실적보다 많이 배정하면 다 쓰지 못하고 남아요(쓴 돈 기준).")
         else:
             st.markdown("검색어가 없거나 네이버 예상 실적을 못 받아 **모두 메타**로 계산했어요. 메타 클릭 비용은 대략값(등급 D: 가정)이에요.")
 
@@ -588,13 +597,19 @@ with coach_tab:
         if b1.button("내 가게 숫자 넣기", type="secondary" if chat_ok else "primary"):
             ss["coach_mode"] = "mine"
             st.rerun()
-        if b2.button("예시로 먼저 보기: 원두 쇼핑몰"):
-            for k, v in EXAMPLE.items():
+        ex_pick = None
+        if b2.button("예시 1: 원두 로스터리"):
+            ex_pick = "coffee"
+        if b2.button("예시 2: 단백질 쉐이크 정기구매 (광고가 맞는 경우)"):
+            ex_pick = "protein"
+        if ex_pick:
+            for k, v in EXAMPLES[ex_pick][1].items():
                 ss[k] = v
-            ss["coach_mode"], ss["coach_step"], ss["coach_seen"] = "example", 1, 1
+            ss["coach_mode"], ss["coach_step"], ss["coach_seen"], ss["example_name"] = "example", 1, 1, EXAMPLES[ex_pick][0]
             ss.pop("_closed_example", None)
             st.rerun()
-        st.caption("예시: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 한 달 최대 광고비 30만 원, 검색어 '원두커피'")
+        st.caption("예시 1: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 다 쓰면 매달 다시 삼, 월 최대 30만 원, 검색어 '원두커피'  \n"
+                   "예시 2: 스마트스토어 단백질 쉐이크(한 달분), 1개 7.9만 원, 남는 돈 3.95만 원(50%), 매달 정기구매, 월 최대 50만 원, 검색어 '프로틴쉐이크'")
         with st.expander("한 달 전에 계획을 세웠나요? 계획 파일 불러오기"):
             plan_upload("plan_up_empty")
     elif mode == "chat":
@@ -602,7 +617,7 @@ with coach_tab:
     else:
         if mode == "example" and not ss.get("_closed_example"):
             e1, e2, e3 = st.columns([10, 2, 0.6])
-            e1.info("지금은 **예시 값**(원두 쇼핑몰)입니다. '내 가게' 단계에서 숫자를 바꾸면 바로 다시 계산돼요.", icon="🧪")
+            e1.info(f"지금은 **예시 값**({ss.get('example_name', '원두 로스터리')})입니다. '내 가게' 단계에서 숫자를 바꾸면 바로 다시 계산돼요.", icon="🧪")
             if e2.button("내 숫자로 시작"):
                 for k in _KEEP:
                     ss.pop(k, None)
@@ -635,8 +650,9 @@ with coach_tab:
                            help="받는 돈에서 원가·포장·배송비·판매 수수료를 뺀 금액")
                 if input_error:
                     st.markdown(":red[남는 돈은 판매가보다 작아야 해요. 원가·배송비·수수료를 뺀 금액을 넣어 주세요.]")
-            st.segmented_control("한 번 산 손님이 다시 사나요?", list(CO.REPURCHASE_PRESETS), key="q_repurchase")
-            st.caption("1년 동안 다시 사는 횟수로 계산해요: 거의 안 삼 0번 · 가끔 0.5번 · 자주 2번 (모두 가정값)")
+            st.segmented_control("한 번 산 손님이 다시 사나요?", list(CO.REPURCHASE_PRESETS), key="q_repurchase",
+                                 format_func=REPURCHASE_WORDS.get)
+            st.caption("1년 동안 다시 사는 횟수로 계산해요: 거의 안 사요 0번 · 가끔 0.5번 · 자주 2번 · 매달(정기) 6번 (모두 가정값, 등급 D)")
             st.caption("믿을 만한 정도(등급): 판매가·남는 돈·최대 광고비는 사장님이 아는 숫자라 **A 실측**, 재구매는 감으로 고르는 값이라 **D 가정**이에요. "
                        "답은 등급이 낮은 숫자일수록 넓게 흔들어 계산해요.")
             c3, c4 = st.columns(2)
@@ -815,7 +831,7 @@ with coach_tab:
             store_tot = None
             if store_file is not None:
                 try:
-                    sdf = pd.read_csv(store_file) if store_file.name.lower().endswith(".csv") else pd.read_excel(store_file)
+                    sdf = RP.read_report(store_file)   # BOM 있는 CSV도
                     guess = MS.detect_columns(list(sdf.columns))
                     missing = not all(guess[k] for k in ("visits", "orders"))
                     if missing:

@@ -1,0 +1,408 @@
+{
+ "request": {
+  "device": "MOBILE",
+  "keywordplus": true,
+  "key": "프로틴쉐이크",
+  "bids": [
+   70,
+   100,
+   150,
+   200,
+   250,
+   300,
+   400,
+   500,
+   600,
+   700,
+   800,
+   900,
+   1000,
+   1100,
+   1200,
+   1300,
+   1400,
+   1500,
+   1600,
+   1700,
+   1800,
+   1900,
+   2000,
+   2100,
+   2200,
+   2300,
+   2400,
+   2500,
+   2600,
+   2700,
+   2800,
+   2900,
+   3000,
+   3200,
+   3400,
+   3600,
+   3800,
+   4000,
+   4200,
+   4400,
+   4600,
+   4800,
+   5000,
+   5200,
+   5400,
+   5600,
+   5800,
+   6000,
+   6500,
+   7000,
+   7500,
+   8000,
+   8500,
+   9000,
+   9500,
+   10000
+  ]
+ },
+ "fetched_at": "2026-11-09 01:49:27",
+ "response": {
+  "device": "MOBILE",
+  "keyword": "프로틴쉐이크",
+  "estimate": [
+   {
+    "bid": 70,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 100,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 150,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 200,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 250,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 300,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 400,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 500,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 600,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 700,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 800,
+    "clicks": 0,
+    "impressions": 0,
+    "cost": 0
+   },
+   {
+    "bid": 900,
+    "clicks": 0,
+    "impressions": 56,
+    "cost": 0
+   },
+   {
+    "bid": 1000,
+    "clicks": 0,
+    "impressions": 250,
+    "cost": 0
+   },
+   {
+    "bid": 1100,
+    "clicks": 5,
+    "impressions": 425,
+    "cost": 4467
+   },
+   {
+    "bid": 1200,
+    "clicks": 13,
+    "impressions": 585,
+    "cost": 12671
+   },
+   {
+    "bid": 1300,
+    "clicks": 22,
+    "impressions": 733,
+    "cost": 23230
+   },
+   {
+    "bid": 1400,
+    "clicks": 30,
+    "impressions": 869,
+    "cost": 34114
+   },
+   {
+    "bid": 1500,
+    "clicks": 38,
+    "impressions": 996,
+    "cost": 46297
+   },
+   {
+    "bid": 1600,
+    "clicks": 47,
+    "impressions": 1115,
+    "cost": 61079
+   },
+   {
+    "bid": 1700,
+    "clicks": 55,
+    "impressions": 1226,
+    "cost": 75943
+   },
+   {
+    "bid": 1800,
+    "clicks": 64,
+    "impressions": 1331,
+    "cost": 93567
+   },
+   {
+    "bid": 1900,
+    "clicks": 72,
+    "impressions": 1431,
+    "cost": 111111
+   },
+   {
+    "bid": 2000,
+    "clicks": 80,
+    "impressions": 1525,
+    "cost": 129954
+   },
+   {
+    "bid": 2100,
+    "clicks": 89,
+    "impressions": 1615,
+    "cost": 151802
+   },
+   {
+    "bid": 2200,
+    "clicks": 97,
+    "impressions": 1701,
+    "cost": 173325
+   },
+   {
+    "bid": 2300,
+    "clicks": 105,
+    "impressions": 1782,
+    "cost": 196147
+   },
+   {
+    "bid": 2400,
+    "clicks": 109,
+    "impressions": 1861,
+    "cost": 212472
+   },
+   {
+    "bid": 2500,
+    "clicks": 109,
+    "impressions": 1936,
+    "cost": 221324
+   },
+   {
+    "bid": 2600,
+    "clicks": 109,
+    "impressions": 2008,
+    "cost": 230177
+   },
+   {
+    "bid": 2700,
+    "clicks": 109,
+    "impressions": 2078,
+    "cost": 239029
+   },
+   {
+    "bid": 2800,
+    "clicks": 109,
+    "impressions": 2144,
+    "cost": 247881
+   },
+   {
+    "bid": 2900,
+    "clicks": 109,
+    "impressions": 2209,
+    "cost": 256734
+   },
+   {
+    "bid": 3000,
+    "clicks": 109,
+    "impressions": 2271,
+    "cost": 265586
+   },
+   {
+    "bid": 3200,
+    "clicks": 109,
+    "impressions": 2390,
+    "cost": 283291
+   },
+   {
+    "bid": 3400,
+    "clicks": 109,
+    "impressions": 2502,
+    "cost": 300996
+   },
+   {
+    "bid": 3600,
+    "clicks": 109,
+    "impressions": 2607,
+    "cost": 318701
+   },
+   {
+    "bid": 3800,
+    "clicks": 109,
+    "impressions": 2706,
+    "cost": 336406
+   },
+   {
+    "bid": 4000,
+    "clicks": 109,
+    "impressions": 2801,
+    "cost": 354111
+   },
+   {
+    "bid": 4200,
+    "clicks": 109,
+    "impressions": 2891,
+    "cost": 371816
+   },
+   {
+    "bid": 4400,
+    "clicks": 109,
+    "impressions": 2976,
+    "cost": 389520
+   },
+   {
+    "bid": 4600,
+    "clicks": 109,
+    "impressions": 3058,
+    "cost": 407225
+   },
+   {
+    "bid": 4800,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 424930
+   },
+   {
+    "bid": 5000,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 442635
+   },
+   {
+    "bid": 5200,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 460340
+   },
+   {
+    "bid": 5400,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 478045
+   },
+   {
+    "bid": 5600,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 5800,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 6000,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 6500,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 7000,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 7500,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 8000,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 8500,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 9000,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 9500,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   },
+   {
+    "bid": 10000,
+    "clicks": 109,
+    "impressions": 3087,
+    "cost": 481562
+   }
+  ]
+ }
+}

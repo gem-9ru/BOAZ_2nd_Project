@@ -92,3 +92,15 @@ def test_scaled_curve():
     from src.engine import MetaCurve
     c = R.ScaledCurve(MetaCurve(1_000, 0.0), 0.5)
     assert c.clicks(100_000) == pytest.approx(50) and c.marginal_cpc(0) == pytest.approx(2_000)
+
+
+def test_bom_meta_export_fixture():
+    """실제 메타 내보내기 열 이름 + 가상 숫자, BOM 포함 (원본 파일은 커밋하지 않음)."""
+    path = Path(__file__).parent / "fixtures" / "meta_export_fake.csv"
+    assert path.read_bytes()[:3] == b"\xef\xbb\xbf"
+    assert R.detect_platform(["\ufeff보고 시작", "지출 금액 (KRW)", "링크 클릭"]) == "meta"   # BOM이 열 이름에 남는 읽기 도구 대비
+    assert R.map_columns(["\ufeff노출", "링크 클릭"], "meta")["impressions"] == "\ufeff노출"
+    df = R.read_report(path)
+    assert df.columns[0] == "보고 시작"
+    t = R.totals(df, R.map_columns(list(df.columns), "meta"), "meta")
+    assert t["cost"] == 140_000 and t["conversions"] == 5

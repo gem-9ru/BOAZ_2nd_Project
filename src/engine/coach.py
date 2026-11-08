@@ -15,7 +15,8 @@ from zoneinfo import ZoneInfo
 # 참고 기준 (한 쇼핑몰 값, 업종 평균 아님). 방문한 손님 중 산 비율 = 방문 기준 (필요한 비율은 클릭 기준)
 # '전체'는 유입 매체가 지워진 손님 '(data deleted)'를 뺀 값 (그 묶음만 구매율 8%로 튀는 마스킹 이상값, 분석 보고서 4장). 엔진 퍼널과 같은 범위
 REFERENCE_RATES = {"GA4 공개 샘플 유료 검색 유입": 0.0119, "GA4 공개 샘플 전체": 0.0149}
-REPURCHASE_PRESETS = {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0}   # 12개월 동안 다시 사는 횟수, 모두 가정값
+REPURCHASE_PRESETS = {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0, "매달(정기)": 6.0}   # 12개월 동안 다시 사는 횟수, 모두 가정값(등급 D)
+# '매달(정기)' 6회: 원두·사료처럼 다 쓰면 다시 사는 소모품 (사용자 결정 11/9). 첫 달 뒤 손님 일부가 꾸준히 돌아오는 곡선으로 1년 6회
 # '자주' 2회는 분석 Q4(UCI) 범위 안: 매출 기준 약 1.5회분(LTV = 첫 주문 2.45배), 리텐션 곡선 기준 약 2.2회 (도매 섞임). '가끔' 0.5회는 근거 약함 (GA4 3개월 안 재구매 11.8%)
 TEST_SALES = 30           # 시험 예산 = 첫 구매 손익분기 × 30 (판매 30건이면 CPA 오차 약 ±18% = 1/√30)
 WARN_SALES = 10           # 월 최대 예산이 손익분기 × 10 미만이면 "한 달로 판단이 어려울 수 있음"
@@ -163,8 +164,22 @@ def retention_scale_for(repurchases: float, floor: float, decay: float, purchase
     곡선 모양(바닥값·감소 속도)은 다음 단계 슬라이더를 따르고, 높이만 맞춘다 (가정값)."""
     from .model import FunnelParams
     base = FunnelParams(retention_floor=floor, retention_decay=decay, purchase_freq=purchase_freq, months=months)
-    per_customer = float(base.retention(months)[1:].sum()) * purchase_freq
-    return max(repurchases, 0.0) / per_customer if per_customer > 0 else 0.0
+    target = max(repurchases, 0.0)
+
+    def per_customer(scale: float) -> float:   # 리텐션은 100%에서 잘리므로 배수와 횟수가 비례하지 않음
+        return float(base.with_changes(retention_scale=scale).retention(months)[1:].sum()) * purchase_freq
+
+    if per_customer(1.0) <= 0 or target <= 0:
+        return 0.0
+    cap = purchase_freq * (months - 1)              # 매달 다시 와도 이 이상은 안 됨
+    target = min(target, cap * 0.999)
+    lo, hi = 0.0, 1.0
+    while per_customer(hi) < target:
+        hi *= 2
+    for _ in range(60):                             # 이분법
+        mid = (lo + hi) / 2
+        lo, hi = (mid, hi) if per_customer(mid) < target else (lo, mid)
+    return hi
 
 
 def _preset_name(repurchases: float) -> str:
@@ -262,6 +277,7 @@ def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: 
     from .acquisition import Channel, MetaCurve
     from .model import simulate
     from .optimize import optimize_allocation
+    from .montecarlo import one_month
     sat = D.META_SATURATION if meta_sat is None else meta_sat
     has_naver = naver_curve is not None and getattr(naver_curve, "capacity", 0) > 0
     chans = []
@@ -282,9 +298,10 @@ def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: 
     if has_naver:
         for share in SPLIT_SHARES:
             n = min(budget * share, naver_curve.capacity)
-            s = simulate(chans, [n, budget - n], params).summary
-            rows.append({"share": share, "naver": n, "meta": budget - n, "new_customers": s["new_customers"],
-                         "profit_12m": s["profit_12m"]})
+            # 코치 단위 = 한 달 광고 → 그 달 손님 코호트의 12개월 이익 − 그 한 달 광고비 (montecarlo.one_month와 같은 식)
+            m = one_month(chans, [n, budget - n], params)
+            rows.append({"share": share, "naver": n, "meta": budget - n, "new_customers": m["new"],
+                         "profit_cohort": m["profit"], "profit_first": m["first_only"]})
     return {
         "naver": naver, "meta": budget - naver, "has_naver": has_naver, "spends": spends, "channels": chans,
         "clicks": clicks, "cpc": (budget / clicks) if clicks > 0 else float(meta_cpc),

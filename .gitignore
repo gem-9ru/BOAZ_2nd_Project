@@ -9,3 +9,7 @@ __pycache__/
 .venv/
 .DS_Store
 data/interim/naver_hub_cache/
+
+# 메타 광고 관리자 원본 내보내기 (실제 계정 숫자) — 열 이름만 쓰고 커밋하지 않음 (사용자 결정 11/9)
+유제명-캠페인-*.csv
+*캠페인*.csv

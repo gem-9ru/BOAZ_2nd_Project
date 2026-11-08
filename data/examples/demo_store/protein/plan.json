@@ -1,0 +1,28 @@
+{
+ "version": 1,
+ "started": "2026-10-01",
+ "inputs": {
+  "q_category": "식품",
+  "q_stores": [
+   "스마트스토어"
+  ],
+  "q_price": 79000,
+  "q_profit": 39500,
+  "q_repurchase": "매달(정기)",
+  "q_budget": 500000,
+  "q_keyword": "프로틴쉐이크",
+  "q_budget_pick": "recommended"
+ },
+ "prediction": {
+  "budget": 500000.0,
+  "naver": 120600.0,
+  "meta": 379400.0,
+  "clicks": 375.0,
+  "cpc": 1333.0,
+  "new": 4.2,
+  "cvr": 0.0126,
+  "wins": 85.0,
+  "p10": -63000.0,
+  "p90": 1010000.0
+ }
+}

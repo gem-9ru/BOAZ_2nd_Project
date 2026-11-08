@@ -8,7 +8,7 @@
   ],
   "q_price": 20000,
   "q_profit": 7000,
-  "q_repurchase": "가끔",
+  "q_repurchase": "매달(정기)",
   "q_budget": 300000,
   "q_keyword": "원두커피",
   "q_budget_pick": "recommended"
@@ -18,11 +18,11 @@
   "naver": 68000.0,
   "meta": 142000.0,
   "clicks": 145.0,
-  "cpc": 1500.0,
-  "new": 1.83,
+  "cpc": 1450.0,
+  "new": 1.4,
   "cvr": 0.0126,
   "wins": 0.0,
-  "p10": -202000.0,
-  "p90": -179000.0
+  "p10": -190000.0,
+  "p90": -110000.0
  }
 }
