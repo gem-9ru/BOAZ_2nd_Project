@@ -48,6 +48,7 @@ from src.engine import naver_hub as NH  # noqa: E402
 from src.engine import seasonal as SE  # noqa: E402
 from src.engine import montecarlo as MC  # noqa: E402
 from src.engine import report as RP  # noqa: E402
+from src.engine import guide as GD  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -222,6 +223,34 @@ def _num_input(label, key, **kw):
     if key not in ss:
         kw["value"] = None
     return st.number_input(label, key=key, **kw)
+
+
+def ads_guide(a: dict):
+    """광고 관리자 설정 가이드 (노션 11/9). ✅ 공식 확인 / △ 대행사 안내·경험 기준 / 🧮 이 앱의 계산."""
+    sp = a["split"]
+    with st.expander("🛠️ 광고 관리자에서 이렇게 설정하세요 (네이버 첫 세팅 · 메타 목적 · 자동 vs 수동)"):
+        g_n, g_m, g_a = st.tabs(["네이버 첫 세팅", "메타 목적 고르기", "자동 vs 수동"])
+        with g_n:
+            if sp["naver"] <= 0:
+                st.caption("이번 배분에서는 네이버 예산이 없어요. 검색어를 넣으면 네이버 예상 실적으로 다시 나눠요.")
+            else:
+                bid = GD.naver_bid_at(sp["channels"][0].curve, sp["naver"]) if sp["has_naver"] else None
+                for i, it in enumerate(GD.naver_checklist(sp["naver"], bid, a["kw"], stores), 1):
+                    st.markdown(f"{i}. **{it['step']}** {it['check']}  \n{it['detail']}")
+        with g_m:
+            pixel = st.toggle("메타 픽셀(또는 전환 API)에 구매 이벤트를 설치했다", key="pixel_ready")
+            mp = GD.meta_plan(sp["meta"], a["budget0"] / max(a["prediction"]["new"], 1e-9), pixel)
+            if mp["objective"]:
+                st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{mp['why']}")
+            else:
+                st.caption(mp["why"])
+            st.dataframe(pd.DataFrame([{"목적": o, "메타가 찾아 주는 사람": who, "맞을 때": when, "확인": chk}
+                                       for o, who, when, chk in GD.META_OBJECTIVES]), hide_index=True, use_container_width=True)
+        with g_a:
+            st.dataframe(pd.DataFrame([{"항목": k, "자동(어드밴티지+)": auto, "수동": man, "처음엔": first, "확인": chk}
+                                       for k, auto, man, first, chk in GD.AUTO_VS_MANUAL]), hide_index=True, use_container_width=True)
+        st.caption("확인 표시: ✅ 공식 문서로 확인 · △ 광고 대행사 안내·업계 경험 기준(공식 문서 미확인, 화면 이름은 바뀔 수 있어요) · 🧮 이 앱이 계산한 값. "
+                   "실제 광고 집행은 사장님 계정에서 직접 하세요(이 앱은 광고 계정에 쓰지 않아요).")
 
 
 def plan_download(a: dict, key: str):
@@ -685,6 +714,7 @@ with coach_tab:
                 st.markdown("**이 광고 전용 쿠폰 코드** (판매처에서 이 이름으로 쿠폰을 만드세요)")
                 st.code(MS.coupon_code(link_ch, month, product_en), language=None)
                 st.caption(MS.STORE_NOTES.get(link_store, "") + f" 같은 채널은 늘 같은 이름(캠페인 '{camp}')으로 써야 나중에 합쳐 볼 수 있습니다.")
+            ads_guide(a)
             if n_prep == 3:   # 모두 완료 빈 화면 (UX 6-2)
                 st.success("준비 끝! 광고를 시작했다면 아래 버튼을 눌러 주세요.", icon="✅")
             if no_ad:
