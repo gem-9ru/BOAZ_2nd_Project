@@ -23,15 +23,6 @@ def test_signal_thresholds_on_first_purchase(cpc, light):
     assert C.signal(C.required_rate(cpc, BE.first))[0] == light
 
 
-def test_first_channel_follows_store():
-    assert C.first_channel(["스마트스토어"])[0] == "네이버 쇼핑검색광고"
-    assert C.first_channel(["쿠팡"])[0].startswith("쿠팡 광고")
-    assert C.first_channel(["자사몰"], monthly_search=1_000)[0] == "네이버 검색광고"
-    assert C.first_channel(["자사몰"], monthly_search=999)[0].startswith("메타")
-    assert C.first_channel(["매장·예약"])[0] == "네이버 플레이스 광고"
-    assert C.first_channel(["자사몰", "스마트스토어"])[0] == "네이버 쇼핑검색광고"   # 여러 곳이면 우선순위
-
-
 def test_test_budget_and_warning():
     b, w = C.test_budget(3_000_000, 14_000)
     assert b == 14_000 * 30 and w is None
@@ -152,22 +143,9 @@ def test_retention_presets_include_uci():
 
 
 # ── 서비스 진단 6-1 수정 ──
-def test_coupang_has_own_channel_key_and_coupon_prefix():
+def test_coupang_coupon_prefix():
     from src.engine import measure as MS
-    assert MS.FIRST_CHANNEL_KEY["쿠팡"] == "coupang"
     assert MS.coupon_code("coupang", "2611", "coffee").startswith("CP")
-
-
-def test_coach_cpc_fallbacks():
-    fb = 1_300.0
-    # 쿠팡은 네이버 예상치가 있어도 빌리지 않음
-    cpc, src = C.pick_cpc("쿠팡 광고 (AI 스마트 광고)", 900.0, None, fb, "원두커피")
-    assert cpc == fb and "쿠팡 출처 없음" in src
-    # 자사몰 + 검색어 없음 → 메타: 임시값 700원 대신 1,300원
-    cpc, src = C.pick_cpc("메타 광고 (인스타그램·페이스북)", None, None, fb)
-    assert cpc == fb and "메타" in src
-    assert C.pick_cpc("네이버 쇼핑검색광고", 2_000.0, None, fb, "x")[0] == 2_000.0
-    assert C.pick_cpc("메타 광고", None, 500, fb)[0] == 500.0
 
 
 def test_short_budget_warning_for_banner():
@@ -196,3 +174,29 @@ def test_reference_rate_matches_engine_funnel():
     steps, _ = dl.funnel_steps()
     visit_to_purchase = float(np.prod([r for _, r in steps[1:]]))
     assert C.REFERENCE_RATES["GA4 공개 샘플 전체"] == pytest.approx(visit_to_purchase, abs=5e-4)
+
+
+# ── Phase 1: 네이버·메타 배분 ──
+def _naver_curve(cap_cost=200_000.0, cap_clicks=400.0):
+    import pandas as pd
+    from src.engine import NaverCurve
+    # 입찰가가 오를수록 클릭당 비용이 오르는 꺾은선 (포화)
+    df = pd.DataFrame({"bid": [100, 300, 600, 1000], "cost": [20_000, 60_000, 120_000, cap_cost],
+                       "clicks": [80, 180, 290, cap_clicks], "impressions": [0, 0, 0, 0]})
+    return NaverCurve({"원두커피": df})
+
+
+def test_split_budget_fills_naver_before_saturation():
+    params = C.coach_params(20_000, 7_000, 0.5)
+    small = C.split_budget(20_000, _naver_curve(), 1_300.0, params)       # 네이버 첫 구간 CPC 250원 < 메타 1,300원
+    assert small["naver"] == pytest.approx(20_000, rel=0.05) and small["naver"] + small["meta"] == pytest.approx(20_000)
+    big = C.split_budget(1_000_000, _naver_curve(), 1_300.0, params)      # 네이버 상한 20만 원 → 나머지는 메타
+    assert big["naver"] <= 200_000 + 1 and big["meta"] >= 800_000 - 1
+    assert big["naver"] + big["meta"] == pytest.approx(1_000_000)
+    assert [r["share"] for r in big["table"]] == list(C.SPLIT_SHARES)
+
+
+def test_split_budget_without_naver_goes_all_meta():
+    params = C.coach_params(20_000, 7_000, 0.5)
+    s = C.split_budget(210_000, None, 1_300.0, params)
+    assert s["naver"] == 0 and s["meta"] == pytest.approx(210_000) and not s["has_naver"] and s["table"] == []

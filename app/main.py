@@ -201,8 +201,9 @@ for _i, t in enumerate(tabs):
 # 계산 규칙·확정 값: 초보자_코치_설계안.md 8장 (src/engine/coach.py). 화면 구성: UX_개편안.md (v0.9)
 #  4단계(내 가게 → 답 보기 → 광고 준비 → 한 달 뒤), 앞 단계가 채워져야 다음이 열림, 한 달 뒤는 "광고를 시작했어요" 뒤에 열림
 COACH_STEPS = ["내 가게", "답 보기", "광고 준비", "한 달 뒤"]
-EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 35_000, "q_profit": 14_000, "q_repurchase": "가끔",
-           "q_budget": 1_000_000, "q_baseline": None, "q_keyword": "원두커피"}
+# 예시 페르소나 (노션 11/9): 스마트스토어 원두 로스터리, 판매가 2만·마진 35%(남는 돈 7천)·월 최대 30만
+EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 20_000, "q_profit": 7_000, "q_repurchase": "가끔",
+           "q_budget": 300_000, "q_baseline": None, "q_keyword": "원두커피"}
 _Q_KEYS = list(EXAMPLE) + ["q_cpc", "q_budget_pick", "q_spent", "q_clicks", "q_coupon", "q_report", "q_total"]
 _KEEP = _Q_KEYS + ["prep_1", "prep_2", "prep_3", "link_store", "link_ch", "link_url", "link_product", "link_detail"]
 for _k in _KEEP:            # 화면에 안 그린 단계의 입력값도 남도록 (Streamlit은 그리지 않은 위젯 값을 지움)
@@ -221,6 +222,35 @@ def _num_input(label, key, **kw):
     return st.number_input(label, key=key, **kw)
 
 
+def split_card(a: dict, budget_label: bool = False):
+    """네이버·메타 배분 카드 (노션 Q1): 금액, 근거(키워드 포화 지점), 비율별 비교 표."""
+    sp = a["split"]
+    total = sp["naver"] + sp["meta"]
+    with st.container(border=True):
+        st.markdown(f"**{'시험 예산 ' + won(total) + ' 나누기' if budget_label else '추천 배분 (시험 예산 ' + won(total) + ')'}: "
+                    f"네이버 {won(sp['naver'])} · 메타 {won(sp['meta'])}**")
+        if sp["has_naver"]:
+            if sp["meta"] > 1 and sp["naver"] >= sp["naver_capacity"] - 1:
+                why = (f"'{a['kw']}' 검색 수요는 한 달 약 {won(sp['naver_capacity'])}어치가 끝이라(네이버 예상 실적의 최대치), "
+                       "남는 돈은 메타로 보내요.")
+            elif sp["meta"] > 1 and sp["naver_marginal_cpc"]:
+                why = (f"네이버는 {won(sp['naver'])}을 넘으면 클릭 1번이 {won(sp['naver_marginal_cpc'])}까지 올라서(포화), "
+                       f"그 뒤로는 메타(클릭 약 {won(sp['meta_cpc'])}, 가정)가 손님을 더 싸게 데려와요.")
+            else:
+                why = (f"'{a['kw']}'을(를) 검색하는 사람에게 보이는 네이버가 이 예산 안에서는 메타(클릭 약 {won(sp['meta_cpc'])}, 가정)보다 "
+                       "손님을 싸게 데려와서 모두 네이버에 써요.")
+            st.markdown(why)
+            st.caption("같은 돈으로 새 손님이 가장 많이 오는 배분이에요. 네이버는 네이버 검색광고 예상 실적(등급 B), "
+                       "메타 클릭 비용은 가정값(등급 D)이에요.")
+            with st.expander("네이버 비율을 바꾸면?"):
+                st.dataframe(pd.DataFrame([{"네이버 비율": f"{r['share']:.0%}", "네이버": won(r["naver"]), "메타": won(r["meta"]),
+                                            "1년 새 손님": f"{r['new_customers']:.1f}명", "1년 남는 돈": won(r["profit_12m"])}
+                                           for r in sp["table"]]), hide_index=True, use_container_width=True)
+                st.caption("네이버에 예상 실적보다 많이 배정하면 다 쓰지 못하고 남아요(1년 남는 돈은 쓴 돈 기준).")
+        else:
+            st.markdown("검색어가 없거나 네이버 예상 실적을 못 받아 **모두 메타**로 계산했어요. 메타 클릭 비용은 대략값(등급 D: 가정)이에요.")
+
+
 def _go(step: int):
     ss["coach_step"] = step
     ss["coach_seen"] = max(ss.get("coach_seen", 0), step)
@@ -235,7 +265,7 @@ coach, ans = {}, None
 input_error = (price is not None and profit is not None and profit > price)
 if price and profit and max_budget and not input_error:
     be = CO.breakeven(profit, CO.REPURCHASE_PRESETS[repurchase])
-    monthly_search, naver_cpc, kw_missing = None, None, False
+    monthly_search, naver_curve, kw_missing = None, None, False
     kw = (ss.get("q_keyword") or "").strip().replace(" ", "")
     if kw:
         # 처음 불러오는 검색어면 답 자리에 스켈레톤 (UX 6-2 로딩): 캐시에 있으면 바로 지나감
@@ -251,28 +281,36 @@ if price and profit and max_budget and not input_error:
             monthly_search = float(kdf.set_index("keyword").loc[kw, "total_qc"])
         est = load_estimate(kw, _online)
         if est is not None and (est["clicks"] > 0).any():
-            nc = NaverCurve({kw: est})
-            spend0 = min(be.first * CO.TEST_SALES, max_budget, nc.capacity) or nc.capacity
-            if nc.clicks(spend0) > 0:
-                naver_cpc = spend0 / nc.clicks(spend0)
-        kw_missing = naver_cpc is None
+            naver_curve = NaverCurve({kw: est})
+        kw_missing = naver_curve is None
         ss["_kw_loaded"].add(kw)
         skel.empty()
-    ch_name, ch_reason = CO.first_channel(stores, monthly_search)
     naver_failed = bool(kw) and bool(NAVER_FAILED)
-    cpc, cpc_src = CO.pick_cpc(ch_name, naver_cpc, ss.get("q_cpc"), D.NAVER_FALLBACK_CPC, kw)
+    cparams = CO.coach_params(price, profit, CO.REPURCHASE_PRESETS[repurchase])
+    meta_cpc = float(ss.get("q_cpc") or D.NAVER_FALLBACK_CPC)   # 메타 클릭 비용: 근거 있는 값이 없어 대략값 (등급 D)
+    options = CO.budget_options(be.first, max_budget)
+    amount_of = lambda k: next(o["amount"] for o in options if o["key"] == k)  # noqa: E731
+    # 배분·신호등은 권장 예산 기준으로 먼저 계산하고, 사장님이 다른 금액을 고르면 그 금액으로 다시 나눔
+    split = CO.split_budget(amount_of("recommended"), naver_curve, meta_cpc, cparams)
+    cpc = split["cpc"]
     need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
     light, _ = CO.signal(need)
-    options = CO.budget_options(be.first, max_budget)
     # 기본 선택은 신호등에 따라 (🔴 = 광고 안 함). 사장님이 직접 고르기 전까지는 신호등이 바뀌면 기본도 따라감
     default_pick = CO.default_budget_pick(light)
     if not ss.get("_budget_touched") or ss.get("q_budget_pick") not in [o["key"] for o in options] + ["none"]:
         ss["q_budget_pick"] = default_pick
     pick_key = ss["q_budget_pick"]
     # 광고 안 함이면 다음 단계 탭에는 권장 예산을 넘김 (시뮬레이션용)
-    budget0 = next(o["amount"] for o in options if o["key"] == (pick_key if pick_key != "none" else "recommended"))
+    budget0 = amount_of(pick_key if pick_key != "none" else "recommended")
+    if budget0 != amount_of("recommended"):
+        split = CO.split_budget(budget0, naver_curve, meta_cpc, cparams)
+    cpc_src = ("네이버 예상 실적 '" + kw + "' + 메타 대략값, 배분한 예산의 평균" if split["has_naver"]
+               else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
+    if ss.get("q_cpc"):
+        cpc_src += " · 메타 클릭 비용 직접 입력"
+    ch_name = "메타 광고" if split["meta"] > 0 else "네이버 검색광고"   # 판정의 학습 구간 경고용 (메타가 있으면 7일 학습)
     season_idx, season_src = load_season(kw) if kw else (None, "계절성 미반영 (검색어 없음)")
-    ans = dict(be=be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, ch_reason=ch_reason,
+    ans = dict(be=be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, split=split,
                cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, light=light, options=options, budget0=budget0,
                default_pick=default_pick)
     coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
@@ -299,7 +337,7 @@ with coach_tab:
             ss["coach_mode"], ss["coach_step"], ss["coach_seen"] = "example", 1, 1
             ss.pop("_closed_example", None)
             st.rerun()
-        st.caption("예시: 스마트스토어 원두 쇼핑몰, 1개 3.5만 원, 남는 돈 1.4만 원, 한 달 최대 광고비 100만 원, 검색어 '원두커피'")
+        st.caption("예시: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 한 달 최대 광고비 30만 원, 검색어 '원두커피'")
     else:
         if mode == "example" and not ss.get("_closed_example"):
             e1, e2, e3 = st.columns([10, 2, 0.6])
@@ -326,7 +364,7 @@ with coach_tab:
         if cur == 0:
             st.markdown("#### 내 가게 숫자")
             st.pills("무엇을 파나요?", CO.CATEGORIES, key="q_category")
-            st.pills("어디서 파나요? (여러 곳이면 모두)", CO.STORES, selection_mode="multi", key="q_stores")
+            st.pills("어디서 파나요? (광고 링크·쿠폰 만들 때 써요, 여러 곳이면 모두)", CO.STORES, selection_mode="multi", key="q_stores")
             c1, c2 = st.columns(2)
             with c1:
                 _num_input("1개 팔면 받는 돈 (원)", "q_price", min_value=0, max_value=100_000_000, step=1_000, placeholder="예: 35000",
@@ -361,7 +399,7 @@ with coach_tab:
             r1, r2, r3, r4, r5 = st.columns([3, 0.6, 3, 0.6, 4])
             r1.metric("손님 1명에 최대 (첫 구매만)", won(be.first))
             r2.markdown("<div style='font-size:28px;text-align:center;padding-top:22px'>÷</div>", unsafe_allow_html=True)
-            r3.metric("클릭 1번 비용", won(a["cpc"]))
+            r3.metric("클릭 1번 비용 (평균)", won(a["cpc"]))
             r4.markdown("<div style='font-size:28px;text-align:center;padding-top:22px'>→</div>", unsafe_allow_html=True)
             r5.metric("100명 중 몇 명이 사야 남나", f"{a['need'] * 100:.1f}명")
             word = CO.SIGNAL_WORDS[a["light"]]
@@ -379,6 +417,7 @@ with coach_tab:
                 st.markdown(f"광고 대신 **공동구매·제휴**(팔린 만큼만 냄)라면 판매액의 **{profit / price:.0%} 이하** 수수료일 때 남습니다.")
             if be.year > be.first:
                 st.caption(f"다시 사는 손님까지 치면 손님 1명에 {won(be.year)}, 100명 중 {a['need_year'] * 100:.1f}명이면 됩니다 (재구매 '{repurchase}' 가정값).")
+            split_card(a)
             if a["season_idx"]:   # 계절성 (네이버 데이터랩): 꼭 알아야 하는 정보라 캡션으로 (툴팁 아님)
                 pk, lo = SE.peak_low(a["season_idx"])
                 now_m = CO.today_kst().month
@@ -394,16 +433,15 @@ with coach_tab:
             if a["kw_missing"]:
                 st.info(f"'{a['kw']}'로는 예상 클릭 비용을 못 찾았어요. 더 넓은 단어(예: 커피)로 바꿔 보세요. 지금은 대략값으로 계산했어요.", icon="🔎")
             with st.expander(f"클릭 비용 출처: {a['cpc_src']} · 알면 직접 넣기"):
-                _num_input("클릭 1번 비용 (원)", "q_cpc", min_value=0, max_value=100_000, step=50)
+                _num_input("메타 클릭 1번 비용을 알면 (원)", "q_cpc", min_value=0, max_value=100_000, step=50,
+                           help="메타 광고 관리자의 'CPC(링크 클릭당 비용)'. 넣으면 배분과 답이 이 값으로 다시 계산돼요.")
             st.button("다음: 광고 준비 →", type="primary", on_click=_go, args=(2,))
 
         # ── 3 광고 준비: 첫 채널, 시험 예산 3안, 준비 3개, 링크·쿠폰 (UX 3-4) ──
         elif cur == 2:
             a = ans
             st.markdown("#### 첫 달에 이렇게 시작하세요")
-            with st.container(border=True):
-                st.markdown(f"**첫 광고: {a['ch_name']}**  \n{a['ch_reason']}"
-                            + (f"  \n(검색어 '{a['kw']}' 네이버 월 검색 {a['monthly_search']:,.0f}회)" if a["monthly_search"] is not None else ""))
+            split_card(a, budget_label=True)
             _, short_warn = CO.test_budget(max_budget, a["be"].first)
             if short_warn:   # 설계안 8-1 #5
                 st.warning(short_warn, icon="⏳")
@@ -440,7 +478,7 @@ with coach_tab:
                 st.caption("광고마다 꼬리표가 붙은 링크와 쿠폰 코드를 만들어, 한 달 뒤 '어느 광고로 팔렸나'를 셀 수 있게 합니다. 코드 상자 오른쪽 위 아이콘으로 복사하세요.")
                 l1, l2 = st.columns(2)
                 link_store = l1.selectbox("이 광고가 보낼 곳", stores or ["자사몰"], key="link_store")
-                default_ch = next((v for k, v in MS.FIRST_CHANNEL_KEY.items() if a["ch_name"].startswith(k)), "meta")
+                default_ch = "naver_search" if a["split"]["naver"] > 0 else "meta"
                 ch_keys = list(MS.CHANNELS)
                 link_ch = l2.selectbox("광고 채널", ch_keys, index=ch_keys.index(default_ch), format_func=lambda k: MS.CHANNELS[k][0], key="link_ch")
                 l3, l4, l5 = st.columns([2, 1, 1])

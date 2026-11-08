@@ -3,7 +3,8 @@
 기준: 초보자_코치_설계안.md 8장 "확정 값" (사용자 확정 11/5, 기획안 13장 #15).
 사장님이 이미 아는 숫자(판매가, 1개 팔면 남는 돈, 재구매 감, 월 최대 광고비)만으로
 ① 손님 1명에 쓸 수 있는 최대 금액(손익분기 CPA) ② 광고가 맞는 상품인지(필요한 구매 비율 신호등)
-③ 첫 달 계획(첫 채널, 시험 예산) ④ 한 달 뒤 판정(순서형)을 만든다.
+③ 첫 달 계획(네이버·메타 예산 배분, 시험 예산) ④ 한 달 뒤 판정(순서형)을 만든다.
+매체 범위는 네이버 검색광고·메타 두 개 (노션 11/9 기획, plans/pending/notion-v2-alignment.md Q1).
 """
 from dataclasses import dataclass
 from datetime import date, datetime
@@ -24,18 +25,9 @@ MIN_DAYS = 14             # 판정 보류: 집행 14일 미만
 MIN_SALES = 10            # 판정 보류: 광고로 온 판매 10건 미만 (오차 약 ±32%)
 LEARNING_DAYS = 7         # 메타·카카오는 첫 7일 학습 구간: 이 기간 성과로 "줄이기" 금지
 INCREASE = 0.20           # "계속"일 때 증액 폭 (업계 경험칙 △, 1차 근거 없음)
-NAVER_QC_MIN = 1_000      # 🔧 자사몰: 상품 키워드 월 검색수가 이 이상이면 네이버 검색광고, 아니면 메타
 
-STORES = ["스마트스토어", "쿠팡", "자사몰", "매장·예약"]
+STORES = ["스마트스토어", "쿠팡", "자사몰", "매장·예약"]   # 판매처: 광고 링크(NT·UTM)·쿠폰 만들 때만 씀
 CATEGORIES = ["식품", "뷰티", "패션", "생활", "육아", "서비스·예약", "기타"]
-# 판매처 → (첫 채널, 이유, 대략 클릭 비용을 어디서 구하나)
-FIRST_CHANNEL = {
-    "스마트스토어": ("네이버 쇼핑검색광고", "사려고 검색한 사람에게 내 상품이 바로 보입니다. 클릭할 때만 돈을 냅니다."),
-    "쿠팡": ("쿠팡 광고 (AI 스마트 광고)", "쿠팡 안에서 검색한 사람에게 상단에 보입니다. 키워드·입찰을 쿠팡이 자동으로 맞춥니다."),
-    "자사몰_검색": ("네이버 검색광고", "이 상품을 이미 검색하는 사람이 많습니다. 찾는 사람에게 먼저 보이는 게 가장 쌉니다."),
-    "자사몰_메타": ("메타 광고 (인스타그램·페이스북)", "아직 검색하는 사람이 적은 상품입니다. 사람들이 찾기 전에 먼저 보여 줘야 합니다."),
-    "매장·예약": ("네이버 플레이스 광고", "가까운 곳을 찾는 사람에게 지도·플레이스 위쪽에 보입니다. (근처 주민에게 알리려면 당근 광고도 대안)"),
-}
 LEARNING_CHANNELS = ("메타", "카카오")
 PLAIN_STEPS = ["봤다", "눌렀다", "둘러봤다", "샀다", "다시 샀다", "소개했다"]   # 체인 6단계의 초보자 표기
 
@@ -63,17 +55,6 @@ def signal(rate: float) -> Tuple[str, str]:
     if rate <= SIGNAL_YELLOW:
         return "🟡", "평균보다 잘 팔려야 남습니다. 상세페이지와 후기를 먼저 갖추고 작게 시작하세요."
     return "🔴", "광고만으로는 남기기 어렵습니다. 공동구매처럼 팔린 만큼만 내는 방식이나 가격·구성 조정을 먼저 보세요."
-
-
-def first_channel(stores: List[str], monthly_search: Optional[float] = None) -> Tuple[str, str]:
-    """판매처를 따라 첫 채널 1개. 여러 곳에서 팔면 스마트스토어 > 쿠팡 > 자사몰 > 매장 순으로 하나."""
-    for s in STORES:
-        if s in stores:
-            if s == "자사몰":
-                key = "자사몰_검색" if (monthly_search or 0) >= NAVER_QC_MIN else "자사몰_메타"
-                return FIRST_CHANNEL[key]
-            return FIRST_CHANNEL[s]
-    return FIRST_CHANNEL["자사몰_메타"]
 
 
 def test_budget(max_budget: float, be_first: float) -> Tuple[float, Optional[str]]:
@@ -265,16 +246,53 @@ def default_budget_pick(light: str) -> str:
     return "none" if light == "🔴" else "recommended"
 
 
-def pick_cpc(ch_name: str, naver_cpc: Optional[float], user_cpc: Optional[float], fallback: float,
-             keyword: str = "") -> Tuple[float, str]:
-    """코치가 쓸 클릭 1번 비용과 출처. 직접 입력 > 쿠팡·메타는 근거 있는 대략값 > 네이버 예상치 > 대략값.
-    쿠팡은 네이버 예상치를 빌리지 않고, 메타의 임시값(700원)은 근거가 없어 코치에서는 쓰지 않음 (서비스 진단 5-3)."""
-    if user_cpc:
-        return float(user_cpc), "직접 입력"
-    if ch_name.startswith("쿠팡"):
-        return float(fallback), "쿠팡 출처 없음, 대략값 (네이버 키워드 63개 중앙값)"
-    if "메타" in ch_name:
-        return float(fallback), "메타 출처 없음, 대략값 (네이버 키워드 63개 중앙값)"
-    if naver_cpc:
-        return float(naver_cpc), f"네이버 예상 실적 '{keyword}' (최근 4주 → 한 달)" + ("" if "네이버" in ch_name else ", 이 채널 대신 참고")
-    return float(fallback), "네이버 대략값 (공개 키워드 63개 중앙값, 검색어를 넣으면 네이버 예상치로 바뀜)"
+# ── 네이버·메타 예산 배분 (노션 Q1) ──────────────────────────────
+SPLIT_SHARES = (1.0, 0.7, 0.5, 0.3, 0.0)   # 비교 표: 네이버 비율
+
+
+def coach_params(price: float, profit: float, repurchases: float):
+    """코치 숫자로 엔진 파라미터를 만든다: 객단가 = 판매가, 마진 = 남는 돈 ÷ 판매가, 재구매 프리셋으로 곡선 높이."""
+    from . import defaults as D
+    from .model import FunnelParams
+    scale = retention_scale_for(repurchases, D.RETENTION_FLOOR, D.RETENTION_DECAY, D.PURCHASE_FREQ)
+    return FunnelParams(aov=float(price), margin=float(profit) / float(price), retention_scale=scale)
+
+
+def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: Optional[float] = None) -> Dict:
+    """시험 예산을 네이버·메타에 나눔. 같은 돈으로 새 손님이 가장 많은 배분 (optimize_allocation 재사용, 예산 전부 씀):
+    네이버 검색어 수요(예상 실적 곡선)가 메타보다 싸게 손님을 데려오는 구간까지 네이버를 채우고 남는 돈을 메타로.
+    naver_curve가 없으면(검색어 없음·예측 실패) 모두 메타."""
+    from . import defaults as D
+    from .acquisition import Channel, MetaCurve
+    from .model import simulate
+    from .optimize import optimize_allocation
+    sat = D.META_SATURATION if meta_sat is None else meta_sat
+    has_naver = naver_curve is not None and getattr(naver_curve, "capacity", 0) > 0
+    chans = []
+    if has_naver:
+        chans.append(Channel("naver", "네이버 검색광고", naver_curve, D.NAVER_CVR_MULT, D.NAVER_RETENTION_MULT))
+    chans.append(Channel("meta", "메타 광고", MetaCurve(meta_cpc, sat), D.META_CVR_MULT, D.META_RETENTION_MULT))
+    budget = max(float(budget), 0.0)
+    if has_naver and budget > 0:
+        spends = optimize_allocation(chans, budget, params, "new_customers", full_budget=True)["spends"]
+        naver = min(float(spends[0]), naver_curve.capacity)
+        spends = [naver, budget - naver]
+    else:
+        spends = [budget]
+    res = simulate(chans, spends, params)
+    clicks = res.summary["clicks_total"] / params.months
+    naver = spends[0] if has_naver else 0.0
+    rows = []
+    if has_naver:
+        for share in SPLIT_SHARES:
+            n = min(budget * share, naver_curve.capacity)
+            s = simulate(chans, [n, budget - n], params).summary
+            rows.append({"share": share, "naver": n, "meta": budget - n, "new_customers": s["new_customers"],
+                         "profit_12m": s["profit_12m"]})
+    return {
+        "naver": naver, "meta": budget - naver, "has_naver": has_naver, "spends": spends, "channels": chans,
+        "clicks": clicks, "cpc": (budget / clicks) if clicks > 0 else float(meta_cpc),
+        "naver_capacity": naver_curve.capacity if has_naver else 0.0,
+        "naver_marginal_cpc": naver_curve.marginal_cpc(naver) if (has_naver and naver > 0) else None,
+        "meta_cpc": float(meta_cpc), "result": res, "table": rows,
+    }
