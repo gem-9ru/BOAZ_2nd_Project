@@ -112,3 +112,32 @@ def store_funnel(totals: Dict[str, Optional[float]]) -> Optional[pd.DataFrame]:
     if len(cols) < 2:
         return None
     return pd.DataFrame([{FIELDS[k][0]: totals[k] for k in cols}])
+
+
+# ── 한 달치만 고르기 (판매처 통계가 여러 달일 때) ─────────────────────
+DATE_WORDS = ["날짜", "일자", "일별", "기간", "date", "day"]
+
+
+def detect_date_column(df: pd.DataFrame) -> Optional[str]:
+    """이름에 날짜 단어가 있고 값의 절반 이상이 날짜로 읽히는 열."""
+    for c in df.columns:
+        if any(w in str(c).lower() for w in DATE_WORDS):
+            parsed = parse_dates(df[c])
+            if parsed.notna().mean() >= 0.5:
+                return c
+    return None
+
+
+def parse_dates(s: pd.Series) -> pd.Series:
+    """'2026-10-01', '2026.10.01.', '2026/10/01', '20261001' 같은 날짜 문자열."""
+    text = s.astype(str).str.strip().str.rstrip(".").str.replace(r"[./]", "-", regex=True)
+    return pd.to_datetime(text, errors="coerce", format="mixed")
+
+
+def months_in(df: pd.DataFrame, col: str) -> List[str]:
+    return sorted(parse_dates(df[col]).dropna().dt.strftime("%Y-%m").unique().tolist())
+
+
+def only_month(df: pd.DataFrame, col: str, month: str) -> pd.DataFrame:
+    """month = 'YYYY-MM'인 행만."""
+    return df[parse_dates(df[col]).dt.strftime("%Y-%m") == month]

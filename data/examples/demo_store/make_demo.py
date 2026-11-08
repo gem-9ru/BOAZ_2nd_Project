@@ -28,9 +28,9 @@ EXAMPLES = {
     "coffee": dict(
         products=[("1001", "싱글오리진 원두 200g", 20_000), ("1002", "하우스 블렌드 원두 500g", 20_000)],
         price=20_000, profit=7_000, budget_max=300_000, keyword="원두커피", organic_new=1.2,
-        naver=68_000, meta=142_000, naver_cpc=1_900, meta_cpc=1_300, cvr=0.013,
-        naver_tracking=False,            # 전환 추적이 빠진 가게 → '측정부터 확인' 진단
-        meta_extra_results=0.5,          # 조회 후 구매 등으로 메타가 하루 평균 0.5건 더 셈 → 과대 집계
+        naver=68_000, meta=142_000, naver_cpc=1_900, meta_cpc=1_300, cvr=0.015,
+        naver_tracking=True,
+        meta_overcount=0.7,              # 메타가 자기 광고 주문 1건마다 0.7건을 더 셈(조회 후 구매·다른 경로 구매) → 과대 집계
         meta_reach=(900, 1_400), meta_freq=(2.6, 3.4), coupon_share=0.6,
         prediction=dict(budget=210_000, naver=68_000, meta=142_000, clicks=145.0, cpc=1_450.0, new=1.4, cvr=0.0126,
                         wins=0, p10=-190_000, p90=-110_000),
@@ -40,7 +40,7 @@ EXAMPLES = {
         products=[("2001", "단백질 쉐이크 초코 2kg (한 달분)", 79_000), ("2002", "단백질 쉐이크 곡물 2kg (한 달분)", 79_000)],
         price=79_000, profit=39_500, budget_max=500_000, keyword="프로틴쉐이크", organic_new=0.6,
         naver=120_600, meta=379_400, naver_cpc=1_450, meta_cpc=1_300, cvr=0.05,   # 실제 광고 성과가 가정(1.26%)보다 좋음
-        naver_tracking=True, meta_extra_results=0.2,
+        naver_tracking=True, meta_overcount=0.6,
         meta_reach=(1_800, 2_600), meta_freq=(1.6, 2.2), coupon_share=0.9,
         prediction=dict(budget=500_000, naver=120_600, meta=379_400, clicks=375.0, cpc=1_333.0, new=4.2, cvr=0.0126,
                         wins=85, p10=-63_000, p90=1_010_000),
@@ -56,12 +56,23 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
     oid = {"coffee": 2026080100000, "protein": 2026080200000}[name]
     p_repeat = REPEATS_PER_YEAR / 365
     naver_daily, meta_daily = cfg["naver"] / len(AD_DAYS), cfg["meta"] / len(AD_DAYS)
+    # 광고 달의 클릭은 매일 무작위, 광고 주문·메타 리포트 전환 '합계'는 정해진 비율로 (시연 숫자가 늘 같은 이야기를 하게)
+    n_clicks = rng.poisson(naver_daily / cfg["naver_cpc"], len(AD_DAYS))
+    m_clicks = rng.poisson(meta_daily / cfg["meta_cpc"], len(AD_DAYS))
+
+    def spread(total: int, weights) -> np.ndarray:
+        w = np.asarray(weights, dtype=float)
+        days = rng.choice(len(w), size=total, p=w / w.sum()) if total and w.sum() else []
+        return np.bincount(np.asarray(days, dtype=int), minlength=len(w))
+
+    n_buys = spread(int(round(n_clicks.sum() * cfg["cvr"])), n_clicks)
+    m_buys = spread(int(round(m_clicks.sum() * cfg["cvr"])), m_clicks)
+    m_results = m_buys + spread(int(round(m_buys.sum() * cfg["meta_overcount"])), np.maximum(m_clicks, 1))
     for day in DAYS:
         ad = day in AD_DAYS
-        n_clk = rng.poisson(naver_daily / cfg["naver_cpc"]) if ad else 0
-        m_clk = rng.poisson(meta_daily / cfg["meta_cpc"]) if ad else 0
-        n_buy = rng.binomial(n_clk, cfg["cvr"]) if n_clk else 0
-        m_buy = rng.binomial(m_clk, cfg["cvr"]) if m_clk else 0
+        i = AD_DAYS.get_loc(day) if ad else None
+        n_clk, m_clk = (int(n_clicks[i]), int(m_clicks[i])) if ad else (0, 0)
+        n_buy, m_buy = (int(n_buys[i]), int(m_buys[i])) if ad else (0, 0)
         repeat = rng.binomial(len(buyers), p_repeat) if buyers else 0
         sources = (["organic"] * rng.poisson(cfg["organic_new"]) + ["repeat"] * repeat
                    + ["naver"] * n_buy + ["meta"] * m_buy)
@@ -109,7 +120,7 @@ def make(name: str, cfg: dict, rng: np.random.Generator):
                            "전환수": n_conv, "전환매출액(원)": n_conv * cfg["price"]})
         reach = int(rng.integers(*cfg["meta_reach"]))
         m_imp = int(reach * rng.uniform(*cfg["meta_freq"]))
-        results = m_buy + rng.poisson(cfg["meta_extra_results"])
+        results = int(m_results[i])
         spend = m_clk * cfg["meta_cpc"]
         meta_rows.append({
             "보고 시작": day.strftime("%Y-%m-%d"), "보고 종료": day.strftime("%Y-%m-%d"), "캠페인 이름": cfg["campaign"][2],

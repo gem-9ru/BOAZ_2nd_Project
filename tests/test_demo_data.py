@@ -47,3 +47,12 @@ def test_demo_verdicts_match_the_story():
         v = C.judge(31, s["spend"], s["clicks"], basis, C.breakeven(profit, 6.0), s["spend"] / s["clicks"], "메타 광고")
         assert v.step == step, (ex, v.title)
         assert s["report_conversions"] > s["ad_orders"]          # 리포트가 실제보다 많이 셈 (과대 집계 시연)
+
+
+def test_demo_over_count_is_realistic():
+    """플랫폼 과대 집계율 = (리포트 전환 − 실제 광고 주문) ÷ 실제 광고 주문이 +30~100% 범위."""
+    for ex in ("coffee", "protein"):
+        s = json.loads((BASE / ex / "summary.json").read_text(encoding="utf-8"))
+        assert s["ad_orders"] > 0
+        rate = R.over_count_rate(s["report_conversions"], s["ad_orders"])
+        assert 0.3 <= rate <= 1.0, (ex, rate)

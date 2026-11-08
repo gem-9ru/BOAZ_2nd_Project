@@ -225,3 +225,14 @@ def test_retention_scale_hits_preset_even_with_clipping(rep):
     s = C.retention_scale_for(rep, D.RETENTION_FLOOR, D.RETENTION_DECAY, D.PURCHASE_FREQ)
     got = FunnelParams(retention_scale=s).retention(12)[1:].sum() * D.PURCHASE_FREQ
     assert got == pytest.approx(rep, rel=1e-3)
+
+
+def test_store_stats_one_month():
+    import pandas as pd
+    from src.engine import measure as MS
+    df = pd.DataFrame({"날짜": ["2026.09.30.", "2026.10.01.", "2026-10-02", "20261101"], "유입수": [10, 20, 30, 40], "결제수": [1, 2, 3, 4]})
+    col = MS.detect_date_column(df)
+    assert col == "날짜" and MS.months_in(df, col) == ["2026-09", "2026-10", "2026-11"]
+    oct_ = MS.only_month(df, col, "2026-10")
+    assert oct_["결제수"].sum() == 5
+    assert MS.detect_date_column(pd.DataFrame({"유입수": [1], "결제수": [1]})) is None

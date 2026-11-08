@@ -832,6 +832,15 @@ with coach_tab:
             if store_file is not None:
                 try:
                     sdf = RP.read_report(store_file)   # BOM 있는 CSV도
+                    date_col = MS.detect_date_column(sdf)
+                    if date_col:   # 여러 달이 섞여 있으면 한 달치만 (기본: 광고 시작한 달, 없으면 가장 최근 달)
+                        months = MS.months_in(sdf, date_col)
+                        if len(months) > 1:
+                            want = start_day.strftime("%Y-%m")
+                            pick_m = st.selectbox("어느 달 숫자를 볼까요?", months, index=months.index(want) if want in months else len(months) - 1,
+                                                  key="store_month", help=f"파일에 {len(months)}달이 들어 있어요. 고른 달의 행만 더해요.")
+                            sdf = MS.only_month(sdf, date_col, pick_m)
+                            st.caption(f"'{date_col}' 열에서 {pick_m}만 골라 더했어요 ({len(sdf)}일치).")
                     guess = MS.detect_columns(list(sdf.columns))
                     missing = not all(guess[k] for k in ("visits", "orders"))
                     if missing:
@@ -850,9 +859,9 @@ with coach_tab:
                                + (f" → 방문 100명 중 {store_tot['orders'] / store_tot['visits'] * 100:.1f}명이 샀습니다 (광고 외 손님 포함)."
                                   if store_tot.get("visits") and store_tot.get("orders") else "")
                                + " 이 퍼널은 다음 단계 '로그 분석'에도 채워집니다.")
-                    if store_tot.get("orders") and ss.get("_toasted_file") != store_file.name:
+                    if store_tot.get("orders") and ss.get("_toasted_file") != (store_file.name, ss.get("store_month")):
                         ss["q_total"] = int(store_tot["orders"])
-                        ss["_toasted_file"] = store_file.name
+                        ss["_toasted_file"] = (store_file.name, ss.get("store_month"))
                         st.toast(f"통계 파일에서 전체 판매 {int(store_tot['orders'])}건을 넣었어요.", icon="📥")
                 except Exception as e:  # noqa: BLE001
                     st.error("통계 파일을 읽지 못했어요. 판매처 관리자에서 CSV나 엑셀로 다시 내려받아 위 칸에 다시 올려 주세요.", icon="📄")
