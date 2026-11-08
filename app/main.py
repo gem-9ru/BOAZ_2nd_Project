@@ -47,6 +47,7 @@ from src.engine import naver_source as ns  # noqa: E402
 from src.engine import naver_hub as NH  # noqa: E402
 from src.engine import seasonal as SE  # noqa: E402
 from src.engine import montecarlo as MC  # noqa: E402
+from src.engine import report as RP  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
@@ -223,6 +224,139 @@ def _num_input(label, key, **kw):
     return st.number_input(label, key=key, **kw)
 
 
+def plan_download(a: dict, key: str):
+    """내 계획 파일 받기 (가정 A4: 로그인 없이 JSON). 입력·예측·시작일만 담고 개인정보는 없음."""
+    data = RP.plan_to_json({k: ss.get(k) for k in RP.PLAN_INPUT_KEYS}, a["prediction"], ss.get("coach_started"))
+    st.download_button("📄 내 계획 파일 받기", data, file_name=f"광고계획_{CO.today_kst():%Y%m%d}.json", mime="application/json",
+                       key=key, help="한 달 뒤 이 파일을 올리면 숫자와 예측을 그대로 불러와 실제 결과와 비교해요.")
+
+
+def plan_upload(key: str):
+    f = st.file_uploader("계획 파일 불러오기 (한 달 전에 받은 .json)", type=["json"], key=key)
+    if f is None or ss.get("_plan_loaded") == (f.name, f.size):
+        return
+    try:
+        inputs, pred, started = RP.plan_from_json(f.getvalue().decode("utf-8"))
+    except (ValueError, UnicodeDecodeError) as e:
+        st.error("계획 파일을 읽지 못했어요. 이 앱에서 받은 .json 파일을 그대로 올려 주세요.", icon="📄")
+        st.caption(f"자세한 오류: {e}")
+        return
+    for k, v in inputs.items():
+        ss[k] = v
+    if "q_budget_pick" in inputs:
+        ss["_budget_touched"] = True
+    ss["plan_pred"], ss["_plan_loaded"] = pred, (f.name, f.size)
+    ss["coach_mode"] = "mine"
+    if started:
+        ss["coach_started"], ss["coach_step"], ss["coach_seen"] = started, 3, 3
+    st.toast("계획을 불러왔어요. 예측과 실제를 비교해 볼게요.", icon="📄")
+    st.rerun()
+
+
+def report_section(a: dict):
+    """한 달 뒤 재계산 (노션 Q4): 네이버·메타 리포트 → 진단, 과대 집계율, 예측 오차율, 다음 달 배분."""
+    st.divider()
+    st.markdown("#### 광고 리포트로 다시 계산하기 (네이버·메타)")
+    pred = ss.get("plan_pred") or a["prediction"]
+    c1, c2 = st.columns([3, 2])
+    with c1:
+        plan_upload("plan_up_4")
+    with c2:
+        plan_download(a, "plan_dl_4")
+    st.caption("예측: " + ("불러온 계획 파일" if ss.get("plan_pred") else "지금 입력으로 계산한 값")
+               + f" · 광고비 {won(pred.get('budget', 0))} (네이버 {won(pred.get('naver', 0))} · 메타 {won(pred.get('meta', 0))}), "
+               f"클릭 {pred.get('clicks', 0):,.0f}번, 새 손님 {pred.get('new', 0):.1f}명")
+    files = st.file_uploader("네이버 검색광고 보고서 · 메타 광고 관리자 내보내기 (CSV·엑셀, 여러 개 가능)", type=["csv", "xlsx", "xls"],
+                             accept_multiple_files=True, key="rep_files")
+    reps = []
+    for i, f in enumerate(files or []):
+        try:
+            df = pd.read_csv(f) if f.name.lower().endswith(".csv") else pd.read_excel(f)
+        except Exception as e:  # noqa: BLE001
+            st.error(f"'{f.name}'을(를) 읽지 못했어요. 광고 관리자에서 CSV나 엑셀로 다시 내려받아 올려 주세요.", icon="📄")
+            st.caption(f"자세한 오류: {type(e).__name__}")
+            continue
+        guess = RP.detect_platform(list(df.columns))
+        platform = st.selectbox(f"'{f.name}'은 어느 광고의 리포트인가요?", ["naver", "meta"],
+                                index=["naver", "meta"].index(guess) if guess else 0,
+                                format_func={"naver": "네이버 검색광고", "meta": "메타"}.get, key=f"rep_pf_{i}")
+        mapping = RP.map_columns(list(df.columns), platform)
+        missing = [RP.METRICS[k] for k in ("clicks", "cost") if not mapping[k]]
+        if missing or guess is None:
+            st.warning(f"'{f.name}'에서 {', '.join(missing) or '광고 종류'}을(를) 찾지 못했어요. 아래 '열 맞추기'에서 직접 골라 주세요.", icon="🧩")
+        with st.expander(f"열 맞추기: {f.name}", expanded=bool(missing)):
+            opts = ["(없음)"] + list(df.columns)
+            cols = st.columns(4)
+            for j, (k, label) in enumerate(RP.METRICS.items()):
+                pick = cols[j % 4].selectbox(label, opts, index=opts.index(mapping[k]) if mapping[k] in opts else 0, key=f"rep_map_{i}_{k}")
+                mapping[k] = None if pick == "(없음)" else pick
+            st.caption("메타 열 이름은 광고 관리자 한국어 내보내기 기준 ✅, 네이버는 다차원 보고서 항목 이름 기준 △(공식 양식 미확인)이에요.")
+        tot = RP.totals(df, mapping, platform)
+        tot["file"] = f.name
+        reps.append(tot)
+    if not reps:
+        st.caption("리포트를 올리면 무엇이 문제인지, 예측이 얼마나 맞았는지, 다음 달엔 어떻게 나눌지 알려 드려요.")
+        return
+    orders = st.number_input("이번 달 실제 주문 수 (판매처 관리자 기준, 광고 외 포함이면 광고로 온 것만 추정해 넣기)", min_value=0,
+                             value=int(ss.get("q_coupon") or ss.get("q_total") or 0), step=1, key="rep_orders")
+    by = {"naver": [r for r in reps if r["platform"] == "naver"], "meta": [r for r in reps if r["platform"] == "meta"]}
+    sumk = lambda rs, k: sum((r.get(k) or 0) for r in rs)  # noqa: E731
+    rows = []
+    for name, rs in by.items():
+        if rs:
+            cost, clk, conv, imp = sumk(rs, "cost"), sumk(rs, "clicks"), sumk(rs, "conversions"), sumk(rs, "impressions")
+            rows.append({"광고": "네이버" if name == "naver" else "메타", "광고비": won(cost), "클릭": f"{clk:,.0f}",
+                         "클릭률": f"{clk / imp:.2%}" if imp else "-", "클릭 1번": won(cost / clk) if clk else "-",
+                         "리포트 전환": f"{conv:,.0f}"})
+    st.dataframe(pd.DataFrame(rows), hide_index=True, use_container_width=True)
+    for r in reps:
+        if r.get("conversions_note"):
+            st.caption(f"{r['file']}: {r['conversions_note']}")
+    # 진단
+    findings = [d for r in reps for d in RP.diagnose(r, pred.get("cvr") or cparams.cvr)]
+    st.markdown("**무엇이 문제인가요?**" if findings else "**규칙에 걸린 문제는 없어요.**")
+    for d in findings:
+        with st.container(border=True):
+            st.markdown(f"**{d['title']}**  \n{d['evidence']}  \n👉 {d['action']}")
+    # 과대 집계율 · 예측 오차율
+    rep_conv = sumk(reps, "conversions")
+    total_clicks, total_cost = sumk(reps, "clicks"), sumk(reps, "cost")
+    m1, m2, m3 = st.columns(3)
+    oc = RP.over_count_rate(rep_conv, orders)
+    m1.metric("플랫폼 과대 집계율", f"{oc:+.0%}" if oc is not None else "-",
+              help="(네이버 + 메타 리포트 전환 − 실제 주문) ÷ 실제 주문. 두 광고가 같은 주문을 각자 자기 몫으로 세면 커져요.")
+    e_new = RP.prediction_error(pred.get("new"), orders)
+    m2.metric("예측 오차율 (주문)", f"{e_new:.0%}" if e_new is not None else "-", help="|예측 − 실제| ÷ 실제")
+    e_clk = RP.prediction_error(pred.get("clicks"), total_clicks)
+    m3.metric("예측 오차율 (클릭)", f"{e_clk:.0%}" if e_clk is not None else "-", help="|예측 − 실제| ÷ 실제")
+    st.caption(f"리포트 전환 합 {rep_conv:,.0f}건 vs 실제 주문 {orders:,}건. 예측 주문 {pred.get('new', 0):.1f}건, 예측 클릭 {pred.get('clicks', 0):,.0f}번 "
+               f"vs 실제 클릭 {total_clicks:,.0f}번. 과대 집계율이 크면 리포트 전환보다 실제 주문으로 판단하세요.")
+    # 다음 달 배분: 실측 클릭 비용·구매 비율로 다시 계산 (등급 A)
+    sp = a["split"]
+    nav_clk, nav_cost = sumk(by["naver"], "clicks"), sumk(by["naver"], "cost")
+    meta_clk, meta_cost = sumk(by["meta"], "clicks"), sumk(by["meta"], "cost")
+    naver_curve2 = None
+    if sp["has_naver"]:
+        base = sp["channels"][0].curve
+        if nav_clk and nav_cost and base.clicks(nav_cost) > 0:
+            naver_curve2 = RP.ScaledCurve(base, (nav_clk / base.clicks(nav_cost)))   # 같은 돈에 실제 클릭 ÷ 예상 클릭
+        else:
+            naver_curve2 = base
+    meta_cpc2 = meta_cost / meta_clk if meta_clk else sp["meta_cpc"]
+    cvr2 = orders / total_clicks if total_clicks else cparams.cvr
+    params2 = cparams.with_changes(steps=[("④ 구매 (실측)", min(max(cvr2, 0.0), 1.0))])
+    split2 = CO.split_budget(a["budget0"], naver_curve2, meta_cpc2, params2)
+    g2 = {"aov": "A", "margin": "A", "cpc_naver": "A" if nav_clk else "B", "cpc_meta": "A" if meta_clk else a["grades"]["cpc_meta"],
+          "cvr": "A" if total_clicks else "C", "retention": "D"}
+    mc2 = MC.run(split2["channels"], split2["spends"], params2, g2)
+    with st.container(border=True):
+        st.markdown(f"**다음 달 배분 (실측으로 다시 계산): 네이버 {won(split2['naver'])} · 메타 {won(split2['meta'])}**")
+        st.markdown(f"실측 숫자로 다시 해 보면 100번 중 **{mc2['wins']}번** 남아요 (처음 예측 {pred.get('wins', a['mc']['wins']):.0f}번). "
+                    f"→ {MC.ACTION_TEXT[MC.action(mc2['wins'])]}")
+        st.caption(f"실측: 네이버 클릭 {won(nav_cost / nav_clk) if nav_clk else '-'}, 메타 클릭 {won(meta_cpc2)}, 누른 사람 중 산 비율 {cvr2:.2%} (등급 A). "
+                   "재구매는 아직 가정(D)이라 몇 달 더 쌓이면 바뀌어요.")
+
+
 def hundred_bar(wins: int) -> str:
     """100칸 막대 (자연 빈도 표현): 남는 경우는 초록, 손해는 회색. 색은 보조라 숫자 문장이 먼저 나옴."""
     cells = "".join(f"<div style='width:9px;height:9px;border-radius:2px;background:{'#2e9e5b' if i < wins else 'rgba(127,127,127,.35)'}'></div>"
@@ -335,10 +469,12 @@ if price and profit and max_budget and not input_error:
                else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
     if ss.get("q_cpc"):
         cpc_src += " · 메타 클릭 비용 직접 입력"
-    ch_name = "메타 광고" if split["meta"] > 0 else "네이버 검색광고"   # 판정의 학습 구간 경고용 (메타가 있으면 7일 학습)
+    ch_name = "메타 광고" if split["meta"] > 0 else "네이버 검색광고"
+    prediction = dict(budget=budget0, naver=split["naver"], meta=split["meta"], clicks=split["clicks"], cpc=split["cpc"],
+                      new=float(np.mean(mc["new"])), cvr=cparams.cvr, wins=mc["wins"], p10=mc["p10"], p90=mc["p90"])   # 판정의 학습 구간 경고용 (메타가 있으면 7일 학습)
     season_idx, season_src = load_season(kw) if kw else (None, "계절성 미반영 (검색어 없음)")
     ans = dict(be=be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, split=split,
-               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, mc=mc, grades=grades, options=options, budget0=budget0,
+               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, mc=mc, grades=grades, prediction=prediction, options=options, budget0=budget0,
                default_pick=default_pick)
     coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
                  channel=ch_name, repurchase=repurchase)
@@ -365,6 +501,8 @@ with coach_tab:
             ss.pop("_closed_example", None)
             st.rerun()
         st.caption("예시: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 한 달 최대 광고비 30만 원, 검색어 '원두커피'")
+        with st.expander("한 달 전에 계획을 세웠나요? 계획 파일 불러오기"):
+            plan_upload("plan_up_empty")
     else:
         if mode == "example" and not ss.get("_closed_example"):
             e1, e2, e3 = st.columns([10, 2, 0.6])
@@ -542,7 +680,9 @@ with coach_tab:
                 st.success("준비 끝! 광고를 시작했다면 아래 버튼을 눌러 주세요.", icon="✅")
             if no_ad:
                 st.info("광고 없이 이번 달은 준비 3가지부터 해 보세요. 준비가 끝나면 예산을 다시 골라 시작하면 돼요.", icon="🛠️")
-            elif st.button("광고를 시작했어요 ▶", type="primary"):
+            else:
+                plan_download(a, "plan_dl_3")
+            if not no_ad and st.button("광고를 시작했어요 ▶", type="primary"):
                 ss["coach_started"] = CO.today_kst().isoformat()   # 한국 날짜 (서버는 UTC)
                 ss["coach_step"] = 3
                 st.toast(f"시작일 {ss['coach_started']}을 기억해 둘게요. {CO.MIN_DAYS}일 뒤부터 판정할 수 있어요.", icon="📅")
@@ -659,6 +799,7 @@ with coach_tab:
                                        if ss.get("coach_prev_rate") is not None else ""))
             else:
                 st.caption("쓴 돈, 클릭 수, 판매 수(셋 중 아는 것)를 넣으면 판정합니다.")
+            report_section(a)
         if ans is not None:
             st.caption("더 알고 싶으면 오른쪽 **시작 · 다음 단계** 탭부터 보세요. 위 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있어요.")
 
