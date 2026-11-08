@@ -576,6 +576,15 @@ with coach_tab:
                 }[act])
             st.markdown(f"첫 구매만 보면 100번 중 **{mc['wins_first']}번** 남아요. "
                         "다시 사는 손님까지 봐야 광고의 진짜 값이 보여요.")
+            cpa_now = a["budget0"] / max(a["prediction"]["new"], 1e-9)
+            bg = CO.breakeven_grid(price, profit / price, cpa_now, CO.REPURCHASE_PRESETS[repurchase])
+            with st.expander("어떻게 하면 남을까요? 판매가 × 재구매 지도", expanded=act == "prep"):
+                st.plotly_chart(charts.breakeven_map(bg), use_container_width=True)
+                st.markdown(f"지금 판매가 {won(price)}에서는 손님 1명이 1년 동안 **{bg['need_here']:.1f}번 더 사야** 본전이에요 "
+                            f"(지금 가정 '{repurchase}' = {CO.REPURCHASE_PRESETS[repurchase]:g}번).")
+                st.caption(f"손님 1명을 데려오는 데 드는 돈(CPA) 약 {won(cpa_now)} = 시험 예산 ÷ 예상 새 손님. "
+                           f"선 위(초록)면 남고 아래(빨강)면 손해예요. 손님 1명이 남기는 돈 = 판매가 × 마진 {profit / price:.0%} × (1 + 재구매 횟수). "
+                           "판매가를 올리거나 묶음 구성으로 객단가를 높이면 오른쪽으로, 다시 사게 만들면 위로 움직여요.")
             if act == "prep":
                 st.markdown(f"광고 대신 **공동구매·제휴**(팔린 만큼만 냄)라면 판매액의 **{profit / price:.0%} 이하** 수수료일 때 남습니다.")
             with st.expander("왜 이렇게 나왔나요?"):

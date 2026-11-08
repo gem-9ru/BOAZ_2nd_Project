@@ -27,7 +27,7 @@ def keyword_scatter(kw: pd.DataFrame, selected):
             marker=dict(color=color, size=np.where(d["선택"] == "선택", 14, 7),
                         line=dict(width=np.where(d["선택"] == "선택", 2, 0), color="black")),
             text=d["keyword"], hovertemplate="%{text}<br>월 검색수 %{x:,.0f}<br>모바일 CTR %{y:.2f}%<extra></extra>"))
-    for x, label in [(1_000, "세부 ↑"), (30_000, "대표 ↑")]:
+    for x, label in [(300, "세부 ↑"), (10_000, "대표 ↑")]:   # defaults.KEYWORD_TIERS (분석 Q1 기준)
         fig.add_vline(x=x, line_dash="dot", line_color="gray", annotation_text=label, annotation_position="top right")
     fig.update_xaxes(type="log", title="한 달 검색 수 (로그 눈금) · 1천 미만 롱테일 · 1천~3만 세부 · 3만 이상 대표")
     fig.update_yaxes(title="광고 클릭률 (%)")
@@ -190,3 +190,17 @@ def money_compare(labels, values, title=None):
                            text=[f"{v / 1e4:+,.0f}만 원" for v in values], textposition="auto"))
     fig.update_yaxes(title="1년 동안 남는 돈 증가 (원)")
     return _layout(fig, title, 300)
+
+
+def breakeven_map(g: dict):
+    """손익분기 재구매율 지도: 판매가 × 1년 재구매 횟수. 초록 = 남음, 빨강 = 손해, 선 = 본전, 점 = 지금 내 위치."""
+    z = np.sign(g["profit"]) * np.log1p(np.abs(g["profit"]) / 1_000)   # 크기 차이가 커서 로그로 눌러 색만 보이게
+    fig = go.Figure(go.Heatmap(
+        x=g["prices"], y=g["reps"], z=z, zmid=0, colorscale=[[0, "#c0392b"], [0.5, "#f4f1ea"], [1, "#2e9e5b"]], showscale=False,
+        customdata=g["profit"], hovertemplate="판매가 %{x:,.0f}원 · 재구매 %{y:.1f}번<br>손님 1명당 %{customdata:,.0f}원<extra></extra>"))
+    fig.add_trace(go.Scatter(x=g["prices"], y=g["boundary"], mode="lines", name="본전 선", line=dict(color="black", width=2, dash="dash")))
+    fig.add_trace(go.Scatter(x=[g["my_price"]], y=[g["my_rep"]], mode="markers+text", name="지금 내 위치", text=["지금"],
+                             textposition="top center", marker=dict(size=14, color="white", line=dict(color="black", width=2))))
+    fig.update_xaxes(title="판매가 (원)", tickformat=",")
+    fig.update_yaxes(title="1년 동안 다시 사는 횟수", range=[0, float(g["reps"][-1])])
+    return _layout(fig, height=380)

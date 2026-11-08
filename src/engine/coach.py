@@ -292,3 +292,19 @@ def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: 
         "naver_marginal_cpc": naver_curve.marginal_cpc(naver) if (has_naver and naver > 0) else None,
         "meta_cpc": float(meta_cpc), "result": res, "table": rows,
     }
+
+
+# ── 손익분기 재구매율 지도 (노션 Q3) ──────────────────────────────
+def breakeven_grid(price: float, margin: float, cpa: float, my_repurchases: float, n_price: int = 31, n_rep: int = 41) -> Dict:
+    """판매가(가로) × 1년 재구매 횟수(세로) → 손님 1명이 남기는 돈 − 데려오는 데 든 돈(CPA).
+    손님 1명이 남기는 돈 = 판매가 × 마진 × (1 + 재구매 횟수) (breakeven().year와 같은 식).
+    본전 선: 재구매 = CPA ÷ (판매가 × 마진) − 1."""
+    import numpy as np
+    prices = np.linspace(price * 0.5, price * 2.0, n_price)
+    need_here = cpa / (price * margin) - 1 if price * margin > 0 else 0.0
+    rep_max = float(min(max(4.0, need_here * 1.3, my_repurchases * 1.5), 30.0))
+    reps = np.linspace(0.0, rep_max, n_rep)
+    profit = prices[None, :] * margin * (1 + reps[:, None]) - cpa
+    boundary = np.maximum(cpa / (prices * margin) - 1, 0.0)
+    return {"prices": prices, "reps": reps, "profit": profit, "boundary": boundary, "need_here": max(need_here, 0.0),
+            "my_price": float(price), "my_rep": float(my_repurchases), "cpa": float(cpa), "margin": float(margin)}

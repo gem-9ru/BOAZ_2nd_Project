@@ -194,3 +194,15 @@ def test_split_budget_without_naver_goes_all_meta():
     params = C.coach_params(20_000, 7_000, 0.5)
     s = C.split_budget(210_000, None, 1_300.0, params)
     assert s["naver"] == 0 and s["meta"] == pytest.approx(210_000) and not s["has_naver"] and s["table"] == []
+
+
+def test_breakeven_grid_boundary_matches_formula():
+    import numpy as np
+    g = C.breakeven_grid(20_000, 0.35, 21_000, 0.5)
+    # 본전 선 위(재구매 = 경계)에서 손님 1명 이익 = 0, 손익분기식(breakeven().year = CPA)과 같음
+    for p, r in zip(g["prices"], g["boundary"]):
+        assert C.breakeven(p * 0.35, r).year == pytest.approx(21_000) or r == 0
+    assert g["need_here"] == pytest.approx(21_000 / 7_000 - 1)
+    i_lo = np.searchsorted(g["reps"], 1.0)          # 재구매 1번이면 지금 판매가에서 7,000 × 2 = 14,000 < 21,000 → 손해
+    j = int(np.argmin(abs(g["prices"] - 20_000)))
+    assert g["profit"][i_lo, j] < 0 and g["profit"][-1, j] > 0
