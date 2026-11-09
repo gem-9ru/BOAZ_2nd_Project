@@ -287,7 +287,52 @@ def coach_params(price: float, profit: float, repurchases: float):
     return FunnelParams(aov=float(price), margin=float(profit) / float(price), retention_scale=scale)
 
 
-def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: Optional[float] = None) -> Dict:
+@dataclass
+class Leg:
+    """배분의 한 매체: 쓸 돈, 클릭 곡선, 클릭 1번 비용 (네이버는 그 돈에서의 평균, 메타는 입력값 또는 대략값)."""
+    spend: float
+    curve: object
+    cpc: Optional[float]
+
+
+@dataclass
+class Split:
+    """시험 예산을 네이버·메타에 나눈 결과 (split_budget). naver가 None이면 모두 메타.
+    channels·spends는 몬테카를로(MC.run)에 그대로 넘기는 값, table은 '네이버 비율을 바꾸면?' 비교 표."""
+    naver: Optional[Leg]
+    meta: Leg
+    channels: list
+    clicks: float                       # 한 달 클릭 (두 매체 합)
+    cpc: float                          # 배분한 예산의 평균 클릭 비용
+    naver_capacity: float               # 네이버 예상 실적 최대치 (한 달 이만큼 쓰면 검색 수요 끝)
+    naver_marginal_cpc: Optional[float]  # 네이버에 쓴 돈의 끝에서 클릭 1번 더 받는 비용 (포화 설명용)
+    table: List[Dict]
+
+    @property
+    def has_naver(self) -> bool:
+        return self.naver is not None
+
+    @property
+    def spends(self) -> List[float]:
+        return ([self.naver.spend] if self.naver else []) + [self.meta.spend]
+
+    @property
+    def total(self) -> float:
+        return sum(self.spends)
+
+    # 이전 단계용: 예전 dict 키로도 읽힘 (main.py 호출부를 속성으로 옮긴 뒤 지움, MVP 7e 2단계 정리)
+    _OLD_KEYS = {"naver": lambda s: s.naver.spend if s.naver else 0.0, "meta": lambda s: s.meta.spend,
+                 "meta_cpc": lambda s: s.meta.cpc, "has_naver": lambda s: s.has_naver, "spends": lambda s: s.spends}
+
+    def __getitem__(self, key: str):
+        if key in self._OLD_KEYS:
+            return self._OLD_KEYS[key](self)
+        if key in ("channels", "clicks", "cpc", "naver_capacity", "naver_marginal_cpc", "table"):
+            return getattr(self, key)
+        raise KeyError(key)
+
+
+def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: Optional[float] = None) -> Split:
     """시험 예산을 네이버·메타에 나눔. 같은 돈으로 새 손님이 가장 많은 배분 (optimize_allocation 재사용, 예산 전부 씀):
     네이버 검색어 수요(예상 실적 곡선)가 메타보다 싸게 손님을 데려오는 구간까지 네이버를 채우고 남는 돈을 메타로.
     naver_curve가 없으면(검색어 없음·예측 실패) 모두 메타."""
@@ -320,13 +365,17 @@ def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: 
             m = one_month(chans, [n, budget - n], params)
             rows.append({"share": share, "naver": n, "meta": budget - n, "new_customers": m["new"],
                          "profit_cohort": m["profit"], "profit_first": m["first_only"]})
-    return {
-        "naver": naver, "meta": budget - naver, "has_naver": has_naver, "spends": spends, "channels": chans,
-        "clicks": clicks, "cpc": (budget / clicks) if clicks > 0 else float(meta_cpc),
-        "naver_capacity": naver_curve.capacity if has_naver else 0.0,
-        "naver_marginal_cpc": naver_curve.marginal_cpc(naver) if (has_naver and naver > 0) else None,
-        "meta_cpc": float(meta_cpc), "result": res, "table": rows,
-    }
+    naver_leg = None
+    if has_naver:
+        n_clicks = naver_curve.clicks(naver) if naver > 0 else 0.0
+        naver_leg = Leg(naver, naver_curve, naver / n_clicks if n_clicks > 0 else None)
+    return Split(
+        naver=naver_leg, meta=Leg(budget - naver, chans[-1].curve, float(meta_cpc)), channels=chans,
+        clicks=clicks, cpc=(budget / clicks) if clicks > 0 else float(meta_cpc),
+        naver_capacity=naver_curve.capacity if has_naver else 0.0,
+        naver_marginal_cpc=naver_curve.marginal_cpc(naver) if (has_naver and naver > 0) else None,
+        table=rows,
+    )
 
 
 # ── 손익분기 재구매율 지도 (노션 Q3) ──────────────────────────────
