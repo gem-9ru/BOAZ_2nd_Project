@@ -139,10 +139,15 @@ def only_month(df: pd.DataFrame, col: str, month: str) -> pd.DataFrame:
 # ── 퍼널 진단 (MVP 7a): 판매처 통계로 "들어온 100명 → 상품 본 ○명 → 담은 ○명 → 산 ○명" ─────────────
 FUNNEL_MIN_VISITS = 100     # 들어온 사람이 이보다 적으면 판단 보류
 # 단계: (키, 이전 키, 화면 이름, 빠질 때 할 일)
+def _step_action(step: str) -> str:
+    from . import defaults as D
+    return D.STEP_PRESCRIPTIONS[step]     # 할 일 문장은 defaults.STEP_PRESCRIPTIONS 하나 (4b)
+
+
 FUNNEL_DIAG_STEPS = [
-    ("views", "visits", "들어와서 상품을 봄", "들어와서 바로 나가요. 광고 문구·사진과 실제 상품·첫 화면이 맞는지 먼저 보세요."),
-    ("cart", "views", "상품을 보고 담음", "상품을 보고도 안 담아요. 상세페이지·가격·후기를 먼저 고치세요."),
-    ("orders", "cart", "담고 삼", "담고도 안 사요. 배송비·결제 단계를 먼저 보세요 (공개 샘플에서도 장바구니 뒤 이탈이 큰 구간이에요)."),
+    ("views", "visits", "들어와서 상품을 봄", _step_action("③ 상품 조회")),
+    ("cart", "views", "상품을 보고 담음", _step_action("③ 장바구니")),
+    ("orders", "cart", "담고 삼", _step_action("④ 구매")),
 ]
 
 

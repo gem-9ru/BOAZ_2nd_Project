@@ -79,3 +79,12 @@ def test_q3_more_tab_passes_coach_wins():
     main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
     assert "verdict(res.summary, opt_profit[\"spends\"], coach_wins)" in main
     assert "warnings(res, alloc, coach_wins)" in main and "recs, coach_wins)" in main
+
+
+def test_4b_one_action_table():
+    from src.engine import defaults as D, insights as I, measure as MS
+    by_key = {k: a for k, _, _, a in MS.FUNNEL_DIAG_STEPS}
+    assert by_key["views"] == D.STEP_PRESCRIPTIONS["③ 상품 조회"] == I.prescription("③ 상품 조회")
+    assert by_key["cart"] == D.STEP_PRESCRIPTIONS["③ 장바구니"] == I.prescription("③ 장바구니")
+    assert by_key["orders"] == I.prescription("③ 결제 시작") == I.prescription("④ 구매")
+    assert "로딩" in I.prescription("③ 방문")          # '더 보기'에만 있는 단계는 원래 문장
