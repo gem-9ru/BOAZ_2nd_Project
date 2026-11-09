@@ -266,8 +266,10 @@ def default_budget_pick(action: str) -> str:
 
 def mc_grades(meta_cpc_measured: bool) -> Dict[str, str]:
     """코치 몬테카를로에서 흔드는 입력과 등급: 판매가·마진은 사장님 입력(A), 네이버 클릭은 예상 실적(B),
-    메타 클릭은 직접 넣으면 A·아니면 가정(D), 구매 비율은 GA4 공개 샘플(C), 재구매는 프리셋 가정(D)."""
-    return {"aov": "A", "margin": "A", "cpc_naver": "B", "cpc_meta": "A" if meta_cpc_measured else "D",
+    메타 클릭은 직접 넣으면 A·아니면 기본값 등급(defaults.INPUT_GRADES, D), 구매 비율은 GA4 공개 샘플(C), 재구매는 프리셋 가정(D)."""
+    from . import defaults as D
+    return {"aov": "A", "margin": "A", "cpc_naver": "B",
+            "cpc_meta": "A" if meta_cpc_measured else D.INPUT_GRADES["META_FALLBACK_CPC"][0],
             "cvr": "C", "retention": "D"}
 
 

@@ -51,3 +51,10 @@ def test_b8_meta_fallback_cpc_is_its_own_constant():
     assert a.split.meta.cpc == D.META_FALLBACK_CPC and a.grades["cpc_meta"] == "D"
     main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
     assert "NAVER_FALLBACK_CPC" not in main                    # 화면이 메타 기본값에 네이버 상수를 쓰지 않음
+
+
+def test_meta_fallback_cpc_grade_is_read_from_one_place():
+    """사용자 결정 (11/10): 메타 기본 클릭 비용 등급은 D 하나. 등급표(INPUT_GRADES)와 몬테카를로가 같은 값을 읽음."""
+    assert D.INPUT_GRADES["META_FALLBACK_CPC"][0] == "D"
+    assert C.mc_grades(False)["cpc_meta"] == D.INPUT_GRADES["META_FALLBACK_CPC"][0]
+    assert C.mc_grades(True)["cpc_meta"] == "A"

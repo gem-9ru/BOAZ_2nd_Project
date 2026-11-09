@@ -28,7 +28,8 @@ def prescription(step_name: str) -> str:
 
 
 def biggest_drop(params) -> Tuple[str, float]:
-    """전환율이 가장 낮은(이탈이 가장 큰) 단계 (Q3)."""
+    """전환율이 가장 낮은(이탈이 가장 큰) 단계 (Q3). '더 보기' 시뮬레이션 단계용 (그냥 최솟값: 기준 대비는 늘 1.0이라 쓰지 않음).
+    판매처 실측 진단(코치·퍼널 카드)은 measure.lowest_step·diagnose_funnel (기준 대비 비율, B5)."""
     name, rate = min(params.steps, key=lambda x: x[1])
     return name, rate
 
