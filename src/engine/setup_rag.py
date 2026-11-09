@@ -258,3 +258,38 @@ def summaries(found: List[Tuple[Card, float]], n: int = 3, chars: int = 160) -> 
 
 def by_id(card_id: str) -> Optional[Card]:
     return next((c for c in load_cards() if c.id == card_id), None)
+
+
+def my_numbers(card: Card, nums: Dict) -> List[str]:
+    """카드 '코치 연결'에 맞는 내 숫자 한 줄들 (키가 없을 때 카드 위에). 숫자는 앱이 이미 계산한 값(nums)만 쓴다.
+    nums: naver, naver_daily, meta, meta_daily, meta_rec_daily, bid, shopping_min, smartstore, keyword, cpa, be_first, meta_objective."""
+    link, naver = card.coach, "네이버" in card.media
+    lines: List[str] = []
+
+    def won(v) -> str:
+        return f"{v:,.0f}원"
+
+    if naver:
+        if "하루 예산" in link and nums.get("naver"):
+            lines.append(f"네이버 하루 예산 약 {won(nums['naver_daily'])} (월 {won(nums['naver'])} ÷ 30.4)")
+        elif ("네이버 월 배분" in link or "네이버 배분" in link) and "입찰가" not in link and nums.get("naver"):
+            lines.append(f"네이버 월 배분 {won(nums['naver'])}")
+        if "입찰가" in link and nums.get("naver"):
+            if nums.get("smartstore"):
+                lines.append(f"쇼핑검색 기본 입찰가는 최소 {won(nums['shopping_min'])}부터"
+                             + (f" (참고: '{nums['keyword']}' 키워드 예상 실적 입찰가 약 {won(nums['bid'])})" if nums.get("bid") else ""))
+            elif nums.get("bid"):
+                lines.append(f"기본 입찰가 약 {won(nums['bid'])} ('{nums['keyword']}' 예상 실적)")
+        if ("검색어" in link or "키워드" in link) and nums.get("keyword"):
+            lines.append(f"검색어 '{nums['keyword']}'")
+    else:
+        if "하루 예산" in link and nums.get("meta"):
+            lines.append(f"메타 하루 예산 약 {won(nums['meta_daily'])} (월 {won(nums['meta'])} ÷ 30.4)"
+                         + (f", 메타 권장(결과 1개 비용 × 10) 약 {won(nums['meta_rec_daily'])}" if nums.get("meta_rec_daily") else ""))
+        elif "메타 월 배분" in link and nums.get("meta"):
+            lines.append(f"메타 월 배분 {won(nums['meta'])}")
+        if ("예상 CPA" in link or "손님 1명 비용" in link or "CPA" in link) and nums.get("cpa"):
+            lines.append(f"손님 1명 데려오는 비용(예상) 약 {won(nums['cpa'])}, 한도 {won(nums['be_first'])}")
+        if ("pixel_ready" in link or "메타 목적" in link) and nums.get("meta_objective"):
+            lines.append(f"코치 추천 목적: {nums['meta_objective']}")
+    return list(dict.fromkeys(lines))[:3]

@@ -95,3 +95,21 @@ def test_helpbot_falls_back_to_setup_card():
     out = helpbot.answer("스마트스토어에 메타 픽셀 달 수 있어?", {}, "광고 관리자", won)
     assert "세팅 자료에서 찾았어요" in out and "❓" in out
     assert "포화" in helpbot.answer("포화가 뭐야?", {}, "광고 관리자", won)      # 규칙 기반 답은 그대로
+
+
+NUMS = {"naver": 68_000, "naver_daily": 68_000 / 30.4, "meta": 142_000, "meta_daily": 142_000 / 30.4, "meta_rec_daily": 13_000,
+        "meta_objective": "트래픽", "bid": 2_400, "shopping_min": 50, "smartstore": True, "keyword": "원두커피",
+        "cpa": 150_000, "be_first": 7_000, "no_ad": True}
+
+
+def test_my_numbers_follow_card_coach_link():
+    line = SR.my_numbers(SR.by_id("naver-setup-009"), NUMS)
+    assert line == ["네이버 하루 예산 약 2,237원 (월 68,000원 ÷ 30.4)"]
+    bid = SR.my_numbers(SR.by_id("naver-setup-011"), NUMS)
+    assert "최소 50원" in bid[0] and "2,400원" in bid[0]                 # 스마트스토어: 쇼핑검색 최소 입찰가 + 키워드 참고
+    meta = " ".join(SR.my_numbers(SR.by_id("meta-bud-004"), NUMS))
+    assert "메타 하루 예산 약 4,671원" in meta and "13,000원" in meta
+    obj = " ".join(SR.my_numbers(SR.by_id("meta-obj-004"), NUMS))
+    assert "트래픽" in obj and "150,000원" in obj
+    assert SR.my_numbers(SR.by_id("naver-setup-013"), NUMS) == []         # 코치 연결 '없음'
+    assert SR.my_numbers(SR.by_id("naver-setup-009"), {**NUMS, "naver": 0}) == []   # 네이버 배분이 없으면 숫자 없음

@@ -307,33 +307,54 @@ def card_source_md(c) -> str:
     return f"{c.check} {SR.CHECK_WORDS.get(c.check, '')} · `{c.id}` {c.title}" + (f" · {links}" if links else "")
 
 
+def setup_numbers(a: dict) -> dict:
+    """세팅 카드 위 '내 숫자'에 쓸 값: 엔진·guide가 이미 계산한 것만 모음 (새 계산 없음)."""
+    sp = a["split"]
+    new = max(a["prediction"]["new"], 1e-9)
+    only_ss = "스마트스토어" in stores and "자사몰" not in stores
+    mp = GD.meta_plan(sp["meta"], a["budget0"] / new, bool(ss.get("pixel_ready")), stores, sp["meta_cpc"])
+    return {"naver": sp["naver"], "naver_daily": GD.daily_budget(sp["naver"]), "meta": sp["meta"], "meta_daily": mp["daily"],
+            "meta_rec_daily": mp["recommended_daily"], "meta_objective": mp["objective"],
+            "bid": GD.naver_bid_at(sp["channels"][0].curve, sp["naver"]) if sp["has_naver"] else None,
+            "shopping_min": GD.NAVER_MIN_BID["쇼핑검색"], "smartstore": only_ss or "스마트스토어" in stores,
+            "keyword": a["kw"], "cpa": a["budget0"] / new, "be_first": a["be"].first,
+            "no_ad": a["default_pick"] == "none"}
+
+
+def setup_ask(a: dict, q: str, img=None):
+    """질문 → 카드 찾기 → (키 있으면) 답. 결과는 세션에 남겨 다시 그릴 때 씀."""
+    found = SR.find(q)
+    sp = a["split"]
+    ctx = {"naver": sp["naver"], "meta": sp["meta"], "keyword": a["kw"], "price": price, "wins": a["mc"]["wins"], "stores": stores}
+    res = {"q": q, "found": [c.id for c, _ in found], "answer": None, "used": [], "note": None}
+    client = CI.make_client()
+    if found and client is not None:
+        try:
+            image = (img.getvalue(), img.name) if img is not None else None
+            out = SR.answer(client, q, found, ctx, image)
+            res["answer"], res["used"] = out["answer"], [c.id for c in out["cards"]]
+        except ValueError as e:                      # 캡처 크기·형식
+            res["note"] = str(e)
+        except CI.IntakeUnavailable as e:
+            res["note"] = f"지금은 답을 만들 수 없어 자료를 그대로 보여 드려요 ({e})."
+    ss["setup_last"] = res
+
+
 def setup_helper(a: dict):
-    """세팅 챗봇 (MVP 7번): 세팅 카드(data/rag)를 찾아, 키가 있으면 Claude가 카드·코치 숫자만으로 답하고, 없으면 카드 요약."""
+    """세팅 챗봇 (MVP 7번): 세팅 카드(data/rag)를 찾아, 키가 있으면 Claude가 카드·코치 숫자만으로 답하고, 없으면 카드 요약 + 내 숫자."""
     st.markdown("#### 🙋 세팅하다 막히면 물어보세요")
     chip = st.pills("이런 걸 물어볼 수 있어요", SETUP_EXAMPLES, key="setup_chip")
-    if chip and ss.get("_setup_chip_used") != chip:
-        ss["setup_q"], ss["_setup_chip_used"] = chip, chip
-    q = st.text_input("광고 관리자에서 막힌 곳", key="setup_q", placeholder="예: 네이버 하루 예산 어디에 넣어?")
     client = CI.make_client()
     img = None
+    if chip and ss.get("_setup_chip_used") != chip:      # 칩을 누르면 바로 답 (입력칸에도 남겨 고쳐 다시 물을 수 있게)
+        ss["setup_q"], ss["_setup_chip_used"] = chip, chip
+        setup_ask(a, chip)
+    q = st.text_input("광고 관리자에서 막힌 곳", key="setup_q", placeholder="예: 네이버 하루 예산 어디에 넣어?")
     if client is not None:
         img = st.file_uploader("화면 캡처 (선택, png·jpg 5MB 이하)", type=["png", "jpg", "jpeg"], key="setup_img")
         st.caption("계정 이름·카드 정보는 가리고 올려 주세요. 질문과 캡처는 답을 만들기 위해 Anthropic으로 보내집니다. 캡처는 저장하지 않아요.")
     if st.button("물어보기", key="setup_ask", disabled=not q):
-        found = SR.find(q)
-        sp = a["split"]
-        ctx = {"naver": sp["naver"], "meta": sp["meta"], "keyword": a["kw"], "price": price, "wins": a["mc"]["wins"], "stores": stores}
-        res = {"q": q, "found": [c.id for c, _ in found], "answer": None, "used": [], "note": None}
-        if found and client is not None:
-            try:
-                image = (img.getvalue(), img.name) if img is not None else None
-                out = SR.answer(client, q, found, ctx, image)
-                res["answer"], res["used"] = out["answer"], [c.id for c in out["cards"]]
-            except ValueError as e:                      # 캡처 크기·형식
-                res["note"] = str(e)
-            except CI.IntakeUnavailable as e:
-                res["note"] = f"지금은 답을 만들 수 없어 자료를 그대로 보여 드려요 ({e})."
-        ss["setup_last"] = res
+        setup_ask(a, q, img)
     res = ss.get("setup_last")
     if not res:
         return
@@ -350,15 +371,21 @@ def setup_helper(a: dict):
                 if c:
                     st.caption(card_source_md(c))
         return
-    st.caption("찾은 세팅 자료예요 (답을 만드는 AI는 아직 연결 전이라 자료를 그대로 보여 드려요).")
-    for s in SR.summaries([(SR.by_id(i), 0) for i in res["found"] if SR.by_id(i)]):
+    st.caption(f"'{res['q']}'에 맞는 세팅 자료예요 (답을 만드는 AI는 아직 연결 전이라 자료와 내 숫자를 함께 보여 드려요).")
+    nums = setup_numbers(a)
+    shown = SR.summaries([(SR.by_id(i), 0) for i in res["found"] if SR.by_id(i)])
+    if nums["no_ad"] and any(SR.my_numbers(SR.by_id(s["id"]), nums) for s in shown):
+        st.markdown("지금은 **광고 안 함**을 추천해요. 시작한다면 아래 숫자대로 넣어요.")
+    for s in shown:
+        c = SR.by_id(s["id"])
+        mine = SR.my_numbers(c, nums)
         with st.container(border=True):
+            if mine:
+                st.markdown("🧮 **내 숫자**: " + " · ".join(mine))
             st.markdown(f"**{s['title']}** {s['check']}  \n{s['body']}")
             if s["screen"]:
                 st.caption("화면에서 찾을 곳: " + s["screen"])
-            c = SR.by_id(s["id"])
             st.caption(card_source_md(c))
-
 
 def ads_guide(a: dict):
     """광고 관리자 설정 가이드. ✅ 공식 확인 / △ 다른 자료·코치 판단 / ❓ 확인 못 함 / 🧮 이 앱의 계산. 근거는 세팅 카드(data/rag)."""

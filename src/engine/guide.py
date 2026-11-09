@@ -12,6 +12,11 @@ DAILY_BUDGET_X = 10        # ✅ 메타: 일일 예산 ≥ 성과 목표 평균 
 DAILY_OVERSPEND = 0.75     # ✅ 메타: 어떤 날은 일일 예산보다 최대 75% 더 씀, 주 합계는 일일 예산 × 7 이하 [meta-bud-001]
 NAVER_MIN_BID = {"파워링크": 70, "쇼핑검색": 50}   # ✅ 네이버 최소 입찰가 [naver-setup-011]
 
+
+def daily_budget(monthly: float) -> float:
+    """하루 예산 = 월 배분 ÷ 30.4일 (네이버·메타 공통, 앱 계산)."""
+    return monthly / 30.4 if monthly > 0 else 0.0
+
 META_OBJECTIVES = [
     # (목적, 메타가 찾아 주는 사람, 우리에게 맞을 때, 확인) — 목표 6개 ✅ [meta-obj-001]
     ("인지도", "광고를 기억할 가능성이 높은 사람에게 최대한 많이", "새 브랜드를 알릴 때. 바로 판매를 기대하면 안 맞아요", "✅"),
@@ -31,7 +36,7 @@ def meta_plan(meta_monthly: float, expected_cpa: float, pixel_ready: bool, store
     - 일일 예산 권장 ✅: 성과 목표 평균 비용의 10배 이상 [meta-bud-003], 하루 최대 75% 더 쓸 수 있음 [meta-bud-001]"""
     stores = stores or []
     weekly = meta_monthly / WEEKS_PER_MONTH if meta_monthly > 0 else 0.0
-    daily = meta_monthly / 30.4 if meta_monthly > 0 else 0.0
+    daily = daily_budget(meta_monthly)
     weekly_sales = weekly / expected_cpa if expected_cpa > 0 else 0.0
     learning_ok = weekly_sales >= LEARNING_EVENTS_PER_WEEK
     smartstore_only = "스마트스토어" in stores and "자사몰" not in stores
@@ -92,7 +97,7 @@ def naver_bid_at(curve, spend: float) -> Optional[float]:
 
 def naver_checklist(naver_monthly: float, bid: Optional[float], keyword: str, stores: List[str]) -> List[Dict[str, str]]:
     smartstore = "스마트스토어" in stores or not stores
-    daily = naver_monthly / 30.4 if naver_monthly > 0 else 0.0
+    daily = daily_budget(naver_monthly)
     kind = "쇼핑검색광고 (쇼핑몰 상품형)" if smartstore else "사이트검색광고 (파워링크)"
     items = [
         {"step": "광고주 가입·비즈머니 충전", "detail": "네이버애즈에서 광고주 계정을 만들고 첫 달 예산만큼만 충전해요.", "check": "✅", "card": "naver-setup-002"},
