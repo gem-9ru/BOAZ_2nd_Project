@@ -115,15 +115,31 @@ def seasonality(keyword: str, years: int = 3, end: Optional[str] = None, online:
     return _index_from_frame(df)
 
 
-def _index_from_frame(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
-    if df is None or df.empty:
-        return None
-    s = df.iloc[:, 0]
+PARTIAL_NOTE = "1년이 안 되는 자료라 계절 차이가 작게 보일 수 있어요"
+
+
+def index_from_series(s: pd.Series) -> pd.Series:
+    """월별 검색 지수 시계열 → 1~12월 계절 지수(평균 1). 꽉 찬 12개월이 있는 해만 써서 해마다 평균 1로 맞춤 (검수 A1:
+    첫해·끝해가 몇 달뿐인데 그 해 평균으로 나누면 그 달들이 눌림). 꽉 찬 해가 없으면 예전처럼 하되 attrs["partial"]=True."""
+    s = s.copy()
     s.index = pd.to_datetime(s.index)
+    months = s.groupby(s.index.year).apply(lambda x: x.index.month.nunique())
+    full = months[months == 12].index
+    partial = len(full) == 0
+    if not partial:
+        s = s[s.index.year.isin(full)]
     s = s / s.groupby(s.index.year).transform("mean")
     idx = s.groupby(s.index.month).mean()
     idx = idx.reindex(range(1, 13)).fillna(1.0)
-    return idx / idx.mean()
+    idx = idx / idx.mean()
+    idx.attrs["partial"] = partial
+    return idx
+
+
+def _index_from_frame(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
+    if df is None or df.empty:
+        return None
+    return index_from_series(df.iloc[:, 0])
 
 
 def _from_saved(keyword: str) -> Optional[pd.Series]:
@@ -137,9 +153,11 @@ def _from_saved(keyword: str) -> Optional[pd.Series]:
         req = saved.get("request", {})
         groups = req.get("keywordGroups", [])
         if req.get("timeUnit") == "month" and len(groups) == 1 and groups[0].get("keywords") == [keyword]:
-            if best is None or saved.get("fetched_at", "") > best.get("fetched_at", ""):
-                best = saved
-    return None if best is None else _index_from_frame(_results_frame(best["response"]))
+            n = sum(len(r.get("data", [])) for r in saved.get("response", {}).get("results", []))
+            rank = (n, saved.get("fetched_at", ""))        # 긴 기간(꽉 찬 해가 있을 가능성) 먼저, 그다음 최근 (A1)
+            if best is None or rank > best[0]:
+                best = (rank, saved)
+    return None if best is None else _index_from_frame(_results_frame(best[1]["response"]))
 
 
 def _from_example(keyword: str) -> Optional[pd.Series]:
@@ -156,16 +174,17 @@ def seasonality_safe(keyword: str, online: Optional[bool] = None) -> Tuple[Optio
     if not keyword:
         return None, "계절성 미반영 (검색어 없음)"
     online = available() if online is None else online
+    note = lambda i, s: s + (f" · {PARTIAL_NOTE}" if i.attrs.get("partial") else "")  # noqa: E731
     if online:
         try:
             idx = seasonality(keyword, online=True)
             if idx is not None:
-                return idx, "네이버 데이터랩 (검색어 트렌드)"
+                return idx, note(idx, "네이버 데이터랩 (검색어 트렌드)")
         except (requests.RequestException, HubError):   # 연결 실패·HTTP 오류만 → 아래 저장본으로 (코드 버그는 숨기지 않음, A15)
             pass
     idx = _from_saved(keyword)
     if idx is not None:
-        return idx, "네이버 데이터랩 (검색어 트렌드, 저장된 응답)"
+        return idx, note(idx, "네이버 데이터랩 (검색어 트렌드, 저장된 응답)")
     idx = _from_example(keyword)
     if idx is not None:
         return idx, "네이버 데이터랩 (검색어 트렌드, 예시 지수 파일)"

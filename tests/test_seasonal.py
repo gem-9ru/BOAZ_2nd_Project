@@ -66,3 +66,35 @@ def test_seasonality_fallback_without_keys(tmp_path, monkeypatch):
     pd.DataFrame({"month": range(1, 13), "index": [2.0] * 12}).to_csv(tmp_path / "examples" / "원두커피.csv", index=False)
     idx, src = H.seasonality_safe("원두커피", online=False)
     assert idx.mean() == pytest.approx(1.0) and "예시 지수 파일" in src
+
+
+def test_a1_partial_years_do_not_flatten_season():
+    """검수 A1: 2023-11~2026-10처럼 첫해·끝해가 몇 달뿐이어도 꽉 찬 해만 써서 12월/1월 = 2.0 (예전 방식은 1.77)."""
+    months = pd.date_range("2023-11-01", "2026-10-01", freq="MS")
+    s = pd.Series([100.0 if m.month == 12 else 50.0 for m in months], index=months.strftime("%Y-%m-%d"))
+    idx = H.index_from_series(s)
+    assert idx[12] / idx[1] == pytest.approx(2.0) and not idx.attrs["partial"]
+    assert idx.mean() == pytest.approx(1.0)
+    # 꽉 찬 해가 하나도 없으면 예전처럼 + 화면 안내
+    short = s.iloc[-8:]
+    idx2 = H.index_from_series(short)
+    assert idx2.attrs["partial"]
+
+
+def test_a1_partial_note_on_screen(tmp_path, monkeypatch):
+    import json
+    monkeypatch.setattr(H, "CACHE_DIR", tmp_path / "cache")
+    monkeypatch.setattr(H, "EXAMPLE_DIR", tmp_path / "examples")
+    (tmp_path / "cache").mkdir()
+    data = [{"period": f"2026-{m:02d}-01", "ratio": 50.0 + m} for m in range(3, 11)]
+    saved = {"request": {"timeUnit": "month", "keywordGroups": [{"groupName": "마카롱", "keywords": ["마카롱"]}]},
+             "fetched_at": "2026-11-10 00:00:00", "response": {"results": [{"title": "마카롱", "data": data}]}}
+    (tmp_path / "cache" / "search-trend_v1_search_x.json").write_text(json.dumps(saved, ensure_ascii=False))
+    idx, src = H.seasonality_safe("마카롱", online=False)
+    assert idx is not None and H.PARTIAL_NOTE in src
+
+
+def test_a1_example_files_follow_full_year_rule():
+    for kw in ("원두커피", "프로틴쉐이크", "필라테스"):
+        idx = H._from_example(kw)
+        assert idx is not None and idx.mean() == pytest.approx(1.0, abs=1e-3)
