@@ -113,3 +113,73 @@ def test_my_numbers_follow_card_coach_link():
     assert "트래픽" in obj and "150,000원" in obj
     assert SR.my_numbers(SR.by_id("naver-setup-013"), NUMS) == []         # 코치 연결 '없음'
     assert SR.my_numbers(SR.by_id("naver-setup-009"), {**NUMS, "naver": 0}) == []   # 네이버 배분이 없으면 숫자 없음
+
+
+# ── 7d 1단계: 매체 고르기 + 찾기 정확도 ──
+QUESTIONS = json.loads((Path(__file__).parent / "fixtures" / "setup_questions.json").read_text(encoding="utf-8"))
+BASELINE_OTHERS = 8        # 7d 전 찾기(매체 거르기 없음)로 다른 판매자 10문항 중 맨 위 정답 수 (11/10 잼)
+DESSERT_MIN = 13           # 1단계 (새 카드 없이): 25문항 중 11개는 2단계 새 카드가 정답
+
+
+def _top1_hits(group):
+    hits, misses = 0, []
+    for it in QUESTIONS[group]:
+        kind, found = SR.route(it["q"], it["media"])
+        e = it["expect"]
+        ok = (kind == "none") if e == "none" else (kind == "coach") if e == "coach" else bool(found) and found[0][0].id in e
+        hits += ok
+        if not ok:
+            misses.append((it["q"], found[0][0].id if found else kind))
+    return hits, misses
+
+
+def test_question_set_accuracy():
+    d, d_miss = _top1_hits("dessert")
+    o, o_miss = _top1_hits("others")
+    print(f"\n세팅 챗봇 정확도: 디저트 {d}/{len(QUESTIONS['dessert'])}, 다른 판매자 {o}/{len(QUESTIONS['others'])}")
+    for q, got in d_miss + o_miss:
+        print("  ✗", q, "→", got)
+    assert len(QUESTIONS["dessert"]) == 25 and len(QUESTIONS["others"]) == 10
+    assert d >= DESSERT_MIN
+    assert o >= BASELINE_OTHERS          # 25문항에만 맞추지 않았는지 (지금보다 안 나빠짐)
+
+
+def test_media_words_and_coach_questions():
+    assert SR.media_in("인스타 광고 사진 뭐로 해?") == "meta" and SR.media_in("파워링크 입찰가") == "naver"
+    assert SR.media_in("네이버랑 메타 중 뭐부터 해?") is None and SR.media_in("하루 예산") is None
+    assert SR.is_coach_question("네이버랑 메타 중 뭐부터 해?") and SR.is_coach_question("예산 30만원인데 어떻게 나눠?")
+    assert not SR.is_coach_question("예산 균등 배분은 뭐야?") and not SR.is_coach_question("하루 예산 어디에 넣어?")
+    # 고른 매체 카드에서만 찾되, 질문에 다른 매체 이름이 있으면 그쪽
+    assert all("네이버" in c.media for c, _ in SR.find("하루 예산 어디에 넣어?", media="naver"))
+    assert all("메타" in c.media for c, _ in SR.find("인스타 하루 예산", media="naver"))
+
+
+def test_endings_are_cut_before_pieces():
+    toks = SR.tokenize("쿠키 레시피 검색하는 사람한테 광고 안 나가게 하려면?", query=True)
+    assert "가게" not in toks and "한테" not in toks and "사람" not in toks
+    assert SR.tokenize("연결해요?") == ["연결"]
+
+
+def test_default_media_follows_coach_split():
+    assert SR.default_media(68_000, 142_000) == "both"
+    assert SR.default_media(70_000, 0) == "naver" and SR.default_media(0, 300_000) == "meta"
+
+
+def test_coach_answer_uses_split_numbers():
+    from src.engine import coach as C
+    sp = C.split_budget(210_000, None, 1_300.0, C.coach_params(20_000, 7_000, 6))
+    text = SR.coach_answer(sp, "", no_ad=True)
+    assert "광고 안 함" in text and "메타 21.0만 원" in text and "메타만" in text
+
+
+def test_card_cache_follows_card_files(tmp_path):
+    """카드 파일만 고쳐도 새 카드를 읽음 (검수 A8)."""
+    import os
+    for f in SR.CARD_FILES:
+        (tmp_path / f).write_text((SR.RAG_DIR / f).read_text(encoding="utf-8"), encoding="utf-8")
+    n = len(SR.load_cards(tmp_path))
+    path = tmp_path / SR.CARD_FILES[0]
+    path.write_text(path.read_text(encoding="utf-8") + "\n## [naver-test-999] 시험 카드\n- 매체: 네이버 검색광고 | 단계: 시험\n\n본문: 시험\n",
+                    encoding="utf-8")
+    os.utime(path, (path.stat().st_atime, path.stat().st_mtime + 5))
+    assert len(SR.load_cards(tmp_path)) == n + 1

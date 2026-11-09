@@ -504,3 +504,18 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
                   grades=grades, params=params, cpc=cpc, need=need, need_year=need_year, cpc_src=cpc_src,
                   ch_name="메타 광고" if split.meta.spend > 0 else "네이버 검색광고", prediction=prediction,
                   repurchase=repurchase)
+
+
+def split_reason(split: Split, kw: str) -> str:
+    """배분 이유 한 문장 (배분 카드·세팅 챗봇 '뭐부터/어떻게 나눠' 답이 같은 문장을 씀)."""
+    from .insights import won
+    if not split.has_naver:
+        return "검색어가 없거나 네이버 예상 실적을 못 받아 **모두 메타**로 계산했어요. 메타 클릭 비용은 대략값(등급 D: 가정)이에요."
+    if split.meta.spend > 1 and split.naver_spend >= split.naver_capacity - 1:
+        return (f"'{kw}' 검색 수요는 한 달 약 {won(split.naver_capacity)}어치가 끝이라(네이버 예상 실적의 최대치), "
+                "남는 돈은 메타로 보내요.")
+    if split.meta.spend > 1 and split.naver_marginal_cpc:
+        return (f"네이버는 {won(split.naver_spend)}을 넘으면 클릭 1번이 {won(split.naver_marginal_cpc)}까지 올라서(포화), "
+                f"그 뒤로는 메타(클릭 약 {won(split.meta.cpc)}, 가정)가 손님을 더 싸게 데려와요.")
+    return (f"'{kw}'을(를) 검색하는 사람에게 보이는 네이버가 이 예산 안에서는 메타(클릭 약 {won(split.meta.cpc)}, 가정)보다 "
+            "손님을 싸게 데려와서 모두 네이버에 써요.")

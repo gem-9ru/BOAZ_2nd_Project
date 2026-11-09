@@ -31,6 +31,8 @@ KEYS: List[Tuple[str, Tuple[str, ...]]] = [
     ("prep_1", (_P, _R)), ("prep_2", (_P, _R)), ("prep_3", (_P, _R)),
     ("link_store", (_P, _R)), ("link_ch", (_P, _R)), ("link_url", (_P, _R)), ("link_product", (_P, _R)),
     ("link_detail", (_P, _R)),
+    # 3 광고 준비: 세팅 도우미 매체 고르기 (7d). 고른 값은 단계 이동 때 남기고 '내 숫자로 시작'에서 지움
+    ("setup_media", (_P, _R)), ("_setup_media_touched", (_R,)), ("setup_phase", (_R,)), ("setup_last", (_R,)),
     # 단계 진행
     ("coach_started", (_R,)), ("coach_prev_rate", (_R,)), ("coach_seen", (_R,)), ("_budget_touched", (_R,)),
 ]

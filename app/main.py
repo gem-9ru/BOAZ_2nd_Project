@@ -22,10 +22,10 @@ sys.path.insert(0, str(ROOT / "app"))
 def _drop_stale_modules():
     """배포 서버는 push 뒤 이 파일만 다시 읽고, 이미 불러온 엔진·차트 모듈은 예전 것을 계속 쓴다 (11/5 두 번 발생).
     엔진·앱 파일의 수정 시각이 바뀌었으면 그 모듈들을 지워서 새 코드로 다시 불러오게 한다."""
-    files = list((ROOT / "src").rglob("*.py")) + [ROOT / "app" / "charts.py", ROOT / "app" / "helpbot.py"]
+    files = list((ROOT / "src").rglob("*.py")) + [ROOT / "app" / f for f in ("charts.py", "helpbot.py", "setup_view.py")]
     stamp = max(f.stat().st_mtime for f in files)
     if getattr(sys, "_aarrr_code_stamp", None) != stamp:
-        for name in [m for m in sys.modules if m in ("src", "charts", "helpbot") or m.startswith("src.")]:
+        for name in [m for m in sys.modules if m in ("src", "charts", "helpbot", "setup_view") or m.startswith("src.")]:
             del sys.modules[name]
         sys._aarrr_code_stamp = stamp
 
@@ -34,6 +34,7 @@ _drop_stale_modules()
 
 import charts  # noqa: E402
 import helpbot  # noqa: E402
+import setup_view  # noqa: E402
 from helpbot import SCREEN_HELP  # noqa: E402
 from src.engine import (Channel, FunnelParams, MetaCurve, NaverCurve, budget_scan,  # noqa: E402
                         lever_table, optimize_allocation, simulate)
@@ -294,94 +295,6 @@ def chat_intake():
             ss["coach_mode"] = "mine"
             st.rerun()
 
-
-SETUP_EXAMPLES = ["네이버 하루 예산 어디에 넣어?", "메타 목표 뭐 골라?", "머신 러닝 단계가 뭐야?", "구매가 보고서에 잡히게 하려면?"]
-
-
-def card_source_md(c) -> str:
-    links = " · ".join(f"[출처 {i + 1}]({u})" for i, u in enumerate(c.sources) if u.startswith("http"))
-    return f"{c.check} {SR.CHECK_WORDS.get(c.check, '')} · `{c.id}` {c.title}" + (f" · {links}" if links else "")
-
-
-def setup_numbers(a: dict) -> dict:
-    """세팅 카드 위 '내 숫자'에 쓸 값: 엔진·guide가 이미 계산한 것만 모음 (새 계산 없음)."""
-    sp = a["split"]
-    new = max(a["prediction"]["new"], 1e-9)
-    only_ss = "스마트스토어" in stores and "자사몰" not in stores
-    mp = GD.meta_plan(sp.meta.spend, a["budget0"] / new, bool(ss.get("pixel_ready")), stores, sp.meta.cpc)
-    return {"naver": sp.naver_spend, "naver_daily": GD.daily_budget(sp.naver_spend), "meta": sp.meta.spend, "meta_daily": mp["daily"],
-            "meta_rec_daily": mp["recommended_daily"], "meta_objective": mp["objective"],
-            "bid": GD.naver_bid_at(sp.naver.curve, sp.naver_spend) if sp.has_naver else None,
-            "shopping_min": GD.NAVER_MIN_BID["쇼핑검색"], "smartstore": only_ss or "스마트스토어" in stores,
-            "keyword": a["kw"], "cpa": a["budget0"] / new, "be_first": a["be"].first,
-            "no_ad": a["default_pick"] == "none"}
-
-
-def setup_ask(a: dict, q: str, img=None):
-    """질문 → 카드 찾기 → (키 있으면) 답. 결과는 세션에 남겨 다시 그릴 때 씀."""
-    found = SR.find(q)
-    sp = a["split"]
-    ctx = {"naver": sp.naver_spend, "meta": sp.meta.spend, "keyword": a["kw"], "price": price, "wins": a["mc"]["wins"], "stores": stores}
-    res = {"q": q, "found": [c.id for c, _ in found], "answer": None, "used": [], "note": None}
-    client = CI.make_client()
-    if found and client is not None:
-        try:
-            image = (img.getvalue(), img.name) if img is not None else None
-            out = SR.answer(client, q, found, ctx, image)
-            res["answer"], res["used"] = out["answer"], [c.id for c in out["cards"]]
-        except ValueError as e:                      # 캡처 크기·형식
-            res["note"] = str(e)
-        except CI.IntakeUnavailable as e:
-            res["note"] = f"지금은 답을 만들 수 없어 자료를 그대로 보여 드려요 ({e})."
-    ss["setup_last"] = res
-
-
-def setup_helper(a: dict):
-    """세팅 챗봇 (MVP 7번): 세팅 카드(data/rag)를 찾아, 키가 있으면 Claude가 카드·코치 숫자만으로 답하고, 없으면 카드 요약 + 내 숫자."""
-    st.markdown("#### 🙋 세팅하다 막히면 물어보세요")
-    chip = st.pills("이런 걸 물어볼 수 있어요", SETUP_EXAMPLES, key="setup_chip")
-    client = CI.make_client()
-    img = None
-    if chip and ss.get("_setup_chip_used") != chip:      # 칩을 누르면 바로 답 (입력칸에도 남겨 고쳐 다시 물을 수 있게)
-        ss["setup_q"], ss["_setup_chip_used"] = chip, chip
-        setup_ask(a, chip)
-    q = st.text_input("광고 관리자에서 막힌 곳", key="setup_q", placeholder="예: 네이버 하루 예산 어디에 넣어?")
-    if client is not None:
-        img = st.file_uploader("화면 캡처 (선택, png·jpg 5MB 이하)", type=["png", "jpg", "jpeg"], key="setup_img")
-        st.caption("계정 이름·카드 정보는 가리고 올려 주세요. 질문과 캡처는 답을 만들기 위해 Anthropic으로 보내집니다. 캡처는 저장하지 않아요.")
-    if st.button("물어보기", key="setup_ask", disabled=not q):
-        setup_ask(a, q, img)
-    res = ss.get("setup_last")
-    if not res:
-        return
-    if not res["found"]:
-        st.info("자료에 없어요. 네이버 검색광고·메타 광고 관리자 세팅에 관한 질문으로 다시 물어봐 주세요.", icon="🔎")
-        return
-    if res["note"]:
-        st.warning(res["note"], icon="📝")
-    if res["answer"]:
-        with st.container(border=True):
-            st.markdown(res["answer"])
-            for cid in res["used"]:
-                c = SR.by_id(cid)
-                if c:
-                    st.caption(card_source_md(c))
-        return
-    st.caption(f"'{res['q']}'에 맞는 세팅 자료예요 (답을 만드는 AI는 아직 연결 전이라 자료와 내 숫자를 함께 보여 드려요).")
-    nums = setup_numbers(a)
-    shown = SR.summaries([(SR.by_id(i), 0) for i in res["found"] if SR.by_id(i)])
-    if nums["no_ad"] and any(SR.my_numbers(SR.by_id(s["id"]), nums) for s in shown):
-        st.markdown("지금은 **광고 안 함**을 추천해요. 시작한다면 아래 숫자대로 넣어요.")
-    for s in shown:
-        c = SR.by_id(s["id"])
-        mine = SR.my_numbers(c, nums)
-        with st.container(border=True):
-            if mine:
-                st.markdown("🧮 **내 숫자**: " + " · ".join(mine))
-            st.markdown(f"**{s['title']}** {s['check']}  \n{s['body']}")
-            if s["screen"]:
-                st.caption("화면에서 찾을 곳: " + s["screen"])
-            st.caption(card_source_md(c))
 
 def ads_guide(a: dict):
     """광고 관리자 설정 가이드. ✅ 공식 확인 / △ 다른 자료·코치 판단 / ❓ 확인 못 함 / 🧮 이 앱의 계산. 근거는 세팅 카드(data/rag)."""
@@ -647,17 +560,8 @@ def split_card(a: dict, budget_label: bool = False):
     with st.container(border=True):
         st.markdown(f"**{'시험 예산 ' + won(total) + ' 나누기' if budget_label else '추천 배분 (시험 예산 ' + won(total) + ')'}: "
                     f"네이버 {won(sp.naver_spend)} · 메타 {won(sp.meta.spend)}**")
+        st.markdown(CO.split_reason(sp, a['kw']))   # 배분 이유 (세팅 챗봇과 같은 문장)
         if sp.has_naver:
-            if sp.meta.spend > 1 and sp.naver_spend >= sp.naver_capacity - 1:
-                why = (f"'{a['kw']}' 검색 수요는 한 달 약 {won(sp.naver_capacity)}어치가 끝이라(네이버 예상 실적의 최대치), "
-                       "남는 돈은 메타로 보내요.")
-            elif sp.meta.spend > 1 and sp.naver_marginal_cpc:
-                why = (f"네이버는 {won(sp.naver_spend)}을 넘으면 클릭 1번이 {won(sp.naver_marginal_cpc)}까지 올라서(포화), "
-                       f"그 뒤로는 메타(클릭 약 {won(sp.meta.cpc)}, 가정)가 손님을 더 싸게 데려와요.")
-            else:
-                why = (f"'{a['kw']}'을(를) 검색하는 사람에게 보이는 네이버가 이 예산 안에서는 메타(클릭 약 {won(sp.meta.cpc)}, 가정)보다 "
-                       "손님을 싸게 데려와서 모두 네이버에 써요.")
-            st.markdown(why)
             st.caption("같은 돈으로 새 손님이 가장 많이 오는 배분이에요. 네이버는 네이버 검색광고 예상 실적(등급 B), "
                        "메타 클릭 비용은 가정값(등급 D)이에요.")
             with st.expander("네이버 비율을 바꾸면?"):
@@ -667,8 +571,6 @@ def split_card(a: dict, budget_label: bool = False):
                                            for r in sp.table]), hide_index=True, use_container_width=True)
                 st.caption("한 달 광고를 하고, 그 달에 온 손님이 1년 동안 남기는 돈 − 그 한 달 광고비예요(가운데 값, 흔들기 전). "
                            "네이버에 예상 실적보다 많이 배정하면 다 쓰지 못하고 남아요(쓴 돈 기준).")
-        else:
-            st.markdown("검색어가 없거나 네이버 예상 실적을 못 받아 **모두 메타**로 계산했어요. 메타 클릭 비용은 대략값(등급 D: 가정)이에요.")
 
 
 def _go(step: int):
@@ -948,7 +850,7 @@ with coach_tab:
                 st.code(MS.coupon_code(link_ch, month, product_en), language=None)
                 st.caption(MS.STORE_NOTES.get(link_store, "") + f" 같은 채널은 늘 같은 이름(캠페인 '{camp}')으로 써야 나중에 합쳐 볼 수 있습니다.")
             ads_guide(a)
-            setup_helper(a)
+            setup_view.render(a, ss, stores, price)   # 세팅 도우미 (app/setup_view.py)
             if n_prep == 3:   # 모두 완료 빈 화면 (UX 6-2)
                 st.success("준비 끝! 광고를 시작했다면 아래 버튼을 눌러 주세요.", icon="✅")
             if no_ad:

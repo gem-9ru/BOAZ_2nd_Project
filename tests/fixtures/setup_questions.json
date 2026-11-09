@@ -1,0 +1,42 @@
+{
+ "_설명": "세팅 챗봇 시험 문항 (MVP 7d). media = 사장님이 처음 고른 매체, expect = 맨 위에 와야 하는 카드 id 중 하나 / 'coach' = 코치 배분 숫자로 답 / 'none' = 자료에 없어요. 새 카드(2단계) id: naver-kw-008 제외 키워드, naver-setup-017 지역·요일·시간·기기, naver-setup-018 확장소재, naver-setup-019 광고 심사 표현, naver-setup-020 대목 전 예산·입찰",
+ "dessert": [
+  {"q": "마카롱 파는데 키워드 뭘로 해야 돼?", "media": "naver", "expect": ["naver-kw-004"]},
+  {"q": "디저트 선물세트 키워드 추천해줘", "media": "naver", "expect": ["naver-kw-004"]},
+  {"q": "쿠키 레시피 검색하는 사람한테 광고 안 나가게 하려면?", "media": "naver", "expect": ["naver-kw-008"]},
+  {"q": "제외 키워드 어떻게 넣어?", "media": "naver", "expect": ["naver-kw-008"]},
+  {"q": "발렌타인데이 전에 예산 올려야 해?", "media": "naver", "expect": ["naver-setup-020"]},
+  {"q": "크리스마스 시즌 광고 언제 시작해?", "media": "naver", "expect": ["naver-setup-020"]},
+  {"q": "케이크는 서울만 배송되는데 지역 설정 어디서 해?", "media": "naver", "expect": ["naver-setup-017"]},
+  {"q": "당일배송 지역만 광고하고 싶어", "media": "naver", "expect": ["naver-setup-017"]},
+  {"q": "광고 문구에 최고 써도 돼?", "media": "naver", "expect": ["naver-setup-019"]},
+  {"q": "수제 마카롱 광고 제목 써줘", "media": "naver", "expect": ["naver-setup-014"]},
+  {"q": "광고 시간 저녁에만 나오게 할 수 있어?", "media": "naver", "expect": ["naver-setup-017"]},
+  {"q": "PC 말고 모바일에만 광고하고 싶어", "media": "naver", "expect": ["naver-setup-017"]},
+  {"q": "클릭은 많은데 구매가 없어", "media": "meta", "expect": ["meta-rpt-004"]},
+  {"q": "인스타 광고 사진 뭐로 해?", "media": "meta", "expect": ["meta-crv-001"]},
+  {"q": "인스타에서 디저트 좋아하는 사람만 타깃하고 싶어", "media": "meta", "expect": ["meta-tgt-003"]},
+  {"q": "릴스 광고 영상 몇 초?", "media": "meta", "expect": ["meta-crv-002"]},
+  {"q": "메타 광고 하루 얼마?", "media": "meta", "expect": ["meta-bud-004", "meta-bud-003"]},
+  {"q": "스마트스토어 연결 어떻게 해?", "media": "naver", "expect": ["naver-setup-006"]},
+  {"q": "쇼핑검색 광고 이미지 규격", "media": "naver", "expect": ["naver-setup-006", "naver-setup-015"]},
+  {"q": "리뷰 많은 상품 광고 잘 돼?", "media": "naver", "expect": "none"},
+  {"q": "확장소재 뭐 넣어?", "media": "naver", "expect": ["naver-setup-018"]},
+  {"q": "가격 써도 돼?", "media": "naver", "expect": ["naver-setup-019"]},
+  {"q": "재구매 손님한테 다시 광고하려면", "media": "meta", "expect": ["meta-tgt-004"]},
+  {"q": "네이버랑 메타 중 뭐부터 해?", "media": "naver", "expect": "coach"},
+  {"q": "예산 30만원인데 어떻게 나눠?", "media": "naver", "expect": "coach"}
+ ],
+ "others": [
+  {"q": "원두 키워드 검색량 어디서 봐?", "media": "naver", "expect": ["naver-kw-001", "naver-kw-002"]},
+  {"q": "비즈머니 충전은 어떻게 해?", "media": "naver", "expect": ["naver-setup-002"]},
+  {"q": "단백질 쉐이크 광고 입찰가 처음에 얼마로 해?", "media": "naver", "expect": ["naver-setup-011"]},
+  {"q": "광고 등록했는데 계속 검토 중이야", "media": "naver", "expect": ["naver-setup-015"]},
+  {"q": "구매가 보고서에 안 잡혀", "media": "naver", "expect": ["naver-setup-016"]},
+  {"q": "메타 픽셀 꼭 달아야 해?", "media": "meta", "expect": ["meta-msr-001", "meta-obj-003"]},
+  {"q": "머신 러닝 단계 언제 끝나?", "media": "meta", "expect": ["meta-lrn-001", "meta-lrn-004"]},
+  {"q": "프로틴 광고 목표 뭐로 골라?", "media": "meta", "expect": ["meta-obj-004", "meta-obj-001"]},
+  {"q": "광고 관리자 구매 수가 실제 주문보다 많아", "media": "meta", "expect": ["meta-msr-004"]},
+  {"q": "어드밴티지 타겟 켜 둬도 돼?", "media": "meta", "expect": ["meta-tgt-001"]}
+ ]
+}

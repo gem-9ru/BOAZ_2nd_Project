@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RAG_DIR = ROOT / "data" / "rag"
 CARD_FILES = ("naver_searchad.md", "meta_ads.md")
 TOP_K = 4
-MIN_SCORE = 6.0            # 이보다 낮으면 '자료에 없어요' (찾기 테스트로 정함)
+MIN_SCORE = 4.0            # 이보다 낮으면 '자료에 없어요' (시험 문항 tests/fixtures/setup_questions.json으로 정함)
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 IMAGE_TYPES = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg"}
 FIELD_WEIGHTS = {"title": 3, "questions": 2, "screen": 2, "body": 1, "coach": 1, "stage": 1, "media": 1}
@@ -99,8 +99,14 @@ def parse_cards(text: str, file: str = "") -> List[Card]:
 _CACHE: Dict[str, List[Card]] = {}
 
 
+def _cards_key(rag_dir: Path) -> str:
+    """카드 파일 수정 시각까지 캐시 키에 (카드만 고쳐 올려도 배포 앱이 새 카드를 읽게, 검수 A8)."""
+    stamps = [str((rag_dir / f).stat().st_mtime) for f in CARD_FILES if (rag_dir / f).exists()]
+    return str(rag_dir) + "|" + "|".join(stamps)
+
+
 def load_cards(rag_dir: Path = RAG_DIR) -> List[Card]:
-    key = str(rag_dir)
+    key = _cards_key(rag_dir)
     if key not in _CACHE:
         cards = []
         for f in CARD_FILES:
@@ -113,16 +119,79 @@ def load_cards(rag_dir: Path = RAG_DIR) -> List[Card]:
 
 # ── 찾기 (BM25) ─────────────────────────────────────────────────
 _WORD = re.compile(r"[0-9A-Za-z가-힣]+")
+# 말끝·조사 (긴 것부터 뗌). 떼고 남은 말이 2글자 이상일 때만 (예: "나가게"→"나가", "사람한테"→"사람", "넣어?"는 그대로)
+_ENDINGS = sorted("""하려면 하는데 해야돼 해야 할까 할래 해줘 써줘 하고 싶어 고싶어 한테 에게 에서 으로 까지 부터 이랑 하면 려면
+    는데 은데 인데 이야 이에요 예요 해요 나요 되나요 될까 돼요 했어 됐어 하게 나게 되게 은 는 이 가 을 를 에 도 만 로 와 과 랑 야 요 해 돼 줘 게""".split(),
+                  key=len, reverse=True)
+# 질문 쪽에서만 버리는 말 (어느 카드에나 맞아 순위를 흐림)
+STOPWORDS = {"어떻게", "어디", "어디서", "어디에", "뭐", "뭘", "뭐로", "뭐야", "수", "있어", "있나", "하는", "할", "해",
+             "돼", "좀", "잘", "꼭", "많은", "많이", "어때", "괜찮아", "좋아", "그냥", "나", "내", "우리", "광고", "광고를", "광고가", "사람", "사람한테", "싶어", "하고", "하려면", "써도", "되나"}
 
 
-def tokenize(text: str) -> List[str]:
-    """공백·기호로 나눈 단어 + 한글·영문 2글자 조각 (조사가 붙어도 맞게)."""
+# 같은 뜻 다른 말 (광고 관리자 화면 말 ↔ 사장님 말). 질문에 앞말이 있으면 뒷말도 찾음
+SYNONYMS = {"사진": "이미지", "이미지": "사진", "영상": "동영상", "타깃": "타겟", "타겟": "타깃",
+            "문구": "소재", "카피": "소재", "제외어": "제외", "모바일": "기기", "pc": "기기"}
+
+
+def _stem(w: str) -> str:
+    for e in _ENDINGS:
+        if w.endswith(e) and len(w) - len(e) >= 2:
+            return w[: -len(e)]
+    return w
+
+
+def tokenize(text: str, query: bool = False) -> List[str]:
+    """단어(말끝·조사를 뗀 것) + 한글·영문 2글자 조각. query=True면 흔한 말(STOPWORDS)은 뺌."""
     out = []
     for w in _WORD.findall((text or "").lower()):
-        out.append(w)
-        if len(w) > 2:
-            out += [w[i:i + 2] for i in range(len(w) - 1)]
+        if query and w in STOPWORDS:
+            continue
+        s = _stem(w)
+        if query and s in STOPWORDS:
+            continue
+        out.append(s)
+        if len(s) > 2:
+            out += [s[i:i + 2] for i in range(len(s) - 1)]
+        if query and s in SYNONYMS:
+            out.append(SYNONYMS[s])         # 같은 뜻 말은 통째로만 (조각까지 더하면 점수가 부풀음)
     return out
+
+
+# 매체: 고른 매체 카드에서만 찾되, 질문에 다른 매체 이름이 있으면 그 매체로 (계획 가정 2)
+MEDIA = {"naver": "네이버", "meta": "메타"}
+MEDIA_WORDS = {"naver": ("네이버", "파워링크", "쇼핑검색", "비즈머니", "검색광고", "키워드도구"),
+               "meta": ("메타", "인스타", "페이스북", "페북", "릴스", "스토리", "픽셀", "어드밴티지")}
+MEDIA_NAMES = {"naver": ("네이버", "검색광고"), "meta": ("메타", "인스타그램", "인스타", "페이스북", "페북")}   # 찾을 때 빼는 매체 이름만
+# 카드보다 코치 배분 숫자로 답할 질문 ("뭐부터 해?", "30만 원 어떻게 나눠?")
+_COACH = re.compile(r"뭐부터|어디부터|먼저\s*(해|할|시작)|어떻게\s*나눠|나눠야|나누면|얼마씩|반반|(네이버|메타).*(랑|하고|vs|중).*(네이버|메타).*(중|뭐|어디|먼저|더)")
+
+
+def media_in(query: str) -> Optional[str]:
+    """질문에 한 매체 이름만 있으면 그 매체 ('naver'/'meta'), 없거나 둘 다면 None."""
+    q = (query or "").replace(" ", "").lower()
+    hits = [m for m, words in MEDIA_WORDS.items() if any(w in q for w in words)]
+    return hits[0] if len(hits) == 1 else None
+
+
+def is_coach_question(query: str) -> bool:
+    return bool(_COACH.search(query or ""))
+
+
+def query_weights(query: str) -> Dict[str, float]:
+    """질문 토큰 → 무게. 단어는 1, 단어에서 나온 2글자 조각은 합쳐서 1 (긴 단어 하나가 점수를 독차지하지 않게)."""
+    w: Dict[str, float] = {}
+    for word in _WORD.findall((query or "").lower()):
+        toks = tokenize(word, query=True)
+        if not toks:
+            continue
+        head, rest = toks[0], toks[1:]
+        grams = [x for x in rest if x not in SYNONYMS.values() or len(x) <= 2]
+        extra = [x for x in rest if x not in grams]
+        for x in [head] + extra:
+            w[x] = w.get(x, 0) + 1.0
+        for x in grams:
+            w[x] = w.get(x, 0) + 1.0 / len(grams)
+    return w
 
 
 class Index:
@@ -142,7 +211,7 @@ class Index:
         self.idf = {t: math.log(1 + (n - d + 0.5) / (d + 0.5)) for t, d in df.items()}
 
     def search(self, query: str, top: int = TOP_K, media: Optional[str] = None) -> List[Tuple[Card, float]]:
-        q = Counter(tokenize(query))
+        q = query_weights(query)
         scored = []
         for c, tf, dl in zip(self.cards, self.tf, self.len):
             if media and media not in c.media:
@@ -151,7 +220,7 @@ class Index:
             for t, qn in q.items():
                 f = tf.get(t)
                 if f:
-                    s += self.idf[t] * f * (self.k1 + 1) / (f + self.k1 * (1 - self.b + self.b * dl / self.avg)) * min(qn, 2)
+                    s += self.idf[t] * f * (self.k1 + 1) / (f + self.k1 * (1 - self.b + self.b * dl / self.avg)) * min(qn, 2.0)
             if s > 0:
                 scored.append((c, s))
         scored.sort(key=lambda x: -x[1])
@@ -162,15 +231,59 @@ _INDEX: Dict[str, Index] = {}
 
 
 def index(rag_dir: Path = RAG_DIR) -> Index:
-    key = str(rag_dir)
+    key = _cards_key(rag_dir)
     if key not in _INDEX:
         _INDEX[key] = Index(load_cards(rag_dir))
     return _INDEX[key]
 
 
-def find(query: str, top: int = TOP_K) -> List[Tuple[Card, float]]:
-    """기준 이상인 카드만 (없으면 빈 목록 = '자료에 없어요')."""
-    return [(c, s) for c, s in index().search(query, top) if s >= MIN_SCORE]
+def find(query: str, top: int = TOP_K, media: Optional[str] = None) -> List[Tuple[Card, float]]:
+    """기준 이상인 카드만 (없으면 빈 목록 = '자료에 없어요'). media: 고른 매체('naver'/'meta'), 질문에 다른 매체 이름이 있으면 그쪽."""
+    m = media_in(query) or media
+    q = query
+    if m:   # 매체로 거른 뒤엔 매체 이름(인스타·네이버…)이 모든 카드에 맞아 순위만 흐림 → 빼고 찾음
+        for w in MEDIA_NAMES[m]:
+            q = re.sub(w + r"[가-힣]{0,2}", " ", q, flags=re.I)
+    return [(c, s) for c, s in index().search(q, top, MEDIA.get(m)) if s >= MIN_SCORE]
+
+
+# ── 매체 고르기 (7d 1단계) ──────────────────────────────────────
+MEDIA_CHOICES = {"both": "둘 다 (네이버 먼저)", "naver": "네이버만", "meta": "메타만"}
+CHIPS = {"naver": ["하루 예산 어디에 넣어?", "처음 입찰가 얼마로 해?", "파워링크랑 쇼핑검색 중 뭐 해?", "구매가 보고서에 잡히게 하려면?"],
+         "meta": ["목표 뭐 골라?", "하루 예산 얼마 넣어?", "머신 러닝 단계가 뭐야?", "픽셀 꼭 달아야 해?"]}
+
+
+def default_media(naver_spend: float, meta_spend: float) -> str:
+    """코치 배분으로 미리 고를 매체 (계획 가정 1): 메타 0원 → 네이버만, 네이버 0원 → 메타만, 둘 다 있으면 둘 다(네이버 먼저)."""
+    if meta_spend <= 0 < naver_spend:
+        return "naver"
+    if naver_spend <= 0 < meta_spend:
+        return "meta"
+    return "both"
+
+
+def coach_answer(split, kw: str, no_ad: bool = False) -> str:
+    """'뭐부터 해? / 어떻게 나눠?' → 카드 대신 코치 배분 숫자로 답 (마크다운). split: coach.Split."""
+    from .coach import split_reason
+    from .insights import won
+    first = "네이버" if split.naver_spend > 0 else "메타"
+    lines = [f"코치가 나눈 시험 예산 {won(split.total)}: **네이버 {won(split.naver_spend)} · 메타 {won(split.meta.spend)}** "
+             f"(하루 약 {won(split.naver_spend / D.DAYS_PER_MONTH)} · {won(split.meta.spend / D.DAYS_PER_MONTH)}).",
+             split_reason(split, kw),
+             "세팅은 **네이버 먼저** 하세요. 네이버는 비즈머니 충전과 검토(보통 영업일 1~2일)가 있어서, "
+             "먼저 올려 두면 메타를 세팅하는 동안 검토가 끝나요 (naver-setup-015)."
+             if split.naver_spend > 0 and split.meta.spend > 0 else f"이번 배분은 **{first}만** 써요."]
+    if no_ad:
+        lines.insert(0, "지금은 **광고 안 함**을 추천해요. 시작한다면 아래처럼 나눠요.")
+    return "  \n".join(lines)
+
+
+def route(query: str, media: Optional[str] = None) -> Tuple[str, List[Tuple[Card, float]]]:
+    """질문 → ("coach", []) 코치 배분 숫자로 답 / ("cards", 찾은 카드) / ("none", []) 자료에 없어요."""
+    if is_coach_question(query):
+        return "coach", []
+    found = find(query, media=media)
+    return ("cards", found) if found else ("none", [])
 
 
 # ── 답하기 ──────────────────────────────────────────────────────
