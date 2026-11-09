@@ -60,3 +60,9 @@ def test_a9_keyword_axis_caption_from_tiers():
     assert charts.tier_caption() == "300 미만 롱테일 · 300~1만 세부 · 1만 이상 대표"
     src = (Path(__file__).resolve().parents[1] / "app" / "charts.py").read_text(encoding="utf-8")
     assert "1천~3만" not in src
+
+
+def test_a18_masked_medium_not_offered():
+    from src.engine import defaults as D
+    ms = dl.ga4_mediums()
+    assert D.GA4_MASKED_MEDIUM not in ms and (not ms or ms[0] == dl.GA4_ALL)

@@ -41,7 +41,8 @@ def ga4_mediums() -> List[str]:
     df = _ga4_table()
     if df is None or "medium" not in df.columns:
         return []
-    return [GA4_ALL] + sorted(df["medium"].dropna().unique().tolist())
+    # 마스킹 매체 '(data deleted)'는 계산에서 늘 빼므로 선택지에서도 뺌 (고르면 말없이 기본값이 되던 것, 검수 A18)
+    return [GA4_ALL] + sorted(m for m in df["medium"].dropna().unique().tolist() if m != D.GA4_MASKED_MEDIUM)
 
 
 def funnel_steps(medium: str = GA4_ALL) -> Tuple[List[Tuple[str, float]], str]:
