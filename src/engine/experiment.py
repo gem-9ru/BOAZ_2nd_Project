@@ -7,6 +7,8 @@ from typing import Dict
 
 from scipy.stats import norm
 
+from .defaults import DAYS_PER_MONTH
+
 
 def sample_size(p1: float, relative_lift: float, alpha: float = 0.05, power: float = 0.8) -> Dict[str, float]:
     """기준 전환율 p1을 relative_lift(예: 0.10 = 10%)만큼 올린 효과를 잡는 데 필요한 그룹당 표본."""
@@ -22,7 +24,7 @@ def sample_size(p1: float, relative_lift: float, alpha: float = 0.05, power: flo
 
 
 def days_needed(n_total: float, monthly_traffic: float) -> float:
-    """해당 단계에 한 달 동안 들어오는 사용자 수로 실험 기간(일) 추정."""
+    """해당 단계에 한 달 동안 들어오는 사용자 수로 실험 기간(일) 추정. 한 달 = 30.4일 (앱 전체 같은 상수, 검수 A22)."""
     if monthly_traffic <= 0 or n_total != n_total:
         return float("inf")
-    return math.ceil(n_total / (monthly_traffic / 30))
+    return math.ceil(n_total / (monthly_traffic / DAYS_PER_MONTH))

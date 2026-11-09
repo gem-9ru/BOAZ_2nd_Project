@@ -20,7 +20,8 @@ def test_sample_size_textbook_case():
 
 
 def test_days_needed():
-    assert days_needed(3000, 3000) == 30
+    assert days_needed(3000, 3000) == 31            # 한 달 = 30.4일 (예전 30일이면 30)
+    assert days_needed(1000, 30_400) == 1
     assert days_needed(100, 0) == float("inf")
 
 
