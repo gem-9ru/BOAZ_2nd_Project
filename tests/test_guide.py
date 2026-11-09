@@ -41,21 +41,11 @@ def _curve():
     return NaverCurve({"원두커피": df})
 
 
-def test_naver_bid_and_checklist():
+def test_naver_bid_at():
     c = _curve()
     assert G.naver_bid_at(c, 10_000) == 100 and G.naver_bid_at(c, 50_000) == 300 and G.naver_bid_at(c, 10**9) == 1000
     assert G.naver_bid_at(None, 50_000) is None
-    items = G.naver_checklist(68_000, 300, "원두커피", ["스마트스토어"])
-    text = " ".join(i["step"] + i["detail"] for i in items)
-    assert any("쇼핑검색광고" in i["step"] for i in items)
-    assert any(i["step"] == f"하루 예산: {68_000 / 30.4:,.0f}원" for i in items)
-    assert "최소 50원" in text and "키워드를 넣지 않고" in text            # 쇼핑검색 기준 입찰 설명
-    assert "입찰가 × 품질지수" not in text and "광고 연관지수" in text       # 공식 표현
-    assert "전환 추적 관리" in text and "캠페인 설정에서" in text           # 신청 + 캠페인에서 고르기
-    assert "ADVoost" in text
-    assert all(i["check"] in ("✅", "△", "❓", "🧮") for i in items)
-    assert all(SR.by_id(i["card"]) is not None for i in items if i.get("card"))   # 근거 카드가 실제로 있음
-    assert any("파워링크" in i["step"] for i in G.naver_checklist(68_000, None, "x", ["자사몰"]))
+    # 네이버 첫 세팅 체크리스트는 광고 세팅값(ad_setup.build_settings)으로 옮김 → tests/test_ad_setup.py
 
 
 def test_keywordplus_removed():

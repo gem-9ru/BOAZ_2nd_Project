@@ -51,6 +51,7 @@ from src.engine import montecarlo as MC  # noqa: E402
 from src.engine import report as RP  # noqa: E402
 from src.engine import session_schema as SS  # noqa: E402
 from src.engine import guide as GD  # noqa: E402
+from src.engine import ad_setup as AS  # noqa: E402
 from src.engine import chat_intake as CI  # noqa: E402
 from src.engine import setup_rag as SR  # noqa: E402
 from src.engine import orders as OR  # noqa: E402
@@ -298,28 +299,26 @@ def chat_intake():
 
 def ads_guide(a: dict):
     """광고 관리자 설정 가이드. ✅ 공식 확인 / △ 다른 자료·코치 판단 / ❓ 확인 못 함 / 🧮 이 앱의 계산. 근거는 세팅 카드(data/rag)."""
-    sp = a["split"]
-
     def src(card_id):
         c = SR.by_id(card_id) if card_id else None
         u = next((x for x in (c.sources if c else []) if x.startswith("http")), "")
         return f" · [출처]({u})" if u else ""
 
+    plan = setup_view.settings_plan(a, ss, stores)       # 세팅 숫자는 ad_setup 한 곳 (7d)
     with st.expander("🛠️ 광고 관리자에서 이렇게 설정하세요 (네이버 첫 세팅 · 메타 목적 · 자동 vs 수동)"):
         g_n, g_m, g_a = st.tabs(["네이버 첫 세팅", "메타 목적 고르기", "자동 vs 수동"])
         with g_n:
-            if sp.naver_spend <= 0:
+            steps = plan.for_media("naver")
+            if not steps:
                 st.caption("이번 배분에서는 네이버 예산이 없어요. 검색어를 넣으면 네이버 예상 실적으로 다시 나눠요.")
-            else:
-                bid = GD.naver_bid_at(sp.naver.curve, sp.naver_spend) if sp.has_naver else None
-                for i, it in enumerate(GD.naver_checklist(sp.naver_spend, bid, a["kw"], stores), 1):
-                    st.markdown(f"{i}. **{it['step']}** {it['check']}{src(it.get('card'))}  \n{it['detail']}")
+            for i, s in enumerate(steps, 1):
+                vals = " · ".join(f"{it.label} **{AS.show(it.value)}** {it.source}" for it in s.items if it.value not in ("", []))
+                st.markdown(f"{i}. **{s.title}**{src(s.cards[0] if s.cards else None)}  \n{vals}")
+            st.caption("아래 '세팅 도우미'에서 단계별로 고치고 시트로 받을 수 있어요.")
         with g_m:
-            only_ss = "스마트스토어" in stores and "자사몰" not in stores
-            pixel = st.toggle("내 사이트(자사몰)에 메타 픽셀 구매 이벤트를 설치했다", key="pixel_ready", disabled=only_ss,
+            st.toggle("내 사이트(자사몰)에 메타 픽셀 구매 이벤트를 설치했다", key="pixel_ready", disabled=not plan.own_site,
                               help="스마트스토어에 픽셀을 달 수 있는지는 공식 확인 못 함이라, 스마트스토어만 쓰면 이 설정과 관계없이 트래픽을 권해요.")
-            new = max(a["prediction"]["new"], 1e-9)
-            mp = GD.meta_plan(sp.meta.spend, a["budget0"] / new, pixel, stores, sp.meta.cpc)
+            mp = plan.meta_plan
             if mp["objective"]:
                 st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{mp['why']}")
                 if mp["recommended_daily"]:
@@ -409,7 +408,7 @@ def orders_section():
 
 def plan_download(a: dict, key: str):
     """내 계획 파일 받기 (가정 A4: 로그인 없이 JSON). 입력·예측·시작일만 담고 개인정보는 없음."""
-    data = SS.Plan.from_session(ss, a["prediction"], ss.get("coach_started")).to_json()
+    data = SS.Plan.from_session(ss, a["prediction"], ss.get("coach_started"), ss.get("ad_settings")).to_json()   # 광고 세팅값(7d) 함께
     st.download_button("📄 내 계획 파일 받기", data, file_name=f"광고계획_{CO.today_kst():%Y%m%d}.json", mime="application/json",
                        key=key, help="한 달 뒤 이 파일을 올리면 숫자와 예측을 그대로 불러와 실제 결과와 비교해요.")
 
@@ -425,6 +424,7 @@ def plan_upload(key: str):
         st.caption(f"자세한 오류: {e}")
         return
     SS.apply_plan(ss, plan)
+    setup_view.restore_settings(ss, plan.settings)      # 사장님이 고친 광고 세팅값
     ss["_plan_loaded"] = (f.name, f.size)
     st.toast("계획을 불러왔어요. 예측과 실제를 비교해 볼게요.", icon="📄")
     st.rerun()
@@ -630,7 +630,8 @@ if price and profit and max_budget and not input_error:
                naver_failed=naver_failed, monthly_search=monthly_search, ch_name=answer.ch_name, split=answer.split,
                cpc=answer.cpc, cpc_src=answer.cpc_src, need=answer.need, need_year=answer.need_year, mc=answer.mc,
                grades=answer.grades, prediction=answer.prediction, options=answer.options, budget0=answer.budget,
-               default_pick=answer.default_pick, inputs=inputs, naver_curve=naver_curve, repurchase=rep_src, pick=answer.pick)
+               default_pick=answer.default_pick, inputs=inputs, naver_curve=naver_curve, repurchase=rep_src, pick=answer.pick,
+               answer=answer)
     coach = dict(price=float(price), margin=profit / price, budget=float(answer.budget), keyword=kw, be=answer.be, cpc=answer.cpc,
                  channel=answer.ch_name, repurchase=repurchase)
 

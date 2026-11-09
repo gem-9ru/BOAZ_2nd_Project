@@ -6,6 +6,7 @@
 from typing import Dict, List, Optional
 
 from .acquisition import LEARNING_EVENTS_PER_WEEK
+from .ad_setup import is_smartstore, own_site
 from .defaults import DAYS_PER_MONTH, WEEKS_PER_MONTH
 
 DAILY_BUDGET_X = 10        # ✅ 메타: 일일 예산 ≥ 성과 목표 평균 비용 × 10 (결과당 비용 목표 입찰이면 × 5) [meta-bud-003]
@@ -39,7 +40,7 @@ def meta_plan(meta_monthly: float, expected_cpa: float, pixel_ready: bool, store
     daily = daily_budget(meta_monthly)
     weekly_sales = weekly / expected_cpa if expected_cpa > 0 else 0.0
     learning_ok = weekly_sales >= LEARNING_EVENTS_PER_WEEK
-    smartstore_only = "스마트스토어" in stores and "자사몰" not in stores
+    smartstore_only = is_smartstore(stores) and not own_site(stores)     # 스마트스토어 규칙 하나 (ad_setup)
     if meta_monthly <= 0:
         objective, why, result_cost = None, "이번 배분에서는 메타 예산이 없어요.", None
     elif smartstore_only:
@@ -93,48 +94,3 @@ def naver_bid_at(curve, spend: float) -> Optional[float]:
         if spend <= acc + 1e-9:
             return float(seg["bid"]) if seg["bid"] == seg["bid"] else None
     return float(curve.segments[-1]["bid"])
-
-
-def naver_checklist(naver_monthly: float, bid: Optional[float], keyword: str, stores: List[str]) -> List[Dict[str, str]]:
-    smartstore = "스마트스토어" in stores or not stores
-    daily = daily_budget(naver_monthly)
-    kind = "쇼핑검색광고 (쇼핑몰 상품형)" if smartstore else "사이트검색광고 (파워링크)"
-    items = [
-        {"step": "광고주 가입·비즈머니 충전", "detail": "네이버애즈에서 광고주 계정을 만들고 첫 달 예산만큼만 충전해요.", "check": "✅", "card": "naver-setup-002"},
-        {"step": f"캠페인 유형: {kind}",
-         "detail": ("스마트스토어 상품이 네이버 쇼핑 영역에 보이는 광고예요. 키워드를 넣지 않고 상품을 소재로 넣어요. "
-                    "파워링크용 '웹사이트'와 별도로 '쇼핑몰' 비즈채널을 등록해 스마트스토어를 연결해요."
-                    if smartstore else "키워드 검색 결과에 내 사이트를 문구와 함께 보여 주는 광고예요."),
-         "check": "✅", "card": "naver-setup-006" if smartstore else "naver-setup-005"},
-        {"step": "구조: 캠페인 → 광고그룹 → " + ("소재(상품)" if smartstore else "키워드·소재"),
-         "detail": "처음엔 캠페인 1개, 광고그룹 1개로 시작하면 숫자를 보기 쉬워요.", "check": "✅", "card": "naver-setup-008"},
-        {"step": f"하루 예산: {daily:,.0f}원",
-         "detail": f"배분한 네이버 월 {naver_monthly:,.0f}원 ÷ 30.4일을 캠페인 하루 예산에 넣어요. 예산에 닿으면 그날 광고가 멈추고, "
-                   "광고가 내려가기까지 시간이 걸려 조금 더 과금될 수 있어요.", "check": "🧮", "card": "naver-setup-009"},
-    ]
-    if smartstore:
-        items.append({"step": f"기본 입찰가: 최소 {NAVER_MIN_BID['쇼핑검색']}원부터",
-                      "detail": "쇼핑검색은 키워드별 입찰이 아니라 상품(광고그룹 기본 입찰가) 단위예요. 최소 50원으로 두고 보고서의 노출·클릭을 보며 조금씩 올려요. "
-                                + (f"참고로 '{keyword}' 키워드(파워링크) 예상 실적에서 이 예산을 쓰는 입찰가는 약 {bid:,.0f}원이에요(쇼핑검색 입찰가와는 달라요)."
-                                   if bid else ""),
-                      "check": "✅", "card": "naver-setup-011"})
-    elif bid:
-        items.append({"step": f"기본 입찰가: 약 {bid:,.0f}원 (최소 {NAVER_MIN_BID['파워링크']}원)",
-                      "detail": f"'{keyword}' 예상 실적에서 이 예산을 쓰게 되는 입찰가예요. 광고그룹 수정 창의 [예상 실적 보기]에 넣어 월 예산을 넘지 않는지 확인하세요.",
-                      "check": "🧮", "card": "naver-setup-011"})
-    items.append({"step": "노출 순위는 입찰가만으로 정해지지 않아요",
-                  "detail": "검색어와 광고·사이트의 연관성, 광고 품질을 입찰가와 함께 봐서 정해져요. 파워링크는 품질을 '광고 연관지수'·'클릭 기대지수'(1~10)로 보여 줘요. "
-                            "입찰가를 올려도 순위는 보장되지 않으니 다음 날 보고서의 노출수로 확인하세요.",
-                  "check": "✅", "card": "naver-setup-012"})
-    items.append({"step": "전환(구매) 추적 신청하고 캠페인에서 고르기",
-                  "detail": "도구 > 전환 추적 관리 > 웹사이트에서 [+ 전환 추적 신청]. 스마트스토어는 신청하자마자 '설치 완료'이고, 자사몰은 안내 메일대로 스크립트를 설치해요. "
-                            "신청한 뒤 캠페인 설정에서 그 전환 추적 대상을 골라야 리포트에 '총 전환수'가 잡혀요.",
-                  "check": "✅", "card": "naver-setup-016"})
-    items.append({"step": "광고 링크에 꼬리표", "detail": "코치가 만든 NT 꼬리표 링크(스마트스토어)나 UTM 링크(자사몰)를 쓰면 판매처 통계에서 따로 셀 수 있어요.",
-                  "check": "🧮", "card": None})
-    if smartstore:
-        items.append({"step": "이런 상품도 있어요: ADVoost 쇼핑 · 스마트스토어 광고",
-                      "detail": "예산만 정하면 AI가 상품·지면·입찰을 자동으로 정하는 쇼핑 광고예요(ADVoost 쇼핑은 전환 추적 필수, 스마트스토어 광고는 스마트스토어센터에서). "
-                                "둘 중 하나만 쓰라고 안내돼요. 입찰가를 직접 정해 숫자를 배우려면 위 쇼핑검색광고가 맞아요.",
-                      "check": "✅", "card": "naver-setup-007"})
-    return items

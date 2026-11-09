@@ -278,6 +278,41 @@ def coach_answer(split, kw: str, no_ad: bool = False) -> str:
     return "  \n".join(lines)
 
 
+def find_in(query: str, card_ids: List[str], media: Optional[str] = None) -> List[Tuple[Card, float]]:
+    """'여기서 막혔어요': 그 단계 카드에서 먼저 찾고, 기준을 넘는 게 없으면 매체 전체에서."""
+    ids = set(card_ids)
+    first = [(c, s) for c, s in index().search(query, len(index().cards), MEDIA.get(media_in(query) or media))
+             if c.id in ids and s >= MIN_SCORE]
+    return first[:TOP_K] if first else find(query, media=media)
+
+
+# ── 광고 문구 초안 (키 있을 때 AI 3개, 7d 3단계) ──────────────────────
+COPY_SYSTEM = """너는 광고를 처음 하는 사장님의 광고 문구 초안을 쓰는 도우미야.
+사장님이 준 상품명·강점·혜택만 써. 없는 사실(수상·순위·후기 수·가격·할인)은 지어내지 마.
+'최고·최초·1위·유일·100%·완벽·보장' 같은 최상급·순위·보장 표현은 쓰지 마. 특수문자를 반복하지 마.
+네이버 제목은 15자 이하, 설명은 20~45자(띄어쓰기 포함), 메타 제목은 27자 이하, 메타 기본 문구는 50~150자.
+서로 다른 느낌으로 초안 3개를 만들어."""
+COPY_SCHEMA = {
+    "type": "object",
+    "properties": {"drafts": {"type": "array", "items": {
+        "type": "object",
+        "properties": {k: {"type": "string"} for k in ("naver_title", "naver_desc", "meta_text", "meta_headline")},
+        "required": ["naver_title", "naver_desc", "meta_text", "meta_headline"], "additionalProperties": False}}},
+    "required": ["drafts"], "additionalProperties": False,
+}
+
+
+def draft_copy(client, product: str, strength: str = "", benefit: str = "") -> List[Dict[str, str]]:
+    """키가 있으면 초안 3개 (실패하면 CI.IntakeUnavailable → 화면은 틀 채우기로)."""
+    msg = CI.scrub(f"상품명: {product}\n강점: {strength or '(없음)'}\n혜택: {benefit or '(없음)'}")
+    out = CI.call_json(client, COPY_SYSTEM, [{"role": "user", "content": msg}], COPY_SCHEMA, max_tokens=1_200)
+    drafts = [{k: str(d.get(k, "")).strip()[:200] for k in ("naver_title", "naver_desc", "meta_text", "meta_headline")}
+              for d in (out.get("drafts") or []) if isinstance(d, dict)]
+    if not drafts:
+        raise CI.IntakeUnavailable("빈 초안")
+    return drafts[:3]
+
+
 def route(query: str, media: Optional[str] = None) -> Tuple[str, List[Tuple[Card, float]]]:
     """질문 → ("coach", []) 코치 배분 숫자로 답 / ("cards", 찾은 카드) / ("none", []) 자료에 없어요."""
     if is_coach_question(query):
@@ -324,7 +359,10 @@ def coach_text(ctx: Dict) -> str:
         rows.append(f"100번 해 보면 1년 동안 {ctx['wins']}번 남음")
     if ctx.get("stores"):
         rows.append("판매처 " + ", ".join(ctx["stores"]))
-    return "코치 숫자: " + " · ".join(rows)
+    text = "코치 숫자: " + " · ".join(rows)
+    if ctx.get("settings"):
+        text += "\n지금 세팅 중인 광고 세팅값 (ad_setup):\n" + "\n".join("- " + s for s in ctx["settings"])
+    return text
 
 
 def check_image(data: bytes, name: str) -> str:
@@ -337,9 +375,23 @@ def check_image(data: bytes, name: str) -> str:
     return IMAGE_TYPES[ext]
 
 
+HISTORY_TURNS = 6          # 키가 있을 때 앞 대화 6턴(질문·답 12개)까지 기억 (계획 결정 11/9)
+
+
+def trim_history(history: Optional[List[Dict[str, str]]]) -> List[Dict[str, str]]:
+    """앞 대화 → 최근 6턴, 질문은 개인정보를 지우고, 사용자 → 도우미 순서로 맞춤."""
+    msgs = [{"role": m["role"], "content": CI.scrub(m["content"]) if m["role"] == "user" else str(m["content"])[:1_500]}
+            for m in (history or []) if m.get("role") in ("user", "assistant") and m.get("content")]
+    msgs = msgs[-HISTORY_TURNS * 2:]
+    while msgs and msgs[0]["role"] != "user":
+        msgs = msgs[1:]
+    return msgs
+
+
 def answer(client, question: str, found: List[Tuple[Card, float]], ctx: Dict,
-           image: Optional[Tuple[bytes, str]] = None) -> Dict:
-    """→ {"answer": 글, "cards": [Card...]}. 카드가 없으면 LLM을 부르지 않는다. 실패하면 CI.IntakeUnavailable."""
+           image: Optional[Tuple[bytes, str]] = None, history: Optional[List[Dict[str, str]]] = None) -> Dict:
+    """→ {"answer": 글, "cards": [Card...]}. 카드가 없으면 LLM을 부르지 않는다. 실패하면 CI.IntakeUnavailable.
+    history: 앞 대화 [{"role", "content"}] (최근 6턴만 보냄)."""
     if not found:
         return {"answer": "자료에 없어요. 네이버 검색광고·메타 광고 관리자 세팅에 관한 질문으로 다시 물어봐 주세요.", "cards": []}
     content: List[Dict] = []
@@ -351,7 +403,8 @@ def answer(client, question: str, found: List[Tuple[Card, float]], ctx: Dict,
     cards = [c for c, _ in found]
     content.append({"type": "text", "text": "세팅 카드:\n\n" + "\n\n".join(card_text(c) for c in cards)
                     + "\n\n" + coach_text(ctx) + "\n\n사장님 질문: " + CI.scrub(question)})
-    out = CI.call_json(client, SYSTEM, [{"role": "user", "content": content}], ANSWER_SCHEMA, max_tokens=1_500)
+    out = CI.call_json(client, SYSTEM, trim_history(history) + [{"role": "user", "content": content}], ANSWER_SCHEMA,
+                       max_tokens=1_500)
     by_id = {c.id: c for c in cards}
     used = [by_id[i] for i in out.get("card_ids", []) if isinstance(i, str) and i in by_id]
     text = str(out.get("answer") or "").strip()[:1_500]
