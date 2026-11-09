@@ -34,11 +34,27 @@ def biggest_drop(params) -> Tuple[str, float]:
     return name, rate
 
 
-def warnings(res: SimResult, keyword_alloc: Optional[pd.DataFrame] = None) -> List[Tuple[str, str]]:
-    """(수준, 문장). 수준: error / warning / info"""
+# '광고 안 함' 판정은 코치 기준 하나 (사용자 결정 Q3, 11/10): 100번 중 ○번 → MC.action. '더 보기'의 LTV/CAC·최적 지출은 참고 숫자로만
+ACTION_LEVEL = {"go": ("success", "🟢"), "small": ("warning", "🟡"), "prep": ("error", "🔴")}
+
+
+def coach_verdict_line(wins: int) -> Tuple[str, str]:
+    """(수준, 문장): 코치 판정 한 줄 (코치 3·4단계와 같은 MC.action 기준)."""
+    from .montecarlo import ACTION_TEXT, action
+    act = action(wins)
+    lvl, icon = ACTION_LEVEL[act]
+    return lvl, f"{icon} **코치 판정: 100번 해 보면 {wins}번 남아요 → {ACTION_TEXT[act]}**"
+
+
+def warnings(res: SimResult, keyword_alloc: Optional[pd.DataFrame] = None,
+             coach_wins: Optional[int] = None) -> List[Tuple[str, str]]:
+    """(수준, 문장). 수준: error / warning / info. coach_wins가 있으면 PMF는 판정이 아니라 참고 숫자 (Q3)."""
     s, out = res.summary, []
-    # PMF 경고 (기획안 결정 5): 현재 리텐션에서 12개월 LTV/CAC < 1
-    if s["ltv_cac"] is not None and s["ltv_cac"] < D.PMF_LTV_CAC_THRESHOLD:
+    if coach_wins is not None and s["ltv_cac"] is not None and s["ltv_cac"] < D.PMF_LTV_CAC_THRESHOLD:
+        out.append(("info", f"참고 숫자 (12개월 시뮬레이션): 손님 1명이 1년 동안 남겨 주는 돈 {won(s['ltv_12m'])} ÷ 데려오는 데 든 광고비 "
+                            f"{won(s['paid_cac'])} = LTV/CAC {s['ltv_cac']:.2f}. 판정은 위 코치 기준(100번 중 {coach_wins}번)을 따라요."))
+    # PMF 경고 (기획안 결정 5): 현재 리텐션에서 12개월 LTV/CAC < 1 (코치 판정이 없을 때만 판정 문장)
+    elif s["ltv_cac"] is not None and s["ltv_cac"] < D.PMF_LTV_CAC_THRESHOLD:
         out.append(("error", f"광고할수록 손해인 상태입니다 (PMF 경고). 광고로 데려온 손님 1명이 1년 동안 남겨 주는 돈({won(s['ltv_12m'])})이 "
                              f"데려오는 데 든 광고비({won(s['paid_cac'])})보다 작습니다 (LTV/CAC {s['ltv_cac']:.2f}). "
                              "광고비를 늘리기 전에 재구매·구매 비율을 먼저 올려야 합니다."))
@@ -58,7 +74,7 @@ def warnings(res: SimResult, keyword_alloc: Optional[pd.DataFrame] = None) -> Li
 
 def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
              scan: Optional[pd.DataFrame] = None, opt_profit: Optional[Dict] = None, opt_roas: Optional[Dict] = None,
-             keyword_recs: Optional[pd.DataFrame] = None) -> List[Dict[str, str]]:
+             keyword_recs: Optional[pd.DataFrame] = None, coach_wins: Optional[int] = None) -> List[Dict[str, str]]:
     """인사이트 카드: {"title": 문장, "evidence": 근거 숫자, "action": 다음 실험}."""
     s, p, out = res.summary, res.params, []
     core = levers[levers["core"]].sort_values("up", ascending=False)
@@ -86,7 +102,13 @@ def insights(res: SimResult, levers: pd.DataFrame, opt: Dict, omtm_label: str,
                 "action": f"두 버전 비교 실험(A/B 테스트): {prescription(best)}"})
     budget = max(sum(opt_roas["spends"]) if opt_roas else 0.0, 1.0)
     no_ads = opt_profit is not None and sum(opt_profit["spends"]) < 0.05 * budget
-    if no_ads:
+    if no_ads and coach_wins is not None:     # 판정은 코치 기준, 최적 지출 ≈ 0원은 참고 숫자 (Q3)
+        from .montecarlo import ACTION_TEXT, action
+        out.append({"title": f"코치 판정은 100번 중 {coach_wins}번 남아요 → {ACTION_TEXT[action(coach_wins)]}. "
+                             "12개월 시뮬레이션에서는 남는 돈이 가장 큰 광고비가 ≈ 0원이에요 (참고 숫자).",
+                    "evidence": f"참고: 남는 돈이 가장 큰 광고비 ≈ 0원 · 손님이 남기는 돈은 데려오는 비용의 {s['ltv_cac'] or 0:.2f}배",
+                    "action": "광고를 늘리기 전에 구매 비율·재구매·결제 금액부터 올리기 ('결과·우선순위' 탭의 4가지 선택지 비교 참고)"})
+    elif no_ads:
         out.append({"title": "지금 숫자로는 광고비를 쓸수록 1년 동안 남는 돈이 줄어듭니다.",
                     "evidence": f"남는 돈이 가장 큰 광고비 ≈ 0원 · 손님이 남기는 돈은 데려오는 비용의 {s['ltv_cac'] or 0:.2f}배",
                     "action": "광고를 늘리기 전에 구매 비율·재구매·결제 금액부터 올리기 ('결과·우선순위' 탭의 4가지 선택지 비교 참고)"})

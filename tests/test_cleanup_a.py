@@ -66,3 +66,16 @@ def test_a18_masked_medium_not_offered():
     from src.engine import defaults as D
     ms = dl.ga4_mediums()
     assert D.GA4_MASKED_MEDIUM not in ms and (not ms or ms[0] == dl.GA4_ALL)
+
+
+@pytest.mark.parametrize("wins,lvl,word", [(84, "success", "해 볼 만해요"), (60, "warning", "작게 시험"), (3, "error", "준비가 먼저")])
+def test_q3_one_verdict_follows_coach(wins, lvl, word):
+    from src.engine import insights as I
+    got_lvl, text = I.coach_verdict_line(wins)
+    assert got_lvl == lvl and word in text and f"100번 해 보면 {wins}번" in text
+
+
+def test_q3_more_tab_passes_coach_wins():
+    main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
+    assert "verdict(res.summary, opt_profit[\"spends\"], coach_wins)" in main
+    assert "warnings(res, alloc, coach_wins)" in main and "recs, coach_wins)" in main

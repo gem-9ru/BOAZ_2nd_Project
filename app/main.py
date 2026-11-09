@@ -57,6 +57,7 @@ from src.engine import setup_rag as SR  # noqa: E402
 from src.engine import orders as OR  # noqa: E402
 from src.engine.acquisition import LEARNING_EVENTS_PER_WEEK, RevShareCurve, cpc_from_cpm, learning_check  # noqa: E402
 from src.engine.experiment import days_needed, sample_size  # noqa: E402
+from src.engine import insights as insights_mod  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
 from src.engine.optimize import compare_options  # noqa: E402
 
@@ -1579,11 +1580,19 @@ def kpis(s):
     cols[6].metric("광고비 1원당 첫 매출 (ROAS)", f"{s['roas']:.2f}원" if s["roas"] else "-", help=HELP["roas"])
 
 
-def verdict(s, opt_profit_spends):
-    """신호등 + 쉬운 문장."""
+def verdict(s, opt_profit_spends, coach_wins=None):
+    """신호등 + 쉬운 문장. 코치 답이 있으면 판정은 코치 기준 하나(100번 중 ○번, 사용자 결정 Q3),
+    LTV/CAC·1년 남는 돈·최적 지출은 '참고 숫자'로만."""
     ratio, cac, ltv = s["ltv_cac"], s["paid_cac"], s["ltv_12m"]
     if ratio is None:
         return "info", "광고비가 0원이라 광고 효과를 계산할 수 없습니다. 시작에서 한 달 광고비를 넣어 주세요."
+    if coach_wins is not None:
+        lvl, line = insights_mod.coach_verdict_line(coach_wins)
+        ref = (f"참고 숫자 (12개월 시뮬레이션, 판정에는 안 씀): LTV/CAC {ratio:.2f} (손님 1명 {won(ltv)} ÷ 데려오는 비용 {won(cac)}) · "
+               f"1년 남는 돈 {won(s['profit_12m'])} · 광고비 본전 {str(s['payback_month']) + '개월' if s['payback_month'] else '36개월 넘음'}")
+        if sum(opt_profit_spends) < budget * 0.9:
+            ref += f" · 남는 돈이 가장 큰 광고비 한 달 {won(sum(opt_profit_spends))}"
+        return lvl, line + "  \n" + ref
     if ratio < 1:
         return "error", (f"🔴 **지금 조건이면 광고를 할수록 손해입니다 (PMF 경고).** 손님 1명을 데려오는 데 {won(cac)}이 드는데, "
                          f"그 손님이 1년 동안 남겨 주는 돈은 {won(ltv)}뿐입니다. 광고비 증액은 보류하고 유지·활성화 선택지를 먼저 봅니다. "
@@ -1632,8 +1641,9 @@ def exp_card(row):
 
 
 with tabs[5]:
-    warn = warnings(res, alloc)
-    lvl, msg = verdict(res.summary, opt_profit["spends"])
+    coach_wins = ans["mc"]["wins"] if ans is not None else None   # '광고 안 함' 판정은 코치 기준 하나 (Q3)
+    warn = warnings(res, alloc, coach_wins)
+    lvl, msg = verdict(res.summary, opt_profit["spends"], coach_wins)
     getattr(st, lvl)(msg)
     defaults_used = [name for name, used in [("시작: 객단가·마진 기본값", aov == D.AOV and margin == D.MARGIN),
                                              ("광고 관리자: 예시 검색어", hint_text == ns.SAMPLE_KEYWORD), ("로그 분석: GA4 샘플 퍼널", fun_df is None and not funnel_edited),
@@ -1697,7 +1707,7 @@ with tabs[5]:
                                        na_rep="-"), hide_index=True, width="stretch")
         st.caption("남는 돈은 모두 광고비를 뺀 뒤의 금액입니다. 전체 전환율·객단가·구매 횟수 10%는 계산상 효과가 같아 '손님 1명당 매출' 하나로 묶었습니다.")
     with st.expander("이렇게 해 보세요 (인사이트 카드)"):
-        for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs):
+        for card in insights(res, levers, opt, D.OMTM_OPTIONS[omtm], scan, opt_profit, opt_roas, recs, coach_wins):
             st.markdown(f"**{card['title']}**  \n📊 근거: {card['evidence']}  \n🧪 해 볼 일: {card['action']}")
     with st.expander("자세히 보기: 채널별·월별 표 (CSV 다운로드)"):
         bc = res.by_channel[["label", "billing", "budget", "spend", "clicks", "cpc", "marginal_cpc", "new_customers", "cac", "ltv_12m"]].rename(columns={
@@ -1803,7 +1813,7 @@ help_ctx = {
     "profit": res.summary["profit_12m"], "ltv": res.summary["ltv_12m"], "cac": res.summary["paid_cac"],
     "ltv_cac": res.summary["ltv_cac"], "roas": res.summary["roas"], "payback": res.summary["payback_month"],
     "cvr": params.cvr, "aov": aov, "margin": margin, "pmf": pmf,
-    "verdict": verdict(res.summary, opt_profit["spends"])[1],
+    "verdict": verdict(res.summary, opt_profit["spends"], coach_wins)[1],
     "top_option": None if top_row is None else (top_row["option"], float(top_row["gain"]), top_row["cost_kind"], float(top_row["cost"])),
     "best_step": (bname, float(best["up"]), prescription(bname)) if len(steps_lv) else None,
     "attribution": attr_verdict,
