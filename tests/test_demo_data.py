@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from src.engine import measure as MS  # noqa: E402
 from src.engine import report as R  # noqa: E402
+from src.engine import session_schema as S  # noqa: E402
 
 BASE = ROOT / "data" / "examples" / "demo_store"
 
@@ -18,7 +19,8 @@ BASE = ROOT / "data" / "examples" / "demo_store"
 @pytest.mark.parametrize("ex,price", [("coffee", 20_000), ("protein", 79_000)])
 def test_demo_files_feed_the_coach(ex, price):
     DEMO = BASE / ex
-    inputs, pred, started = R.plan_from_json((DEMO / "plan.json").read_text(encoding="utf-8"))
+    plan = S.Plan.from_json((DEMO / "plan.json").read_text(encoding="utf-8"))
+    inputs, started = plan.inputs, plan.started
     assert inputs["q_price"] == price and inputs["q_repurchase"] == "매달(정기)" and started == "2026-10-01"
     for f, platform in (("naver_report.csv", "naver"), ("meta_report.csv", "meta")):
         df = pd.read_csv(DEMO / f)

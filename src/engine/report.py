@@ -1,4 +1,4 @@
-"""한 달 뒤 재계산 (노션 Q4): 계획 파일 저장·불러오기, 네이버·메타 리포트 CSV 매핑, 진단 규칙, 과대 집계율·예측 오차율.
+"""한 달 뒤 재계산 (노션 Q4): 네이버·메타 리포트 CSV 매핑, 진단 규칙, 과대 집계율·예측 오차율.
 
 리포트 열 이름
 - 메타: 광고 관리자 '보고서 내보내기'(한국어) 실제 파일의 열 이름 ✅ (팀 제공 캠페인 내보내기, 2026-11).
@@ -7,101 +7,10 @@
   예: 노출수, 클릭수, 총비용(VAT포함,원), 전환수, 전환매출액(원)
 열 이름은 판매처·버전마다 달라 화면에서 사용자가 고칠 수 있게 한다.
 """
-import json
-import math
 import re
-from datetime import date
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
-
-from .coach import BUDGET_PICKS, CATEGORIES, MEASURED, REPURCHASE_PRESETS
-
-PLAN_VERSION = 2          # 2: 재구매 실측(repurchase_measured) 추가 (MVP 7e B3). 버전 1 파일도 그대로 읽음
-# 계획 파일에 담는 입력 (개인정보 없음: 상품·숫자·검색어·재구매 실측 숫자만)
-PLAN_INPUT_KEYS = ("q_category", "q_stores", "q_price", "q_profit", "q_repurchase", "q_budget", "q_baseline", "q_keyword",
-                   "q_cpc", "q_budget_pick", "repurchase_measured")
-
-# 선택지 값은 화면 선택지 상수에서만 (B4)
-PLAN_CHOICES = {"q_category": tuple(CATEGORIES), "q_repurchase": tuple(REPURCHASE_PRESETS) + (MEASURED,),
-                "q_budget_pick": BUDGET_PICKS}
-# 재구매 실측: 숫자 dict (orders.measure 결과 중 화면이 쓰는 것, 고객 식별자 없음)
-MEASURED_NUM_KEYS = ("customers", "orders", "observed_months", "repeat_share", "repeats_observed", "repeats_year")
-PLAN_PRED_KEYS = ("budget", "naver", "meta", "clicks", "cpc", "new", "cvr", "wins", "p10", "p90")
-
-
-# ── 계획 파일 (가정 A4: 로그인 없이 JSON 내려받기·올리기) ──────────────────────
-def plan_to_json(inputs: Dict, prediction: Dict, started: Optional[str]) -> str:
-    body = {"version": PLAN_VERSION, "started": started,
-            "inputs": {k: inputs.get(k) for k in PLAN_INPUT_KEYS if k in inputs and inputs.get(k) is not None},
-            "prediction": {k: (None if prediction.get(k) is None else float(prediction[k])) for k in PLAN_PRED_KEYS}}
-    return json.dumps(body, ensure_ascii=False, indent=1)
-
-
-def _is_num(v) -> bool:
-    """bool이 아닌 유한한 수 (NaN·무한대 제외)."""
-    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
-
-
-def _measured(v) -> Dict:
-    if not (isinstance(v, dict) and all(_is_num(v.get(k)) and v[k] >= 0 for k in MEASURED_NUM_KEYS)):
-        raise ValueError("재구매 실측 값이 이상해요")
-    out = {k: v[k] for k in MEASURED_NUM_KEYS}
-    out["extended"] = bool(v.get("extended", out["observed_months"] < 11.5))
-    return out
-
-
-def _upgrade(body: Dict) -> Dict:
-    """버전 변환 (1 → 2: 재구매 실측 항목이 없을 뿐, 나머지 그대로)."""
-    if body.get("version") == 1:
-        body = dict(body, version=2)
-    return body
-
-
-def plan_from_json(text: str) -> Tuple[Dict, Dict, Optional[str]]:
-    """정해진 키만 받는다 (다른 키는 버림). 형식이 틀리면 ValueError (화면은 사장님 문장으로 안내)."""
-    body = json.loads(text)
-    if not isinstance(body, dict) or body.get("version") not in (1, PLAN_VERSION):
-        raise ValueError("계획 파일 형식이 아니에요")
-    body = _upgrade(body)
-    raw_in, raw_pred = body.get("inputs") or {}, body.get("prediction") or {}
-    inputs = {}
-    for k in PLAN_INPUT_KEYS:
-        if k not in raw_in or raw_in[k] is None:
-            continue
-        v = raw_in[k]
-        if k == "q_stores":
-            if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
-                raise ValueError("판매처 값이 이상해요")
-        elif k == "repurchase_measured":
-            v = _measured(v)
-        elif k in PLAN_CHOICES:
-            if v not in PLAN_CHOICES[k]:
-                raise ValueError(f"{k} 값이 이상해요")
-        elif k == "q_keyword":
-            if not isinstance(v, str):
-                raise ValueError(f"{k} 값이 이상해요")
-        elif not _is_num(v) or v < 0:
-            raise ValueError(f"{k} 값이 이상해요")
-        inputs[k] = v
-    pred = {}
-    for k in PLAN_PRED_KEYS:
-        v = raw_pred.get(k)
-        if v is None:
-            continue
-        if not _is_num(v):
-            raise ValueError(f"예측 {k} 값이 이상해요")
-        pred[k] = float(v)
-    started = body.get("started")
-    if started is not None:
-        try:
-            ok = isinstance(started, str) and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", started)) and date.fromisoformat(started)
-        except ValueError:
-            ok = False
-        if not ok:
-            raise ValueError("시작일 형식이 이상해요")
-    return inputs, pred, started
-
 
 # ── 리포트 열 매핑 ─────────────────────────────────────────────
 METRICS = {

@@ -48,6 +48,7 @@ from src.engine import naver_hub as NH  # noqa: E402
 from src.engine import seasonal as SE  # noqa: E402
 from src.engine import montecarlo as MC  # noqa: E402
 from src.engine import report as RP  # noqa: E402
+from src.engine import session_schema as SS  # noqa: E402
 from src.engine import guide as GD  # noqa: E402
 from src.engine import chat_intake as CI  # noqa: E402
 from src.engine import setup_rag as SR  # noqa: E402
@@ -220,9 +221,7 @@ EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price"
 EXAMPLE2 = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 79_000, "q_profit": 39_500, "q_repurchase": "매달(정기)",
             "q_budget": 500_000, "q_baseline": None, "q_keyword": "프로틴쉐이크"}
 EXAMPLES = {"coffee": ("원두 로스터리", EXAMPLE), "protein": ("단백질 쉐이크 정기구매", EXAMPLE2)}
-_Q_KEYS = list(EXAMPLE) + ["q_cpc", "q_budget_pick", "q_spent", "q_clicks", "q_coupon", "q_report", "q_total"]
-_KEEP = _Q_KEYS + ["prep_1", "prep_2", "prep_3", "link_store", "link_ch", "link_url", "link_product", "link_detail"]
-for _k in _KEEP:            # 화면에 안 그린 단계의 입력값도 남도록 (Streamlit은 그리지 않은 위젯 값을 지움)
+for _k in SS.PERSIST:       # 화면에 안 그린 단계의 입력값도 남도록 (Streamlit은 그리지 않은 위젯 값을 지움). 키 목록은 session_schema 선언 하나
     if _k in ss:
         ss[_k] = ss[_k]
 ss.setdefault("q_category", "식품")
@@ -288,9 +287,7 @@ def chat_intake():
             if go or st.button("질문 폼으로 넣기", type="tertiary"):
                 for k, v in vals.items():
                     ss[k] = v
-                ss["coach_mode"] = "mine"
-                ss["coach_step"] = 1 if go else 0
-                ss["coach_seen"] = ss["coach_step"]
+                SS.begin(ss, "mine", 1 if go else 0)
                 st.rerun()
     elif not hist:
         if st.button("대화 말고 질문 폼으로", type="tertiary"):
@@ -499,7 +496,7 @@ def orders_section():
 
 def plan_download(a: dict, key: str):
     """내 계획 파일 받기 (가정 A4: 로그인 없이 JSON). 입력·예측·시작일만 담고 개인정보는 없음."""
-    data = RP.plan_to_json({k: ss.get(k) for k in RP.PLAN_INPUT_KEYS}, a["prediction"], ss.get("coach_started"))
+    data = SS.Plan.from_session(ss, a["prediction"], ss.get("coach_started")).to_json()
     st.download_button("📄 내 계획 파일 받기", data, file_name=f"광고계획_{CO.today_kst():%Y%m%d}.json", mime="application/json",
                        key=key, help="한 달 뒤 이 파일을 올리면 숫자와 예측을 그대로 불러와 실제 결과와 비교해요.")
 
@@ -509,19 +506,13 @@ def plan_upload(key: str):
     if f is None or ss.get("_plan_loaded") == (f.name, f.size):
         return
     try:
-        inputs, pred, started = RP.plan_from_json(f.getvalue().decode("utf-8"))
+        plan = SS.Plan.from_json(f.getvalue().decode("utf-8"))
     except (ValueError, UnicodeDecodeError) as e:
         st.error("계획 파일을 읽지 못했어요. 이 앱에서 받은 .json 파일을 그대로 올려 주세요.", icon="📄")
         st.caption(f"자세한 오류: {e}")
         return
-    for k, v in inputs.items():
-        ss[k] = v
-    if "q_budget_pick" in inputs:
-        ss["_budget_touched"] = True
-    ss["plan_pred"], ss["_plan_loaded"] = pred, (f.name, f.size)
-    ss["coach_mode"] = "mine"
-    if started:
-        ss["coach_started"], ss["coach_step"], ss["coach_seen"] = started, 3, 3
+    SS.apply_plan(ss, plan)
+    ss["_plan_loaded"] = (f.name, f.size)
     st.toast("계획을 불러왔어요. 예측과 실제를 비교해 볼게요.", icon="📄")
     st.rerun()
 
@@ -681,8 +672,7 @@ def split_card(a: dict, budget_label: bool = False):
 
 
 def _go(step: int):
-    ss["coach_step"] = step
-    ss["coach_seen"] = max(ss.get("coach_seen", 0), step)
+    SS.go_to(ss, step)
 
 
 # 답 계산 (어느 단계를 보든 먼저 계산: 다음 단계 탭 미리 채우기·단계 열림 판단에 씀)
@@ -742,9 +732,7 @@ if price and profit and max_budget and not input_error:
     coach = dict(price=float(price), margin=profit / price, budget=float(answer.budget), keyword=kw, be=answer.be, cpc=answer.cpc,
                  channel=answer.ch_name, repurchase=repurchase)
 
-unlocked = 0 if ans is None else (3 if ss.get("coach_started") else 2)
-ss["coach_step"] = min(ss["coach_step"], unlocked)
-cur = ss["coach_step"]
+cur, unlocked = SS.clamp_step(ss, has_answer=ans is not None)
 # 끝낸 단계: 내 가게 = 답이 나옴, 답 보기 = 다음 단계로 넘어감, 광고 준비 = 광고 시작
 done = [ans is not None, ans is not None and ss.get("coach_seen", 0) >= 2, bool(ss.get("coach_started")), False]
 
@@ -769,7 +757,8 @@ with coach_tab:
         if ex_pick:
             for k, v in EXAMPLES[ex_pick][1].items():
                 ss[k] = v
-            ss["coach_mode"], ss["coach_step"], ss["coach_seen"], ss["example_name"] = "example", 1, 1, EXAMPLES[ex_pick][0]
+            SS.begin(ss, "example", 1)
+            ss["example_name"] = EXAMPLES[ex_pick][0]
             ss.pop("_closed_example", None)
             st.rerun()
         st.caption("예시 1: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 다 쓰면 매달 다시 삼, 월 최대 30만 원, 검색어 '원두커피'  \n"
@@ -783,11 +772,7 @@ with coach_tab:
             e1, e2, e3 = st.columns([10, 2, 0.6])
             e1.info(f"지금은 **예시 값**({ss.get('example_name', '원두 로스터리')})입니다. '내 가게' 단계에서 숫자를 바꾸면 바로 다시 계산돼요.", icon="🧪")
             if e2.button("내 숫자로 시작"):
-                for k in _KEEP:
-                    ss.pop(k, None)
-                for k in ("coach_started", "coach_prev_rate", "coach_seen", "_budget_touched"):
-                    ss.pop(k, None)
-                ss["coach_mode"], ss["coach_step"] = "mine", 0
+                SS.reset(ss)
                 st.rerun()
             if e3.button("✕", key="x_example", help="닫기", type="tertiary"):
                 ss["_closed_example"] = True
@@ -972,7 +957,7 @@ with coach_tab:
                 plan_download(a, "plan_dl_3")
             if not no_ad and st.button("광고를 시작했어요 ▶", type="primary"):
                 ss["coach_started"] = CO.today_kst().isoformat()   # 한국 날짜 (서버는 UTC)
-                ss["coach_step"] = 3
+                SS.go_to(ss, 3)
                 st.toast(f"시작일 {ss['coach_started']}을 기억해 둘게요. {CO.MIN_DAYS}일 뒤부터 판정할 수 있어요.", icon="📅")
                 st.rerun()
 
