@@ -104,7 +104,7 @@
 
 ## 다음에 정할 것
 - ✅ 4b 할 일 문장 표 하나로 (4bc8b0c, 코치 문장 기준). ✅ 4d Q3 '광고 안 함' 판정 하나 (dc700d8, 더 보기는 코치 판정 + 참고 숫자). ✅ 등급표·배분 이유 Answer로 (6507a01).
-- 남은 것: 4c 파일별 어댑터 (MVP 8 네이버 실제 리포트 열 대기), src/collect 수집 스크립트 키 읽기 (수정 금지 규칙, 사용자 확인 필요).
+- 남은 것: 4c 파일별 어댑터 (MVP 8 네이버 실제 리포트 열 대기). (src/collect 키 읽기는 ✅ 5eb33ad)
 - 배포 앱 확인: 계획 파일 내려받기→올리기 ✅ (11/10, v2·실측 7.4번 유지·100번 중 6번 일치). 한 달 뒤 C 캡션 화면은 리포트까지 올려야 보여 테스트로만 확인.
 - 4c: 네이버 리포트 실제 열 이름은 팀원 파일(MVP 8)이 와야 확정. 그 전엔 지금 별칭 유지 + 확인 안 된 것 ❓.
 - 5단계: 7d 계획의 남은 질문(메타 노출 위치 단계)은 7d 3단계 시작 때.
@@ -154,7 +154,7 @@
 | A10 | naver_source.py:138–141 | 키워드 도구 캐시 키가 입력 순서대로라 같은 묶음을 또 부름, 중복도 안 뺌 (가장 빡빡한 API 낭비) | 중복 빼고 정렬해서 키 | ✅ db5e029 |
 | A11 | naver_source.py:150, 182 | 오류 코드(7001·7002·1016 등)를 버려서 화면은 늘 "가져오지 못해"만 보임 | 오류 코드 → 쉬운 문장 표 하나 | ✅ db5e029 |
 | A12 | naver_source.py:47–48 · naver_hub.py:62–63 | 캐시 파일이 깨지면 앱이 멈춤 | 읽기 실패면 캐시 없음으로 | ✅ db5e029 |
-| A13 | naver_source.py:97–107 · naver_hub.py:32–47 · collect/naver_api_test.py | 키 읽기가 세 벌, .env를 secrets보다 먼저 봄 | 키 읽기·서명 함수 하나로 | ✅ cee6350 (엔진 키 읽기 하나 src/engine/keys.py, secrets→환경 변수→.env. src/collect 스크립트는 수정 금지 규칙이라 그대로) |
+| A13 | naver_source.py:97–107 · naver_hub.py:32–47 · collect/naver_api_test.py | 키 읽기가 세 벌, .env를 secrets보다 먼저 봄 | 키 읽기·서명 함수 하나로 | ✅ cee6350 (엔진 키 읽기 하나 src/engine/keys.py, secrets→환경 변수→.env. src/collect 스크립트도 5eb33ad에서 같은 방식으로, 사용자 승인 11/10) |
 | A14 | naver_hub.py:120–127 | `shopping_category_trend` 부르는 곳 없음 | 지우거나 쓸 계획 적기 | ✅ db5e029 |
 | A15 | naver_hub.py:165–166 | 계절성 불러오기가 모든 예외를 삼켜 코드 버그도 '불러오지 못함'으로 숨고 하루 캐시됨 | 연결·HTTP 오류만 잡기 | ✅ db5e029 |
 | A16 | chat_intake.py:117–130 | "어떤 실패든 IntakeUnavailable"이라 적었지만 다른 SDK 오류는 그대로 나가 화면이 멈춤 | 마지막에 `anthropic.APIError`도 잡기 | ✅ 9869af0 |
