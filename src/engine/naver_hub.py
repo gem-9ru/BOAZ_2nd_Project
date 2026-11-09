@@ -25,7 +25,6 @@ CACHE_DIR = ROOT / "data" / "interim" / "naver_hub_cache"
 EXAMPLE_DIR = ROOT / "data" / "examples" / "seasonality"
 BASE = "https://naverapihub.apigw.ntruss.com"
 SEARCH_TREND = "/search-trend/v1/search"
-SHOPPING_CATEGORIES = "/shopping/v1/categories"
 KEY_NAMES = ("NAVER_HUB_CLIENT_ID", "NAVER_HUB_CLIENT_SECRET")
 
 
@@ -56,11 +55,18 @@ def _cache_path(path: str, body: dict) -> Path:
     return CACHE_DIR / f"{path.strip('/').replace('/', '_')}_{digest}.json"
 
 
+class HubError(RuntimeError):
+    """API HUB가 200이 아닌 응답이나 깨진 응답을 줌 (HTTP 오류). 키는 담기지 않음."""
+
+
 def post(path: str, body: dict, online: bool = True) -> Optional[dict]:
-    """캐시가 있으면 캐시, 없고 online이면 호출 후 저장. 실패하면 None (오류 내용에 키는 담기지 않음)."""
+    """캐시가 있으면 캐시, 없고 online이면 호출 후 저장. 키가 없으면 None. 연결 실패는 requests 오류, HTTP 오류는 HubError."""
     cache = _cache_path(path, body)
     if cache.exists():
-        return json.loads(cache.read_text(encoding="utf-8"))["response"]
+        try:
+            return json.loads(cache.read_text(encoding="utf-8"))["response"]
+        except (OSError, ValueError, KeyError):
+            pass                                 # 깨진 캐시는 없는 것으로 (검수 A12)
     keys = _keys() if online else None
     if keys is None:
         return None
@@ -68,8 +74,11 @@ def post(path: str, body: dict, online: bool = True) -> Optional[dict]:
                "Content-Type": "application/json"}
     r = requests.post(BASE + path, headers=headers, data=json.dumps(body, ensure_ascii=False).encode("utf-8"), timeout=20)
     if r.status_code != 200:
-        raise RuntimeError(f"NAVER API HUB {path} 호출 실패: HTTP {r.status_code} {r.text[:300]}")
-    data = r.json()
+        raise HubError(f"NAVER API HUB {path} 호출 실패: HTTP {r.status_code} {r.text[:300]}")
+    try:
+        data = r.json()
+    except ValueError as e:
+        raise HubError(f"NAVER API HUB {path} 응답이 JSON이 아님") from e
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache.write_text(json.dumps({"request": body, "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S"), "response": data},
                                 ensure_ascii=False, indent=1), encoding="utf-8")
@@ -117,16 +126,6 @@ def _index_from_frame(df: Optional[pd.DataFrame]) -> Optional[pd.Series]:
     return idx / idx.mean()
 
 
-def shopping_category_trend(categories: Dict[str, str], start: str, end: str, time_unit: str = "month",
-                            online: bool = True, **filters) -> Optional[pd.DataFrame]:
-    """쇼핑 인사이트 분야별 트렌드: {분야 이름: 분야 코드(예: 50000000 패션의류)} → 상대 클릭 추이."""
-    body = {"startDate": start, "endDate": end, "timeUnit": time_unit,
-            "category": [{"name": n, "param": [c]} for n, c in list(categories.items())[:3]]}
-    body.update({k: v for k, v in filters.items() if v})
-    data = post(SHOPPING_CATEGORIES, body, online)
-    return None if data is None else _results_frame(data)
-
-
 def _from_saved(keyword: str) -> Optional[pd.Series]:
     """저장된 검색어 트렌드 응답 중 이 검색어 하나·월 단위인 가장 최근 것 (기간이 달라도 씀)."""
     best = None
@@ -162,7 +161,7 @@ def seasonality_safe(keyword: str, online: Optional[bool] = None) -> Tuple[Optio
             idx = seasonality(keyword, online=True)
             if idx is not None:
                 return idx, "네이버 데이터랩 (검색어 트렌드)"
-        except Exception:  # noqa: BLE001  (연결 실패·HTTP 오류: 아래 저장본으로)
+        except (requests.RequestException, HubError):   # 연결 실패·HTTP 오류만 → 아래 저장본으로 (코드 버그는 숨기지 않음, A15)
             pass
     idx = _from_saved(keyword)
     if idx is not None:

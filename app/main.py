@@ -102,22 +102,22 @@ def load_season(keyword: str):
     return _load_season(keyword, f.stat().st_mtime if f.exists() else 0.0)
 
 
-NAVER_FAILED = []   # 이번 실행에서 네이버 연결이 실패했는지 (실패는 캐시하지 않아 다음 실행에 다시 시도)
+NAVER_FAILED = []   # 이번 실행에서 네이버 실패 문장 (실패는 캐시하지 않아 다음 실행에 다시 시도, 검수 A2·A11)
 
 
 def load_keywords(hints: tuple, online: bool):
     try:
         return _load_keywords(hints, online)
-    except ns.NaverUnavailable:
-        NAVER_FAILED.append("keywords")
+    except ns.NaverUnavailable as e:
+        NAVER_FAILED.append(e.message)
         return None
 
 
 def load_estimate(keyword: str, online: bool):
     try:
         return _load_estimate(keyword, online)
-    except ns.NaverUnavailable:
-        NAVER_FAILED.append("estimate")
+    except ns.NaverUnavailable as e:
+        NAVER_FAILED.append(e.message)
         return None
 
 
@@ -609,7 +609,7 @@ baseline = ss.get("q_baseline")
 coach, ans = {}, None
 input_error = (price is not None and profit is not None and profit > price)
 if price and profit and max_budget and not input_error:
-    monthly_search, naver_curve, kw_missing = None, None, False
+    monthly_search, naver_curve, kw_missing, est_note = None, None, False, ""
     kw = (ss.get("q_keyword") or "").strip().replace(" ", "")
     if kw:
         # 처음 불러오는 검색어면 답 자리에 스켈레톤 (UX 6-2 로딩): 캐시에 있으면 바로 지나감
@@ -626,10 +626,13 @@ if price and profit and max_budget and not input_error:
         est = load_estimate(kw, _online)
         if est is not None and (est["clicks"] > 0).any():
             naver_curve = NaverCurve({kw: est})
+            if est.attrs.get("source") and est.attrs["source"] != "실시간":    # 저장본이면 받은 날짜를 화면에 (A6)
+                est_note = f"네이버 예상 실적: {est.attrs['source']} ({str(est.attrs.get('fetched_at', ''))[:10]} 받음)"
         kw_missing = naver_curve is None
         ss["_kw_loaded"].add(kw)
         skel.empty()
     naver_failed = bool(kw) and bool(NAVER_FAILED)
+    naver_msg = NAVER_FAILED[0] if naver_failed else ""
     # 코치 답 하나 (CO.solve): 손익분기 → 시험 예산 3안 → 배분·100번 → 기본 선택 → 고른 예산으로 다시 나눔.
     # 사장님이 직접 고르기 전까지는 결론이 바뀌면 기본 선택도 따라감 (100번 중 50번 미만 = 광고 안 함)
     inputs = CO.CoachInputs(price, profit, max_budget, kw, ss.get("q_cpc"))
@@ -639,7 +642,7 @@ if price and profit and max_budget and not input_error:
     cparams = answer.params
     season_idx, season_src = load_season(kw) if kw else (None, "계절성 미반영 (검색어 없음)")
     ans = dict(be=answer.be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed,
-               naver_failed=naver_failed, monthly_search=monthly_search, ch_name=answer.ch_name, split=answer.split,
+               naver_failed=naver_failed, naver_msg=naver_msg, est_note=est_note, monthly_search=monthly_search, ch_name=answer.ch_name, split=answer.split,
                cpc=answer.cpc, cpc_src=answer.cpc_src, need=answer.need, need_year=answer.need_year, mc=answer.mc,
                grades=answer.grades, prediction=answer.prediction, options=answer.options, budget0=answer.budget,
                default_pick=answer.default_pick, inputs=inputs, naver_curve=naver_curve, repurchase=rep_src, pick=answer.pick,
@@ -793,7 +796,9 @@ with coach_tab:
             elif a["kw"]:
                 st.caption(f"📅 {a['season_src']}")
             if a["naver_failed"]:
-                st.warning("네이버 예상치를 못 불러와 대략값을 썼어요. 잠시 뒤 새로고침하면 다시 시도해요.", icon="📡")
+                st.warning(a["naver_msg"] or ns.error_text(), icon="📡")
+            if a["est_note"]:
+                st.caption("📦 " + a["est_note"])
             if a["kw_missing"]:
                 st.info(f"'{a['kw']}'로는 예상 클릭 비용을 못 찾았어요. 더 넓은 단어(예: 커피)로 바꿔 보세요. 지금은 대략값으로 계산했어요.", icon="🔎")
             with st.expander(f"클릭 비용 출처: {a['cpc_src']} · 알면 직접 넣기"):

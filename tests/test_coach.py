@@ -168,7 +168,7 @@ def test_naver_connection_error_raises_unavailable(monkeypatch):
 
     def broken(*a, **k):
         raise requests.ConnectionError("down")
-    monkeypatch.setattr(ns, "_read_cache", lambda *a, **k: None)
+    monkeypatch.setattr(ns, "_read_cache", lambda *a, **k: (None, False))
     monkeypatch.setattr(ns, "_api_call", lambda: broken)
     with pytest.raises(ns.NaverUnavailable):
         ns.bid_estimate("테스트검색어", online=True)

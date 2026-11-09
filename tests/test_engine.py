@@ -126,7 +126,8 @@ def test_naver_estimate_converted_to_month():
     # 네이버 예상 실적은 과거 28일 기준 → 30.4/28로 월 환산 (캐시 원본은 그대로)
     import json
     from src.engine import defaults as D, naver_source as ns
-    raw = json.loads(ns._cache_path("estimate", f"{ns.SAMPLE_KEYWORD}|{D.NAVER_DEVICE}").read_text(encoding="utf-8"))
+    payload, _ = ns._read_cache("estimate", f"{ns.SAMPLE_KEYWORD}|{D.NAVER_DEVICE}|{ns._bids_tag()}")   # 예시 고정 캐시
+    raw = payload
     raw = pd.DataFrame(raw["response"]["estimate"]).astype({"clicks": float, "cost": float}).sort_values("bid").reset_index(drop=True)
     est = ns.bid_estimate(ns.SAMPLE_KEYWORD, device=D.NAVER_DEVICE, online=False)
     factor = D.DAYS_PER_MONTH / D.NAVER_ESTIMATE_DAYS

@@ -51,10 +51,16 @@ def test_seasonality_fallback_without_keys(tmp_path, monkeypatch):
     assert "검색어 없음" in H.seasonality_safe("")[1]
     # 연결 실패도 앱을 멈추지 않음
     def boom(*a, **k):
-        raise RuntimeError("HTTP 500")
+        raise H.HubError("HTTP 500")
     monkeypatch.setattr(H, "seasonality", boom)
     idx, src = H.seasonality_safe("원두커피", online=True)
     assert idx is None and "미반영" in src
+    # 연결·HTTP 오류만 잡음: 코드 버그는 숨기지 않음 (검수 A15)
+    def bug(*a, **k):
+        raise KeyError("코드 버그")
+    monkeypatch.setattr(H, "seasonality", bug)
+    with pytest.raises(KeyError):
+        H.seasonality_safe("원두커피", online=True)
     # 예시 지수 파일이 있으면 그걸 씀 (평균 1로)
     (tmp_path / "examples").mkdir()
     pd.DataFrame({"month": range(1, 13), "index": [2.0] * 12}).to_csv(tmp_path / "examples" / "원두커피.csv", index=False)

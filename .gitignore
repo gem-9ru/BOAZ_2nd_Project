@@ -13,3 +13,6 @@ data/interim/naver_hub_cache/
 # 메타 광고 관리자 원본 내보내기 (실제 계정 숫자) — 열 이름만 쓰고 커밋하지 않음 (사용자 결정 11/9)
 유제명-캠페인-*.csv
 *캠페인*.csv
+
+# 사장님 검색어로 생기는 네이버 검색광고 API 캐시 (예시 1·2용 고정 캐시는 data/examples/naver_cache/, 검수 A5)
+data/interim/naver_cache/
