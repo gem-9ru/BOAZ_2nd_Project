@@ -52,3 +52,11 @@ def test_a23_zero_conversions_do_not_divide_by_zero():
     assert A.correction_factors(t, "first").empty or np.isfinite(A.correction_factors(t, "first")).all()
     import inspect
     assert "lookback_days" not in inspect.signature(A.clean_paths).parameters
+
+
+def test_a9_keyword_axis_caption_from_tiers():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
+    import charts
+    assert charts.tier_caption() == "300 미만 롱테일 · 300~1만 세부 · 1만 이상 대표"
+    src = (Path(__file__).resolve().parents[1] / "app" / "charts.py").read_text(encoding="utf-8")
+    assert "1천~3만" not in src

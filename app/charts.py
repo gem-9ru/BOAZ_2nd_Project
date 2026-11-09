@@ -3,6 +3,8 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 
+from src.engine import defaults as D
+
 AARRR_COLORS = {"획득": "#4C78A8", "활성화": "#59A14F", "유지": "#F28E2B", "추천": "#E15759"}  # 행동 축 (밸류체인 v3)
 MONEY_COLOR = "#B07AA1"  # 돈 축 (매출·남는 돈). 수익은 단계가 아님
 CUR, OPT = "#4C78A8", "#F28E2B"
@@ -16,6 +18,25 @@ def _layout(fig, title=None, height=360):
     return fig
 
 
+def _qc(n: float) -> str:
+    return f"{n / 10_000:g}만" if n >= 10_000 else (f"{n / 1_000:g}천" if n >= 1_000 else f"{n:,.0f}")
+
+
+def tier_caption() -> str:
+    """검색어 구간 설명 (defaults.KEYWORD_TIERS): 예) '300 미만 롱테일 · 300~1만 세부 · 1만 이상 대표'."""
+    tiers = sorted(D.KEYWORD_TIERS)                     # (0 롱테일), (300 세부), (1만 대표)
+    parts = []
+    for i, (th, name) in enumerate(tiers):
+        nxt = tiers[i + 1][0] if i + 1 < len(tiers) else None
+        if th == 0:
+            parts.append(f"{_qc(nxt)} 미만 {name}")
+        elif nxt is None:
+            parts.append(f"{_qc(th)} 이상 {name}")
+        else:
+            parts.append(f"{_qc(th)}~{_qc(nxt)} {name}")
+    return " · ".join(parts)
+
+
 def keyword_scatter(kw: pd.DataFrame, selected):
     df = kw.head(200).copy()
     df["선택"] = np.where(df["keyword"].isin(selected), "선택", "후보")
@@ -27,9 +48,10 @@ def keyword_scatter(kw: pd.DataFrame, selected):
             marker=dict(color=color, size=np.where(d["선택"] == "선택", 14, 7),
                         line=dict(width=np.where(d["선택"] == "선택", 2, 0), color="black")),
             text=d["keyword"], hovertemplate="%{text}<br>월 검색수 %{x:,.0f}<br>모바일 CTR %{y:.2f}%<extra></extra>"))
-    for x, label in [(300, "세부 ↑"), (10_000, "대표 ↑")]:   # defaults.KEYWORD_TIERS (분석 Q1 기준)
-        fig.add_vline(x=x, line_dash="dot", line_color="gray", annotation_text=label, annotation_position="top right")
-    fig.update_xaxes(type="log", title="한 달 검색 수 (로그 눈금) · 1천 미만 롱테일 · 1천~3만 세부 · 3만 이상 대표")
+    # 선·분류·설명 모두 defaults.KEYWORD_TIERS 하나에서 (검수 A9)
+    for x, name in [(th, nm) for th, nm in D.KEYWORD_TIERS if th > 0]:
+        fig.add_vline(x=x, line_dash="dot", line_color="gray", annotation_text=f"{name} ↑", annotation_position="top right")
+    fig.update_xaxes(type="log", title="한 달 검색 수 (로그 눈금) · " + tier_caption())
     fig.update_yaxes(title="광고 클릭률 (%)")
     return _layout(fig, "검색어별 검색 수와 광고 클릭률 (색: 광고 경쟁)")
 
