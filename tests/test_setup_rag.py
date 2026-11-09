@@ -23,10 +23,10 @@ class FakeClient:
                                content=[SimpleNamespace(type="text", text=json.dumps(self.payload, ensure_ascii=False))])
 
 
-def test_59_cards_with_required_fields():
+def test_65_cards_with_required_fields():
     cards = SR.load_cards()
-    assert len(cards) == 59 and len({c.id for c in cards}) == 59
-    assert sum(c.id.startswith("naver") for c in cards) == 28 and sum(c.id.startswith("meta") for c in cards) == 31
+    assert len(cards) == 65 and len({c.id for c in cards}) == 65       # 7d 2단계: 네이버 새 카드 6장
+    assert sum(c.id.startswith("naver") for c in cards) == 34 and sum(c.id.startswith("meta") for c in cards) == 31
     for c in cards:
         assert c.title and c.media and c.stage and c.questions and c.screen and c.coach and c.body, c.id
         assert c.check in ("✅", "△", "❓", "🧮") and c.sources, c.id
@@ -118,7 +118,7 @@ def test_my_numbers_follow_card_coach_link():
 # ── 7d 1단계: 매체 고르기 + 찾기 정확도 ──
 QUESTIONS = json.loads((Path(__file__).parent / "fixtures" / "setup_questions.json").read_text(encoding="utf-8"))
 BASELINE_OTHERS = 8        # 7d 전 찾기(매체 거르기 없음)로 다른 판매자 10문항 중 맨 위 정답 수 (11/10 잼)
-DESSERT_MIN = 13           # 1단계 (새 카드 없이): 25문항 중 11개는 2단계 새 카드가 정답
+DESSERT_MIN = 23           # 합격 기준 (사용자 결정 11/9): 25문항 중 맨 위 정답 23개 이상
 
 
 def _top1_hits(group):
