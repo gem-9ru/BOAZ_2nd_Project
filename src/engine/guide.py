@@ -6,8 +6,8 @@
 from typing import Dict, List, Optional
 
 from .acquisition import LEARNING_EVENTS_PER_WEEK
+from .defaults import DAYS_PER_MONTH, WEEKS_PER_MONTH
 
-WEEKS_PER_MONTH = 30.4 / 7
 DAILY_BUDGET_X = 10        # ✅ 메타: 일일 예산 ≥ 성과 목표 평균 비용 × 10 (결과당 비용 목표 입찰이면 × 5) [meta-bud-003]
 DAILY_OVERSPEND = 0.75     # ✅ 메타: 어떤 날은 일일 예산보다 최대 75% 더 씀, 주 합계는 일일 예산 × 7 이하 [meta-bud-001]
 NAVER_MIN_BID = {"파워링크": 70, "쇼핑검색": 50}   # ✅ 네이버 최소 입찰가 [naver-setup-011]
@@ -15,7 +15,7 @@ NAVER_MIN_BID = {"파워링크": 70, "쇼핑검색": 50}   # ✅ 네이버 최�
 
 def daily_budget(monthly: float) -> float:
     """하루 예산 = 월 배분 ÷ 30.4일 (네이버·메타 공통, 앱 계산)."""
-    return monthly / 30.4 if monthly > 0 else 0.0
+    return monthly / DAYS_PER_MONTH if monthly > 0 else 0.0
 
 META_OBJECTIVES = [
     # (목적, 메타가 찾아 주는 사람, 우리에게 맞을 때, 확인) — 목표 6개 ✅ [meta-obj-001]

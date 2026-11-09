@@ -14,6 +14,8 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
+from . import defaults as D
+
 SAT_UNIT = 1_000_000.0  # 메타 포화 노브의 기준 금액 (원)
 
 
@@ -195,7 +197,7 @@ def cpc_from_cpm(cpm: float, ctr: float) -> float:
 
 def learning_check(monthly_budget: float, ad_sets: int, cpa: float) -> dict:
     """머신 러닝 단계 예산 점검: 광고 세트 수 × 주 50건 × 예상 CPA > 주 예산이면 '제한된 머신 러닝' 경고."""
-    weekly = monthly_budget * 7 / 30.4
+    weekly = monthly_budget / D.WEEKS_PER_MONTH
     need = ad_sets * LEARNING_EVENTS_PER_WEEK * cpa
     return {"weekly_budget": weekly, "weekly_needed": need, "ok": weekly >= need,
             "events_per_set": weekly / cpa / max(ad_sets, 1) if cpa > 0 else float("inf")}

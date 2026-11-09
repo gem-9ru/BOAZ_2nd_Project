@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from . import chat_intake as CI
+from . import defaults as D
 
 ROOT = Path(__file__).resolve().parents[2]
 RAG_DIR = ROOT / "data" / "rag"
@@ -201,7 +202,7 @@ def coach_text(ctx: Dict) -> str:
     rows = []
     for key, label in (("naver", "네이버 월 예산"), ("meta", "메타 월 예산")):
         if ctx.get(key) is not None:
-            rows.append(f"{label} {ctx[key]:,.0f}원 (하루 {ctx[key] / 30.4:,.0f}원)")
+            rows.append(f"{label} {ctx[key]:,.0f}원 (하루 {ctx[key] / D.DAYS_PER_MONTH:,.0f}원)")
     if ctx.get("keyword"):
         rows.append(f"검색어 '{ctx['keyword']}'")
     if ctx.get("price"):

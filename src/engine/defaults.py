@@ -21,7 +21,11 @@ CHANNEL_SHARES = {"naver": 0.6, "meta": 0.4}   # PLACEHOLDER: 초기 배분 비�
 
 NAVER_DEVICE = "MOBILE"             # 검색 대부분이 모바일 (가이드 1-6)
 NAVER_ESTIMATE_DAYS = 28            # /estimate/performance는 과거 28일 기준 추정 (네이버 답변, searchad-apidoc 이슈 #841)
-DAYS_PER_MONTH = 30.4               # 한 달 평균 일수 → 예상 실적 × 30.4/28 ≈ 1.086으로 월 환산
+DAYS_PER_MONTH = 30.4               # 한 달 평균 일수 → 예상 실적 × 30.4/28 ≈ 1.086으로 월 환산. 하루 예산 = 월 ÷ 이 값
+WEEKS_PER_MONTH = DAYS_PER_MONTH / 7
+# 코치 판매 기준 (초보자_코치_설계안.md 8장): 판매 n건이면 CPA 오차 약 1/√n
+TEST_SALES = 30           # 시험 예산 = 첫 구매 손익분기 × 30 (오차 약 ±18%)
+MIN_SALES = 10            # 판정 보류 (광고로 온 판매 10건 미만, 오차 약 ±32%)·작게 시작 예산·'한 달로 판단 어려움' 경고 기준
 NAVER_CVR_MULT = 1.0                # 검색 의도 기준 채널 (전환율 배수 1.0)
 NAVER_RETENTION_MULT = 1.0
 

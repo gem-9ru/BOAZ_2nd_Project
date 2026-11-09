@@ -11,6 +11,8 @@ from datetime import date, datetime
 from typing import Dict, List, Optional, Tuple
 from zoneinfo import ZoneInfo
 
+from .defaults import MIN_SALES, TEST_SALES   # 판매 기준은 defaults 한 곳 (시험 예산 30건, 판정·경고 10건)
+
 # ── 확정 값 (8장) ─────────────────────────────────────────────
 # 참고 기준 (한 쇼핑몰 값, 업종 평균 아님). 방문한 손님 중 산 비율 = 방문 기준 (필요한 비율은 클릭 기준)
 # '전체'는 유입 매체가 지워진 손님 '(data deleted)'를 뺀 값 (그 묶음만 구매율 8%로 튀는 마스킹 이상값, 분석 보고서 4장). 엔진 퍼널과 같은 범위
@@ -18,10 +20,7 @@ REFERENCE_RATES = {"GA4 공개 샘플 유료 검색 유입": 0.0119, "GA4 공개
 REPURCHASE_PRESETS = {"거의 안 삼": 0.0, "가끔": 0.5, "자주": 2.0, "매달(정기)": 6.0}   # 12개월 동안 다시 사는 횟수, 모두 가정값(등급 D)
 # '매달(정기)' 6회: 원두·사료처럼 다 쓰면 다시 사는 소모품 (사용자 결정 11/9). 첫 달 뒤 손님 일부가 꾸준히 돌아오는 곡선으로 1년 6회
 # '자주' 2회는 분석 Q4(UCI) 범위 안: 매출 기준 약 1.5회분(LTV = 첫 주문 2.45배), 리텐션 곡선 기준 약 2.2회 (도매 섞임). '가끔' 0.5회는 근거 약함 (GA4 3개월 안 재구매 11.8%)
-TEST_SALES = 30           # 시험 예산 = 첫 구매 손익분기 × 30 (판매 30건이면 CPA 오차 약 ±18% = 1/√30)
-WARN_SALES = 10           # 월 최대 예산이 손익분기 × 10 미만이면 "한 달로 판단이 어려울 수 있음"
 MIN_DAYS = 14             # 판정 보류: 집행 14일 미만
-MIN_SALES = 10            # 판정 보류: 광고로 온 판매 10건 미만 (오차 약 ±32%)
 LEARNING_DAYS = 7         # 메타·카카오는 첫 7일 학습 구간: 이 기간 성과로 "줄이기" 금지
 INCREASE = 0.20           # "계속"일 때 증액 폭 (업계 경험칙 △, 1차 근거 없음)
 
@@ -52,9 +51,9 @@ def test_budget(max_budget: float, be_first: float) -> Tuple[float, Optional[str
     """시험 예산 = min(월 최대 예산, 첫 구매 손익분기 × 30). 최대 예산이 손익분기 × 10 미만이면 경고."""
     budget = min(max(max_budget, 0.0), be_first * TEST_SALES)
     warn = None
-    if be_first > 0 and max_budget < be_first * WARN_SALES:
+    if be_first > 0 and max_budget < be_first * MIN_SALES:
         warn = (f"한 달 {max_budget:,.0f}원으로는 판단할 만큼 판매가 모이지 않을 수 있습니다 "
-                f"(손님 1명에 최대 {be_first:,.0f}원이면 판매 10건에 {be_first * WARN_SALES:,.0f}원 필요). 두 달을 합쳐 판단하세요.")
+                f"(손님 1명에 최대 {be_first:,.0f}원이면 판매 {MIN_SALES}건에 {be_first * MIN_SALES:,.0f}원 필요). 두 달을 합쳐 판단하세요.")
     return budget, warn
 
 

@@ -12,7 +12,8 @@ from typing import Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-DAYS_PER_MONTH = 30.4
+from .defaults import DAYS_PER_MONTH
+
 # 개인정보: 열 이름에 이 말이 들어가면 읽자마자 버림 (주문자 번호 ordererNo는 해시용이라 남김)
 PII_WORDS = ("orderername", "orderertel", "ordererid", "shippingaddress", "receiver", "pickuplocation", "entrymethod",
              "이름", "성명", "전화", "연락처", "휴대", "주소", "수취인", "수령인", "배송지", "이메일", "email", "아이디")
