@@ -249,10 +249,10 @@ def today_kst(now: Optional[datetime] = None) -> date:
 BUDGET_PICKS = ("small", "recommended", "max", "none")   # 시험 예산 선택지 키 (budget_options + 광고 안 함)
 
 
-def rates_for(split: Dict, be: "Breakeven") -> Tuple[float, float, float]:
+def rates_for(split: "Split", be: "Breakeven") -> Tuple[float, float, float]:
     """실제로 쓴 배분(split)의 평균 클릭 비용 → (cpc, 첫 구매 필요 구매율, 1년 필요 구매율).
     고른 예산으로 다시 나눴으면 그 split을 넘긴다 (B1: 권장 예산 값이 남지 않게)."""
-    cpc = split["cpc"]
+    cpc = split.cpc
     return cpc, required_rate(cpc, be.first), required_rate(cpc, be.year)
 
 
@@ -395,7 +395,7 @@ def breakeven_grid(price: float, margin: float, cpa: float, my_repurchases: floa
 
 
 # ── 코치 '풀기' 하나 (MVP 7e 2단계): 화면은 입력을 모아 solve를 한 번 부르고 Answer만 읽는다 ──────────────
-MEASURED = "실측"   # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (MVP 7b)
+MEASURED = "실측"   # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (MVP 7b, 계획 파일에도 저장)
 REPURCHASE_WORDS = {"거의 안 삼": "거의 안 사요", "가끔": "가끔 다시 사요", "자주": "자주 다시 사요",
                     "매달(정기)": "다 쓰면 매달 다시 사요(정기)"}
 
@@ -469,10 +469,7 @@ def _actual_world(act: Actuals, naver_curve, meta_cpc: float, params, grades: Di
     clicks = act.naver_clicks + act.meta_clicks
     cvr = act.orders / clicks if clicks else params.cvr
     params2 = params.with_changes(steps=[("④ 구매 (실측)", min(max(cvr, 0.0), 1.0))])
-    g = {"aov": "A", "margin": "A", "cpc_naver": "A" if act.naver_clicks else "B",
-         "cpc_meta": "A" if act.meta_clicks else grades["cpc_meta"], "cvr": "A" if clicks else "C",
-         "retention": grades["retention"]}
-    return curve, meta, params2, g
+    return curve, meta, params2, next_month_grades(grades, bool(act.naver_clicks), bool(act.meta_clicks), bool(clicks))
 
 
 def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: Optional[str] = None,
@@ -486,7 +483,7 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
     from . import montecarlo as MC
     be = breakeven(inputs.profit, repurchase.per_year)
     params = coach_params(inputs.price, inputs.profit, repurchase.per_year)
-    meta_cpc = float(inputs.meta_cpc or D.NAVER_FALLBACK_CPC)   # 대략값 (등급 D). 1단계 B8 뒤 META_FALLBACK_CPC로
+    meta_cpc = float(inputs.meta_cpc or D.META_FALLBACK_CPC)   # 메타 실측이 없으면 기본값 (몬테카를로 등급 D)
     options = budget_options(be.first, inputs.max_budget)
     amount = {o["key"]: o["amount"] for o in options}
     grades = mc_grades(bool(inputs.meta_cpc))
@@ -495,7 +492,7 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
     split = split_budget(amount["recommended"], naver_curve, meta_cpc, params)
     mc = MC.run(split.channels, split.spends, params, grades)   # 권장 예산으로 100번 → 기본 선택
     default_pick = default_budget_pick(MC.action(mc["wins"]))
-    pick = pick if pick in list(amount) + ["none"] else default_pick
+    pick = pick if pick in list(amount) + ["none"] else default_pick   # 권장이 최대보다 크면 '최대' 안이 없음
     budget = amount[pick if pick != "none" else "recommended"]
     if actuals is not None:
         curve2, meta2, params, grades = _actual_world(actuals, naver_curve, meta_cpc, params, grades)
@@ -511,8 +508,8 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
         cpc_src += " · 메타 클릭 비용 직접 입력"
     prediction = dict(budget=budget, naver=split.naver.spend if split.naver else 0.0, meta=split.meta.spend, clicks=split.clicks, cpc=split.cpc,
                       new=float(np.mean(mc["new"])), cvr=params.cvr, wins=mc["wins"], p10=mc["p10"], p90=mc["p90"])
+    cpc, need, need_year = rates_for(split, be)   # 실제로 쓴 배분 기준 (B1)
     return Answer(be=be, options=options, pick=pick, default_pick=default_pick, budget=budget, split=split, mc=mc,
-                  grades=grades, params=params, cpc=split.cpc, need=required_rate(split.cpc, be.first),
-                  need_year=required_rate(split.cpc, be.year), cpc_src=cpc_src,
+                  grades=grades, params=params, cpc=cpc, need=need, need_year=need_year, cpc_src=cpc_src,
                   ch_name="메타 광고" if split.meta.spend > 0 else "네이버 검색광고", prediction=prediction,
                   repurchase=repurchase)

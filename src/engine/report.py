@@ -15,13 +15,13 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from .coach import BUDGET_PICKS, CATEGORIES, REPURCHASE_PRESETS
+from .coach import BUDGET_PICKS, CATEGORIES, MEASURED, REPURCHASE_PRESETS
 
 PLAN_VERSION = 2          # 2: 재구매 실측(repurchase_measured) 추가 (MVP 7e B3). 버전 1 파일도 그대로 읽음
 # 계획 파일에 담는 입력 (개인정보 없음: 상품·숫자·검색어·재구매 실측 숫자만)
 PLAN_INPUT_KEYS = ("q_category", "q_stores", "q_price", "q_profit", "q_repurchase", "q_budget", "q_baseline", "q_keyword",
                    "q_cpc", "q_budget_pick", "repurchase_measured")
-MEASURED = "실측"         # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (main.py와 같은 값)
+
 # 선택지 값은 화면 선택지 상수에서만 (B4)
 PLAN_CHOICES = {"q_category": tuple(CATEGORIES), "q_repurchase": tuple(REPURCHASE_PRESETS) + (MEASURED,),
                 "q_budget_pick": BUDGET_PICKS}
