@@ -61,6 +61,19 @@ class FunnelParams:
         r[0] = 1.0
         return r
 
+    def per_customer_value(self, months: Optional[int] = None, mult: float = 1.0, ret_f=None):
+        """손님 1명이 months개월 동안 사는 횟수 (= 남기는 돈 ÷ (판매가 × 마진)). 코치의 '손님 1명 가치' 정의는 이것 하나.
+        첫 달은 딱 1번 구매, 그 뒤 달은 r(t) × 월 구매 횟수 (Q1, 사용자 결정 11/10: 손익분기 식 1 + 재구매에 맞춤).
+        ret_f: 재구매 흔들기 배수 배열 (몬테카를로) → 배열을 돌려줌. 없으면 숫자 하나.
+        자동화 보너스·휴면 복귀(retention_bonus·reactivation)는 넣지 않음 (코치는 쓰지 않음, 예전 몬테카를로와 같음)."""
+        n = months or self.months
+        f = np.ones(1) if ret_f is None else np.asarray(ret_f, dtype=float)
+        t = np.arange(n, dtype=float)
+        base = self.retention_floor + (1 - self.retention_floor) * np.exp(-self.retention_decay * t)
+        r = np.clip(base[None, :] * self.retention_scale * mult * f[:, None], 0.0, 1.0)
+        value = 1.0 + r[:, 1:].sum(axis=1) * self.purchase_freq
+        return float(value[0]) if ret_f is None else value
+
     def value_per_active(self) -> float:
         """활성 고객 1명이 한 달에 남기는 매출총이익."""
         return self.purchase_freq * self.aov * self.margin

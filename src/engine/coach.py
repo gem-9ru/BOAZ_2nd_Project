@@ -166,8 +166,8 @@ def retention_scale_for(repurchases: float, floor: float, decay: float, purchase
     base = FunnelParams(retention_floor=floor, retention_decay=decay, purchase_freq=purchase_freq, months=months)
     target = max(repurchases, 0.0)
 
-    def per_customer(scale: float) -> float:   # 리텐션은 100%에서 잘리므로 배수와 횟수가 비례하지 않음
-        return float(base.with_changes(retention_scale=scale).retention(months)[1:].sum()) * purchase_freq
+    def per_customer(scale: float) -> float:   # 재구매 횟수 = 손님 1명 가치 − 첫 구매 1번. 리텐션은 100%에서 잘리므로 배수와 횟수가 비례하지 않음
+        return base.with_changes(retention_scale=scale).per_customer_value(months) - 1.0
 
     if per_customer(1.0) <= 0 or target <= 0:
         return 0.0

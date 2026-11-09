@@ -3,7 +3,7 @@
 한 달 시험 예산을 쓰고, 그 달에 온 새 손님이 12개월 동안 남기는 돈(첫 구매 + 재구매) − 광고비를 N번 뽑는다.
 불확실한 입력을 데이터 신뢰 등급별 폭으로 흔든다 (defaults.GRADE_WIDTH, 로그정규, 표준편차 = ln(1 + 폭)):
   클릭 비용(채널별 등급), 구매 비율(퍼널, C), 재구매(D), 판매가·마진(A).
-엔진과 같은 식(model.FunnelParams.retention, cvr)을 쓰고, 폭이 0이면 one_month()와 같은 값이 나온다.
+손님 1명 가치는 model.FunnelParams.per_customer_value 하나 (첫 달 1번 + 재구매, 손익분기 식과 같음). 폭이 0이면 one_month()와 같은 값이 나온다.
 """
 from typing import Dict, Optional, Sequence
 
@@ -18,14 +18,6 @@ SEED = 20261109
 def _sigma(grade: str) -> float:
     return float(np.log1p(D.GRADE_WIDTH[grade]))
 
-
-def _per_customer_gp(params, ret_mult: float, ret_f: np.ndarray, months: int) -> np.ndarray:
-    """손님 1명이 12개월 동안 남기는 매출총이익 ÷ (판매가 × 마진). r(0) = 1은 첫 구매 달."""
-    t = np.arange(months, dtype=float)
-    base = params.retention_floor + (1 - params.retention_floor) * np.exp(-params.retention_decay * t)
-    r = np.clip(base[None, :] * params.retention_scale * ret_mult * ret_f[:, None], 0.0, 1.0)
-    r[:, 0] = 1.0
-    return r.sum(axis=1) * params.purchase_freq
 
 
 def one_month(channels: Sequence, spends: Sequence[float], params) -> Dict[str, float]:
@@ -58,10 +50,10 @@ def run(channels: Sequence, spends: Sequence[float], params, grades: Dict[str, s
         spend_total += ch.curve.spendable(s)
         clicks = ch.curve.clicks(s)
         new = clicks * params.cvr * ch.cvr_mult * ch.incr_mult / draw(f"cpc_{ch.key}") * cvr_f
-        per = _per_customer_gp(params, ch.retention_mult, ret_f, months)
+        per = params.per_customer_value(months, ch.retention_mult, ret_f)
         new_total += new
         gp_total += new * per
-        first_total += new * params.purchase_freq
+        first_total += new             # 첫 구매는 딱 1번 (Q1)
     money = unit * aov_f * margin_f
     profits = gp_total * money - spend_total
     first_only = first_total * money - spend_total

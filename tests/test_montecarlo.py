@@ -33,9 +33,11 @@ def test_zero_width_matches_engine():
     sp, params = _setup()
     det = MC.one_month(sp["channels"], sp["spends"], params)
     # 엔진 12개월 시뮬레이션: 매달 같은 코호트 → 한 코호트 = 신규 ÷ 12, 손님 1명 12개월 이익 = ltv_12m
+    # 단, 코치는 첫 달을 딱 1번 구매로 셈 (Q1) → 엔진(첫 달도 월 구매 횟수 1.1번)보다 손님 1명당 (1.1 − 1)번 × 판매가 × 마진 적음
     s = simulate(sp["channels"], sp["spends"], params).summary
     assert det["new"] == pytest.approx(s["paid_new"] / params.months)
-    assert det["profit"] == pytest.approx(s["paid_new"] / params.months * s["ltv_12m"] - s["spend_total"] / params.months, rel=1e-6)
+    ltv_coach = s["ltv_12m"] - (params.purchase_freq - 1) * params.aov * params.margin
+    assert det["profit"] == pytest.approx(s["paid_new"] / params.months * ltv_coach - s["spend_total"] / params.months, rel=1e-6)
     zero = MC.run(sp["channels"], sp["spends"], params, C.mc_grades(False), n=50, widths=0.0)
     assert zero["p10"] == pytest.approx(det["profit"]) and zero["p90"] == pytest.approx(det["profit"])
 
@@ -55,3 +57,18 @@ def test_same_seed_same_result_and_fast():
 def test_action_thresholds():
     assert MC.action(80) == "go" and MC.action(79) == "small" and MC.action(50) == "small" and MC.action(49) == "prep"
     assert C.default_budget_pick(MC.action(49)) == "none" and C.default_budget_pick(MC.action(50)) == "recommended"
+
+
+@pytest.mark.parametrize("preset", ["거의 안 삼", "가끔", "자주", "매달(정기)"])
+def test_one_month_customer_value_matches_breakeven(preset):
+    """Q1 (11/10): 손님 1명 가치 = 첫 달 딱 1번 구매 + 그 뒤 재구매. 손익분기 식(남는 돈 × (1 + 재구매))과 시뮬레이션이 같은 값.
+    네이버만 봄 (재구매 배수 1.0). 메타는 재구매 배수 0.9 가정이라 손님 1명 가치가 조금 낮은 게 맞음."""
+    rep = C.REPURCHASE_PRESETS[preset]
+    sp, params = _setup(price=20_000, profit=7_000, rep=rep)
+    naver = sp["channels"][0]
+    assert naver.key == "naver" and naver.retention_mult == 1.0
+    be = C.breakeven(7_000, rep)
+    det = MC.one_month([naver], [sp["spends"][0]], params)
+    spend = naver.curve.spendable(sp["spends"][0])
+    assert det["profit"] == pytest.approx(det["new"] * be.year - spend, rel=1e-6)
+    assert det["first_only"] == pytest.approx(det["new"] * be.first - spend, rel=1e-6)
