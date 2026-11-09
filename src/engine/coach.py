@@ -392,3 +392,127 @@ def breakeven_grid(price: float, margin: float, cpa: float, my_repurchases: floa
     boundary = np.maximum(cpa / (prices * margin) - 1, 0.0)
     return {"prices": prices, "reps": reps, "profit": profit, "boundary": boundary, "need_here": max(need_here, 0.0),
             "my_price": float(price), "my_rep": float(my_repurchases), "cpa": float(cpa), "margin": float(margin)}
+
+
+# ── 코치 '풀기' 하나 (MVP 7e 2단계): 화면은 입력을 모아 solve를 한 번 부르고 Answer만 읽는다 ──────────────
+MEASURED = "실측"   # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (MVP 7b)
+REPURCHASE_WORDS = {"거의 안 삼": "거의 안 사요", "가끔": "가끔 다시 사요", "자주": "자주 다시 사요",
+                    "매달(정기)": "다 쓰면 매달 다시 사요(정기)"}
+
+
+@dataclass
+class CoachInputs:
+    """사장님이 넣은 숫자. meta_cpc는 직접 넣은 메타 클릭 비용 (없으면 대략값, 등급 D)."""
+    price: float
+    profit: float
+    max_budget: float
+    keyword: str = ""
+    meta_cpc: Optional[float] = None
+
+
+@dataclass
+class RepurchaseSource:
+    """1년 동안 다시 사는 횟수와 그 출처: 프리셋(가정 D) 또는 주문 내역 실측(관찰분 A + 1년 연장 곡선 C → C)."""
+    name: str
+    per_year: float
+    grade: str
+    word: str
+
+
+def repurchase_source(choice: Optional[str], measured: Optional[Dict] = None) -> RepurchaseSource:
+    """재구매 선택지 → RepurchaseSource. '실측'인데 주문 내역 값이 없으면(계획 파일만 불러온 경우 등) '가끔'."""
+    if choice == MEASURED and measured:
+        n = float(measured["repeats_year"])
+        return RepurchaseSource(MEASURED, n, "C", f"내 가게 실측 ({n:.1f}번)")
+    name = choice if choice in REPURCHASE_PRESETS else "가끔"
+    return RepurchaseSource(name, REPURCHASE_PRESETS[name], "D", REPURCHASE_WORDS.get(name, name))
+
+
+@dataclass
+class Actuals:
+    """한 달 뒤 광고 리포트 실측: 네이버·메타 클릭과 쓴 돈, 실제 주문 수. 없는 값은 0."""
+    naver_clicks: float = 0.0
+    naver_cost: float = 0.0
+    meta_clicks: float = 0.0
+    meta_cost: float = 0.0
+    orders: float = 0.0
+
+
+@dataclass
+class Answer:
+    """코치 화면이 아는 전부. budget = 고른 예산 (광고 안 함이면 시뮬레이션용 권장 금액)."""
+    be: Breakeven
+    options: List[Dict]
+    pick: str
+    default_pick: str
+    budget: float
+    split: Split
+    mc: Dict
+    grades: Dict[str, str]
+    params: object
+    cpc: float
+    need: float
+    need_year: float
+    cpc_src: str
+    ch_name: str
+    prediction: Dict
+    repurchase: RepurchaseSource
+
+
+def _actual_world(act: Actuals, naver_curve, meta_cpc: float, params, grades: Dict[str, str]):
+    """실측으로 바꾼 네이버 곡선·메타 클릭 비용·구매 비율·등급. 재구매 등급은 처음 계산 그대로 (B2)."""
+    from .report import ScaledCurve
+    curve = naver_curve
+    if naver_curve is not None and act.naver_clicks and act.naver_cost and naver_curve.clicks(act.naver_cost) > 0:
+        curve = ScaledCurve(naver_curve, act.naver_clicks / naver_curve.clicks(act.naver_cost))   # 같은 돈에 실제 클릭 ÷ 예상 클릭
+    meta = act.meta_cost / act.meta_clicks if act.meta_clicks else meta_cpc
+    clicks = act.naver_clicks + act.meta_clicks
+    cvr = act.orders / clicks if clicks else params.cvr
+    params2 = params.with_changes(steps=[("④ 구매 (실측)", min(max(cvr, 0.0), 1.0))])
+    g = {"aov": "A", "margin": "A", "cpc_naver": "A" if act.naver_clicks else "B",
+         "cpc_meta": "A" if act.meta_clicks else grades["cpc_meta"], "cvr": "A" if clicks else "C",
+         "retention": grades["retention"]}
+    return curve, meta, params2, g
+
+
+def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: Optional[str] = None,
+          actuals: Optional[Actuals] = None) -> Answer:
+    """코치 답 하나: 손익분기 → 시험 예산 3안 → 권장 예산으로 배분·100번 → 기본 선택 → 고른 예산으로 다시 나눔.
+    pick: 사장님이 직접 고른 예산 키 (small·recommended·max·none). None이거나 없는 값이면 기본 선택 (결론이 '준비 먼저'면 none).
+    actuals: 한 달 뒤 실측이 있으면 그 숫자로 곡선·클릭 비용·구매 비율을 바꿔 고른 예산을 다시 나누고 100번 (등급 A).
+    naver_curve: 네이버 예상 실적 곡선 (검색어 없음·불러오기 실패면 None → 모두 메타)."""
+    import numpy as np
+    from . import defaults as D
+    from . import montecarlo as MC
+    be = breakeven(inputs.profit, repurchase.per_year)
+    params = coach_params(inputs.price, inputs.profit, repurchase.per_year)
+    meta_cpc = float(inputs.meta_cpc or D.NAVER_FALLBACK_CPC)   # 대략값 (등급 D). 1단계 B8 뒤 META_FALLBACK_CPC로
+    options = budget_options(be.first, inputs.max_budget)
+    amount = {o["key"]: o["amount"] for o in options}
+    grades = mc_grades(bool(inputs.meta_cpc))
+    grades["retention"] = repurchase.grade
+
+    split = split_budget(amount["recommended"], naver_curve, meta_cpc, params)
+    mc = MC.run(split.channels, split.spends, params, grades)   # 권장 예산으로 100번 → 기본 선택
+    default_pick = default_budget_pick(MC.action(mc["wins"]))
+    pick = pick if pick in list(amount) + ["none"] else default_pick
+    budget = amount[pick if pick != "none" else "recommended"]
+    if actuals is not None:
+        curve2, meta2, params, grades = _actual_world(actuals, naver_curve, meta_cpc, params, grades)
+        split = split_budget(budget, curve2, meta2, params)
+        mc = MC.run(split.channels, split.spends, params, grades)
+    elif budget != amount["recommended"]:
+        split = split_budget(budget, naver_curve, meta_cpc, params)
+        mc = MC.run(split.channels, split.spends, params, grades)
+
+    cpc_src = (f"네이버 예상 실적 '{inputs.keyword}' + 메타 대략값, 배분한 예산의 평균" if split.has_naver
+               else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
+    if inputs.meta_cpc:
+        cpc_src += " · 메타 클릭 비용 직접 입력"
+    prediction = dict(budget=budget, naver=split.naver.spend if split.naver else 0.0, meta=split.meta.spend, clicks=split.clicks, cpc=split.cpc,
+                      new=float(np.mean(mc["new"])), cvr=params.cvr, wins=mc["wins"], p10=mc["p10"], p90=mc["p90"])
+    return Answer(be=be, options=options, pick=pick, default_pick=default_pick, budget=budget, split=split, mc=mc,
+                  grades=grades, params=params, cpc=split.cpc, need=required_rate(split.cpc, be.first),
+                  need_year=required_rate(split.cpc, be.year), cpc_src=cpc_src,
+                  ch_name="메타 광고" if split.meta.spend > 0 else "네이버 검색광고", prediction=prediction,
+                  repurchase=repurchase)
