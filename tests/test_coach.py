@@ -111,6 +111,16 @@ def test_biggest_drop_from_store_totals():
     assert C.biggest_drop({"visits": 100}, labels, list(labels)) is None
 
 
+def test_biggest_drop_uses_funnel_diagnosis_rule():
+    """B5: '가장 많이 빠지는 단계'는 퍼널 진단 하나(기준 대비 비율)로. 단계마다 원래 비율이 달라 그냥 최솟값은 늘 같은 곳을 짚음."""
+    from src.engine import measure as MS
+    labels = {"visits": "방문", "views": "상품 조회", "cart": "장바구니", "orders": "구매"}
+    # 단계 비율: 조회 25% (기준 22.2%), 담기 24% (기준 19.9%), 사기 30% (기준 33.7%) → 그냥 최솟값은 담기, 기준 대비로는 사기
+    totals = {"visits": 1000, "views": 250, "cart": 60, "orders": 18}
+    assert MS.diagnose_funnel(totals)["worst"]["key"] == "orders"
+    assert C.biggest_drop(totals, labels, list(labels)) == ("장바구니", "구매", pytest.approx(0.3))
+
+
 def test_default_budget_pick_follows_action():
     assert C.default_budget_pick("prep") == "none"
     assert C.default_budget_pick("small") == "recommended"

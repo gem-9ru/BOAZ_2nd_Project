@@ -161,8 +161,9 @@ def funnel_baseline() -> Dict[str, float]:
 
 
 def diagnose_funnel(totals: Dict[str, Optional[float]]) -> Optional[Dict]:
-    """→ {"per100": [...], "steps": [{name, rate, base, ratio}], "worst": 단계 또는 None, "action", "hold"}.
-    있는 단계만 계산. 기준 대비 비율(실측 ÷ 기준)이 가장 낮은 단계 하나만 짚는다."""
+    """→ {"per100": [...], "steps": [{key, prev, name, rate, base, ratio, action}], "lowest": 단계, "worst": 단계 또는 None, "hold"}.
+    있는 단계만 계산. '가장 많이 빠지는 단계'의 규칙은 여기 하나: 기준 대비 비율(실측 ÷ 기준)이 가장 낮은 단계 (B5).
+    lowest = 그 단계 (언제나), worst = 짚어 줄 단계 (들어온 사람이 적어 보류거나 모든 단계가 기준보다 좋으면 None)."""
     visits = totals.get("visits")
     if not visits:
         return None
@@ -173,15 +174,14 @@ def diagnose_funnel(totals: Dict[str, Optional[float]]) -> Optional[Dict]:
         if not cur or not before:
             continue
         rate = cur / before
-        steps.append({"key": key, "name": name, "rate": rate, "base": base[key], "ratio": rate / base[key], "action": action})
+        steps.append({"key": key, "prev": prev, "name": name, "rate": rate, "base": base[key], "ratio": rate / base[key], "action": action})
         per100.append(({"views": "상품 본", "cart": "담은", "orders": "산"}[key], 100 * cur / visits))
     if not steps:
         return None
     hold = visits < FUNNEL_MIN_VISITS
-    worst = min(steps, key=lambda s: s["ratio"])
-    if worst["ratio"] >= 1:
-        worst = None                                  # 모든 단계가 기준보다 좋음
-    return {"per100": per100, "steps": steps, "worst": None if hold else worst, "hold": hold, "visits": visits}
+    lowest = min(steps, key=lambda s: s["ratio"])
+    worst = None if (hold or lowest["ratio"] >= 1) else lowest   # 보류 / 모든 단계가 기준보다 좋음
+    return {"per100": per100, "steps": steps, "lowest": lowest, "worst": worst, "hold": hold, "visits": visits}
 
 
 def ad_or_store(ctr: Optional[float], diag: Optional[Dict], ctr_ok: float = 0.01) -> Optional[str]:
