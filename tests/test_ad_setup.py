@@ -75,15 +75,34 @@ def test_one_smartstore_rule():
     assert G.meta_plan(142_000, 100_000, False, ["스마트스토어"], 1_300)["objective"] == "트래픽"
 
 
-def test_meta_cpa_is_meta_only():
-    """A3 결정: 메타 손님 1명 비용 = 메타 예산 ÷ 메타가 데려온 새 손님 (네이버와 섞지 않음)."""
-    a = _answer()
+def _example(kw, price, profit, budget):
+    from src.engine import naver_source as ns
+    est = ns.bid_estimate(kw, device=D.NAVER_DEVICE, online=False)          # 저장된 예시 예상 실적 (네트워크 안 씀)
+    return C.solve(C.CoachInputs(price, profit, budget, kw), NaverCurve({kw: est}), C.repurchase_source("매달(정기)"))
+
+
+@pytest.mark.parametrize("kw,price,profit,budget", [("원두커피", 20_000, 7_000, 300_000), ("프로틴쉐이크", 79_000, 39_500, 500_000)])
+def test_meta_cpa_is_meta_only(kw, price, profit, budget):
+    """A3 결정 (예시 1·2): 메타 손님 1명 비용 = 메타 예산 ÷ 메타 새 손님 (코치 100번 평균 새 손님의 메타 몫), 전체 CPA와 다름."""
+    a = _example(kw, price, profit, budget)
     sp = a.split
-    new_meta = one_month([sp.channels[-1]], [sp.meta.spend], a.params)["new"]
-    assert AS.meta_cpa(sp, a.params) == pytest.approx(sp.meta.spend / new_meta)
-    assert AS.meta_cpa(sp, a.params) != pytest.approx(a.budget / a.prediction["new"])     # 섞인 값과 다름
-    p = AS.build_settings(a, ["자사몰"], pixel_ready=True)
-    assert p.numbers["cpa"] == pytest.approx(AS.meta_cpa(sp, a.params))
+    assert sp.naver_spend > 0 and sp.meta.spend > 0
+    m = one_month([sp.channels[-1]], [sp.meta.spend], a.params)["new"]
+    n = one_month(sp.channels[:1], [sp.naver_spend], a.params)["new"]
+    assert one_month(sp.channels, sp.spends, a.params)["new"] == pytest.approx(m + n)        # 엔진 새 손님은 매체별로 더해짐
+    meta_new = a.prediction["new"] * m / (m + n)
+    cpa = AS.meta_cpa(sp, a.params, a.prediction["new"])
+    assert cpa == pytest.approx(sp.meta.spend / meta_new)
+    assert abs(cpa - a.budget / a.prediction["new"]) > 1.0     # 섞인 전체 CPA와 다름 (원두는 배분이 두 매체 한계 비용을 맞춰 0.2%만 다름)
+    p = AS.build_settings(a, ["자사몰"], pixel_ready=True, keyword=kw)
+    assert p.meta_cpa == pytest.approx(cpa) and p.numbers["cpa"] == pytest.approx(cpa)
+    assert p.meta_plan["recommended_daily"] == pytest.approx(cpa * G.DAILY_BUDGET_X)          # 판매 목표: 결과 비용 × 10
+
+
+def test_meta_zero_hides_meta_lines():
+    a = _answer()
+    zero = C.split_budget(10_000, _curve(), 1_300.0, a.params)                    # 작은 예산 → 모두 네이버
+    assert zero.meta.spend == 0 and AS.meta_cpa(zero, a.params, 1.0) is None
 
 
 def test_owner_values_override_and_save_to_plan():

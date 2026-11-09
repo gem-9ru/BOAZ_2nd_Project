@@ -39,17 +39,22 @@ def own_site(stores: Optional[List[str]]) -> bool:
 
 
 # ── 메타 손님 1명 비용 (A3) ─────────────────────────────────────
-def meta_new_customers(split, params) -> float:
-    """메타 예산만으로 한 달에 오는 새 손님 (엔진 one_month, 흔들기 없이)."""
+def meta_new_customers(split, params, mc_new: Optional[float] = None) -> float:
+    """메타가 데려오는 새 손님 (한 달). 새 식 없이 엔진 값으로: 코치 몬테카를로 평균 새 손님(mc_new = Answer.prediction["new"])
+    × 엔진(one_month)에서 메타 채널이 차지하는 몫. mc_new가 없으면 엔진 값(흔들기 없음) 그대로."""
     from .montecarlo import one_month
     if split.meta.spend <= 0:
         return 0.0
-    return one_month([split.channels[-1]], [split.meta.spend], params)["new"]
+    meta = one_month([split.channels[-1]], [split.meta.spend], params)["new"]
+    if mc_new is None:
+        return meta
+    total = one_month(split.channels, split.spends, params)["new"]
+    return mc_new * meta / total if total > 0 else 0.0
 
 
-def meta_cpa(split, params) -> Optional[float]:
-    """메타 손님 1명 비용 = 메타 예산 ÷ 메타 새 손님 (A3 결정: 네이버와 섞지 않음)."""
-    new = meta_new_customers(split, params)
+def meta_cpa(split, params, mc_new: Optional[float] = None) -> Optional[float]:
+    """메타 손님 1명 비용 = 메타 예산 ÷ 메타 새 손님 (A3 사용자 결정 11/10: 네이버와 섞지 않음). 메타 0원이면 None (줄 숨김)."""
+    new = meta_new_customers(split, params, mc_new)
     return split.meta.spend / new if new > 0 else None
 
 
@@ -145,7 +150,7 @@ def build_settings(answer, stores: Optional[List[str]], pixel_ready: bool = Fals
     sp = answer.split
     ss_, site = is_smartstore(stores), own_site(stores)
     no_ad = answer.default_pick == "none"
-    cpa_meta = meta_cpa(sp, answer.params)
+    cpa_meta = meta_cpa(sp, answer.params, answer.prediction.get("new"))
     mp = GD.meta_plan(sp.meta.spend, cpa_meta or 0.0, pixel_ready, stores, sp.meta.cpc)
     steps: List[Step] = []
     prod = product or keyword or "상품"
