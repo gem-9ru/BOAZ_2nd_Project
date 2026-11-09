@@ -476,8 +476,12 @@ def report_section(a: dict, verdict=None):
         st.caption("리포트를 올리면 무엇이 문제인지, 예측이 얼마나 맞았는지, 다음 달엔 어떻게 나눌지 알려 드려요.")
         return
     # 기본값은 쿠폰·전용 링크 판매 수만 (판매처 전체 판매에는 광고 외 손님이 섞임, D3). 없으면 빈칸 = 모름, 0은 0건
-    orders = st.number_input("이번 달 광고로 온 주문 수 (쿠폰·전용 링크 기준, 모르면 비워 두기)", min_value=0,
-                             value=CO.report_orders_default(ss.get("q_coupon")), step=1, key="rep_orders")
+    # 사장님이 직접 고치기 전에는 쿠폰 칸을 따라감 (나중에 쿠폰 수를 넣어도 반영되게)
+    default_orders = CO.report_orders_default(ss.get("q_coupon"))
+    if "rep_orders" not in ss or ss.get("rep_orders") == ss.get("_rep_orders_default"):
+        ss["rep_orders"] = default_orders
+    ss["_rep_orders_default"] = default_orders
+    orders = st.number_input("이번 달 광고로 온 주문 수 (쿠폰·전용 링크 기준, 모르면 비워 두기)", min_value=0, step=1, key="rep_orders")
     by = {"naver": [r for r in reps if r["platform"] == "naver"], "meta": [r for r in reps if r["platform"] == "meta"]}
     sumk = lambda rs, k: sum((r.get(k) or 0) for r in rs)  # noqa: E731
     rows = []
