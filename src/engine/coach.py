@@ -313,6 +313,10 @@ class Split:
         return self.naver is not None
 
     @property
+    def naver_spend(self) -> float:
+        return self.naver.spend if self.naver else 0.0
+
+    @property
     def spends(self) -> List[float]:
         return ([self.naver.spend] if self.naver else []) + [self.meta.spend]
 
@@ -321,7 +325,7 @@ class Split:
         return sum(self.spends)
 
     # 이전 단계용: 예전 dict 키로도 읽힘 (main.py 호출부를 속성으로 옮긴 뒤 지움, MVP 7e 2단계 정리)
-    _OLD_KEYS = {"naver": lambda s: s.naver.spend if s.naver else 0.0, "meta": lambda s: s.meta.spend,
+    _OLD_KEYS = {"naver": lambda s: s.naver_spend, "meta": lambda s: s.meta.spend,
                  "meta_cpc": lambda s: s.meta.cpc, "has_naver": lambda s: s.has_naver, "spends": lambda s: s.spends}
 
     def __getitem__(self, key: str):
@@ -506,7 +510,7 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
                else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
     if inputs.meta_cpc:
         cpc_src += " · 메타 클릭 비용 직접 입력"
-    prediction = dict(budget=budget, naver=split.naver.spend if split.naver else 0.0, meta=split.meta.spend, clicks=split.clicks, cpc=split.cpc,
+    prediction = dict(budget=budget, naver=split.naver_spend, meta=split.meta.spend, clicks=split.clicks, cpc=split.cpc,
                       new=float(np.mean(mc["new"])), cvr=params.cvr, wins=mc["wins"], p10=mc["p10"], p90=mc["p90"])
     cpc, need, need_year = rates_for(split, be)   # 실제로 쓴 배분 기준 (B1)
     return Answer(be=be, options=options, pick=pick, default_pick=default_pick, budget=budget, split=split, mc=mc,

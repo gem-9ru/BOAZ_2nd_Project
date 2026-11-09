@@ -214,8 +214,7 @@ COACH_STEPS = ["내 가게", "답 보기", "광고 준비", "한 달 뒤"]
 # 예시 페르소나 (노션 11/9): 스마트스토어 원두 로스터리, 판매가 2만·마진 35%(남는 돈 7천)·월 최대 30만
 EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 20_000, "q_profit": 7_000, "q_repurchase": "매달(정기)",
            "q_budget": 300_000, "q_baseline": None, "q_keyword": "원두커피"}
-REPURCHASE_WORDS = {"거의 안 삼": "거의 안 사요", "가끔": "가끔 다시 사요", "자주": "자주 다시 사요",
-                    "매달(정기)": "다 쓰면 매달 다시 사요(정기)"}
+
 # 예시 2 (사용자 결정 11/9): 광고가 맞는 경우. 엔진 가정(사는 비율 1.26% 등)은 그대로, 판매가·마진·재구매·검색어만 다름
 # 단백질 쉐이크 정기구매: 판매가 7.9만, 남는 돈 3.95만(50%), 매달(정기), 월 최대 50만 → 100번 중 약 85번 (README 근거)
 EXAMPLE2 = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 79_000, "q_profit": 39_500, "q_repurchase": "매달(정기)",
@@ -611,28 +610,17 @@ def report_section(a: dict):
     st.caption(f"리포트 전환 합 {rep_conv:,.0f}건 vs 실제 주문 {orders:,}건. 예측 주문 {pred.get('new', 0):.1f}건, 예측 클릭 {pred.get('clicks', 0):,.0f}번 "
                f"vs 실제 클릭 {total_clicks:,.0f}번. 과대 집계율이 크면 리포트 전환보다 실제 주문으로 판단하세요.")
     # 다음 달 배분: 실측 클릭 비용·구매 비율로 다시 계산 (등급 A)
-    sp = a["split"]
     nav_clk, nav_cost = sumk(by["naver"], "clicks"), sumk(by["naver"], "cost")
     meta_clk, meta_cost = sumk(by["meta"], "clicks"), sumk(by["meta"], "cost")
-    naver_curve2 = None
-    if sp["has_naver"]:
-        base = sp["channels"][0].curve
-        if nav_clk and nav_cost and base.clicks(nav_cost) > 0:
-            naver_curve2 = RP.ScaledCurve(base, (nav_clk / base.clicks(nav_cost)))   # 같은 돈에 실제 클릭 ÷ 예상 클릭
-        else:
-            naver_curve2 = base
-    meta_cpc2 = meta_cost / meta_clk if meta_clk else sp["meta_cpc"]
+    nxt = CO.solve(a["inputs"], a["naver_curve"], a["repurchase"], pick=a["pick"],
+                   actuals=CO.Actuals(nav_clk, nav_cost, meta_clk, meta_cost, orders))   # 재구매 등급은 처음 그대로 (B2)
     cvr2 = orders / total_clicks if total_clicks else cparams.cvr
-    params2 = cparams.with_changes(steps=[("④ 구매 (실측)", min(max(cvr2, 0.0), 1.0))])
-    split2 = CO.split_budget(a["budget0"], naver_curve2, meta_cpc2, params2)
-    g2 = CO.next_month_grades(a["grades"], bool(nav_clk), bool(meta_clk), bool(total_clicks))   # 재구매 등급은 처음 그대로 (B2)
-    mc2 = MC.run(split2["channels"], split2["spends"], params2, g2)
     with st.container(border=True):
-        st.markdown(f"**다음 달 배분 (실측으로 다시 계산): 네이버 {won(split2['naver'])} · 메타 {won(split2['meta'])}**")
-        st.markdown(f"실측 숫자로 다시 해 보면 100번 중 **{mc2['wins']}번** 남아요 (처음 예측 {pred.get('wins', a['mc']['wins']):.0f}번). "
-                    f"→ {MC.ACTION_TEXT[MC.action(mc2['wins'])]}")
-        st.caption(f"실측: 네이버 클릭 {won(nav_cost / nav_clk) if nav_clk else '-'}, 메타 클릭 {won(meta_cpc2)}, 누른 사람 중 산 비율 {cvr2:.2%} (등급 A). "
-                   + ("재구매는 주문 내역 실측(C)이에요. 1년으로 늘린 부분이 곡선이라 몇 달 더 쌓이면 바뀌어요." if g2["retention"] == "C"
+        st.markdown(f"**다음 달 배분 (실측으로 다시 계산): 네이버 {won(nxt.split.naver_spend)} · 메타 {won(nxt.split.meta.spend)}**")
+        st.markdown(f"실측 숫자로 다시 해 보면 100번 중 **{nxt.mc['wins']}번** 남아요 (처음 예측 {pred.get('wins', a['mc']['wins']):.0f}번). "
+                    f"→ {MC.ACTION_TEXT[MC.action(nxt.mc['wins'])]}")
+        st.caption(f"실측: 네이버 클릭 {won(nav_cost / nav_clk) if nav_clk else '-'}, 메타 클릭 {won(nxt.split.meta.cpc)}, 누른 사람 중 산 비율 {cvr2:.2%} (등급 A). "
+                   + ("재구매는 주문 내역 실측(C)이에요. 1년으로 늘린 부분이 곡선이라 몇 달 더 쌓이면 바뀌어요." if nxt.grades["retention"] == "C"
                       else "재구매는 아직 가정(D)이라 몇 달 더 쌓이면 바뀌어요."))
 
 
@@ -700,7 +688,7 @@ def _go(step: int):
 # 답 계산 (어느 단계를 보든 먼저 계산: 다음 단계 탭 미리 채우기·단계 열림 판단에 씀)
 price, profit, max_budget = ss.get("q_price"), ss.get("q_profit"), ss.get("q_budget")
 stores = ss.get("q_stores") or []
-MEASURED = RP.MEASURED   # 재구매 선택지 "실측": 주문 내역으로 잰 내 가게 값 (MVP 7b, 계획 파일에도 저장)
+MEASURED = CO.MEASURED   # 재구매 선택지 "실측": 주문 내역으로 잰 내 가게 값 (MVP 7b, 계획 파일에도 저장)
 if ss.get("q_repurchase") == MEASURED and not ss.get("repurchase_measured"):
     ss["q_repurchase"] = "가끔"
 repurchase = ss.get("q_repurchase") or "가끔"
@@ -708,20 +696,15 @@ repurchase = ss.get("q_repurchase") or "가끔"
 
 def rep_value(name: str) -> float:
     """재구매 선택지 → 1년 동안 다시 사는 횟수. '실측'이면 주문 내역에서 잰 값."""
-    if name == MEASURED and ss.get("repurchase_measured"):
-        return float(ss["repurchase_measured"]["repeats_year"])
-    return CO.REPURCHASE_PRESETS.get(name, CO.REPURCHASE_PRESETS["가끔"])
+    return CO.repurchase_source(name, ss.get("repurchase_measured")).per_year
 
 
 def rep_word(name: str) -> str:
-    if name == MEASURED and ss.get("repurchase_measured"):
-        return f"내 가게 실측 ({ss['repurchase_measured']['repeats_year']:.1f}번)"
-    return REPURCHASE_WORDS.get(name, name)
+    return CO.repurchase_source(name, ss.get("repurchase_measured")).word
 baseline = ss.get("q_baseline")
 coach, ans = {}, None
 input_error = (price is not None and profit is not None and profit > price)
 if price and profit and max_budget and not input_error:
-    be = CO.breakeven(profit, rep_value(repurchase))
     monthly_search, naver_curve, kw_missing = None, None, False
     kw = (ss.get("q_keyword") or "").strip().replace(" ", "")
     if kw:
@@ -743,41 +726,21 @@ if price and profit and max_budget and not input_error:
         ss["_kw_loaded"].add(kw)
         skel.empty()
     naver_failed = bool(kw) and bool(NAVER_FAILED)
-    cparams = CO.coach_params(price, profit, rep_value(repurchase))
-    meta_cpc = float(ss.get("q_cpc") or D.META_FALLBACK_CPC)   # 메타 클릭 비용: 근거 있는 값이 없어 대략값 (몬테카를로 등급 D)
-    options = CO.budget_options(be.first, max_budget)
-    amount_of = lambda k: next(o["amount"] for o in options if o["key"] == k)  # noqa: E731
-    # 배분·신호등은 권장 예산 기준으로 먼저 계산하고, 사장님이 다른 금액을 고르면 그 금액으로 다시 나눔
-    split = CO.split_budget(amount_of("recommended"), naver_curve, meta_cpc, cparams)
-    grades = CO.mc_grades(bool(ss.get("q_cpc")))
-    if repurchase == MEASURED:
-        grades["retention"] = "C"     # 관찰분은 실측(A)이지만 1년으로 늘린 부분이 곡선(C)이라 보수적으로 C
-    mc_rec = MC.run(split["channels"], split["spends"], cparams, grades)   # 권장 예산으로 100번
-    # 기본 선택은 결론 문장에 따라 (100번 중 50번 미만 = 광고 안 함). 사장님이 직접 고르기 전까지는 결론이 바뀌면 기본도 따라감
-    default_pick = CO.default_budget_pick(MC.action(mc_rec["wins"]))
-    if not ss.get("_budget_touched") or ss.get("q_budget_pick") not in [o["key"] for o in options] + ["none"]:
-        ss["q_budget_pick"] = default_pick
-    pick_key = ss["q_budget_pick"]
-    # 광고 안 함이면 다음 단계 탭에는 권장 예산을 넘김 (시뮬레이션용)
-    budget0 = amount_of(pick_key if pick_key != "none" else "recommended")
-    mc = mc_rec
-    if budget0 != amount_of("recommended"):
-        split = CO.split_budget(budget0, naver_curve, meta_cpc, cparams)
-        mc = MC.run(split["channels"], split["spends"], cparams, grades)
-    cpc, need, need_year = CO.rates_for(split, be)   # 실제로 쓴 배분 기준 (B1)
-    cpc_src = ("네이버 예상 실적 '" + kw + "' + 메타 대략값, 배분한 예산의 평균" if split["has_naver"]
-               else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
-    if ss.get("q_cpc"):
-        cpc_src += " · 메타 클릭 비용 직접 입력"
-    ch_name = "메타 광고" if split["meta"] > 0 else "네이버 검색광고"
-    prediction = dict(budget=budget0, naver=split["naver"], meta=split["meta"], clicks=split["clicks"], cpc=split["cpc"],
-                      new=float(np.mean(mc["new"])), cvr=cparams.cvr, wins=mc["wins"], p10=mc["p10"], p90=mc["p90"])   # 판정의 학습 구간 경고용 (메타가 있으면 7일 학습)
+    # 코치 답 하나 (CO.solve): 손익분기 → 시험 예산 3안 → 배분·100번 → 기본 선택 → 고른 예산으로 다시 나눔.
+    # 사장님이 직접 고르기 전까지는 결론이 바뀌면 기본 선택도 따라감 (100번 중 50번 미만 = 광고 안 함)
+    inputs = CO.CoachInputs(price, profit, max_budget, kw, ss.get("q_cpc"))
+    rep_src = CO.repurchase_source(repurchase, ss.get("repurchase_measured"))
+    answer = CO.solve(inputs, naver_curve, rep_src, pick=ss.get("q_budget_pick") if ss.get("_budget_touched") else None)
+    ss["q_budget_pick"] = answer.pick
+    cparams = answer.params
     season_idx, season_src = load_season(kw) if kw else (None, "계절성 미반영 (검색어 없음)")
-    ans = dict(be=be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed, naver_failed=naver_failed, monthly_search=monthly_search, ch_name=ch_name, split=split,
-               cpc=cpc, cpc_src=cpc_src, need=need, need_year=need_year, mc=mc, grades=grades, prediction=prediction, options=options, budget0=budget0,
-               default_pick=default_pick)
-    coach = dict(price=float(price), margin=profit / price, budget=float(budget0), keyword=kw, be=be, cpc=cpc,
-                 channel=ch_name, repurchase=repurchase)
+    ans = dict(be=answer.be, kw=kw, season_idx=season_idx, season_src=season_src, kw_missing=kw_missing and not naver_failed,
+               naver_failed=naver_failed, monthly_search=monthly_search, ch_name=answer.ch_name, split=answer.split,
+               cpc=answer.cpc, cpc_src=answer.cpc_src, need=answer.need, need_year=answer.need_year, mc=answer.mc,
+               grades=answer.grades, prediction=answer.prediction, options=answer.options, budget0=answer.budget,
+               default_pick=answer.default_pick, inputs=inputs, naver_curve=naver_curve, repurchase=rep_src, pick=answer.pick)
+    coach = dict(price=float(price), margin=profit / price, budget=float(answer.budget), keyword=kw, be=answer.be, cpc=answer.cpc,
+                 channel=answer.ch_name, repurchase=repurchase)
 
 unlocked = 0 if ans is None else (3 if ss.get("coach_started") else 2)
 ss["coach_step"] = min(ss["coach_step"], unlocked)

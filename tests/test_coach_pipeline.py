@@ -46,6 +46,8 @@ def test_b2_next_month_keeps_measured_repurchase_grade():
 def test_b8_meta_fallback_cpc_is_its_own_constant():
     assert D.META_FALLBACK_CPC == 1_300.0                     # 숫자는 그대로 (사용자 결정 Q2)
     assert "META_FALLBACK_CPC" in D.INPUT_GRADES
+    # 계산은 CO.solve로 옮겨짐 (7e 2단계): 메타 클릭 비용을 안 넣으면 메타 기본값 상수를 씀
+    a = C.solve(C.CoachInputs(20_000, 7_000, 300_000), None, C.repurchase_source("가끔"))
+    assert a.split.meta.cpc == D.META_FALLBACK_CPC and a.grades["cpc_meta"] == "D"
     main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
-    assert "D.META_FALLBACK_CPC" in main
-    assert "q_cpc\") or D.NAVER_FALLBACK_CPC" not in main     # 메타 기본값에 네이버 상수를 쓰지 않음
+    assert "NAVER_FALLBACK_CPC" not in main                    # 화면이 메타 기본값에 네이버 상수를 쓰지 않음
