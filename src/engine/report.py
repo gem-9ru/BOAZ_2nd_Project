@@ -8,31 +8,62 @@
 열 이름은 판매처·버전마다 달라 화면에서 사용자가 고칠 수 있게 한다.
 """
 import json
+import math
 import re
+from datetime import date
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-PLAN_VERSION = 1
-# 계획 파일에 담는 입력 (개인정보 없음: 상품·숫자·검색어만)
+from .coach import BUDGET_PICKS, CATEGORIES, REPURCHASE_PRESETS
+
+PLAN_VERSION = 2          # 2: 재구매 실측(repurchase_measured) 추가 (MVP 7e B3). 버전 1 파일도 그대로 읽음
+# 계획 파일에 담는 입력 (개인정보 없음: 상품·숫자·검색어·재구매 실측 숫자만)
 PLAN_INPUT_KEYS = ("q_category", "q_stores", "q_price", "q_profit", "q_repurchase", "q_budget", "q_baseline", "q_keyword",
-                   "q_cpc", "q_budget_pick")
+                   "q_cpc", "q_budget_pick", "repurchase_measured")
+MEASURED = "실측"         # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (main.py와 같은 값)
+# 선택지 값은 화면 선택지 상수에서만 (B4)
+PLAN_CHOICES = {"q_category": tuple(CATEGORIES), "q_repurchase": tuple(REPURCHASE_PRESETS) + (MEASURED,),
+                "q_budget_pick": BUDGET_PICKS}
+# 재구매 실측: 숫자 dict (orders.measure 결과 중 화면이 쓰는 것, 고객 식별자 없음)
+MEASURED_NUM_KEYS = ("customers", "orders", "observed_months", "repeat_share", "repeats_observed", "repeats_year")
 PLAN_PRED_KEYS = ("budget", "naver", "meta", "clicks", "cpc", "new", "cvr", "wins", "p10", "p90")
 
 
 # ── 계획 파일 (가정 A4: 로그인 없이 JSON 내려받기·올리기) ──────────────────────
 def plan_to_json(inputs: Dict, prediction: Dict, started: Optional[str]) -> str:
     body = {"version": PLAN_VERSION, "started": started,
-            "inputs": {k: inputs.get(k) for k in PLAN_INPUT_KEYS if k in inputs},
+            "inputs": {k: inputs.get(k) for k in PLAN_INPUT_KEYS if k in inputs and inputs.get(k) is not None},
             "prediction": {k: (None if prediction.get(k) is None else float(prediction[k])) for k in PLAN_PRED_KEYS}}
     return json.dumps(body, ensure_ascii=False, indent=1)
 
 
+def _is_num(v) -> bool:
+    """bool이 아닌 유한한 수 (NaN·무한대 제외)."""
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v)
+
+
+def _measured(v) -> Dict:
+    if not (isinstance(v, dict) and all(_is_num(v.get(k)) and v[k] >= 0 for k in MEASURED_NUM_KEYS)):
+        raise ValueError("재구매 실측 값이 이상해요")
+    out = {k: v[k] for k in MEASURED_NUM_KEYS}
+    out["extended"] = bool(v.get("extended", out["observed_months"] < 11.5))
+    return out
+
+
+def _upgrade(body: Dict) -> Dict:
+    """버전 변환 (1 → 2: 재구매 실측 항목이 없을 뿐, 나머지 그대로)."""
+    if body.get("version") == 1:
+        body = dict(body, version=2)
+    return body
+
+
 def plan_from_json(text: str) -> Tuple[Dict, Dict, Optional[str]]:
-    """정해진 키만 받는다 (다른 키는 버림). 형식이 틀리면 ValueError."""
+    """정해진 키만 받는다 (다른 키는 버림). 형식이 틀리면 ValueError (화면은 사장님 문장으로 안내)."""
     body = json.loads(text)
-    if not isinstance(body, dict) or body.get("version") != PLAN_VERSION:
+    if not isinstance(body, dict) or body.get("version") not in (1, PLAN_VERSION):
         raise ValueError("계획 파일 형식이 아니에요")
+    body = _upgrade(body)
     raw_in, raw_pred = body.get("inputs") or {}, body.get("prediction") or {}
     inputs = {}
     for k in PLAN_INPUT_KEYS:
@@ -42,16 +73,33 @@ def plan_from_json(text: str) -> Tuple[Dict, Dict, Optional[str]]:
         if k == "q_stores":
             if not (isinstance(v, list) and all(isinstance(x, str) for x in v)):
                 raise ValueError("판매처 값이 이상해요")
-        elif k in ("q_category", "q_repurchase", "q_keyword", "q_budget_pick"):
+        elif k == "repurchase_measured":
+            v = _measured(v)
+        elif k in PLAN_CHOICES:
+            if v not in PLAN_CHOICES[k]:
+                raise ValueError(f"{k} 값이 이상해요")
+        elif k == "q_keyword":
             if not isinstance(v, str):
                 raise ValueError(f"{k} 값이 이상해요")
-        elif not isinstance(v, (int, float)) or v < 0:
+        elif not _is_num(v) or v < 0:
             raise ValueError(f"{k} 값이 이상해요")
         inputs[k] = v
-    pred = {k: float(raw_pred[k]) for k in PLAN_PRED_KEYS if isinstance(raw_pred.get(k), (int, float))}
+    pred = {}
+    for k in PLAN_PRED_KEYS:
+        v = raw_pred.get(k)
+        if v is None:
+            continue
+        if not _is_num(v):
+            raise ValueError(f"예측 {k} 값이 이상해요")
+        pred[k] = float(v)
     started = body.get("started")
-    if started is not None and not (isinstance(started, str) and re.fullmatch(r"\d{4}-\d{2}-\d{2}", started)):
-        raise ValueError("시작일 형식이 이상해요")
+    if started is not None:
+        try:
+            ok = isinstance(started, str) and bool(re.fullmatch(r"\d{4}-\d{2}-\d{2}", started)) and date.fromisoformat(started)
+        except ValueError:
+            ok = False
+        if not ok:
+            raise ValueError("시작일 형식이 이상해요")
     return inputs, pred, started
 
 
@@ -72,7 +120,8 @@ WORDS = {
         "reach": ["=도달"], "frequency": ["=빈도"], "objective": ["=결과 표시 도구"],
     },
 }
-EXCLUDE = ("률", "당", "비율", "CPC", "CPM", "CTR")   # '클릭률', '결과당 비용' 같은 파생 열은 합계 대상 아님
+EXCLUDE = ("률", "당", "비율", "평균", "CPC", "CPM", "CTR")   # '클릭률', '결과당 비용', '평균클릭비용' 같은 파생 열은 합계 대상 아님
+TOTAL_ROW_WORDS = ("합계", "총계")   # 내보내기 맨 아래 합계 행 (더하면 두 번 셈)
 
 
 def _clean(name) -> str:
@@ -127,6 +176,9 @@ def _num(s: pd.Series) -> pd.Series:
 def totals(df: pd.DataFrame, mapping: Dict[str, Optional[str]], platform: str) -> Dict:
     """합계. 빈도는 노출 ÷ 도달, 목적은 가장 많이 나온 결과 종류. 메타 '결과'가 구매가 아니면 전환으로 세지 않음."""
     out = {"platform": platform}
+    text = df.select_dtypes(exclude="number").astype(str).apply(lambda s: s.str.strip())
+    if not text.empty:
+        df = df[~text.isin(TOTAL_ROW_WORDS).any(axis=1)]
     for m in ("impressions", "clicks", "cost", "conversions", "revenue", "reach"):
         col = mapping.get(m)
         out[m] = float(_num(df[col]).sum()) if col and col in df.columns else None

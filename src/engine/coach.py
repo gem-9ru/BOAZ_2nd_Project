@@ -245,6 +245,23 @@ def today_kst(now: Optional[datetime] = None) -> date:
     return (now or datetime.now(KST)).astimezone(KST).date()
 
 
+BUDGET_PICKS = ("small", "recommended", "max", "none")   # 시험 예산 선택지 키 (budget_options + 광고 안 함)
+
+
+def rates_for(split: Dict, be: "Breakeven") -> Tuple[float, float, float]:
+    """실제로 쓴 배분(split)의 평균 클릭 비용 → (cpc, 첫 구매 필요 구매율, 1년 필요 구매율).
+    고른 예산으로 다시 나눴으면 그 split을 넘긴다 (B1: 권장 예산 값이 남지 않게)."""
+    cpc = split["cpc"]
+    return cpc, required_rate(cpc, be.first), required_rate(cpc, be.year)
+
+
+def next_month_grades(grades: Dict[str, str], naver_measured: bool, meta_measured: bool, cvr_measured: bool) -> Dict[str, str]:
+    """한 달 뒤 실측으로 다시 계산할 때의 등급. 재 실측한 값은 A, 재구매는 처음 계산 등급 그대로 (실측 C·프리셋 D, B2)."""
+    return {"aov": "A", "margin": "A", "cpc_naver": "A" if naver_measured else "B",
+            "cpc_meta": "A" if meta_measured else grades["cpc_meta"], "cvr": "A" if cvr_measured else "C",
+            "retention": grades["retention"]}
+
+
 def default_budget_pick(action: str) -> str:
     """시험 예산 기본 선택 = 실제로 권하는 값 (UX 설계원칙 4장). 결론이 '준비가 먼저'(100번 중 50번 미만)면 '광고 안 함'."""
     return "none" if action == "prep" else "recommended"

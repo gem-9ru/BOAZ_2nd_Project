@@ -29,6 +29,9 @@ META_BASE_CPC = 700.0               # PLACEHOLDER 원: 사용자 입력 CPC. 타
 # 네이버 예상 실적을 못 받을 때 코치가 쓰는 클릭 1번 대략값 ✅ 분석 Q1 (2026-11-06 수집, 4개 업종 63개 키워드)
 # 최대 클릭의 50% 지점 CPC 중앙값: 세부 1,300원 · 대표 1,624원 → 보수적으로 세부 값 (메타 700원보다 높음)
 NAVER_FALLBACK_CPC = 1_300.0
+# 메타 클릭 비용 기본값 (사용자 결정 Q2, 11/10): 메타 실측이 없을 때 쓰는 보수적 기본값. 값은 위 네이버 키워드 63개 중앙값과 같음
+# (출처: 분석 Q1 네이버 키워드 63개 중앙값, 등급 C). 코치 몬테카를로는 메타에 빌려 쓴 값이라 cpc_meta를 D로 흔듦 (coach.mc_grades)
+META_FALLBACK_CPC = 1_300.0
 GA4_MASKED_MEDIUM = "(data deleted)"   # 퍼널 '전체'에서 빼는 마스킹 매체
 META_SATURATION = 0.3               # PLACEHOLDER: 광고비 100만 원 늘 때마다 CPC가 30% 상승 (사용자 노브)
 META_CVR_MULT = 0.7                 # PLACEHOLDER: 소셜 클릭은 검색보다 구매 의도 낮음 → Kaggle CVR vs GA4 CVR 비교로 교체
@@ -156,6 +159,7 @@ INPUT_GRADES = {
     "NAVER_CVR_MULT": ("D", "검색 의도 기준 1.0 가정"),
     "NAVER_RETENTION_MULT": ("D", "가정"),
     "NAVER_FALLBACK_CPC": ("C", "분석 Q1 공개 키워드 63개 중앙값"),
+    "META_FALLBACK_CPC": ("C", "네이버 키워드 63개 중앙값, 메타 실측 없을 때 보수적 기본값 (몬테카를로는 D로 흔듦)"),
     "META_BASE_CPC": ("D", "임시값"),
     "META_SATURATION": ("D", "임시값"),
     "META_CVR_MULT": ("D", "가정"),

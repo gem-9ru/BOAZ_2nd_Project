@@ -1,4 +1,5 @@
 """Phase 4: 계획 파일, 리포트 매핑, 진단·과대 집계·예측 오차."""
+import json
 import sys
 from pathlib import Path
 
@@ -104,3 +105,81 @@ def test_bom_meta_export_fixture():
     assert df.columns[0] == "보고 시작"
     t = R.totals(df, R.map_columns(list(df.columns), "meta"), "meta")
     assert t["cost"] == 140_000 and t["conversions"] == 5
+
+
+# ── MVP 7e 1단계 (B3·B4·B7) ──
+MEASURED = {"customers": 103, "orders": 180, "observed_months": 3.0, "repeat_share": 0.46, "repeats_observed": 0.67,
+            "repeats_year": 7.5, "extended": True}
+
+
+def test_b3_plan_keeps_measured_repurchase():
+    """재구매 실측값을 계획 파일에 저장·불러오기 → 불러온 뒤에도 '실측'이 그대로 (화면이 '가끔'으로 바꾸지 않게)."""
+    inputs = {"q_price": 20_000, "q_profit": 7_000, "q_repurchase": "실측", "q_budget": 300_000,
+              "repurchase_measured": MEASURED}
+    text = R.plan_to_json(inputs, {"budget": 210_000}, "2026-11-09")
+    assert json.loads(text)["version"] == 2
+    got, _, _ = R.plan_from_json(text)
+    assert got["q_repurchase"] == "실측" and got["repurchase_measured"] == MEASURED
+
+
+def test_b3_version1_plan_still_reads():
+    v1 = json.dumps({"version": 1, "started": "2026-10-01",
+                     "inputs": {"q_price": 20_000, "q_profit": 7_000, "q_repurchase": "매달(정기)", "q_budget": 300_000,
+                                "q_budget_pick": "recommended"},
+                     "prediction": {"budget": 210_000.0, "wins": 0.0}})
+    got, pred, started = R.plan_from_json(v1)
+    assert got["q_repurchase"] == "매달(정기)" and "repurchase_measured" not in got
+    assert pred["budget"] == 210_000 and started == "2026-10-01"
+
+
+def test_b3_measured_without_numbers_is_rejected():
+    bad = dict(MEASURED, repeats_year="많이")
+    with pytest.raises(ValueError):
+        R.plan_from_json(json.dumps({"version": 2, "inputs": {"q_repurchase": "실측", "repurchase_measured": bad}}))
+    with pytest.raises(ValueError):
+        R.plan_from_json(json.dumps({"version": 2, "inputs": {"repurchase_measured": dict(MEASURED, repeats_year=float("nan"))}}))
+
+
+@pytest.mark.parametrize("inputs", [
+    {"q_price": True},                       # bool은 숫자가 아님
+    {"q_budget": float("nan")},
+    {"q_budget": float("inf")},
+    {"q_repurchase": "아무거나"},
+    {"q_budget_pick": "전부"},
+    {"q_category": "우주선"},
+])
+def test_b4_plan_rejects_bad_inputs(inputs):
+    with pytest.raises(ValueError):
+        R.plan_from_json(json.dumps({"version": R.PLAN_VERSION, "inputs": inputs}))
+
+
+@pytest.mark.parametrize("started", ["2026-02-30", "2026-13-01", "0000-00-00"])
+def test_b4_plan_rejects_impossible_dates(started):
+    with pytest.raises(ValueError):
+        R.plan_from_json(json.dumps({"version": R.PLAN_VERSION, "started": started, "inputs": {}}))
+
+
+def test_b4_plan_rejects_bad_prediction_numbers():
+    with pytest.raises(ValueError):
+        R.plan_from_json(json.dumps({"version": R.PLAN_VERSION, "inputs": {}, "prediction": {"wins": float("nan")}}))
+
+
+def test_b4_allowed_choices_pass():
+    got, _, _ = R.plan_from_json(json.dumps({"version": R.PLAN_VERSION, "inputs": {
+        "q_category": "식품", "q_repurchase": "가끔", "q_budget_pick": "none", "q_stores": ["스마트스토어"]}}))
+    assert got == {"q_category": "식품", "q_repurchase": "가끔", "q_budget_pick": "none", "q_stores": ["스마트스토어"]}
+
+
+def test_b7_naver_average_cost_is_not_cost():
+    """'평균클릭비용'만 있고 '총비용'이 없으면 비용 열을 비워 둠 (평균을 합치면 엉뚱한 광고비)."""
+    m = R.map_columns(["캠페인", "노출수", "클릭수", "평균클릭비용(VAT포함,원)", "전환수"], "naver")
+    assert m["cost"] is None
+
+
+def test_b7_total_rows_are_dropped():
+    df = pd.DataFrame({"캠페인": ["원두", "드립백", "합계"], "노출수": [1_000, 500, 1_500], "클릭수": [10, 5, 15],
+                       "총비용(VAT포함,원)": [13_000, 6_500, 19_500], "전환수": [1, 0, 1]})
+    t = R.totals(df, R.map_columns(list(df.columns), "naver"), "naver")
+    assert t["clicks"] == 15 and t["cost"] == 19_500 and t["conversions"] == 1
+    df.loc[2, "캠페인"] = "총계"
+    assert R.totals(df, R.map_columns(list(df.columns), "naver"), "naver")["impressions"] == 1_500

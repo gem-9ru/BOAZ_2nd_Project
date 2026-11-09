@@ -625,15 +625,15 @@ def report_section(a: dict):
     cvr2 = orders / total_clicks if total_clicks else cparams.cvr
     params2 = cparams.with_changes(steps=[("④ 구매 (실측)", min(max(cvr2, 0.0), 1.0))])
     split2 = CO.split_budget(a["budget0"], naver_curve2, meta_cpc2, params2)
-    g2 = {"aov": "A", "margin": "A", "cpc_naver": "A" if nav_clk else "B", "cpc_meta": "A" if meta_clk else a["grades"]["cpc_meta"],
-          "cvr": "A" if total_clicks else "C", "retention": "D"}
+    g2 = CO.next_month_grades(a["grades"], bool(nav_clk), bool(meta_clk), bool(total_clicks))   # 재구매 등급은 처음 그대로 (B2)
     mc2 = MC.run(split2["channels"], split2["spends"], params2, g2)
     with st.container(border=True):
         st.markdown(f"**다음 달 배분 (실측으로 다시 계산): 네이버 {won(split2['naver'])} · 메타 {won(split2['meta'])}**")
         st.markdown(f"실측 숫자로 다시 해 보면 100번 중 **{mc2['wins']}번** 남아요 (처음 예측 {pred.get('wins', a['mc']['wins']):.0f}번). "
                     f"→ {MC.ACTION_TEXT[MC.action(mc2['wins'])]}")
         st.caption(f"실측: 네이버 클릭 {won(nav_cost / nav_clk) if nav_clk else '-'}, 메타 클릭 {won(meta_cpc2)}, 누른 사람 중 산 비율 {cvr2:.2%} (등급 A). "
-                   "재구매는 아직 가정(D)이라 몇 달 더 쌓이면 바뀌어요.")
+                   + ("재구매는 주문 내역 실측(C)이에요. 1년으로 늘린 부분이 곡선이라 몇 달 더 쌓이면 바뀌어요." if g2["retention"] == "C"
+                      else "재구매는 아직 가정(D)이라 몇 달 더 쌓이면 바뀌어요."))
 
 
 def hundred_bar(wins: int) -> str:
@@ -700,7 +700,7 @@ def _go(step: int):
 # 답 계산 (어느 단계를 보든 먼저 계산: 다음 단계 탭 미리 채우기·단계 열림 판단에 씀)
 price, profit, max_budget = ss.get("q_price"), ss.get("q_profit"), ss.get("q_budget")
 stores = ss.get("q_stores") or []
-MEASURED = "실측"   # 재구매 선택지: 주문 내역으로 잰 내 가게 값 (MVP 7b)
+MEASURED = RP.MEASURED   # 재구매 선택지 "실측": 주문 내역으로 잰 내 가게 값 (MVP 7b, 계획 파일에도 저장)
 if ss.get("q_repurchase") == MEASURED and not ss.get("repurchase_measured"):
     ss["q_repurchase"] = "가끔"
 repurchase = ss.get("q_repurchase") or "가끔"
@@ -744,13 +744,11 @@ if price and profit and max_budget and not input_error:
         skel.empty()
     naver_failed = bool(kw) and bool(NAVER_FAILED)
     cparams = CO.coach_params(price, profit, rep_value(repurchase))
-    meta_cpc = float(ss.get("q_cpc") or D.NAVER_FALLBACK_CPC)   # 메타 클릭 비용: 근거 있는 값이 없어 대략값 (등급 D)
+    meta_cpc = float(ss.get("q_cpc") or D.META_FALLBACK_CPC)   # 메타 클릭 비용: 근거 있는 값이 없어 대략값 (몬테카를로 등급 D)
     options = CO.budget_options(be.first, max_budget)
     amount_of = lambda k: next(o["amount"] for o in options if o["key"] == k)  # noqa: E731
     # 배분·신호등은 권장 예산 기준으로 먼저 계산하고, 사장님이 다른 금액을 고르면 그 금액으로 다시 나눔
     split = CO.split_budget(amount_of("recommended"), naver_curve, meta_cpc, cparams)
-    cpc = split["cpc"]
-    need, need_year = CO.required_rate(cpc, be.first), CO.required_rate(cpc, be.year)
     grades = CO.mc_grades(bool(ss.get("q_cpc")))
     if repurchase == MEASURED:
         grades["retention"] = "C"     # 관찰분은 실측(A)이지만 1년으로 늘린 부분이 곡선(C)이라 보수적으로 C
@@ -766,6 +764,7 @@ if price and profit and max_budget and not input_error:
     if budget0 != amount_of("recommended"):
         split = CO.split_budget(budget0, naver_curve, meta_cpc, cparams)
         mc = MC.run(split["channels"], split["spends"], cparams, grades)
+    cpc, need, need_year = CO.rates_for(split, be)   # 실제로 쓴 배분 기준 (B1)
     cpc_src = ("네이버 예상 실적 '" + kw + "' + 메타 대략값, 배분한 예산의 평균" if split["has_naver"]
                else "메타 대략값 (등급 D: 가정, 네이버 키워드 63개 중앙값)")
     if ss.get("q_cpc"):
