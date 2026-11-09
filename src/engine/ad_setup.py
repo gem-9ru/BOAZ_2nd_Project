@@ -215,7 +215,7 @@ def _naver_steps(sp, smartstore: bool, keyword: str, name: str, powerlink: bool,
 
 
 _RANK_NOTE = ("노출 순위는 입찰가만으로 정해지지 않아요. 검색어와 광고·사이트의 연관성, 광고 품질을 함께 봐요(파워링크는 광고 연관지수·"
-              "클릭 기대지수 1~10). 입찰가를 올려도 순위는 보장되지 않으니 다음 날 보고서의 노출수로 확인하세요 [naver-setup-012]")
+              "클릭 기대지수 1~10). 입찰가를 올려도 순위는 보장되지 않으니 다음 날 보고서의 노출수로 확인하세요")
 
 
 def _daily_note(monthly: float, both: bool) -> str:
@@ -225,13 +225,14 @@ def _daily_note(monthly: float, both: bool) -> str:
 
 def _shopping_steps(name: str, daily: int, monthly: float, keyword: str, bid: Optional[float], both: bool) -> List[Step]:
     return [
-        Step("naver", "campaign", "캠페인 (쇼핑검색)", "광고 관리 > [+ 새 캠페인] → 쇼핑검색", ["naver-setup-005", "naver-setup-008", "naver-setup-009"],
+        Step("naver", "campaign", "캠페인 (쇼핑검색)", "광고 관리 > [+ 새 캠페인] → 쇼핑검색",
+             ["naver-setup-005", "naver-setup-008", "naver-setup-009", "naver-setup-007"],
              [Item("campaign_type", "캠페인 유형", "쇼핑검색광고 (쇼핑몰 상품형)", CALC, "스마트스토어 상품이 네이버 쇼핑 영역에 보이는 광고 (코치 기본)"),
               Item("campaign_name", "캠페인 이름", f"{name}_쇼핑", OWNER, "월_상품_유형 규칙이면 나중에 합쳐 보기 쉬워요"),
               Item("daily_budget", "하루 예산 (원)", daily, CALC, _daily_note(monthly, both)),
               Item("even_spend", "예산 균등 배분", True, CALC, "아침에 예산이 다 써져 광고가 일찍 꺼지는 일을 줄여요")],
              note="이런 상품도 있어요: ADVoost 쇼핑·스마트스토어 광고는 예산만 정하면 AI가 상품·지면·입찰을 정해요(둘 중 하나만). "
-                  "입찰가를 직접 정해 숫자를 배우려면 쇼핑검색광고가 맞아요 [naver-setup-007]"),
+                  "입찰가를 직접 정해 숫자를 배우려면 쇼핑검색광고가 맞아요"),
         Step("naver", "adgroup", "광고그룹 (입찰가·노출 대상)", "캠페인 > [+ 새 광고그룹] (쇼핑몰 상품형) → 타겟팅 탭",
              ["naver-setup-006", "naver-setup-011", "naver-setup-017", "naver-setup-012"],
              [Item("adgroup_name", "광고그룹 이름", f"{name}_1", OWNER),
@@ -260,7 +261,7 @@ def _powerlink_steps(name: str, daily: int, monthly: float, keyword: str, bid: O
               Item(p + "campaign_name", "캠페인 이름", f"{name}_파워링크", OWNER),
               Item(p + "daily_budget", "하루 예산 (원)", daily, DRAFT if both else CALC, _daily_note(monthly, both))]),
         Step("naver", p + "adgroup", "광고그룹 (입찰가·노출 대상)" + t, "캠페인 > [+ 새 광고그룹] → 고급옵션·타겟팅 탭",
-             ["naver-setup-010", "naver-setup-011", "naver-setup-017", "naver-setup-021"],
+             ["naver-setup-010", "naver-setup-011", "naver-setup-017", "naver-setup-021", "naver-setup-012"],
              [Item(p + "adgroup_name", "광고그룹 이름", f"{name}_PL1", OWNER),
               Item(p + "bid", "기본 입찰가 (원)", _won(max(bid or POWERLINK_MIN_BID, POWERLINK_MIN_BID)), CALC,
                    f"'{keyword}' 예상 실적에서 이 예산을 쓰게 되는 입찰가 (최소 {POWERLINK_MIN_BID}원)" if bid else f"최소 {POWERLINK_MIN_BID}원부터"),
