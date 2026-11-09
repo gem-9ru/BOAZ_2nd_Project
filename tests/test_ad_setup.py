@@ -96,7 +96,7 @@ def test_meta_cpa_is_meta_only(kw, price, profit, budget):
     assert abs(cpa - a.budget / a.prediction["new"]) > 1.0     # 섞인 전체 CPA와 다름 (원두는 배분이 두 매체 한계 비용을 맞춰 0.2%만 다름)
     p = AS.build_settings(a, ["자사몰"], pixel_ready=True, keyword=kw)
     assert p.meta_cpa == pytest.approx(cpa) and p.numbers["cpa"] == pytest.approx(cpa)
-    assert p.meta_plan["recommended_daily"] == pytest.approx(cpa * G.DAILY_BUDGET_X)          # 판매 목표: 결과 비용 × 10
+    assert p.meta_plan["recommended_daily"] == G.won10(cpa * G.DAILY_BUDGET_X)                # 판매 목표: 결과 비용 × 10 (10원 단위)
 
 
 def test_meta_zero_hides_meta_lines():
@@ -283,3 +283,28 @@ def test_meta_template_is_at_least_50_chars():
     for args in (("수제 마카롱 6구", "당일 제작", "선물 포장 무료"), ("마카롱",)):
         d = AS.draft_copy(*args)
         assert len(d["meta_text"]) >= AS.META_TEXT_REC[0] and AS.check_copy(d["meta_text"], "meta_text") == []
+
+
+def test_one_rounding_for_daily_budgets_everywhere():
+    """메타·네이버 하루 예산은 어디서나 같은 10원 단위 값 (가이드 = 시트 = 내 숫자 = 챗봇 문맥)."""
+    a = _answer()
+    p = AS.build_settings(a, ["스마트스토어"], keyword="원두커피")
+    sp = a.split
+    assert p.meta_plan["daily"] == p.value("meta", "daily_budget") == p.numbers["meta_daily"] == G.daily_budget(sp.meta.spend)
+    assert p.value("naver", "daily_budget") == p.numbers["naver_daily"] == G.daily_budget(sp.naver_spend)
+    assert G.daily_budget(sp.meta.spend) % 10 == 0
+    text = SR.coach_text({"meta": sp.meta.spend, "naver": sp.naver_spend})
+    assert f"하루 {G.daily_budget(sp.meta.spend):,.0f}원" in text
+
+
+def test_a7_one_learning_check():
+    """메타 가이드의 머신 러닝 판정 = acquisition.learning_check (광고 세트 수를 받음)."""
+    from src.engine.acquisition import learning_check
+    for monthly, cpa, sets in ((142_000, 100_000, 1), (10_000_000, 10_000, 1), (10_000_000, 10_000, 30)):
+        mp = G.meta_plan(monthly, cpa, True, ["자사몰"], ad_sets=sets)
+        assert mp["learning_ok"] == learning_check(monthly, sets, cpa)["ok"]
+    a = _answer()
+    meta = a.split.channels[-1]
+    assert AS.channel_cpa(meta, a.split.meta.spend, a.params) == pytest.approx(AS.meta_cpa(a.split, a.params))
+    main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
+    assert "AS.channel_cpa(meta_ch, meta_budget, params)" in main and "meta_cpc / meta_cvr" not in main

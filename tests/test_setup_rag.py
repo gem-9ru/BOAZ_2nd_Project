@@ -72,7 +72,7 @@ def test_answer_cites_used_cards_and_keeps_secrets_out(monkeypatch):
     assert [c.id for c in out["cards"]] == ["naver-setup-009"]           # 없는 id는 버림
     body = json.dumps(client.sent, ensure_ascii=False)
     assert "sk-ant" not in body and "010-1234-5678" not in body
-    assert "하루 2,237원" in body and "100번 해 보면 1년 동안 3번" in body   # 코치 숫자(하루 예산 = 월 ÷ 30.4)
+    assert "하루 2,240원" in body and "100번 해 보면 1년 동안 3번" in body   # 코치 숫자(하루 예산 = 월 ÷ 30.4)
     assert "공식 확인 못 함" in client.sent["system"] and client.sent["model"] == "claude-haiku-5-5"
 
 

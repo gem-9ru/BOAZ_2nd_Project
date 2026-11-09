@@ -196,7 +196,8 @@ def cpc_from_cpm(cpm: float, ctr: float) -> float:
 
 
 def learning_check(monthly_budget: float, ad_sets: int, cpa: float) -> dict:
-    """머신 러닝 단계 예산 점검: 광고 세트 수 × 주 50건 × 예상 CPA > 주 예산이면 '제한된 머신 러닝' 경고."""
+    """머신 러닝 단계 예산 점검: 광고 세트 수 × 주 50건 × 예상 CPA > 주 예산이면 '제한된 머신 러닝' 경고.
+    판정은 이 함수 하나 (코치 가이드 guide.meta_plan도 이걸 부름, 검수 A7). cpa는 메타만의 손님 1명 비용 (A3: ad_setup.channel_cpa)."""
     weekly = monthly_budget / D.WEEKS_PER_MONTH
     need = ad_sets * LEARNING_EVENTS_PER_WEEK * cpa
     return {"weekly_budget": weekly, "weekly_needed": need, "ok": weekly >= need,

@@ -39,6 +39,16 @@ def own_site(stores: Optional[List[str]]) -> bool:
 
 
 # ── 메타 손님 1명 비용 (A3) ─────────────────────────────────────
+def channel_cpa(channel, spend: float, params) -> Optional[float]:
+    """한 채널만의 손님 1명 비용 = 그 채널 예산 ÷ 엔진(one_month)이 그 채널로 데려오는 새 손님 (A3·A7 기준 하나).
+    포화·전환율 배수까지 엔진과 같은 식. 예산·손님이 0이면 None."""
+    from .montecarlo import one_month
+    if spend <= 0:
+        return None
+    new = one_month([channel], [spend], params)["new"]
+    return spend / new if new > 0 else None
+
+
 def meta_new_customers(split, params, mc_new: Optional[float] = None) -> float:
     """메타가 데려오는 새 손님 (한 달). 새 식 없이 엔진 값으로: 코치 몬테카를로 평균 새 손님(mc_new = Answer.prediction["new"])
     × 엔진(one_month)에서 메타 채널이 차지하는 몫. mc_new가 없으면 엔진 값(흔들기 없음) 그대로."""
@@ -138,7 +148,8 @@ def show(v: Value) -> str:
 
 
 def _won(v: float) -> int:
-    return int(round(v / 10.0) * 10) if v else 0      # 광고 관리자에 넣기 좋게 10원 단위
+    from .guide import won10
+    return int(won10(v)) if v else 0      # 광고 관리자에 넣기 좋게 10원 단위 (guide.won10 하나)
 
 
 # ── 만들기 ─────────────────────────────────────────────────────

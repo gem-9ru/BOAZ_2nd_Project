@@ -5,7 +5,7 @@
 """
 from typing import Dict, List, Optional
 
-from .acquisition import LEARNING_EVENTS_PER_WEEK
+from .acquisition import LEARNING_EVENTS_PER_WEEK, learning_check
 from .ad_setup import is_smartstore, own_site
 from .defaults import DAYS_PER_MONTH, WEEKS_PER_MONTH
 
@@ -14,9 +14,14 @@ DAILY_OVERSPEND = 0.75     # ✅ 메타: 어떤 날은 일일 예산보다 최�
 NAVER_MIN_BID = {"파워링크": 70, "쇼핑검색": 50}   # ✅ 네이버 최소 입찰가 [naver-setup-011]
 
 
+def won10(v: Optional[float]) -> Optional[float]:
+    """광고 관리자에 넣는 금액은 10원 단위 (시트·가이드·내 숫자·챗봇 문맥이 같은 값을 쓰게 하는 함수 하나)."""
+    return None if v is None else float(int(round(v / 10.0)) * 10)
+
+
 def daily_budget(monthly: float) -> float:
-    """하루 예산 = 월 배분 ÷ 30.4일 (네이버·메타 공통, 앱 계산)."""
-    return monthly / DAYS_PER_MONTH if monthly > 0 else 0.0
+    """하루 예산 = 월 배분 ÷ 30.4일, 10원 단위 (네이버·메타 공통, 앱 계산)."""
+    return won10(monthly / DAYS_PER_MONTH) if monthly > 0 else 0.0
 
 META_OBJECTIVES = [
     # (목적, 메타가 찾아 주는 사람, 우리에게 맞을 때, 확인) — 목표 6개 ✅ [meta-obj-001]
@@ -30,16 +35,17 @@ META_OBJECTIVES = [
 
 
 def meta_plan(meta_monthly: float, expected_cpa: float, pixel_ready: bool, stores: Optional[List[str]] = None,
-              click_cost: Optional[float] = None) -> Dict:
+              click_cost: Optional[float] = None, ad_sets: int = 1) -> Dict:
     """메타 목적 추천과 예산 점검.
     - 스마트스토어(자사몰 없음)면 '판매'를 기본으로 권하지 않고 '트래픽': 스마트스토어 픽셀은 공식 확인 못 함 ❓ [meta-obj-003]
     - 머신 러닝 단계 ✅: 광고 세트당 마지막 큰 수정 뒤 7일 안에 결과 약 50개 [meta-lrn-001]
     - 일일 예산 권장 ✅: 성과 목표 평균 비용의 10배 이상 [meta-bud-003], 하루 최대 75% 더 쓸 수 있음 [meta-bud-001]"""
     stores = stores or []
-    weekly = meta_monthly / WEEKS_PER_MONTH if meta_monthly > 0 else 0.0
     daily = daily_budget(meta_monthly)
+    lc = learning_check(max(meta_monthly, 0.0), ad_sets, expected_cpa)      # 머신 러닝 판정은 acquisition 하나 (검수 A7)
+    weekly = lc["weekly_budget"]
     weekly_sales = weekly / expected_cpa if expected_cpa > 0 else 0.0
-    learning_ok = weekly_sales >= LEARNING_EVENTS_PER_WEEK
+    learning_ok = expected_cpa > 0 and lc["ok"]
     smartstore_only = is_smartstore(stores) and not own_site(stores)     # 스마트스토어 규칙 하나 (ad_setup)
     if meta_monthly <= 0:
         objective, why, result_cost = None, "이번 배분에서는 메타 예산이 없어요.", None
@@ -59,7 +65,7 @@ def meta_plan(meta_monthly: float, expected_cpa: float, pixel_ready: bool, store
             f"다만 주 예산 {weekly:,.0f}원으로는 주 약 {weekly_sales:.1f}건이라, 머신 러닝 단계 기준(광고 세트당 마지막 큰 수정 뒤 "
             f"7일 안에 결과 약 {LEARNING_EVENTS_PER_WEEK}개)에 못 미쳐 '제한된 머신 러닝'으로 남기 쉬워요. "
             "광고 세트를 하나로 모으고, 최적화 기준을 '장바구니 담기'처럼 더 자주 일어나는 이벤트로 시작하는 방법도 있어요."))
-    rec_daily = result_cost * DAILY_BUDGET_X if result_cost else None
+    rec_daily = won10(result_cost * DAILY_BUDGET_X) if result_cost else None
     return {"objective": objective, "why": why, "weekly": weekly, "weekly_sales": weekly_sales, "learning_ok": learning_ok,
             "daily": daily, "daily_max": daily * (1 + DAILY_OVERSPEND), "recommended_daily": rec_daily,
             "daily_ok": (rec_daily is None) or daily >= rec_daily}

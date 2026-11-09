@@ -1731,11 +1731,12 @@ with heads[1]:
     st.caption(f"다음 1만 원(매달)을 어디에 쓰면 가장 많이 남나: **{best_ch}** (1년 {signed(nxt[best_ch])}). "
                "채널별 한계 이익이 같아질 때까지 나누는 것이 최적입니다.")
 with learn_slot:
-    meta_cvr = params.cvr * channels[1].cvr_mult
-    if meta_budget > 0 and meta_cvr > 0:
-        lc = learning_check(meta_budget, int(ad_sets), meta_cpc / meta_cvr)
+    meta_ch = next((c for c in channels if c.key == "meta"), None)
+    meta_cpa = AS.channel_cpa(meta_ch, meta_budget, params) if meta_ch is not None else None   # 메타만의 손님 비용, 엔진 식 하나 (A3·A7)
+    if meta_budget > 0 and meta_cpa:
+        lc = learning_check(meta_budget, int(ad_sets), meta_cpa)
         if not lc["ok"]:
-            st.warning(f"메타 머신 러닝 단계를 끝내기엔 예산 부족('제한된 머신 러닝' 예상): 광고 세트 {int(ad_sets)}개 × 주 약 {LEARNING_EVENTS_PER_WEEK}건 × 예상 CPA {won(meta_cpc / meta_cvr)} "
+            st.warning(f"메타 머신 러닝 단계를 끝내기엔 예산 부족('제한된 머신 러닝' 예상): 광고 세트 {int(ad_sets)}개 × 주 약 {LEARNING_EVENTS_PER_WEEK}건 × 예상 CPA {won(meta_cpa)} "
                        f"= 주 {won(lc['weekly_needed'])}이 필요한데, 주 예산은 {won(lc['weekly_budget'])}입니다 (세트당 주 {lc['events_per_set']:.1f}건). "
                        "광고 세트를 합치거나 최적화 이벤트를 앞 단계(장바구니 등)로 바꾸세요. (50건은 메타 도움말 검색 요약 기준)")
 

@@ -265,10 +265,11 @@ def default_media(naver_spend: float, meta_spend: float) -> str:
 def coach_answer(split, kw: str, no_ad: bool = False) -> str:
     """'뭐부터 해? / 어떻게 나눠?' → 카드 대신 코치 배분 숫자로 답 (마크다운). split: coach.Split."""
     from .coach import split_reason
+    from .guide import daily_budget
     from .insights import won
     first = "네이버" if split.naver_spend > 0 else "메타"
     lines = [f"코치가 나눈 시험 예산 {won(split.total)}: **네이버 {won(split.naver_spend)} · 메타 {won(split.meta.spend)}** "
-             f"(하루 약 {won(split.naver_spend / D.DAYS_PER_MONTH)} · {won(split.meta.spend / D.DAYS_PER_MONTH)}).",
+             f"(하루 약 {won(daily_budget(split.naver_spend))} · {won(daily_budget(split.meta.spend))}).",
              split_reason(split, kw),
              "세팅은 **네이버 먼저** 하세요. 네이버는 비즈머니 충전과 검토(보통 영업일 1~2일)가 있어서, "
              "먼저 올려 두면 메타를 세팅하는 동안 검토가 끝나요 (naver-setup-015)."
@@ -352,10 +353,11 @@ def coach_text(ctx: Dict) -> str:
     """코치 숫자 (네이버·메타 배분, 하루 예산 = 월 ÷ 30.4, 검색어, 판매가, 100번 중 ○번). 개인정보 없음."""
     if not ctx:
         return "코치 숫자: 아직 없음"
+    from .guide import daily_budget
     rows = []
     for key, label in (("naver", "네이버 월 예산"), ("meta", "메타 월 예산")):
         if ctx.get(key) is not None:
-            rows.append(f"{label} {ctx[key]:,.0f}원 (하루 {ctx[key] / D.DAYS_PER_MONTH:,.0f}원)")
+            rows.append(f"{label} {ctx[key]:,.0f}원 (하루 {daily_budget(ctx[key]):,.0f}원)")
     if ctx.get("keyword"):
         rows.append(f"검색어 '{ctx['keyword']}'")
     if ctx.get("price"):
