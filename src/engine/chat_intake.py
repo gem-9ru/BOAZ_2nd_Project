@@ -128,6 +128,8 @@ def call_json(client, system: str, messages: List[Dict], schema: Dict, max_token
         raise IntakeUnavailable("요청이 많음") from e
     except anthropic.APIStatusError as e:
         raise IntakeUnavailable(f"API 오류 {e.status_code}") from e
+    except anthropic.APIError as e:             # 그 밖의 SDK 오류도 화면을 멈추지 않게 (검수 A16)
+        raise IntakeUnavailable(f"API 오류 {type(e).__name__}") from e
     if response.stop_reason == "refusal":
         raise IntakeUnavailable("응답 거절")
     text = next((b.text for b in response.content if b.type == "text"), None)

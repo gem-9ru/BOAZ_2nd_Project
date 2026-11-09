@@ -62,13 +62,12 @@ def _is_self(medium: str, source: str, domains: set) -> bool:
     return (m == "referral" and source.strip().lower() in domains) or m in domains
 
 
-def clean_paths(df: pd.DataFrame, self_domains: Iterable[str] = SELF_DOMAINS, clean: bool = True,
-                lookback_days: Optional[int] = None) -> pd.DataFrame:
+def clean_paths(df: pd.DataFrame, self_domains: Iterable[str] = SELF_DOMAINS, clean: bool = True) -> pd.DataFrame:
     """접점 목록(touches) 컬럼을 만든다.
 
     clean=True: 자기 도메인에서 온 referral 접점(결제·로그인 페이지 복귀) 삭제 = GA4 '원치 않는 추천' 처리.
     접점이 모두 지워진 경로는 GA4처럼 direct 한 접점으로 남긴다 (전환 수 보존).
-    lookback_days: 전환 인정 기간. 경로 CSV에 접점 시각이 없어 지금은 적용하지 않는다 (GA4 샘플은 3개월치).
+    전환 인정 기간(lookback)은 경로 CSV에 접점 시각이 없어 적용하지 않는다 (GA4 샘플은 3개월치, 검수 A23로 안 쓰는 인자 삭제).
     """
     domains = {d.strip().lower() for d in self_domains if d.strip()}
     touches = []
@@ -120,7 +119,8 @@ def credit(df: pd.DataFrame, model: str) -> pd.Series:
 def credit_table(df: pd.DataFrame) -> pd.DataFrame:
     """행 = 채널, 열 = 모델, 값 = 기여 비중(%). 마지막 클릭 기준 내림차순, 식별 불가는 맨 아래."""
     tab = pd.DataFrame({m: credit(df, m) for m in MODELS}).fillna(0.0)
-    tab = tab / df["conversions"].sum() * 100
+    total = df["conversions"].sum()
+    tab = tab / total * 100 if total else tab * 0.0      # 전환이 0이면 0으로 나누지 않음 (A23)
     order = [c for c in tab.sort_values("last", ascending=False).index if c != UNKNOWN]
     return tab.loc[order + ([UNKNOWN] if UNKNOWN in tab.index else [])]
 
@@ -154,8 +154,8 @@ def correction_factors(table: pd.DataFrame, model: str, base: str = "last",
     t = table.loc[[c for c in chans if c in table.index]]
     t = t[t[base] > 0]
     k = t[model] / t[base]
-    k = k * t[base].sum() / (t[base] * k).sum()
-    return k
+    denom = (t[base] * k).sum()
+    return k * t[base].sum() / denom if denom else k * 0.0    # 기여가 모두 0이면 0 (A23)
 
 
 def self_ref_share(df: pd.DataFrame, domain: str = SELF_DOMAINS[0], medium: str = "referral") -> float:

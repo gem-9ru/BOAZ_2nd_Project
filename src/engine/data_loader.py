@@ -187,8 +187,12 @@ STEP_LABELS = ["방문→상품 조회", "상품 조회→장바구니", "장바
 def segment_rates(df: pd.DataFrame, seg_col: Optional[str], step_cols: List[str],
                   labels: Optional[List[str]] = None) -> pd.DataFrame:
     """세그먼트별 단계 전환율 표. 행 = 세그먼트 + '전체', 열 = visitors, 단계 전환율들, 첫→끝, purchases, small."""
+    if seg_col:   # 묶음 값이 빈 행은 빼고, 묶음 값이 합계 행 이름('전체')과 같으면 이름을 바꿔 겹치지 않게 (검수 A20)
+        seg = df[seg_col]
+        df = df[seg.notna() & (seg.astype(str).str.strip() != "")]
+        seg = df[seg_col].astype(str).str.strip().replace({GA4_ALL: f"{GA4_ALL} (묶음 값)"})
     counts = df[step_cols].apply(lambda c: pd.to_numeric(c.astype(str).str.replace(",", ""), errors="coerce")).fillna(0)
-    g = counts.groupby(df[seg_col].astype(str)).sum() if seg_col else pd.DataFrame(columns=step_cols)
+    g = counts.groupby(seg).sum() if seg_col else pd.DataFrame(columns=step_cols)
     g.loc[GA4_ALL] = counts.sum()
     labels = labels or [f"{a}→{b}" for a, b in zip(step_cols, step_cols[1:])] + [f"{step_cols[0]}→{step_cols[-1]}"]
     out = pd.DataFrame({"visitors": g[step_cols[0]]}, index=g.index)

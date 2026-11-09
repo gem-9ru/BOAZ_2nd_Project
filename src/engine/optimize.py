@@ -54,13 +54,16 @@ def optimize_allocation(channels: Sequence[Channel], budget: float, params: Funn
         if v > best_v + 1e-9:
             best_x, best_v = x, v
 
+    if best_x is None:                       # 격자에서 계산되는 값이 하나도 없음(전부 NaN·-inf) → 0 배분 (검수 A17)
+        zero = [0.0] * len(channels)
+        return {"spends": zero, "value": omtm_value(channels, zero, params, omtm)}
     cons = [{"type": "ineq" if allow_under else "eq", "fun": lambda x: 1.0 - np.sum(x)}]
     try:
         res = minimize(lambda x: -f(x), best_x, method="SLSQP", bounds=[(0.0, 1.0)] * n,
                        constraints=cons, options={"maxiter": 100, "eps": 1e-3})
         if res.success and -res.fun > best_v and np.sum(res.x) <= 1.0 + 1e-6:
             best_x, best_v = np.clip(res.x, 0, 1), -res.fun
-    except Exception:
+    except (ValueError, ArithmeticError):     # 다듬기 실패면 격자 결과 그대로 (다른 예외는 숨기지 않음)
         pass
     return {"spends": [float(v) for v in full(best_x)], "value": float(best_v)}
 
