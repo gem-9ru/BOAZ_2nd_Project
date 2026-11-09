@@ -450,6 +450,29 @@ class Answer:
     prediction: Dict
     repurchase: RepurchaseSource
 
+    def grade_rows(self, inputs: "CoachInputs", keyword: str = "") -> List[Dict[str, str]]:
+        """'이 답에 쓴 숫자와 믿을 만한 정도' 표 (등급 정보는 Answer 한 곳에서, 리팩토링 인계 남은 것)."""
+        from .defaults import GRADE_LABELS
+        from .insights import won
+        g, sp, rep = self.grades, self.split, self.repurchase
+        rows = [{"숫자": "판매가", "값": won(inputs.price), "등급": "A 실측", "출처": "사장님 입력"},
+                {"숫자": "1개 팔면 남는 돈", "값": won(inputs.profit), "등급": "A 실측", "출처": "사장님 입력"}]
+        if sp.has_naver:
+            rows.append({"숫자": "네이버 클릭 비용", "값": won(sp.naver.cpc) if sp.naver_spend > 0 else "-",
+                         "등급": "B 플랫폼 예측", "출처": f"네이버 검색광고 예상 실적 '{keyword}'"})
+        rows.append({"숫자": "메타 클릭 비용", "값": won(sp.meta.cpc), "등급": f"{g['cpc_meta']} {GRADE_LABELS[g['cpc_meta']]}",
+                     "출처": "직접 입력" if g["cpc_meta"] == "A" else "대략값 (공개 키워드 중앙값)"})
+        rows.append({"숫자": "누른 사람 중 사는 비율", "값": f"{self.params.cvr * 100:.2f}%", "등급": "C 공개 데이터", "출처": "GA4 공개 샘플 퍼널"})
+        measured = rep.name == MEASURED
+        rows.append({"숫자": "1년 재구매", "값": f"{rep.per_year:.1f}번 ('{rep.word}')",
+                     "등급": "A 실측 + C 곡선" if measured else "D 가정",
+                     "출처": "주문 내역 (관찰 기간 뒤는 곡선으로 늘림)" if measured else "재구매 프리셋"})
+        return rows
+
+    def split_reason(self, keyword: str) -> str:
+        """배분 이유 한 문장 (배분 카드·세팅 도우미가 같은 문장)."""
+        return split_reason(self.split, keyword)
+
 
 def _actual_world(act: Actuals, naver_curve, meta_cpc: float, params, grades: Dict[str, str]):
     """실측으로 바꾼 네이버 곡선·메타 클릭 비용·구매 비율·등급. 재구매 등급은 처음 계산 그대로 (B2)."""

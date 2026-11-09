@@ -552,20 +552,8 @@ def hundred_bar(wins: int) -> str:
 
 
 def grade_rows(a: dict) -> list:
-    g = a["grades"]
-    sp = a["split"]
-    rows = [{"숫자": "판매가", "값": won(price), "등급": "A 실측", "출처": "사장님 입력"},
-            {"숫자": "1개 팔면 남는 돈", "값": won(profit), "등급": "A 실측", "출처": "사장님 입력"}]
-    if sp.has_naver:
-        rows.append({"숫자": "네이버 클릭 비용", "값": won(sp.naver.cpc) if sp.naver_spend > 0 else "-",
-                     "등급": "B 플랫폼 예측", "출처": f"네이버 검색광고 예상 실적 '{a['kw']}'"})
-    rows.append({"숫자": "메타 클릭 비용", "값": won(sp.meta.cpc), "등급": f"{g['cpc_meta']} {D.GRADE_LABELS[g['cpc_meta']]}",
-                 "출처": "직접 입력" if g["cpc_meta"] == "A" else "대략값 (공개 키워드 중앙값)"})
-    rows.append({"숫자": "누른 사람 중 사는 비율", "값": f"{cparams.cvr * 100:.2f}%", "등급": "C 공개 데이터", "출처": "GA4 공개 샘플 퍼널"})
-    rows.append({"숫자": "1년 재구매", "값": f"{rep_value(repurchase):.1f}번 ('{rep_word(repurchase)}')",
-                 "등급": "A 실측 + C 곡선" if repurchase == MEASURED else "D 가정",
-                 "출처": "주문 내역 (관찰 기간 뒤는 곡선으로 늘림)" if repurchase == MEASURED else "재구매 프리셋"})
-    return rows
+    """등급표는 Answer.grade_rows 한 곳 (글자 같음)."""
+    return a["answer"].grade_rows(a["inputs"], a["kw"])
 
 
 def split_card(a: dict, budget_label: bool = False):
@@ -575,7 +563,7 @@ def split_card(a: dict, budget_label: bool = False):
     with st.container(border=True):
         st.markdown(f"**{'시험 예산 ' + won(total) + ' 나누기' if budget_label else '추천 배분 (시험 예산 ' + won(total) + ')'}: "
                     f"네이버 {won(sp.naver_spend)} · 메타 {won(sp.meta.spend)}**")
-        st.markdown(CO.split_reason(sp, a['kw']))   # 배분 이유 (세팅 챗봇과 같은 문장)
+        st.markdown(a["answer"].split_reason(a['kw']))   # 배분 이유는 Answer에서 (세팅 도우미와 같은 문장)
         if sp.has_naver:
             st.caption("같은 돈으로 새 손님이 가장 많이 오는 배분이에요. 네이버는 네이버 검색광고 예상 실적(등급 B), "
                        "메타 클릭 비용은 가정값(등급 D)이에요.")
