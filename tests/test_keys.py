@@ -36,3 +36,24 @@ def test_engine_uses_one_key_reader():
         src = (root / "src" / "engine" / f).read_text(encoding="utf-8")
         assert "read_keys(KEY_NAMES)" in src and "naver_api_test" not in src.replace("src/collect/naver_api_test.py", "")
     assert "testpaths = tests" in (root / "pytest.ini").read_text(encoding="utf-8")
+
+
+def test_collect_script_reads_keys_only_when_calling(monkeypatch):
+    """src/collect/naver_api_test.py: import 때 .env를 읽지 않고, 부를 때 keys.read_keys·naver_signature를 씀 (가짜 키)."""
+    import importlib
+    root = Path(__file__).resolve().parents[1]
+    sys.path.insert(0, str(root / "src" / "collect"))
+    monkeypatch.setattr(K, "read_keys", lambda names, env_file=None: None)
+    mod = importlib.import_module("naver_api_test")          # 키가 없어도 import는 됨
+    monkeypatch.setattr(mod, "read_keys", lambda names: None)
+    import pytest
+    with pytest.raises(RuntimeError) as e:
+        mod.headers("GET", "/keywordstool")
+    assert "NAVER_AD_API_KEY" in str(e.value)
+    fake = {"NAVER_AD_API_KEY": "fake-api", "NAVER_AD_SECRET_KEY": "fake-secret", "NAVER_AD_CUSTOMER_ID": "123"}
+    monkeypatch.setattr(mod, "read_keys", lambda names: fake)
+    h = mod.headers("GET", "/keywordstool")
+    assert h["X-API-KEY"] == "fake-api" and h["X-Customer"] == "123"
+    assert h["X-Signature"] == K.naver_signature("fake-secret", h["X-Timestamp"], "GET", "/keywordstool")
+    src = (root / "src" / "collect" / "naver_api_test.py").read_text(encoding="utf-8")
+    assert "load_env" not in src and "read_keys(KEY_NAMES)" in src

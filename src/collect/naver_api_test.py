@@ -1,16 +1,15 @@
 """네이버 검색광고 API 연결 테스트.
 
-프로젝트 루트의 .env 파일에 아래 세 줄을 넣고 실행합니다 (키 값은 출력하지 않음).
+키는 src/engine/keys.py의 read_keys 하나로 읽습니다: Streamlit secrets → 환경 변수 → 프로젝트 루트 .env (키 값은 출력하지 않음).
+.env를 쓴다면 아래 세 줄을 넣습니다.
     NAVER_AD_API_KEY=...
     NAVER_AD_SECRET_KEY=...
     NAVER_AD_CUSTOMER_ID=...
 
 실행: python src/collect/naver_api_test.py
 """
-import base64
-import hashlib
-import hmac
 import json
+import sys
 import time
 from pathlib import Path
 
@@ -18,36 +17,30 @@ import requests
 
 BASE_URL = "https://api.searchad.naver.com"
 ROOT = Path(__file__).resolve().parents[2]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+from src.engine.keys import naver_signature, read_keys  # noqa: E402  (키 읽기·서명은 엔진과 같은 함수, 검수 A13)
+
+KEY_NAMES = ("NAVER_AD_API_KEY", "NAVER_AD_SECRET_KEY", "NAVER_AD_CUSTOMER_ID")
 
 
-def load_env(path: Path) -> dict:
-    env = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if line and not line.startswith("#") and "=" in line:
-            key, value = line.split("=", 1)
-            env[key.strip()] = value.strip().strip('"').strip("'")
-    return env
-
-
-ENV = load_env(ROOT / ".env")
-API_KEY = ENV["NAVER_AD_API_KEY"]
-SECRET_KEY = ENV["NAVER_AD_SECRET_KEY"]
-CUSTOMER_ID = ENV["NAVER_AD_CUSTOMER_ID"]
+def _keys() -> dict:
+    """부를 때 키를 읽음 (import 때 .env를 바로 읽지 않음). 없으면 키 이름만 알려 주는 오류 (값은 출력하지 않음)."""
+    keys = read_keys(KEY_NAMES)
+    if keys is None:
+        raise RuntimeError("네이버 검색광고 키가 없어요: " + ", ".join(KEY_NAMES) + " (secrets·환경 변수·.env 중 한 곳에 넣어 주세요)")
+    return keys
 
 
 def headers(method: str, uri: str) -> dict:
+    keys = _keys()
     timestamp = str(round(time.time() * 1000))
-    message = f"{timestamp}.{method}.{uri}"
-    signature = base64.b64encode(
-        hmac.new(SECRET_KEY.encode(), message.encode(), hashlib.sha256).digest()
-    ).decode()
     return {
         "Content-Type": "application/json; charset=UTF-8",
         "X-Timestamp": timestamp,
-        "X-API-KEY": API_KEY,
-        "X-Customer": str(CUSTOMER_ID),
-        "X-Signature": signature,
+        "X-API-KEY": keys["NAVER_AD_API_KEY"],
+        "X-Customer": str(keys["NAVER_AD_CUSTOMER_ID"]),
+        "X-Signature": naver_signature(keys["NAVER_AD_SECRET_KEY"], timestamp, method, uri),
     }
 
 
