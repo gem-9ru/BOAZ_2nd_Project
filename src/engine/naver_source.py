@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 CACHE_DIR = ROOT / "data" / "interim" / "naver_cache"            # 사장님 검색어로 생기는 캐시 (git에 안 올림, 검수 A5)
 EXAMPLE_CACHE_DIR = ROOT / "data" / "examples" / "naver_cache"   # 예시 1·2·예시 단어 고정 캐시 (먼저 읽고, 만료 없음)
 SAMPLE_KEYWORD = "필라테스"  # 캐시에 들어 있는 예시 키워드 (업종 예시일 뿐, 엔진은 업종을 가정하지 않음)
+CACHE_FORMAT = 2             # 돌려주는 표 형식 버전 (attrs: 받은 날짜·출처). 바꾸면 화면 캐시(st.cache_data)도 새로
 MAX_AGE_DAYS = 7             # 받은 지 7일 지난 캐시는 온라인일 때 다시 받음 (검수 A6). 예시 캐시는 제외
 
 # 입찰가를 촘촘하게 요청해야 계단 모양 곡선의 꺾이는 지점을 잡을 수 있음 (API는 한 번에 최대 100개)

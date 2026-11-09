@@ -80,12 +80,12 @@ ss = st.session_state
 
 
 @st.cache_data(show_spinner=False)
-def _load_keywords(hints: tuple, online: bool):
+def _load_keywords(hints: tuple, online: bool, fmt: int = 0):
     return ns.keyword_tool(list(hints), online=online)
 
 
 @st.cache_data(show_spinner=False)
-def _load_estimate(keyword: str, online: bool):
+def _load_estimate(keyword: str, online: bool, fmt: int = 0):
     return ns.bid_estimate(keyword, device=D.NAVER_DEVICE, online=online)
 
 
@@ -107,7 +107,7 @@ NAVER_FAILED = []   # 이번 실행에서 네이버 실패 문장 (실패는 캐
 
 def load_keywords(hints: tuple, online: bool):
     try:
-        return _load_keywords(hints, online)
+        return _load_keywords(hints, online, ns.CACHE_FORMAT)   # 결과 형식이 바뀌면 예전 화면 캐시를 쓰지 않게
     except ns.NaverUnavailable as e:
         NAVER_FAILED.append(e.message)
         return None
@@ -115,7 +115,7 @@ def load_keywords(hints: tuple, online: bool):
 
 def load_estimate(keyword: str, online: bool):
     try:
-        return _load_estimate(keyword, online)
+        return _load_estimate(keyword, online, ns.CACHE_FORMAT)
     except ns.NaverUnavailable as e:
         NAVER_FAILED.append(e.message)
         return None
