@@ -421,12 +421,13 @@ def repurchase_source(choice: Optional[str], measured: Optional[Dict] = None) ->
 
 @dataclass
 class Actuals:
-    """한 달 뒤 광고 리포트 실측: 네이버·메타 클릭과 쓴 돈, 실제 주문 수. 없는 값은 0."""
+    """한 달 뒤 광고 리포트 실측: 네이버·메타 클릭과 쓴 돈, 광고로 온 주문 수. 없는 클릭·돈은 0.
+    orders=None이면 '모름' → 구매 비율은 처음 가정(등급 C) 그대로 (D3: 판매처 전체 판매를 광고 주문으로 쓰지 않음). 0은 0건."""
     naver_clicks: float = 0.0
     naver_cost: float = 0.0
     meta_clicks: float = 0.0
     meta_cost: float = 0.0
-    orders: float = 0.0
+    orders: Optional[float] = None
 
 
 @dataclass
@@ -458,18 +459,21 @@ def _actual_world(act: Actuals, naver_curve, meta_cpc: float, params, grades: Di
         curve = ScaledCurve(naver_curve, act.naver_clicks / naver_curve.clicks(act.naver_cost))   # 같은 돈에 실제 클릭 ÷ 예상 클릭
     meta = act.meta_cost / act.meta_clicks if act.meta_clicks else meta_cpc
     clicks = act.naver_clicks + act.meta_clicks
-    cvr = act.orders / clicks if clicks else params.cvr
-    params2 = params.with_changes(steps=[("④ 구매 (실측)", min(max(cvr, 0.0), 1.0))])
-    return curve, meta, params2, next_month_grades(grades, bool(act.naver_clicks), bool(act.meta_clicks), bool(clicks))
+    measured = bool(clicks) and act.orders is not None          # 광고 주문 수를 모르면 구매 비율은 처음 가정 그대로 (D3)
+    if measured:
+        params = params.with_changes(steps=[("④ 구매 (실측)", min(max(act.orders / clicks, 0.0), 1.0))])
+    return curve, meta, params, next_month_grades(grades, bool(act.naver_clicks), bool(act.meta_clicks), measured)
 
 
 def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: Optional[str] = None,
-          actuals: Optional[Actuals] = None) -> Answer:
+          actuals: Optional[Actuals] = None, budget: Optional[float] = None) -> Answer:
     """코치 답 하나: 손익분기 → 시험 예산 3안 → 권장 예산으로 배분·100번 → 기본 선택 → 고른 예산으로 다시 나눔.
     pick: 사장님이 직접 고른 예산 키 (small·recommended·max·none). None이거나 없는 값이면 기본 선택 (결론이 '준비 먼저'면 none).
     actuals: 한 달 뒤 실측이 있으면 그 숫자로 곡선·클릭 비용·구매 비율을 바꿔 고른 예산을 다시 나누고 100번 (등급 A).
-    naver_curve: 네이버 예상 실적 곡선 (검색어 없음·불러오기 실패면 None → 모두 메타)."""
+    naver_curve: 네이버 예상 실적 곡선 (검색어 없음·불러오기 실패면 None → 모두 메타).
+    budget: actuals와 함께 줄 때 다음 달 배분 금액 (판정의 다음 달 예산, D4). 없으면 이번 달 고른 예산."""
     import numpy as np
+    next_budget = budget
     from . import defaults as D
     from . import montecarlo as MC
     be = breakeven(inputs.profit, repurchase.per_year)
@@ -486,6 +490,8 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
     pick = pick if pick in list(amount) + ["none"] else default_pick   # 권장이 최대보다 크면 '최대' 안이 없음
     budget = amount[pick if pick != "none" else "recommended"]
     if actuals is not None:
+        if next_budget is not None:
+            budget = float(next_budget)
         curve2, meta2, params, grades = _actual_world(actuals, naver_curve, meta_cpc, params, grades)
         split = split_budget(budget, curve2, meta2, params)
         mc = MC.run(split.channels, split.spends, params, grades)
@@ -504,6 +510,20 @@ def solve(inputs: CoachInputs, naver_curve, repurchase: RepurchaseSource, pick: 
                   grades=grades, params=params, cpc=cpc, need=need, need_year=need_year, cpc_src=cpc_src,
                   ch_name="메타 광고" if split.meta.spend > 0 else "네이버 검색광고", prediction=prediction,
                   repurchase=repurchase)
+
+
+def report_orders_default(coupon: Optional[float]) -> Optional[int]:
+    """한 달 뒤 '광고로 온 주문 수' 기본값 (D3): 쿠폰·전용 링크 판매 수만. 없으면 None(빈칸). 판매처 전체 판매는 쓰지 않음."""
+    return int(coupon) if coupon is not None else None
+
+
+def next_month_budget(verdict: Optional[Verdict], this_month: float) -> Tuple[float, str]:
+    """다음 달 배분 금액과 제목에 쓸 기준 (D4): 판정이 있고 다음 달 예산이 있으면 그 금액(늘리기 +20%, 보류면 고친 뒤 다시 시험할 금액),
+    없으면 이번 달 예산."""
+    from .insights import won
+    if verdict is not None and verdict.next_budget:
+        return float(verdict.next_budget), f"판정대로 {won(verdict.next_budget)}"
+    return float(this_month), f"이번 달 예산 {won(this_month)} 기준"
 
 
 def split_reason(split: Split, kw: str) -> str:

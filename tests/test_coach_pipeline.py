@@ -58,3 +58,45 @@ def test_meta_fallback_cpc_grade_is_read_from_one_place():
     assert D.INPUT_GRADES["META_FALLBACK_CPC"][0] == "D"
     assert C.mc_grades(False)["cpc_meta"] == D.INPUT_GRADES["META_FALLBACK_CPC"][0]
     assert C.mc_grades(True)["cpc_meta"] == "A"
+
+
+# ── 배포 앱 점검 D3·D4 (11/10) ──
+def _protein():
+    from src.engine import NaverCurve, naver_source as ns
+    est = ns.bid_estimate("프로틴쉐이크", device=D.NAVER_DEVICE, online=False)
+    inp = C.CoachInputs(79_000, 39_500, 500_000, "프로틴쉐이크")
+    return inp, NaverCurve({"프로틴쉐이크": est}), C.repurchase_source("매달(정기)")
+
+
+def test_d3_orders_default_is_coupon_only():
+    """판매처 전체 판매(광고 외 포함)는 기본값으로 쓰지 않음: 쿠폰 없으면 빈칸."""
+    assert C.report_orders_default(None) is None          # 판매처 61건만 있고 쿠폰 없음 → 빈칸
+    assert C.report_orders_default(16) == 16 and C.report_orders_default(0) == 0
+
+
+def test_d3_unknown_orders_keep_assumed_rate():
+    inp, curve, rep = _protein()
+    a = C.solve(inp, curve, rep)
+    unknown = C.solve(inp, curve, rep, pick=a.pick, actuals=C.Actuals(92, 133_400, 280, 364_000, None))
+    assert unknown.params.cvr == pytest.approx(a.params.cvr) and unknown.grades["cvr"] == "C"   # 가정 그대로 (등급 C)
+    coupon = C.solve(inp, curve, rep, pick=a.pick, actuals=C.Actuals(92, 133_400, 280, 364_000, 16))
+    assert coupon.params.cvr == pytest.approx(16 / 372) and coupon.grades["cvr"] == "A"
+    zero = C.solve(inp, curve, rep, pick=a.pick, actuals=C.Actuals(92, 133_400, 280, 364_000, 0))
+    assert zero.params.cvr == 0 and zero.grades["cvr"] == "A"                                      # 직접 0 → 0건으로 계산
+
+
+def test_d4_next_month_split_uses_verdict_budget():
+    inp, curve, rep = _protein()
+    a = C.solve(inp, curve, rep)
+    up = C.Verdict(step=1, level="success", title="늘리기", detail="", next_budget=596_880.0)
+    amount, label = C.next_month_budget(up, a.budget)
+    assert amount == 596_880.0 and "판정대로" in label
+    nxt = C.solve(inp, curve, rep, pick=a.pick, budget=amount, actuals=C.Actuals(92, 133_400, 280, 364_000, 16))
+    assert nxt.split.total == pytest.approx(596_880.0)                    # 다시 나눈 합계 = 판정의 다음 달 예산
+    amount, label = C.next_month_budget(None, a.budget)
+    assert amount == a.budget and "이번 달 예산" in label
+    same = C.solve(inp, curve, rep, pick=a.pick, budget=amount, actuals=C.Actuals(92, 133_400, 280, 364_000, 16))
+    assert same.split.total == pytest.approx(a.budget)
+    # 판정은 인자로 넘김 (상태 키에 숨기지 않음)
+    main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
+    assert "report_section(a, v)" in main and "def report_section(a: dict, verdict=None)" in main

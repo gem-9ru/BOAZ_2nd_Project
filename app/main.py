@@ -430,8 +430,9 @@ def plan_upload(key: str):
     st.rerun()
 
 
-def report_section(a: dict):
-    """한 달 뒤 재계산 (노션 Q4): 네이버·메타 리포트 → 진단, 과대 집계율, 예측 오차율, 다음 달 배분."""
+def report_section(a: dict, verdict=None):
+    """한 달 뒤 재계산 (노션 Q4): 네이버·메타 리포트 → 진단, 과대 집계율, 예측 오차율, 다음 달 배분.
+    verdict: 같은 화면 판정(CO.judge). 있으면 다음 달 배분을 판정의 다음 달 예산으로 (D4), 없으면 이번 달 예산."""
     st.divider()
     st.markdown("#### 광고 리포트로 다시 계산하기 (네이버·메타)")
     pred = ss.get("plan_pred") or a["prediction"]
@@ -474,8 +475,9 @@ def report_section(a: dict):
     if not reps:
         st.caption("리포트를 올리면 무엇이 문제인지, 예측이 얼마나 맞았는지, 다음 달엔 어떻게 나눌지 알려 드려요.")
         return
-    orders = st.number_input("이번 달 실제 주문 수 (판매처 관리자 기준, 광고 외 포함이면 광고로 온 것만 추정해 넣기)", min_value=0,
-                             value=int(ss.get("q_coupon") or ss.get("q_total") or 0), step=1, key="rep_orders")
+    # 기본값은 쿠폰·전용 링크 판매 수만 (판매처 전체 판매에는 광고 외 손님이 섞임, D3). 없으면 빈칸 = 모름, 0은 0건
+    orders = st.number_input("이번 달 광고로 온 주문 수 (쿠폰·전용 링크 기준, 모르면 비워 두기)", min_value=0,
+                             value=CO.report_orders_default(ss.get("q_coupon")), step=1, key="rep_orders")
     by = {"naver": [r for r in reps if r["platform"] == "naver"], "meta": [r for r in reps if r["platform"] == "meta"]}
     sumk = lambda rs, k: sum((r.get(k) or 0) for r in rs)  # noqa: E731
     rows = []
@@ -504,26 +506,32 @@ def report_section(a: dict):
     rep_conv = sumk(reps, "conversions")
     total_clicks, total_cost = sumk(reps, "clicks"), sumk(reps, "cost")
     m1, m2, m3 = st.columns(3)
-    oc = RP.over_count_rate(rep_conv, orders)
+    oc = RP.over_count_rate(rep_conv, orders) if orders is not None else None
     m1.metric("플랫폼 과대 집계율", f"{oc:+.0%}" if oc is not None else "-",
               help="(네이버 + 메타 리포트 전환 − 실제 주문) ÷ 실제 주문. 두 광고가 같은 주문을 각자 자기 몫으로 세면 커져요.")
-    e_new = RP.prediction_error(pred.get("new"), orders)
+    e_new = RP.prediction_error(pred.get("new"), orders) if orders is not None else None
     m2.metric("예측 오차율 (주문)", f"{e_new:.0%}" if e_new is not None else "-", help="|예측 − 실제| ÷ 실제")
     e_clk = RP.prediction_error(pred.get("clicks"), total_clicks)
     m3.metric("예측 오차율 (클릭)", f"{e_clk:.0%}" if e_clk is not None else "-", help="|예측 − 실제| ÷ 실제")
-    st.caption(f"리포트 전환 합 {rep_conv:,.0f}건 vs 실제 주문 {orders:,}건. 예측 주문 {pred.get('new', 0):.1f}건, 예측 클릭 {pred.get('clicks', 0):,.0f}번 "
+    if orders is None:
+        st.info("광고로 온 주문 수를 넣으면 실측 구매율로 다시 계산해요 (판매처 전체 판매에는 광고 외 손님이 섞여 있어요).", icon="✏️")
+    st.caption(f"리포트 전환 합 {rep_conv:,.0f}건 vs 광고로 온 주문 {'-' if orders is None else f'{orders:,}건'}. "
+               f"예측 주문 {pred.get('new', 0):.1f}건, 예측 클릭 {pred.get('clicks', 0):,.0f}번 "
                f"vs 실제 클릭 {total_clicks:,.0f}번. 과대 집계율이 크면 리포트 전환보다 실제 주문으로 판단하세요.")
     # 다음 달 배분: 실측 클릭 비용·구매 비율로 다시 계산 (등급 A)
     nav_clk, nav_cost = sumk(by["naver"], "clicks"), sumk(by["naver"], "cost")
     meta_clk, meta_cost = sumk(by["meta"], "clicks"), sumk(by["meta"], "cost")
-    nxt = CO.solve(a["inputs"], a["naver_curve"], a["repurchase"], pick=a["pick"],
+    amount, basis_label = CO.next_month_budget(verdict, a["budget0"])     # 판정대로 / 이번 달 예산 (D4)
+    nxt = CO.solve(a["inputs"], a["naver_curve"], a["repurchase"], pick=a["pick"], budget=amount,
                    actuals=CO.Actuals(nav_clk, nav_cost, meta_clk, meta_cost, orders))   # 재구매 등급은 처음 그대로 (B2)
-    cvr2 = orders / total_clicks if total_clicks else cparams.cvr
+    cvr2 = nxt.params.cvr
     with st.container(border=True):
-        st.markdown(f"**다음 달 배분 (실측으로 다시 계산): 네이버 {won(nxt.split.naver_spend)} · 메타 {won(nxt.split.meta.spend)}**")
+        st.markdown(f"**다음 달 배분 ({basis_label}, 실측으로 다시 계산): 네이버 {won(nxt.split.naver_spend)} · 메타 {won(nxt.split.meta.spend)}**")
         st.markdown(f"실측 숫자로 다시 해 보면 100번 중 **{nxt.mc['wins']}번** 남아요 (처음 예측 {pred.get('wins', a['mc']['wins']):.0f}번). "
                     f"→ {MC.ACTION_TEXT[MC.action(nxt.mc['wins'])]}")
-        st.caption(f"실측: 네이버 클릭 {won(nav_cost / nav_clk) if nav_clk else '-'}, 메타 클릭 {won(nxt.split.meta.cpc)}, 누른 사람 중 산 비율 {cvr2:.2%} (등급 A). "
+        st.caption(f"실측: 네이버 클릭 {won(nav_cost / nav_clk) if nav_clk else '-'}, 메타 클릭 {won(nxt.split.meta.cpc)}, "
+                   + (f"누른 사람 중 산 비율 {cvr2:.2%} (등급 A). " if nxt.grades["cvr"] == "A"
+                      else f"누른 사람 중 산 비율은 처음 가정 {cvr2:.2%} (등급 C, 광고 주문 수를 넣으면 실측으로). ")
                    + ("재구매는 주문 내역 실측(C)이에요. 1년으로 늘린 부분이 곡선이라 몇 달 더 쌓이면 바뀌어요." if nxt.grades["retention"] == "C"
                       else "재구매는 아직 가정(D)이라 몇 달 더 쌓이면 바뀌어요."))
 
@@ -930,7 +938,8 @@ with coach_tab:
             with s3:
                 total_n = _num_input("이번 달 전체 판매 수", "q_total", min_value=0, max_value=10_000_000, step=1,
                                      help="판매처 통계 파일을 올리면 자동으로 채워집니다.")
-            if spent is not None and clicks_in is not None and any(v is not None for v in (coupon_n, report_n, total_n)):
+            v = None                       # 판정 (있으면 아래 '다음 달 배분'이 그 예산으로 다시 나눔, D4)
+            if spent is not None and clicks_in is not None and any(x is not None for x in (coupon_n, report_n, total_n)):
                 basis = CO.ad_sales(coupon_n, report_n, total_n, baseline)
                 v = CO.judge(int(days), float(spent), float(clicks_in), basis, be, a["cpc"], a["ch_name"])
                 if v.step == 0:
@@ -993,7 +1002,7 @@ with coach_tab:
                                        if ss.get("coach_prev_rate") is not None else ""))
             else:
                 st.caption("쓴 돈, 클릭 수, 판매 수(셋 중 아는 것)를 넣으면 판정합니다.")
-            report_section(a)
+            report_section(a, v)
             orders_section()
         if ans is not None:
             st.caption("광고를 몇 달 해 보고 더 깊게 보고 싶으면 아래 **더 보기**를 펼쳐 보세요. 위 숫자(판매가·남는 돈·시험 예산·검색어)로 미리 채워져 있어요.")
