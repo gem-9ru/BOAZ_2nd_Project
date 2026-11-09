@@ -27,7 +27,7 @@ COPY_KINDS = {"title": "naver_title", "pl_title": "naver_title", "description": 
 
 def card_source_md(c) -> str:
     links = " · ".join(f"[출처 {i + 1}]({u})" for i, u in enumerate(c.sources) if u.startswith("http"))
-    return f"{c.check} {SR.CHECK_WORDS.get(c.check, '')} · `{c.id}` {c.title}" + (f" · {links}" if links else "")
+    return f"{c.check} {SR.CHECK_WORDS.get(c.check, '')} · `{c.id}` {SR.md_safe(c.title)}" + (f" · {links}" if links else "")
 
 
 def phase_of(ss) -> str:
@@ -97,11 +97,11 @@ def _item_widget(ss, media: str, it: AS.Item, default):
     else:
         st.text_input(label, key=wk, placeholder="비워 두면 시트에도 빈칸" if it.source == AS.DRAFT else None)
     if it.note:
-        st.caption(it.note)
+        st.caption(SR.md_safe(it.note))
     kind = COPY_KINDS.get(it.key)
     if kind and ss.get(wk):
         for msg in AS.check_copy(str(ss[wk]), kind):
-            st.caption("⚠️ " + msg)
+            st.caption("⚠️ " + SR.md_safe(msg))
 
 
 def _copy_box(ss, step: AS.Step, client):
@@ -126,18 +126,27 @@ def _copy_box(ss, step: AS.Step, client):
                 fields = ([("naver_title", "네이버 제목"), ("naver_desc", "네이버 설명")] if step.media == "naver"
                           else [("meta_headline", "메타 제목"), ("meta_text", "메타 기본 문구")])
                 for k, name in fields:
-                    st.markdown(f"**{name}**: {d.get(k, '')}")
+                    st.markdown(f"**{name}**: {SR.md_safe(d.get(k, ''))}")
                     for msg in AS.check_copy(d.get(k, ""), k):
-                        st.caption("⚠️ " + msg)
-                if st.button("이 초안 쓰기", key=f"copy_use_{step.media}_{step.key}_{i}"):
-                    keys = {it.key for it in step.items}
-                    pre = "pl_" if any(k.startswith("pl_") for k in keys) else ""
-                    put = ({pre + "title": d["naver_title"], pre + "description": d["naver_desc"], "promo1": d["naver_title"][:AS.NAVER_PROMO1_MAX]}
-                           if step.media == "naver" else {"headline": d["meta_headline"], "primary_text": d["meta_text"]})
-                    for k, v in put.items():
-                        if k in keys:
-                            ss[_wkey(step.media, k)] = v
-                    st.rerun()
+                        st.caption("⚠️ " + SR.md_safe(msg))
+                # 값은 버튼 콜백에서 넣음: 칸이 이미 그려진 뒤 같은 실행에서 칸 값을 바꾸면 Streamlit이 멈춤 (D1)
+                st.button("이 초안 쓰기", key=f"copy_use_{step.media}_{step.key}_{i}", on_click=use_draft, args=(ss, step, d))
+
+
+def draft_values(step: AS.Step, d: Dict[str, str]) -> Dict[str, str]:
+    """초안 하나 → 이 단계 칸에 넣을 값 {위젯 키: 값} (이 단계에 있는 칸만)."""
+    keys = {it.key for it in step.items}
+    pre = "pl_" if any(k.startswith("pl_") for k in keys) else ""
+    put = ({pre + "title": d.get("naver_title", ""), pre + "description": d.get("naver_desc", ""),
+            "promo1": d.get("naver_title", "")[:AS.NAVER_PROMO1_MAX]}
+           if step.media == "naver" else {"headline": d.get("meta_headline", ""), "primary_text": d.get("meta_text", "")})
+    return {_wkey(step.media, k): v for k, v in put.items() if k in keys}
+
+
+def use_draft(ss, step: AS.Step, d: Dict[str, str]):
+    """'이 초안 쓰기' 콜백 (다음 실행이 칸을 그리기 전에 값을 넣음)."""
+    for wk, v in draft_values(step, d).items():
+        ss[wk] = v
 
 
 def _step_guide(a: dict, ss, plan: AS.SettingsPlan, phase: str, client):
@@ -150,21 +159,21 @@ def _step_guide(a: dict, ss, plan: AS.SettingsPlan, phase: str, client):
     pos = min(max(ss.get(pk, 0), 0), len(steps) - 1)
     step = steps[pos]
     st.progress((pos + 1) / len(steps))
-    st.markdown(f"**{PHASE_NAMES[phase]} {pos + 1}/{len(steps)}단계 · {step.title}**  \n광고 관리자에서 찾을 곳: {step.where}")
+    st.markdown(f"**{PHASE_NAMES[phase]} {pos + 1}/{len(steps)}단계 · {SR.md_safe(step.title)}**  \n광고 관리자에서 찾을 곳: {SR.md_safe(step.where)}")
     for it in step.items:
         _item_widget(ss, phase, it, _default_of(ss, phase, it))
     if any(it.key in COPY_KINDS for it in step.items):
         _copy_box(ss, step, client)
     if step.note:
-        st.caption("💡 " + step.note)
+        st.caption("💡 " + SR.md_safe(step.note))
     if step.bulk:
-        st.caption("📦 " + step.bulk)
+        st.caption("📦 " + SR.md_safe(step.bulk))
     cards = [SR.by_id(c) for c in step.cards if SR.by_id(c)]
     if cards:
         with st.expander(f"이 단계 근거 카드 {len(cards)}장"):
             for c in cards:
                 body = c.body if len(c.body) <= 220 else c.body[:220].rsplit(" ", 1)[0] + "…"
-                st.markdown(f"**{c.title}** {c.check}  \n{body}")
+                st.markdown(f"**{SR.md_safe(c.title)}** {c.check}  \n{SR.md_safe(body)}")
                 st.caption(card_source_md(c))
     b1, b2, b3 = st.columns([1, 2, 2])
     if b1.button("← 이전", key=f"setup_prev_{phase}", disabled=pos == 0):
@@ -290,7 +299,7 @@ def render(a: dict, ss, stores: List[str], price: Optional[float]):
     ss["_set_base"] = {f"{s.media}.{it.key}": it.value for s in base.steps for it in s.items}
     plan = settings_plan(a, ss, stores)
     for w in plan.warnings:
-        st.caption("⚠️ " + w)
+        st.caption("⚠️ " + SR.md_safe(w))
     step = _step_guide(a, ss, plan, phase, client)
     plan = settings_plan(a, ss, stores)          # 이번에 고친 칸까지 반영
     edited = [f"{s.media}.{it.key}" for s in plan.steps for it in s.items
@@ -323,7 +332,7 @@ def _show_result(a: dict, ss, plan: AS.SettingsPlan):
         return
     if res.get("kind") == "coach":
         with st.container(border=True):
-            st.markdown(res["coach"])
+            st.markdown(SR.md_safe(res["coach"]))
             st.caption("🧮 코치 배분 숫자로 답했어요 (2단계 '답 보기'와 같은 계산).")
         return
     if not res["found"]:
@@ -333,7 +342,7 @@ def _show_result(a: dict, ss, plan: AS.SettingsPlan):
         st.warning(res["note"], icon="📝")
     if res["answer"]:
         with st.container(border=True):
-            st.markdown(res["answer"])
+            st.markdown(SR.md_safe(res["answer"]))
             for cid in res["used"]:
                 c = SR.by_id(cid)
                 if c:
@@ -347,7 +356,7 @@ def _show_result(a: dict, ss, plan: AS.SettingsPlan):
         with st.container(border=True):
             if mine:
                 st.markdown("🧮 **내 숫자**: " + " · ".join(mine))
-            st.markdown(f"**{s['title']}** {s['check']}  \n{s['body']}")
+            st.markdown(f"**{SR.md_safe(s['title'])}** {s['check']}  \n{SR.md_safe(s['body'])}")
             if s["screen"]:
-                st.caption("화면에서 찾을 곳: " + s["screen"])
+                st.caption("화면에서 찾을 곳: " + SR.md_safe(s["screen"]))
             st.caption(card_source_md(c))

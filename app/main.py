@@ -251,7 +251,7 @@ def chat_intake():
             st.markdown("안녕하세요! 무엇을, 어디서, 얼마에 파시나요?")
     for m in hist:
         with st.chat_message(m["role"]):
-            st.markdown(m["content"])
+            st.markdown(SR.md_safe(m["content"]))
     said = st.chat_input("여기에 적어 주세요")
     if said:
         hist.append({"role": "user", "content": said})
@@ -313,14 +313,14 @@ def ads_guide(a: dict):
                 st.caption("이번 배분에서는 네이버 예산이 없어요. 검색어를 넣으면 네이버 예상 실적으로 다시 나눠요.")
             for i, s in enumerate(steps, 1):
                 vals = " · ".join(f"{it.label} **{AS.show(it.value)}** {it.source}" for it in s.items if it.value not in ("", []))
-                st.markdown(f"{i}. **{s.title}**{src(s.cards[0] if s.cards else None)}  \n{vals}")
+                st.markdown(f"{i}. **{SR.md_safe(s.title)}**{src(s.cards[0] if s.cards else None)}  \n{SR.md_safe(vals)}")
             st.caption("아래 '세팅 도우미'에서 단계별로 고치고 시트로 받을 수 있어요.")
         with g_m:
             st.toggle("내 사이트(자사몰)에 메타 픽셀 구매 이벤트를 설치했다", key="pixel_ready", disabled=not plan.own_site,
                               help="스마트스토어에 픽셀을 달 수 있는지는 공식 확인 못 함이라, 스마트스토어만 쓰면 이 설정과 관계없이 트래픽을 권해요.")
             mp = plan.meta_plan
             if mp["objective"]:
-                st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{mp['why']}")
+                st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{SR.md_safe(mp['why'])}")
                 if mp["recommended_daily"]:
                     st.markdown(f"- 하루 예산 {won(mp['daily'])} (월 ÷ 30.4). 메타 권장은 결과 1개 평균 비용의 {GD.DAILY_BUDGET_X}배 이상 "
                                 f"= **{won(mp['recommended_daily'])}** ✅{src('meta-bud-003')}"
@@ -333,7 +333,7 @@ def ads_guide(a: dict):
                                        for o, who, when, chk in GD.META_OBJECTIVES]), hide_index=True, use_container_width=True)
             st.caption("목표 설명 ✅" + src("meta-obj-001") + " · 스마트스토어 픽셀 ❓" + src("meta-obj-003"))
             for note, chk, cid in GD.META_NOTES:
-                st.markdown(f"- {note} {chk}{src(cid)}")
+                st.markdown(f"- {SR.md_safe(note)} {chk}{src(cid)}")
         with g_a:
             st.dataframe(pd.DataFrame([{"항목": k, "자동(어드밴티지+)": auto, "수동": man, "처음엔": first, "확인": chk}
                                        for k, auto, man, first, chk in GD.AUTO_VS_MANUAL]), hide_index=True, use_container_width=True)
@@ -1807,7 +1807,7 @@ def help_chat(ctx):
                 st.markdown("안녕하세요! 광고 용어 뜻, 지금 계산된 내 숫자, 숫자의 출처, 무엇부터 할지 물어보세요.")
         for role, text in chat[-8:]:
             with st.chat_message(role, avatar="💬" if role == "assistant" else "🙂"):
-                st.markdown(text)
+                st.markdown(SR.md_safe(text))      # 물결표 두 개가 취소선이 되지 않게 (D2)
     if chat and st.button("대화 지우기", key="help_clear"):
         ss["help_chat"] = []
         st.rerun(scope="fragment")

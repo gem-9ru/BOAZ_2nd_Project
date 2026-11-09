@@ -211,3 +211,38 @@ def test_screen_keeps_only_owner_edits():
     assert p.value("naver", "daily_budget") == base.value("naver", "daily_budget")
     V.restore_settings(ss, {"naver.bid": 80, "meta.age": "25", "_edited": ["naver.bid"]})
     assert ss[V._wkey("naver", "bid")] == 80 and V._wkey("meta", "age") not in ss
+
+
+@pytest.mark.parametrize("media,kw", [("meta", None), ("naver", None), ("naver", "pl")])
+def test_use_draft_fills_fields_via_callback(media, kw):
+    """D1: '이 초안 쓰기'는 버튼 콜백에서 값을 넣고(칸을 그리기 전), 그 값이 칸과 세팅값 시트에 들어감."""
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
+    import setup_view as V
+    a = _answer()
+    ans = {"answer": a, "kw": "원두커피", "split": a.split}
+    ss = {"setup_media": "both", "setup_powerlink": kw == "pl"}
+    plan = V.settings_plan(ans, ss, ["스마트스토어"])
+    key = {"meta": "creative", "naver": "pl_creative" if kw == "pl" else "creative"}[media]
+    step = next(s for s in plan.for_media(media) if s.key == key)
+    d = {"naver_title": "수제 마카롱 6구", "naver_desc": "매일 굽는 수제 마카롱, 선물 포장해 드려요",
+         "meta_text": "매일 굽는 수제 마카롱. 선물 포장해 드려요. 지금 스토어에서 확인해 보세요.", "meta_headline": "수제 마카롱 6구"}
+    # 칸을 한 번 그린 상태 (기본값 기억) → 콜백 → 다음 실행
+    ss["_set_defaults"] = {}
+    for it in step.items:
+        wk = V._wkey(media, it.key)
+        ss[wk] = V._to_widget(it.value)
+        ss["_set_defaults"][wk] = ss[wk]
+    V.use_draft(ss, step, d)
+    after = V.settings_plan(ans, ss, ["스마트스토어"])
+    if media == "meta":
+        assert after.value("meta", "headline") == d["meta_headline"] and after.value("meta", "primary_text") == d["meta_text"]
+        assert after.item("meta", "headline").source == AS.DRAFT
+    elif kw == "pl":
+        assert after.value("naver", "pl_title") == d["naver_title"] and after.value("naver", "pl_description") == d["naver_desc"]
+    else:
+        assert after.value("naver", "promo1") == d["naver_title"][:AS.NAVER_PROMO1_MAX]
+    rows = after.rows()
+    assert any(r["값"] in (d["meta_headline"], d["naver_title"][:AS.NAVER_PROMO1_MAX], d["naver_title"]) for r in rows)
+    # 화면 코드가 같은 실행에서 칸 값을 직접 바꾸지 않음 (Streamlit 예외 원인)
+    src = (Path(__file__).resolve().parents[1] / "app" / "setup_view.py").read_text(encoding="utf-8")
+    assert "on_click=use_draft" in src

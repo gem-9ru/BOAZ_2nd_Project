@@ -338,6 +338,11 @@ ANSWER_SCHEMA = {
 }
 
 
+def md_safe(text) -> str:
+    """화면(마크다운)에 그릴 글: '1~2일 … 1~2주'처럼 물결표가 둘이면 취소선이 되므로 '~'를 '\\~'로 (카드 원문은 그대로, D2)."""
+    return re.sub(r"(?<!\\)~", r"\\~", str(text or ""))
+
+
 def card_text(c: Card) -> str:
     return (f"[{c.id}] {c.title}\n매체: {c.media} | 단계: {c.stage}\n화면 단서: {c.screen}\n"
             f"확인: {c.check} {CHECK_WORDS.get(c.check, '')}\n코치 연결: {c.coach}\n본문: {c.body}")

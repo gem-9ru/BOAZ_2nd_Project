@@ -183,3 +183,12 @@ def test_card_cache_follows_card_files(tmp_path):
                     encoding="utf-8")
     os.utime(path, (path.stat().st_atime, path.stat().st_mtime + 5))
     assert len(SR.load_cards(tmp_path)) == n + 1
+
+
+def test_md_safe_keeps_tildes():
+    """D2: '1~2일 … 1~2주'를 마크다운으로 그려도 취소선이 되지 않게 (물결표 유지, 두 번 해도 같음)."""
+    s = SR.md_safe("1~2일 … 1~2주")
+    assert s == "1\\~2일 … 1\\~2주" and SR.md_safe(s) == s
+    assert SR.md_safe(None) == "" and "~" not in SR.md_safe("물결 없음")
+    # 카드 원문은 그대로 (화면에서만 바꿈)
+    assert "1~2" in SR.by_id("naver-setup-020").body

@@ -261,5 +261,5 @@ def _setup_card(question: str):
     c = found[0][0]
     body = c.body if len(c.body) <= 220 else c.body[:220].rsplit(" ", 1)[0] + "…"
     src = next((u for u in c.sources if u.startswith("http")), "")
-    return (f"광고 관리자 세팅 자료에서 찾았어요: **{c.title}** {c.check} {SR.CHECK_WORDS.get(c.check, '')}  \n{body}"
+    return (f"광고 관리자 세팅 자료에서 찾았어요: **{SR.md_safe(c.title)}** {c.check} {SR.CHECK_WORDS.get(c.check, '')}  \n{SR.md_safe(body)}"
             + (f"  \n[출처]({src})" if src else ""))
