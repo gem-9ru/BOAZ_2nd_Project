@@ -324,17 +324,6 @@ class Split:
     def total(self) -> float:
         return sum(self.spends)
 
-    # 이전 단계용: 예전 dict 키로도 읽힘 (main.py 호출부를 속성으로 옮긴 뒤 지움, MVP 7e 2단계 정리)
-    _OLD_KEYS = {"naver": lambda s: s.naver_spend, "meta": lambda s: s.meta.spend,
-                 "meta_cpc": lambda s: s.meta.cpc, "has_naver": lambda s: s.has_naver, "spends": lambda s: s.spends}
-
-    def __getitem__(self, key: str):
-        if key in self._OLD_KEYS:
-            return self._OLD_KEYS[key](self)
-        if key in ("channels", "clicks", "cpc", "naver_capacity", "naver_marginal_cpc", "table"):
-            return getattr(self, key)
-        raise KeyError(key)
-
 
 def split_budget(budget: float, naver_curve, meta_cpc: float, params, meta_sat: Optional[float] = None) -> Split:
     """시험 예산을 네이버·메타에 나눔. 같은 돈으로 새 손님이 가장 많은 배분 (optimize_allocation 재사용, 예산 전부 씀):

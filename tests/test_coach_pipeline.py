@@ -23,11 +23,11 @@ def test_b1_rates_follow_the_split_actually_used():
     be = C.breakeven(7_000, 6)
     rec = C.split_budget(210_000, _naver_curve(), 1_300.0, params)
     small = C.split_budget(70_000, _naver_curve(), 1_300.0, params)
-    assert small["cpc"] != pytest.approx(rec["cpc"])               # 예산이 다르면 평균 클릭 비용이 다름
+    assert small.cpc != pytest.approx(rec.cpc)               # 예산이 다르면 평균 클릭 비용이 다름
     cpc, need, need_year = C.rates_for(small, be)
-    assert cpc == pytest.approx(small["cpc"])
-    assert need == pytest.approx(C.required_rate(small["cpc"], be.first))
-    assert need_year == pytest.approx(C.required_rate(small["cpc"], be.year))
+    assert cpc == pytest.approx(small.cpc)
+    assert need == pytest.approx(C.required_rate(small.cpc, be.first))
+    assert need_year == pytest.approx(C.required_rate(small.cpc, be.year))
 
 
 def test_b2_next_month_keeps_measured_repurchase_grade():

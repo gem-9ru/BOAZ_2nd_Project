@@ -25,7 +25,7 @@ def _coach(name: str, with_naver: bool = True):
     options = CO.budget_options(be.first, max_budget)
     budget = next(o["amount"] for o in options if o["key"] == "recommended")
     split = CO.split_budget(budget, curve, float(D.NAVER_FALLBACK_CPC), params)
-    mc = MC.run(split["channels"], split["spends"], params, CO.mc_grades(False))
+    mc = MC.run(split.channels, split.spends, params, CO.mc_grades(False))
     return be, budget, split, mc
 
 
@@ -45,9 +45,9 @@ def test_example_split_and_odds_stay_the_same(name):
     be, budget, split, mc = _coach(name)
     budget_x, naver, meta, cpc, wins, p10, p50, p90, pick = EXPECTED[name]
     assert budget == budget_x
-    assert split["naver"] == pytest.approx(naver, abs=1)
-    assert split["meta"] == pytest.approx(meta, abs=1)
-    assert split["cpc"] == pytest.approx(cpc, abs=0.1)
+    assert split.naver_spend == pytest.approx(naver, abs=1)
+    assert split.meta.spend == pytest.approx(meta, abs=1)
+    assert split.cpc == pytest.approx(cpc, abs=0.1)
     assert mc["wins"] == wins
     assert (mc["p10"], mc["p50"], mc["p90"]) == pytest.approx((p10, p50, p90), abs=1)
     assert CO.default_budget_pick(MC.action(mc["wins"])) == pick
@@ -57,7 +57,7 @@ def test_example_split_and_odds_stay_the_same(name):
 def test_example_meta_only_odds_stay_the_same(name):
     _, _, split, mc = _coach(name, with_naver=False)
     wins, p10, p50, p90 = EXPECTED_META_ONLY[name]
-    assert split["naver"] == 0 and not split["has_naver"]
+    assert split.naver_spend == 0 and not split.has_naver
     assert mc["wins"] == wins
     assert (mc["p10"], mc["p50"], mc["p90"]) == pytest.approx((p10, p50, p90), abs=1)
 

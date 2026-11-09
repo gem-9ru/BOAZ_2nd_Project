@@ -311,10 +311,10 @@ def setup_numbers(a: dict) -> dict:
     sp = a["split"]
     new = max(a["prediction"]["new"], 1e-9)
     only_ss = "스마트스토어" in stores and "자사몰" not in stores
-    mp = GD.meta_plan(sp["meta"], a["budget0"] / new, bool(ss.get("pixel_ready")), stores, sp["meta_cpc"])
-    return {"naver": sp["naver"], "naver_daily": GD.daily_budget(sp["naver"]), "meta": sp["meta"], "meta_daily": mp["daily"],
+    mp = GD.meta_plan(sp.meta.spend, a["budget0"] / new, bool(ss.get("pixel_ready")), stores, sp.meta.cpc)
+    return {"naver": sp.naver_spend, "naver_daily": GD.daily_budget(sp.naver_spend), "meta": sp.meta.spend, "meta_daily": mp["daily"],
             "meta_rec_daily": mp["recommended_daily"], "meta_objective": mp["objective"],
-            "bid": GD.naver_bid_at(sp["channels"][0].curve, sp["naver"]) if sp["has_naver"] else None,
+            "bid": GD.naver_bid_at(sp.naver.curve, sp.naver_spend) if sp.has_naver else None,
             "shopping_min": GD.NAVER_MIN_BID["쇼핑검색"], "smartstore": only_ss or "스마트스토어" in stores,
             "keyword": a["kw"], "cpa": a["budget0"] / new, "be_first": a["be"].first,
             "no_ad": a["default_pick"] == "none"}
@@ -324,7 +324,7 @@ def setup_ask(a: dict, q: str, img=None):
     """질문 → 카드 찾기 → (키 있으면) 답. 결과는 세션에 남겨 다시 그릴 때 씀."""
     found = SR.find(q)
     sp = a["split"]
-    ctx = {"naver": sp["naver"], "meta": sp["meta"], "keyword": a["kw"], "price": price, "wins": a["mc"]["wins"], "stores": stores}
+    ctx = {"naver": sp.naver_spend, "meta": sp.meta.spend, "keyword": a["kw"], "price": price, "wins": a["mc"]["wins"], "stores": stores}
     res = {"q": q, "found": [c.id for c, _ in found], "answer": None, "used": [], "note": None}
     client = CI.make_client()
     if found and client is not None:
@@ -398,18 +398,18 @@ def ads_guide(a: dict):
     with st.expander("🛠️ 광고 관리자에서 이렇게 설정하세요 (네이버 첫 세팅 · 메타 목적 · 자동 vs 수동)"):
         g_n, g_m, g_a = st.tabs(["네이버 첫 세팅", "메타 목적 고르기", "자동 vs 수동"])
         with g_n:
-            if sp["naver"] <= 0:
+            if sp.naver_spend <= 0:
                 st.caption("이번 배분에서는 네이버 예산이 없어요. 검색어를 넣으면 네이버 예상 실적으로 다시 나눠요.")
             else:
-                bid = GD.naver_bid_at(sp["channels"][0].curve, sp["naver"]) if sp["has_naver"] else None
-                for i, it in enumerate(GD.naver_checklist(sp["naver"], bid, a["kw"], stores), 1):
+                bid = GD.naver_bid_at(sp.naver.curve, sp.naver_spend) if sp.has_naver else None
+                for i, it in enumerate(GD.naver_checklist(sp.naver_spend, bid, a["kw"], stores), 1):
                     st.markdown(f"{i}. **{it['step']}** {it['check']}{src(it.get('card'))}  \n{it['detail']}")
         with g_m:
             only_ss = "스마트스토어" in stores and "자사몰" not in stores
             pixel = st.toggle("내 사이트(자사몰)에 메타 픽셀 구매 이벤트를 설치했다", key="pixel_ready", disabled=only_ss,
                               help="스마트스토어에 픽셀을 달 수 있는지는 공식 확인 못 함이라, 스마트스토어만 쓰면 이 설정과 관계없이 트래픽을 권해요.")
             new = max(a["prediction"]["new"], 1e-9)
-            mp = GD.meta_plan(sp["meta"], a["budget0"] / new, pixel, stores, sp["meta_cpc"])
+            mp = GD.meta_plan(sp.meta.spend, a["budget0"] / new, pixel, stores, sp.meta.cpc)
             if mp["objective"]:
                 st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{mp['why']}")
                 if mp["recommended_daily"]:
@@ -637,10 +637,10 @@ def grade_rows(a: dict) -> list:
     sp = a["split"]
     rows = [{"숫자": "판매가", "값": won(price), "등급": "A 실측", "출처": "사장님 입력"},
             {"숫자": "1개 팔면 남는 돈", "값": won(profit), "등급": "A 실측", "출처": "사장님 입력"}]
-    if sp["has_naver"]:
-        rows.append({"숫자": "네이버 클릭 비용", "값": won(sp["spends"][0] / max(sp["channels"][0].curve.clicks(sp["spends"][0]), 1e-9)) if sp["naver"] > 0 else "-",
+    if sp.has_naver:
+        rows.append({"숫자": "네이버 클릭 비용", "값": won(sp.naver.cpc) if sp.naver_spend > 0 else "-",
                      "등급": "B 플랫폼 예측", "출처": f"네이버 검색광고 예상 실적 '{a['kw']}'"})
-    rows.append({"숫자": "메타 클릭 비용", "값": won(sp["meta_cpc"]), "등급": f"{g['cpc_meta']} {D.GRADE_LABELS[g['cpc_meta']]}",
+    rows.append({"숫자": "메타 클릭 비용", "값": won(sp.meta.cpc), "등급": f"{g['cpc_meta']} {D.GRADE_LABELS[g['cpc_meta']]}",
                  "출처": "직접 입력" if g["cpc_meta"] == "A" else "대략값 (공개 키워드 중앙값)"})
     rows.append({"숫자": "누른 사람 중 사는 비율", "값": f"{cparams.cvr * 100:.2f}%", "등급": "C 공개 데이터", "출처": "GA4 공개 샘플 퍼널"})
     rows.append({"숫자": "1년 재구매", "값": f"{rep_value(repurchase):.1f}번 ('{rep_word(repurchase)}')",
@@ -652,19 +652,19 @@ def grade_rows(a: dict) -> list:
 def split_card(a: dict, budget_label: bool = False):
     """네이버·메타 배분 카드 (노션 Q1): 금액, 근거(키워드 포화 지점), 비율별 비교 표."""
     sp = a["split"]
-    total = sp["naver"] + sp["meta"]
+    total = sp.naver_spend + sp.meta.spend
     with st.container(border=True):
         st.markdown(f"**{'시험 예산 ' + won(total) + ' 나누기' if budget_label else '추천 배분 (시험 예산 ' + won(total) + ')'}: "
-                    f"네이버 {won(sp['naver'])} · 메타 {won(sp['meta'])}**")
-        if sp["has_naver"]:
-            if sp["meta"] > 1 and sp["naver"] >= sp["naver_capacity"] - 1:
-                why = (f"'{a['kw']}' 검색 수요는 한 달 약 {won(sp['naver_capacity'])}어치가 끝이라(네이버 예상 실적의 최대치), "
+                    f"네이버 {won(sp.naver_spend)} · 메타 {won(sp.meta.spend)}**")
+        if sp.has_naver:
+            if sp.meta.spend > 1 and sp.naver_spend >= sp.naver_capacity - 1:
+                why = (f"'{a['kw']}' 검색 수요는 한 달 약 {won(sp.naver_capacity)}어치가 끝이라(네이버 예상 실적의 최대치), "
                        "남는 돈은 메타로 보내요.")
-            elif sp["meta"] > 1 and sp["naver_marginal_cpc"]:
-                why = (f"네이버는 {won(sp['naver'])}을 넘으면 클릭 1번이 {won(sp['naver_marginal_cpc'])}까지 올라서(포화), "
-                       f"그 뒤로는 메타(클릭 약 {won(sp['meta_cpc'])}, 가정)가 손님을 더 싸게 데려와요.")
+            elif sp.meta.spend > 1 and sp.naver_marginal_cpc:
+                why = (f"네이버는 {won(sp.naver_spend)}을 넘으면 클릭 1번이 {won(sp.naver_marginal_cpc)}까지 올라서(포화), "
+                       f"그 뒤로는 메타(클릭 약 {won(sp.meta.cpc)}, 가정)가 손님을 더 싸게 데려와요.")
             else:
-                why = (f"'{a['kw']}'을(를) 검색하는 사람에게 보이는 네이버가 이 예산 안에서는 메타(클릭 약 {won(sp['meta_cpc'])}, 가정)보다 "
+                why = (f"'{a['kw']}'을(를) 검색하는 사람에게 보이는 네이버가 이 예산 안에서는 메타(클릭 약 {won(sp.meta.cpc)}, 가정)보다 "
                        "손님을 싸게 데려와서 모두 네이버에 써요.")
             st.markdown(why)
             st.caption("같은 돈으로 새 손님이 가장 많이 오는 배분이에요. 네이버는 네이버 검색광고 예상 실적(등급 B), "
@@ -673,7 +673,7 @@ def split_card(a: dict, budget_label: bool = False):
                 st.dataframe(pd.DataFrame([{"네이버 비율": f"{r['share']:.0%}", "네이버": won(r["naver"]), "메타": won(r["meta"]),
                                             "새 손님 (한 달 광고)": f"{r['new_customers']:.1f}명",
                                             "1년 남는 돈 (재구매 포함)": won(r["profit_cohort"]), "첫 구매만": won(r["profit_first"])}
-                                           for r in sp["table"]]), hide_index=True, use_container_width=True)
+                                           for r in sp.table]), hide_index=True, use_container_width=True)
                 st.caption("한 달 광고를 하고, 그 달에 온 손님이 1년 동안 남기는 돈 − 그 한 달 광고비예요(가운데 값, 흔들기 전). "
                            "네이버에 예상 실적보다 많이 배정하면 다 쓰지 못하고 남아요(쓴 돈 기준).")
         else:
@@ -942,7 +942,7 @@ with coach_tab:
                 st.caption("광고마다 꼬리표가 붙은 링크와 쿠폰 코드를 만들어, 한 달 뒤 '어느 광고로 팔렸나'를 셀 수 있게 합니다. 코드 상자 오른쪽 위 아이콘으로 복사하세요.")
                 l1, l2 = st.columns(2)
                 link_store = l1.selectbox("이 광고가 보낼 곳", stores or ["자사몰"], key="link_store")
-                default_ch = "naver_search" if a["split"]["naver"] > 0 else "meta"
+                default_ch = "naver_search" if a["split"].naver_spend > 0 else "meta"
                 ch_keys = list(MS.CHANNELS)
                 link_ch = l2.selectbox("광고 채널", ch_keys, index=ch_keys.index(default_ch), format_func=lambda k: MS.CHANNELS[k][0], key="link_ch")
                 l3, l4, l5 = st.columns([2, 1, 1])

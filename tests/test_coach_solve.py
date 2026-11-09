@@ -34,18 +34,6 @@ def test_split_without_naver_has_no_naver_leg():
     assert sp.cpc > 1_300.0          # 평균 클릭 비용은 메타 포화 곡선 때문에 입력값보다 조금 높음
 
 
-def test_split_still_reads_like_the_old_dict():
-    """이전 단계 동안 화면 코드가 그대로 돌도록 예전 키도 읽힘 (main.py 호출부를 옮긴 뒤 지움)."""
-    params = C.coach_params(20_000, 7_000, 0.5)
-    sp = C.split_budget(1_000_000, _naver_curve(), 1_300.0, params)
-    assert sp["naver"] == sp.naver.spend and sp["meta"] == sp.meta.spend and sp["meta_cpc"] == 1_300.0
-    assert sp["has_naver"] and sp["spends"] == sp.spends and sp["channels"] == sp.channels
-    assert sp["table"] is sp.table and sp["cpc"] == sp.cpc and sp["clicks"] == sp.clicks
-    assert sp["naver_capacity"] == sp.naver_capacity and sp["naver_marginal_cpc"] == sp.naver_marginal_cpc
-    none = C.split_budget(210_000, None, 1_300.0, params)
-    assert none["naver"] == 0.0 and none["naver_marginal_cpc"] is None
-
-
 # ── solve: 입력 → Answer (main.py 맨 위 계산과 한 달 뒤 다시 계산을 엔진 한 곳으로) ──
 from tests.test_coach_examples import EXAMPLES, EXPECTED, _coach  # noqa: E402
 

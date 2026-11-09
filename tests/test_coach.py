@@ -193,17 +193,17 @@ def _naver_curve(cap_cost=200_000.0, cap_clicks=400.0):
 def test_split_budget_fills_naver_before_saturation():
     params = C.coach_params(20_000, 7_000, 0.5)
     small = C.split_budget(20_000, _naver_curve(), 1_300.0, params)       # 네이버 첫 구간 CPC 250원 < 메타 1,300원
-    assert small["naver"] == pytest.approx(20_000, rel=0.05) and small["naver"] + small["meta"] == pytest.approx(20_000)
+    assert small.naver_spend == pytest.approx(20_000, rel=0.05) and small.naver_spend + small.meta.spend == pytest.approx(20_000)
     big = C.split_budget(1_000_000, _naver_curve(), 1_300.0, params)      # 네이버 상한 20만 원 → 나머지는 메타
-    assert big["naver"] <= 200_000 + 1 and big["meta"] >= 800_000 - 1
-    assert big["naver"] + big["meta"] == pytest.approx(1_000_000)
-    assert [r["share"] for r in big["table"]] == list(C.SPLIT_SHARES)
+    assert big.naver_spend <= 200_000 + 1 and big.meta.spend >= 800_000 - 1
+    assert big.naver_spend + big.meta.spend == pytest.approx(1_000_000)
+    assert [r["share"] for r in big.table] == list(C.SPLIT_SHARES)
 
 
 def test_split_budget_without_naver_goes_all_meta():
     params = C.coach_params(20_000, 7_000, 0.5)
     s = C.split_budget(210_000, None, 1_300.0, params)
-    assert s["naver"] == 0 and s["meta"] == pytest.approx(210_000) and not s["has_naver"] and s["table"] == []
+    assert s.naver_spend == 0 and s.meta.spend == pytest.approx(210_000) and not s.has_naver and s.table == []
 
 
 def test_breakeven_grid_boundary_matches_formula():
@@ -222,8 +222,8 @@ def test_split_table_uses_one_month_cohort():
     from src.engine import montecarlo as MC
     params = C.coach_params(20_000, 7_000, 0.5)
     sp = C.split_budget(210_000, _naver_curve(), 1_300.0, params)
-    row = next(r for r in sp["table"] if r["share"] == 0.5)
-    det = MC.one_month(sp["channels"], [row["naver"], row["meta"]], params)
+    row = next(r for r in sp.table if r["share"] == 0.5)
+    det = MC.one_month(sp.channels, [row["naver"], row["meta"]], params)
     assert row["profit_cohort"] == pytest.approx(det["profit"]) and row["profit_first"] <= row["profit_cohort"]
     assert row["profit_cohort"] > -210_000 - 1      # 한 달 광고비보다 크게 잃지 않음 (12개월 집행 기준이 아님)
 
