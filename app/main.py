@@ -321,10 +321,12 @@ def ads_guide(a: dict):
             mp = plan.meta_plan
             if mp["objective"]:
                 st.markdown(f"**추천 목적: {mp['objective']}** 🧮  \n{SR.md_safe(mp['why'])}")
-                if mp["recommended_daily"]:
-                    st.markdown(f"- 하루 예산 {won(mp['daily'])} (월 ÷ 30.4). 메타 권장은 결과 1개 평균 비용의 {GD.DAILY_BUDGET_X}배 이상 "
-                                f"= **{won(mp['recommended_daily'])}** ✅{src('meta-bud-003')}"
-                                + ("" if mp["daily_ok"] else " → 지금 예산은 권장보다 작아요. 결과가 고르게 안 나올 수 있어요."))
+                if mp["recommended_daily"]:   # 권장 금액(공식 규칙)과 지금 예산 판정을 나눠 씀 (D7)
+                    st.markdown(f"- 지금 하루 예산 {won(mp['daily'])} (메타 월 배분 ÷ 30.4) 🧮")
+                    st.markdown(f"- 권장 (공식 규칙 ✅{src('meta-bud-003')}): 결과 1개 평균 비용의 {GD.DAILY_BUDGET_X}배 이상 "
+                                f"= **{won(mp['recommended_daily'])}**")
+                    st.markdown("- " + ("지금 예산이 권장보다 작아요. 결과가 고르게 안 나올 수 있어요." if not mp["daily_ok"]
+                                        else "지금 예산이 권장 이상이에요."))
                 st.markdown(f"- 어떤 날은 하루 예산보다 최대 75% 더 써서 하루 최대 약 {won(mp['daily_max'])}까지 나갈 수 있어요. "
                             f"한 주 합계는 하루 예산 × 7을 넘지 않아요. ✅{src('meta-bud-001')}")
             else:

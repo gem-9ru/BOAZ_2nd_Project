@@ -116,7 +116,8 @@ class SettingsPlan:
     def rows(self, media: Optional[str] = None) -> List[Dict[str, str]]:
         """'광고 세팅값' 시트 한 줄씩 (광고 관리자에서 누르는 순서)."""
         rows = []
-        for n, s in enumerate(self.steps if media is None else self.for_media(media), 1):
+        medias = [media] if media else [m for m in ("naver", "meta") if self.for_media(m)]
+        for n, s in ((n, s) for m in medias for n, s in enumerate(self.for_media(m), 1)):   # 단계 번호는 매체별 (D5)
             for it in s.items:
                 rows.append({"매체": "네이버" if s.media == "naver" else "메타", "단계": f"{n}. {s.title}", "항목": it.label,
                              "값": show(it.value), "출처": f"{it.source} {SOURCE_WORDS[it.source]}", "메모": it.note,
@@ -215,7 +216,8 @@ def _naver_steps(sp, smartstore: bool, keyword: str, name: str, powerlink: bool,
     steps.append(Step("naver", "tracking", "전환 추적", "도구 > 전환 추적 관리 > 웹사이트 → 캠페인 설정에서 선택", ["naver-setup-016"],
                       [Item("conversion", "전환 추적 대상", "스마트스토어 (신청하면 바로 설치 완료)" if smartstore else "자사몰 (안내 메일대로 스크립트 설치)",
                             CALC, "신청한 뒤 캠페인 설정에서 꼭 골라야 리포트에 전환이 잡혀요"),
-                       Item("link", "광고 링크 (꼬리표)", link, OWNER, "판매처 통계에서 광고 손님을 따로 세는 링크. 3단계 '링크 만들기'에서 만들어요")]))
+                       Item("link", "광고 링크 (꼬리표)", link, CALC if link else OWNER,
+                            "코치 '링크 만들기'에서 만든 NT/UTM 링크" if link else "판매처 통계에서 광고 손님을 따로 세는 링크. 3단계 '링크 만들기'에서 만들어요")]))
     return steps
 
 
@@ -284,7 +286,7 @@ def _powerlink_steps(name: str, daily: int, monthly: float, keyword: str, bid: O
              ["naver-setup-014", "naver-setup-018", "naver-setup-019"],
              [Item(p + "title", f"제목 ({NAVER_TITLE_MAX}자 이하)", "", DRAFT),
               Item(p + "description", f"설명 ({NAVER_DESC_RANGE[0]}~{NAVER_DESC_RANGE[1]}자)", "", DRAFT),
-              Item(p + "url", "연결 URL", link, OWNER, "코치 '링크 만들기'의 꼬리표 링크")],
+              Item(p + "url", "연결 URL", link, CALC if link else OWNER, "코치 '링크 만들기'의 꼬리표 링크")],
              bulk="소재가 많으면 대량 관리의 소재 파일로 올려요 (광고그룹 ID 필요)."),
     ]
 
@@ -311,7 +313,7 @@ def _meta_steps(sp, mp: Dict, name: str, link: str) -> List[Step]:
              [Item("image_ratio", "이미지 비율", ["4:5 (피드)", "9:16 (릴스·스토리)"], OWNER, "비율별로 하나씩 만들면 대부분의 위치를 채워요"),
               Item("primary_text", f"기본 문구 (권장 {META_TEXT_REC[0]}~{META_TEXT_REC[1]}자)", "", DRAFT),
               Item("headline", f"제목 (권장 {META_TITLE_REC}자)", "", DRAFT),
-              Item("url", "웹사이트 URL", link, OWNER, "코치 '링크 만들기'의 UTM/NT 링크")],
+              Item("url", "웹사이트 URL", link, CALC if link else OWNER, "코치 '링크 만들기'의 UTM/NT 링크")],
              bulk="광고가 여러 개면: 이미지·영상을 계정에 먼저 올리고 → 일괄 가져오기 파일을 내려받아 채운 뒤 → 올리고 미리 보기에서 개수를 확인해요."),
         Step("meta", "measure", "측정", "이벤트 관리자 / 광고 세트 > 기여 설정", ["meta-msr-001", "meta-msr-003"],
              [Item("attribution", "기여 설정", "기본값 (클릭 후 7일·조회 후 1일·참여한 조회 후 1일)", CALC,
@@ -364,4 +366,8 @@ def draft_copy(product: str, strength: str = "", benefit: str = "") -> Dict[str,
         desc = (desc + " 스마트스토어에서 만나 보세요.").strip()
     desc = desc[:NAVER_DESC_RANGE[1]]
     meta_text = " ".join(x for x in (f"{p}." if not s else f"{p}, {s}.", b + "." if b else "", "지금 스토어에서 확인해 보세요.") if x)
+    for extra in ("구성과 배송 안내도 함께 확인해 보세요.", "궁금한 점은 스토어 문의로 남겨 주세요."):   # 메타 권장 50자 이상 (사실을 더하지 않는 문장)
+        if len(meta_text) >= META_TEXT_REC[0]:
+            break
+        meta_text += " " + extra
     return {"naver_title": title, "naver_desc": desc, "meta_text": meta_text, "meta_headline": p[:META_TITLE_REC]}

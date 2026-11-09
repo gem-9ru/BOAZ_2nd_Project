@@ -246,3 +246,40 @@ def test_use_draft_fills_fields_via_callback(media, kw):
     # 화면 코드가 같은 실행에서 칸 값을 직접 바꾸지 않음 (Streamlit 예외 원인)
     src = (Path(__file__).resolve().parents[1] / "app" / "setup_view.py").read_text(encoding="utf-8")
     assert "on_click=use_draft" in src
+
+
+def test_d5_step_numbers_per_media():
+    rows = AS.build_settings(_answer(), ["스마트스토어"], keyword="원두커피").rows()
+    meta_steps = [r["단계"] for r in rows if r["매체"] == "메타"]
+    naver_steps = [r["단계"] for r in rows if r["매체"] == "네이버"]
+    assert meta_steps[0].startswith("1. ") and naver_steps[0].startswith("1. ")
+    assert max(int(s.split(".")[0]) for s in meta_steps) == 6
+
+
+def test_d6_links_from_link_maker_are_prefilled_as_calc():
+    p = AS.build_settings(_answer(), ["스마트스토어"], keyword="원두커피", naver_link="https://n.example/?nt_source=x",
+                          meta_link="https://m.example/?utm_source=meta")
+    assert p.value("naver", "link") == "https://n.example/?nt_source=x" and p.item("naver", "link").source == AS.CALC
+    assert p.value("meta", "url") == "https://m.example/?utm_source=meta" and p.item("meta", "url").source == AS.CALC
+    empty = AS.build_settings(_answer(), ["스마트스토어"], keyword="원두커피")
+    assert empty.item("meta", "url").source == AS.OWNER                    # 링크가 없으면 사장님 답 칸
+
+
+def test_d6_screen_builds_links_from_link_maker_inputs():
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "app"))
+    import setup_view as V
+    links = V._links({"link_url": "smartstore.naver.com/shop/products/1", "link_store": "스마트스토어", "link_product": "coffee"},
+                     ["스마트스토어"], "원두커피")
+    assert links["naver"] and links["meta"] and links["naver"] != links["meta"]
+
+
+def test_d7_meta_guide_separates_rule_mark_from_verdict():
+    main = (Path(__file__).resolve().parents[1] / "app" / "main.py").read_text(encoding="utf-8")
+    assert "권장 (공식 규칙 ✅" in main and "지금 예산이 권장보다 작아요" in main
+    assert "= **{won(mp['recommended_daily'])}** ✅" not in main
+
+
+def test_meta_template_is_at_least_50_chars():
+    for args in (("수제 마카롱 6구", "당일 제작", "선물 포장 무료"), ("마카롱",)):
+        d = AS.draft_copy(*args)
+        assert len(d["meta_text"]) >= AS.META_TEXT_REC[0] and AS.check_copy(d["meta_text"], "meta_text") == []
