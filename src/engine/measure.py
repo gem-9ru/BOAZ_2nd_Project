@@ -14,6 +14,8 @@ from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 import pandas as pd
 
+from .uploads import guess_columns
+
 # 채널 → (화면 이름, 꼬리표 source, 꼬리표 medium, 쿠폰 접두어). 같은 채널은 늘 같은 이름으로 (나중에 합칠 때 섞이지 않게)
 CHANNELS = {
     "naver_search": ("네이버 검색·쇼핑검색광고", "naver", "cpc", "NV"),
@@ -84,16 +86,7 @@ FUNNEL_ORDER = ["visits", "views", "cart", "orders"]
 
 def detect_columns(columns: List[str]) -> Dict[str, Optional[str]]:
     """열 이름 → 항목. 한 열은 한 항목에만 씀 (예: '결제금액'이 구매 수로 잡히지 않게 매출부터 확인)."""
-    norm = {c: re.sub(r"\s+", "", str(c)).lower() for c in columns}
-    out, used = {}, set()
-    for field in ["revenue", "cart", "views", "orders", "visits"]:
-        out[field] = None
-        for word in FIELDS[field][1]:
-            hit = next((c for c in columns if c not in used and word.lower() in norm[c]), None)
-            if hit is not None:
-                out[field] = hit
-                used.add(hit)
-                break
+    out = guess_columns(((f, FIELDS[f][1]) for f in ["revenue", "cart", "views", "orders", "visits"]), columns)
     return {k: out[k] for k in FIELDS}
 
 

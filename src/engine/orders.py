@@ -13,6 +13,7 @@ import numpy as np
 import pandas as pd
 
 from .defaults import DAYS_PER_MONTH
+from .uploads import guess_columns
 
 # 개인정보: 열 이름에 이 말이 들어가면 읽자마자 버림 (주문자 번호 ordererNo는 해시용이라 남김)
 PII_WORDS = ("orderername", "orderertel", "ordererid", "shippingaddress", "receiver", "pickuplocation", "entrymethod",
@@ -39,17 +40,8 @@ def drop_pii(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def detect(columns: List[str]) -> Dict[str, Optional[str]]:
-    norm = {c: re.sub(r"\s+", "", str(c)).lower() for c in columns}
-    out, used = {}, set()
-    for key, (_, words) in FIELDS.items():
-        out[key] = None
-        for w in words:
-            hit = next((c for c in columns if c not in used and w in norm[c]), None)
-            if hit is not None:
-                out[key] = hit
-                used.add(hit)
-                break
-    return out
+    """열 이름 → 항목 (uploads.guess_columns 규칙 하나, 공백 빼고 소문자로 비교)."""
+    return guess_columns(((k, words) for k, (_, words) in FIELDS.items()), columns)
 
 
 def _hash(v) -> str:

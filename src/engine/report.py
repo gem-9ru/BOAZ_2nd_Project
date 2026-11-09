@@ -12,6 +12,8 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
+from .uploads import guess_columns
+
 # ── 리포트 열 매핑 ─────────────────────────────────────────────
 METRICS = {
     "impressions": "노출", "clicks": "클릭", "cost": "광고비", "conversions": "전환(구매)", "revenue": "전환 매출",
@@ -56,26 +58,9 @@ def detect_platform(columns: List[str]) -> Optional[str]:
 
 
 def map_columns(columns: List[str], platform: str) -> Dict[str, Optional[str]]:
-    out, used = {}, set()
-    for metric in METRICS:
-        out[metric] = None
-        for w in WORDS[platform][metric]:
-            exact = w.startswith("=")
-            word = w.lstrip("=")
-            for c in columns:
-                name = _clean(c)
-                if c in used:
-                    continue
-                if exact and name != word:
-                    continue
-                if not exact and (word not in name or (metric not in ("objective",) and any(x in name for x in EXCLUDE))):
-                    continue
-                out[metric] = c
-                used.add(c)
-                break
-            if out[metric] is not None:
-                break
-    return out
+    """열 이름 → 지표 (uploads.guess_columns 규칙 하나). 이름은 BOM·앞뒤 공백만 정리하고 비교, 파생 열(EXCLUDE)은 뺌."""
+    return guess_columns(((m, WORDS[platform][m]) for m in METRICS), columns, norm=_clean,
+                         exclude=EXCLUDE, exclude_except=("objective",))
 
 
 def _num(s: pd.Series) -> pd.Series:
