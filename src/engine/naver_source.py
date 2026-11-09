@@ -1,18 +1,13 @@
 """네이버 검색광고 API 조회 + 캐시.
 
-- 서명·호출은 src/collect/naver_api_test.py의 `call`을 그대로 씁니다 (키는 .env에서 읽고, 출력하지 않음).
-  .env가 없는 배포 환경(Streamlit Cloud)에서는 같은 방식으로 서명하되 키를 환경 변수/secrets
-  (NAVER_AD_API_KEY, NAVER_AD_SECRET_KEY, NAVER_AD_CUSTOMER_ID)에서 읽습니다.
+- 키 읽기·서명은 src/engine/keys.py 하나: Streamlit secrets → 환경 변수 → .env 순 (NAVER_AD_API_KEY, NAVER_AD_SECRET_KEY,
+  NAVER_AD_CUSTOMER_ID). 키 값은 출력하지 않습니다.
 - 응답은 data/interim/naver_cache/ 에 JSON으로 저장하고(git에 안 올림), 예시 1·2 캐시는 data/examples/naver_cache/(고정)에서 먼저 읽습니다.
 - 200이 아닌 응답·이상한 응답은 NaverUnavailable(캐시에 남지 않음), 429는 규칙대로 쉬었다 1번만 다시, 연달아면 5분 멈춤.
 - 캐시에 없는 키워드를 오프라인으로 요청하면 None을 돌려주고, 앱이 예시 키워드(캐시)로 대체합니다.
 """
-import base64
 import hashlib
-import hmac
 import json
-import os
-import sys
 import time
 from pathlib import Path
 from typing import List, Optional
@@ -133,22 +128,17 @@ KEY_NAMES = ("NAVER_AD_API_KEY", "NAVER_AD_SECRET_KEY", "NAVER_AD_CUSTOMER_ID")
 
 
 def _secret_keys() -> Optional[dict]:
-    keys = {k: os.environ.get(k) for k in KEY_NAMES}
-    if not all(keys.values()):
-        try:
-            import streamlit as st
-            keys = {k: st.secrets.get(k) for k in KEY_NAMES}
-        except Exception:
-            return None
-    return keys if all(keys.values()) else None
+    """키 읽기는 keys.read_keys 하나 (secrets → 환경 변수 → .env, 검수 A13). 값은 출력하지 않음."""
+    from .keys import read_keys
+    return read_keys(KEY_NAMES)
 
 
 def _env_call(keys: dict):
-    """naver_api_test.call과 같은 서명 방식. 키는 출력하지 않는다. 200이 아닌 응답은 NaverUnavailable (검수 A2)."""
+    """서명해서 부르는 함수 (keys.naver_signature). 키는 출력하지 않는다. 200이 아닌 응답은 NaverUnavailable (검수 A2)."""
     def call(method: str, uri: str, params=None, body=None):
+        from .keys import naver_signature
         timestamp = str(round(time.time() * 1000))
-        signature = base64.b64encode(hmac.new(keys["NAVER_AD_SECRET_KEY"].encode(),
-                                              f"{timestamp}.{method}.{uri}".encode(), hashlib.sha256).digest()).decode()
+        signature = naver_signature(keys["NAVER_AD_SECRET_KEY"], timestamp, method, uri)
         headers = {"Content-Type": "application/json; charset=UTF-8", "X-Timestamp": timestamp,
                    "X-API-KEY": keys["NAVER_AD_API_KEY"], "X-Customer": str(keys["NAVER_AD_CUSTOMER_ID"]),
                    "X-Signature": signature}
@@ -169,16 +159,9 @@ def _env_call(keys: dict):
 
 
 def _api_call():
-    """src/collect의 call 함수(.env)를 우선 쓰고, 없으면 환경 변수·secrets 키로 서명. 둘 다 없으면 None."""
-    collect_dir = str(ROOT / "src" / "collect")
-    if collect_dir not in sys.path:
-        sys.path.insert(0, collect_dir)
-    try:
-        import naver_api_test  # noqa: WPS433 (수집 담당 모듈 재사용)
-        return naver_api_test.call
-    except Exception:
-        keys = _secret_keys()
-        return _env_call(keys) if keys else None
+    """키가 있으면 서명해 부르는 함수, 없으면 None. 키 읽기·서명은 keys 모듈 하나 (src/collect 스크립트는 불러오지 않음, A13)."""
+    keys = _secret_keys()
+    return _env_call(keys) if keys else None
 
 
 def _safe(call, *args, **kw):

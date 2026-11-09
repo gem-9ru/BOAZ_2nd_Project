@@ -9,7 +9,6 @@
 """
 import hashlib
 import json
-import os
 import time
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
@@ -29,21 +28,9 @@ KEY_NAMES = ("NAVER_HUB_CLIENT_ID", "NAVER_HUB_CLIENT_SECRET")
 
 
 def _keys() -> Optional[Dict[str, str]]:
-    keys = {k: os.environ.get(k) for k in KEY_NAMES}
-    env = ROOT / ".env"
-    if not all(keys.values()) and env.exists():
-        for line in env.read_text(encoding="utf-8").splitlines():
-            if "=" in line and not line.lstrip().startswith("#"):
-                k, v = line.split("=", 1)
-                if k.strip() in KEY_NAMES and not keys.get(k.strip()):
-                    keys[k.strip()] = v.strip().strip('"').strip("'")
-    if not all(keys.values()):
-        try:
-            import streamlit as st
-            keys = {k: keys.get(k) or st.secrets.get(k) for k in KEY_NAMES}
-        except Exception:
-            return None
-    return keys if all(keys.values()) else None
+    """키 읽기는 keys.read_keys 하나 (secrets → 환경 변수 → .env, 검수 A13). 값은 출력하지 않음."""
+    from .keys import read_keys
+    return read_keys(KEY_NAMES)
 
 
 def available() -> bool:
