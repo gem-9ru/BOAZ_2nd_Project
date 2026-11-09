@@ -1094,7 +1094,7 @@ with coach_tab:
                         ss["coach_prev_rate"] = v.rate
                     with st.container(border=True):
                         st.markdown("**상세페이지를 고치는 순서** (어디서 → 왜 → 확인)")
-                        drop = CO.biggest_drop(store_tot or {}, {k: MS.FIELDS[k][0] for k in MS.FUNNEL_ORDER}, MS.FUNNEL_ORDER)
+                        drop = CO.biggest_drop(store_tot or {}, {k: MS.FIELDS[k][0] for k in MS.FUNNEL_ORDER})
                         st.markdown("1. **어디서** 빠지나: "
                                     + (f"판매처 통계로 보면 **{drop[0]} → {drop[1]}**에서 가장 많이 빠져요 (100명 중 {drop[2] * 100:.0f}명만 넘어감)."
                                        if drop else "판매처 통계 파일을 올리면 가장 많이 빠지는 단계를 짚어 드려요."))

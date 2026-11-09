@@ -106,9 +106,9 @@ def test_expected_and_realized_loss():
 
 def test_biggest_drop_from_store_totals():
     labels = {"visits": "방문", "views": "상품 조회", "cart": "장바구니", "orders": "구매"}
-    d = C.biggest_drop({"visits": 2000, "views": 1000, "cart": 100, "orders": 20}, labels, list(labels))
+    d = C.biggest_drop({"visits": 2000, "views": 1000, "cart": 100, "orders": 20}, labels)
     assert d == ("상품 조회", "장바구니", pytest.approx(0.1))
-    assert C.biggest_drop({"visits": 100}, labels, list(labels)) is None
+    assert C.biggest_drop({"visits": 100}, labels) is None
 
 
 def test_biggest_drop_uses_funnel_diagnosis_rule():
@@ -118,7 +118,11 @@ def test_biggest_drop_uses_funnel_diagnosis_rule():
     # 단계 비율: 조회 25% (기준 22.2%), 담기 24% (기준 19.9%), 사기 30% (기준 33.7%) → 그냥 최솟값은 담기, 기준 대비로는 사기
     totals = {"visits": 1000, "views": 250, "cart": 60, "orders": 18}
     assert MS.diagnose_funnel(totals)["worst"]["key"] == "orders"
-    assert C.biggest_drop(totals, labels, list(labels)) == ("장바구니", "구매", pytest.approx(0.3))
+    assert C.biggest_drop(totals, labels) == ("장바구니", "구매", pytest.approx(0.3))
+    # 판매처 파일에 '방문' 열이 없어도 있는 단계끼리는 짚음 (퍼널 카드는 100명 기준이 없어 안 그림)
+    no_visits = {"views": 250, "cart": 60, "orders": 18}
+    assert MS.diagnose_funnel(no_visits) is None
+    assert C.biggest_drop(no_visits, labels) == ("장바구니", "구매", pytest.approx(0.3))
 
 
 def test_default_budget_pick_follows_action():

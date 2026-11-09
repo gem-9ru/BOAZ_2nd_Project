@@ -5,6 +5,7 @@
 """
 import logging
 import os
+from pathlib import Path
 
 import pytest
 
@@ -24,8 +25,11 @@ def _offline(monkeypatch):
     logging.getLogger("streamlit").setLevel(logging.ERROR)
 
 
+APP = str(Path(__file__).resolve().parents[1] / "app" / "main.py")
+
+
 def _run(example: str, step: int = 1, **extra) -> AppTest:
-    at = AppTest.from_file("app/main.py", default_timeout=90)
+    at = AppTest.from_file(APP, default_timeout=90)
     for k, v in {**EXAMPLES[example], **extra}.items():
         at.session_state[k] = v
     at.session_state["coach_mode"], at.session_state["coach_step"], at.session_state["coach_seen"] = "example", step, 3

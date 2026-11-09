@@ -227,15 +227,12 @@ def realized_loss(spend: float, sales: float, profit_per_sale: float) -> float:
     return spend - sales * profit_per_sale
 
 
-def biggest_drop(totals: Dict[str, Optional[float]], labels: Dict[str, str], order: List[str]) -> Optional[Tuple[str, str, float]]:
+def biggest_drop(totals: Dict[str, Optional[float]], labels: Dict[str, str]) -> Optional[Tuple[str, str, float]]:
     """판매처 통계 합계에서 가장 많이 빠지는 구간 (이전 단계 이름, 다음 단계 이름, 통과율).
-    규칙은 퍼널 진단(measure.diagnose_funnel, 기준 대비 비율) 하나를 읽음 (B5). order는 호출부 정리 전까지 남은 인자 (쓰지 않음)."""
-    from .measure import diagnose_funnel
-    diag = diagnose_funnel(totals)
-    if diag is None:
-        return None
-    s = diag["lowest"]
-    return labels[s["prev"]], labels[s["key"]], s["rate"]
+    규칙은 퍼널 진단과 같은 하나(measure.lowest_step, 기준 대비 비율)를 읽음 (B5)."""
+    from .measure import lowest_step
+    s = lowest_step(totals)
+    return None if s is None else (labels[s["prev"]], labels[s["key"]], s["rate"])
 
 
 KST = ZoneInfo("Asia/Seoul")   # 광고 시작일·경과일·판정 가능일은 한국 날짜 기준 (서버는 UTC)
