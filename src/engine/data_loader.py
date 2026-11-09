@@ -6,6 +6,7 @@
 | data/processed/fb_target_metrics.csv | target, rel_cpa, purchases | A |
 | data/processed/cohort_retention.csv | months_since, retention (0~1), [customers], [segment] | B |
 """
+from functools import lru_cache
 from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
@@ -20,13 +21,20 @@ PROCESSED = ROOT / "data" / "processed"
 GA4_ALL = "전체"
 
 
-def _ga4_table() -> Optional[pd.DataFrame]:
+@lru_cache(maxsize=1)
+def _read_ga4_table() -> Optional[pd.DataFrame]:
     for path in (PROCESSED / "ga4_funnel.csv", ROOT / "data" / "raw" / "ga4" / "ga4_funnel.csv"):
         if path.exists():
             df = pd.read_csv(path)
             if set(D.GA4_EVENTS) <= set(df.columns):
                 return df
     return None
+
+
+def _ga4_table() -> Optional[pd.DataFrame]:
+    """GA4 공개 샘플 퍼널 표 (파일은 한 번만 읽고, 부를 때마다 복사본을 줌: 한 곳에서 고쳐도 다른 곳에 번지지 않게)."""
+    df = _read_ga4_table()
+    return None if df is None else df.copy()
 
 
 def ga4_mediums() -> List[str]:
@@ -88,12 +96,6 @@ def keyword_tier(monthly_qc: float) -> str:
     return D.KEYWORD_TIERS[-1][1]
 
 
-def describe_sources() -> Dict[str, str]:
-    return {
-        "ga4": "data/processed/ga4_funnel.csv" if (PROCESSED / "ga4_funnel.csv").exists() else "data/raw/ga4/ga4_funnel.csv",
-        "meta": meta_targets()["source"].iloc[0],
-    }
-
 
 # ── 유지: 코호트 리텐션 → r(t) = floor + (1 − floor)·e^(−decay·t) 적합 ──────────────
 def _retention_model(t, floor, decay):
@@ -150,7 +152,7 @@ def ga4_medium_cvr(medium: str = GA4_ALL) -> Optional[float]:
     df = _ga4_table()
     if df is None or "medium" not in df.columns:
         return None
-    df = df[df["medium"] != "(data deleted)"]
+    df = df[df["medium"] != D.GA4_MASKED_MEDIUM]
     if medium != GA4_ALL:
         df = df[df["medium"] == medium]
     visit = float(df["visit_users"].sum())
@@ -203,7 +205,8 @@ def segment_table(dim: str = "medium") -> Optional[pd.DataFrame]:
     df = _ga4_table()
     if df is None or dim not in df.columns:
         return None
-    df = df[df.get("medium", "") != "(data deleted)"]
+    if "medium" in df.columns:   # medium 열이 없는 표도 (기기만 있는 표)
+        df = df[df["medium"] != D.GA4_MASKED_MEDIUM]
     return segment_rates(df, dim, D.GA4_EVENTS, STEP_LABELS)
 
 
