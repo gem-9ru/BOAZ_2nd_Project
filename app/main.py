@@ -1,4 +1,4 @@
-"""광고 세팅·최적화 코치 v1.0 — 세팅 → 실행 → 최적화 (화면 설계: 기획안_개정본_세팅코치.md 5장).
+"""광고 세팅·최적화 코치 v1.1 — 세팅(한 번에 한 질문) → 실행 → 최적화 (화면 설계: 기획안_개정본_세팅코치.md 5장).
 
 실행: streamlit run app/main.py
 
@@ -62,7 +62,7 @@ from src.engine import insights as insights_mod  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
 from src.engine.optimize import compare_options  # noqa: E402
 
-st.set_page_config(page_title="광고 세팅·최적화 코치 v1.0", page_icon="📈", layout="wide")
+st.set_page_config(page_title="광고 세팅·최적화 코치 v1.1", page_icon="📈", layout="wide")
 
 # 지표 정의서(실행계획 7장) 기반 툴팁 — 광고 용어를 모르는 사용자 기준으로 풀어 씀
 HELP = {
@@ -182,6 +182,8 @@ DESIGN_CSS = """<style>
 [data-testid="stBaseButton-primary"] {background-color: #4C78A8 !important; border-color: #4C78A8 !important; color: #fff !important;}
 [data-testid="stBaseButton-primary"]:hover {background-color: #3E6894 !important; border-color: #3E6894 !important;}
 [data-testid="stProgress"] [role="progressbar"] > div > div > div {background-color: #4C78A8 !important;}
+[data-testid="stBaseButton-pillsActive"], [data-testid="stBaseButton-segmented_controlActive"] {
+  border-color: #4C78A8 !important; color: #4C78A8 !important; background-color: rgba(76,120,168,.12) !important;}
 </style>"""
 st.markdown(DESIGN_CSS, unsafe_allow_html=True)
 
@@ -196,7 +198,7 @@ with st.sidebar:
     st.caption("처음이면 **🧭 광고 코치**부터. 모르는 말은 오른쪽 아래 💬 도우미에게 물어보세요.")
 
 st.title("광고 세팅·최적화 코치")
-st.caption("광고를 처음 하는 사장님이 네이버·메타 광고를 직접 세팅해 돌리고, 돌린 결과로 다음 달 광고를 고치도록 돕는 코치예요. (v1.0)")
+st.caption("광고를 처음 하는 사장님이 네이버·메타 광고를 직접 세팅해 돌리고, 돌린 결과로 다음 달 광고를 고치도록 돕는 코치예요. (v1.1)")
 
 # 첫 화면은 광고 코치 하나 (MVP_기능정의.md 5장 4번). 다음 단계 탭 6개는 코치 아래 접힌 '더 보기' 안에 (코드·기능·코치 값 연결은 그대로)
 coach_tab = st.container()
@@ -653,6 +655,28 @@ def _go(step: int):
     SS.go_to(ss, step)
 
 
+# ① 세팅 질문 (v1.1, 한 번에 한 질문). 칩 이름 · 큰 질문
+QUESTIONS = [("상품", "무엇을, 어디서 파세요?"), ("받는 돈·남는 돈", "1개 팔면 얼마를 받고, 얼마가 남나요?"),
+             ("재구매", "한 번 산 손님이 다시 사나요?"), ("예산", "한 달에 광고에 최대 얼마까지 쓸 수 있나요?"),
+             ("확인", "이렇게 이해했어요. 맞으면 계산할게요.")]
+
+
+def _edit_q(i: int):
+    """질문 i로 (다음·이전 버튼, 지난 답 칩)."""
+    ss["q_idx"] = i
+    ss["q_reached"] = max(ss.get("q_reached", 0), i)   # 칩은 이미 물어본 질문만 (기본값을 답처럼 보이지 않게)
+    SS.go_to(ss, SS.SHOP)
+
+
+def answer_chips() -> list:
+    """[(질문 번호, 답 한 줄 또는 '')] 확인 질문 빼고. 칩과 확인 카드가 같은 글자."""
+    p, f, b = ss.get("q_price"), ss.get("q_profit"), ss.get("q_budget")
+    kw = (ss.get("q_keyword") or "").strip()
+    shop = " · ".join(x for x in (ss.get("q_category"), ", ".join(ss.get("q_stores") or []), f"'{kw}'" if kw else "") if x)
+    return [(0, shop), (1, f"{won(p)} / 남는 돈 {won(f)}" if p and f else ""),
+            (2, rep_word(ss.get("q_repurchase") or "가끔")), (3, f"월 {won(b)}" if b else "")]
+
+
 # 답 계산 (어느 단계를 보든 먼저 계산: 다음 단계 탭 미리 채우기·단계 열림 판단에 씀)
 price, profit, max_budget = ss.get("q_price"), ss.get("q_profit"), ss.get("q_budget")
 stores = ss.get("q_stores") or []
@@ -764,7 +788,7 @@ with coach_tab:
     else:
         if mode == "example" and not ss.get("_closed_example"):
             e1, e2, e3 = st.columns([10, 2, 0.6])
-            e1.info(f"지금은 **예시 값**({ss.get('example_name', '원두 로스터리')})입니다. '내 가게' 단계에서 숫자를 바꾸면 바로 다시 계산돼요.", icon="🧪")
+            e1.info(f"지금은 **예시 값**({ss.get('example_name', '원두 로스터리')})입니다. 위 칩을 눌러 답을 바꾸면 바로 다시 계산돼요.", icon="🧪")
             if e2.button("내 숫자로 시작"):
                 SS.reset(ss)
                 st.rerun()
@@ -782,55 +806,82 @@ with coach_tab:
             mark = "✓ " if all(done[x] for x in steps) and i != stage else ""
             col.button(f"{mark}{'①②③'[i]} {sname}", key=f"nav_{i}", type="primary" if i == stage else "secondary",
                        disabled=not open_steps, on_click=_go, args=(target,), use_container_width=True)
-        if stage == 0:   # ① 세팅 안의 작은 단계 3개
-            subs = st.columns([1, 1, 1, 3])
-            for j, x in enumerate(SS.STAGES[0][1]):
-                mark = "●" if x == cur else ("✓" if done[x] else "○")
-                subs[j].button(f"{mark} {COACH_STEPS[x]}", key=f"sub_{x}", type="tertiary", disabled=x > unlocked,
-                               on_click=_go, args=(x,))
+        if stage == 0:   # ① 세팅 안 진행 (v1.1): 질문 구간과 세팅 구간을 따로 셈 + 지난 답 칩 (누르면 그 질문으로)
+            qi = min(ss.get("q_idx", 0), len(QUESTIONS) - 1)
+            parts = [f"질문 {qi + 1}/{len(QUESTIONS)}" if cur == SS.SHOP else "질문", "결과", "광고 세팅"]
+            st.caption(" → ".join(f"**{t}**" if j == cur else t for j, t in enumerate(parts)))
+            if cur == SS.SHOP:
+                st.progress((qi + 1) / len(QUESTIONS))
+            reached = len(QUESTIONS) if ans is not None and cur != SS.SHOP else ss.get("q_reached", 0)
+            chips = [(i, t) for i, t in answer_chips() if t and i < reached and not (cur == SS.SHOP and i == qi)]   # 물어본 질문만
+            if chips:
+                with st.container(horizontal=True, key="answer_chips"):
+                    for i, t in chips:
+                        st.button(t, key=f"chip_{i}", icon=":material/edit:", on_click=_edit_q, args=(i,),
+                                  help=f"'{QUESTIONS[i][0]}' 답 고치기")
 
-        # ── 1 내 가게 ──
-        if cur == 0:
-            st.markdown("#### 내 가게 숫자")
-            st.pills("무엇을 파나요?", CO.CATEGORIES, key="q_category")
-            st.pills("어디서 파나요? (광고 링크·쿠폰 만들 때 써요, 여러 곳이면 모두)", CO.STORES, selection_mode="multi", key="q_stores")
-            c1, c2 = st.columns(2)
-            with c1:
-                _num_input("1개 팔면 받는 돈 (원)", "q_price", min_value=0, max_value=100_000_000, step=1_000, placeholder="예: 35000",
-                           help="손님이 한 번 결제하는 평균 금액")
-            with c2:
-                _num_input("1개 팔면 남는 돈 (원)", "q_profit", min_value=0, max_value=100_000_000, step=1_000, placeholder="예: 14000",
-                           help="받는 돈에서 원가·포장·배송비·판매 수수료를 뺀 금액")
-                if input_error:
-                    st.markdown(":red[남는 돈은 판매가보다 작아야 해요. 원가·배송비·수수료를 뺀 금액을 넣어 주세요.]")
-            st.segmented_control("한 번 산 손님이 다시 사나요?",
-                                 list(CO.REPURCHASE_PRESETS) + ([MEASURED] if ss.get("repurchase_measured") else []),
-                                 key="q_repurchase", format_func=rep_word)
-            st.caption("1년 동안 다시 사는 횟수로 계산해요: 거의 안 사요 0번 · 가끔 0.5번 · 자주 2번 · 매달(정기) 6번 (모두 가정값, 등급 D)")
-            st.caption("믿을 만한 정도(등급): 판매가·남는 돈·최대 광고비는 사장님이 아는 숫자라 **A 실측**, 재구매는 감으로 고르는 값이라 **D 가정**이에요. "
-                       "답은 등급이 낮은 숫자일수록 넓게 흔들어 계산해요.")
-            c3, c4 = st.columns(2)
-            with c3:
-                _num_input("한 달에 광고에 쓸 수 있는 최대 금액 (원)", "q_budget", min_value=0, max_value=1_000_000_000, step=100_000,
-                           placeholder="예: 1000000")
-            with c4:
-                _num_input("광고 없이 한 달에 보통 몇 개 팔리나요? (모르면 비워 두기)", "q_baseline", min_value=0, max_value=10_000_000, step=1,
-                           help="한 달 뒤 판정에서 광고 없이도 팔렸을 판매를 빼는 데 씁니다.")
-            st.text_input("손님이 이 상품을 찾을 때 검색할 만한 단어 (선택)", key="q_keyword", placeholder="예: 원두커피",
-                          help="네이버에서 한 달에 몇 번 검색되는지, 클릭 1번이 대략 얼마인지 가져옵니다.")
-            if any(s in stores for s in ("스마트스토어", "쿠팡")):
-                st.caption("오픈마켓에서 팔면 판매 수는 마켓 통계 화면에서 보고, 같은 손님이 다시 샀는지는 확인하기 어렵습니다.")
-            if ss.get("report_only"):
-                st.button("다음: 광고 결과 올리기 →", type="primary", disabled=ans is None, on_click=_go, args=(SS.RESULT,))
+        # ── ① 세팅 1 질문: 한 번에 한 질문 (v1.1, 시안 C: prototype/chat-ui-variants 브랜치) ──
+        if cur == SS.SHOP:
+            qi = min(ss.get("q_idx", 0), len(QUESTIONS) - 1)
+            st.header(QUESTIONS[qi][1], anchor=False)
+            can_next = True
+            if qi == 0:
+                st.pills("무엇을 파나요?", CO.CATEGORIES, key="q_category")
+                st.pills("어디서 파나요? (광고 링크·쿠폰 만들 때 써요, 여러 곳이면 모두)", CO.STORES, selection_mode="multi", key="q_stores")
+                st.text_input("손님이 이 상품을 찾을 때 검색할 만한 단어 (선택)", key="q_keyword", placeholder="예: 원두커피",
+                              help="네이버에서 한 달에 몇 번 검색되는지, 클릭 1번이 대략 얼마인지 가져옵니다.")
+                if CI.make_client() is not None and st.button("말로 한 번에 적기", type="tertiary", icon=":material/chat:"):
+                    ss["coach_mode"], ss["chat_hist"], ss["chat_fields"] = "chat", [], {}
+                    st.rerun()
+            elif qi == 1:
+                c1, c2 = st.columns(2)
+                with c1:
+                    _num_input("1개 팔면 받는 돈 (원)", "q_price", min_value=0, max_value=100_000_000, step=1_000, placeholder="예: 35000",
+                               help="손님이 한 번 결제하는 평균 금액")
+                with c2:
+                    _num_input("1개 팔면 남는 돈 (원)", "q_profit", min_value=0, max_value=100_000_000, step=1_000, placeholder="예: 14000",
+                               help="받는 돈에서 원가·포장·배송비·판매 수수료를 뺀 금액")
+                    if input_error:
+                        st.markdown(":red[남는 돈은 판매가보다 작아야 해요. 원가·배송비·수수료를 뺀 금액을 넣어 주세요.]")
+                st.caption("판매가·남는 돈은 사장님이 아는 숫자라 **A 실측**으로 계산해요.")
+                can_next = bool(price) and bool(profit) and not input_error
+            elif qi == 2:
+                st.segmented_control("한 번 산 손님이 다시 사나요?",
+                                     list(CO.REPURCHASE_PRESETS) + ([MEASURED] if ss.get("repurchase_measured") else []),
+                                     key="q_repurchase", format_func=rep_word, label_visibility="collapsed")
+                st.caption("1년 동안 다시 사는 횟수로 계산해요: 거의 안 사요 0번 · 가끔 0.5번 · 자주 2번 · 매달(정기) 6번 "
+                           "(감으로 고르는 값이라 **D 가정**. 등급이 낮을수록 넓게 흔들어 계산해요)")
+            elif qi == 3:
+                c3, c4 = st.columns(2)
+                with c3:
+                    _num_input("한 달에 광고에 쓸 수 있는 최대 금액 (원)", "q_budget", min_value=0, max_value=1_000_000_000, step=100_000,
+                               placeholder="예: 1000000")
+                with c4:
+                    _num_input("광고 없이 한 달에 보통 몇 개 팔리나요? (모르면 비워 두기)", "q_baseline", min_value=0, max_value=10_000_000, step=1,
+                               help="한 달 뒤 판정에서 광고 없이도 팔렸을 판매를 빼는 데 씁니다.")
+                can_next = bool(max_budget)
+            else:   # 확인
+                with st.container(border=True):
+                    for i, t in answer_chips():
+                        st.markdown(f"**{QUESTIONS[i][0]}** · {t or ':red[아직 비어 있어요]'}")
+                if any(s_ in stores for s_ in ("스마트스토어", "쿠팡")):
+                    st.caption("오픈마켓에서 팔면 판매 수는 마켓 통계 화면에서 보고, 같은 손님이 다시 샀는지는 확인하기 어렵습니다.")
+                if ans is None:
+                    st.caption("받는 돈, 남는 돈, 한 달 최대 광고비가 있어야 계산해요. 위 칩을 눌러 채워 주세요.")
+            b1, b2 = st.columns([1, 3])
+            if qi > 0:
+                b1.button("← 이전", key="q_prev", on_click=_edit_q, args=(qi - 1,), use_container_width=True)
+            if qi < len(QUESTIONS) - 1:
+                b2.button("다음 →", key="q_next", type="primary", disabled=not can_next, on_click=_edit_q, args=(qi + 1,))
+            elif ss.get("report_only"):
+                b2.button("다음: 광고 결과 올리기 →", type="primary", disabled=ans is None, on_click=_go, args=(SS.RESULT,))
             else:
-                st.button("다음: 답 보기 →", type="primary", disabled=ans is None, on_click=_go, args=(SS.ANSWER,))
-            if ans is None and not input_error:
-                st.caption("받는 돈, 남는 돈, 한 달 최대 광고비를 넣으면 다음 단계가 열려요.")
+                b2.button("맞아요, 계산해 주세요 →", type="primary", disabled=ans is None, on_click=_go, args=(SS.ANSWER,))
             if ss.get("report_only"):
-                st.info("리포트만 올리기: 위 숫자 3개(받는 돈·남는 돈·한 달 최대 광고비)만 넣으면 바로 결과 올리기로 가요.", icon=":material/upload_file:")
+                st.info("리포트만 올리기: 받는 돈·남는 돈·한 달 최대 광고비만 넣으면 바로 결과 올리기로 가요.", icon=":material/upload_file:")
 
-        # ── 2 답 보기: 한도 → 필요한 비율 → 신호등 한 줄 (UX 3-3, 3-5) ──
-        elif cur == 1:
+        # ── ① 세팅 2 결과: 한도 → 필요한 비율 → 신호등 한 줄 (UX 3-3, 3-5) ──
+        elif cur == SS.ANSWER:
             a = ans
             be = a["be"]
             mc = a["mc"]
@@ -897,13 +948,23 @@ with coach_tab:
             with st.expander(f"클릭 비용 출처: {a['cpc_src']} · 알면 직접 넣기"):
                 _num_input("메타 클릭 1번 비용을 알면 (원)", "q_cpc", min_value=0, max_value=100_000, step=50,
                            help="메타 광고 관리자의 'CPC(링크 클릭당 비용)'. 넣으면 배분과 답이 이 값으로 다시 계산돼요.")
-            st.button("다음: 광고 세팅 →", type="primary", on_click=_go, args=(SS.SETUP,))
+            st.button("이 결과로 광고 세팅하기 →", type="primary", on_click=_go, args=(SS.SETUP,))
 
         # ── ① 세팅 3 광고 세팅: 시험 예산 3안, 배분, 광고 관리자 세팅 도우미 (v1.0: 실행 준비와 나눔) ──
+        elif cur == SS.SETUP and ss.get("q_setup_phase", 0) == 1:   # v1.1: 예산을 고른 뒤 세팅 단계만 한 화면에
+            a = ans
+            no_ad = ss.get("q_budget_pick") == "none"
+            st.header("광고 관리자에 이 값을 그대로 넣어요", anchor=False)
+            pc1, pc2 = st.columns([3, 1], vertical_alignment="center")
+            pc1.caption(f"고른 예산 {won(a['budget0'])} · 네이버 {won(a['split'].naver_spend)} · 메타 {won(a['split'].meta.spend)}")
+            pc2.button("예산 다시 고르기", type="tertiary", key="set_phase_back", on_click=ss.__setitem__, args=("q_setup_phase", 0))
+            setup_view.render(a, ss, stores, price)   # 세팅 도우미 (app/setup_view.py): 단계마다 한 화면
+            ads_guide(a)                              # 자세히 보기 (접힘)
+            st.button("세팅 다 했어요: ② 실행 준비 →", type="primary", on_click=_go, args=(SS.RUN,))
+
         elif cur == SS.SETUP:
             a = ans
-            st.markdown("#### 첫 달 예산을 고르고, 광고 관리자에 넣을 값을 받아 가세요")
-            split_card(a, budget_label=True)
+            st.header("첫 달 예산은 얼마로 할까요?", anchor=False)
             _, short_warn = CO.test_budget(max_budget, a["be"].first)
             if short_warn:   # 설계안 8-1 #5
                 st.warning(short_warn, icon="⏳")
@@ -930,11 +991,12 @@ with coach_tab:
                 if loss > 0:
                     st.warning(f"고른 예산 {won(a['budget0'])}이면 약 {won(loss)} 손해가 예상돼요. 작게 시작하거나 상세페이지부터 다듬어 보세요.")
                     st.caption(f"계산: 예산 {won(a['budget0'])} ÷ 클릭 {won(a['cpc'])} × 구매 비율 {CO.LOSS_REFERENCE_RATE * 100:.2f}% = 판매 약 {sales:.0f}건, 예산 − 판매 × 남는 돈 {won(profit)} = 손해. 구매 비율 출처: GA4 공개 샘플 쇼핑몰 검색광고 손님 (참고 기준)")
-            ads_guide(a)
-            setup_view.render(a, ss, stores, price)   # 세팅 도우미 (app/setup_view.py)
+            split_card(a, budget_label=True)
             if no_ad:
                 st.info("이번 달은 광고 없이 준비부터 해요. 다음 화면의 준비 3가지를 먼저 해 보세요.", icon=":material/build:")
-            st.button("다음: ② 실행 준비 →", type="primary", on_click=_go, args=(SS.RUN,))
+                st.button("광고 없이 준비부터 →", type="primary", on_click=_go, args=(SS.RUN,))
+            else:
+                st.button("이 예산으로 세팅 시작 →", type="primary", on_click=ss.__setitem__, args=("q_setup_phase", 1))
 
         # ── ② 실행: 준비 3개, 광고 링크·쿠폰, 계획 파일, 광고 시작 (UX 3-4) ──
         elif cur == SS.RUN:

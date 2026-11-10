@@ -37,6 +37,8 @@ KEYS: List[Tuple[str, Tuple[str, ...]]] = [
     ("coach_started", (_R,)), ("coach_prev_rate", (_R,)), ("coach_seen", (_R,)), ("_budget_touched", (_R,)),
     # 첫 화면 '리포트만 올리기' (v1.0): 가게 숫자만 넣고 바로 최적화로. 계획 때 예측이 없어 예측 오차율을 숨김
     ("report_only", (_R,)),
+    # ① 세팅 한 번에 한 질문 (v1.1): 지금 질문 번호, 광고 세팅 안 0 예산 고르기 / 1 세팅 단계
+    ("q_idx", (_R,)), ("q_reached", (_R,)), ("q_setup_phase", (_R,)),
 ]
 PERSIST = [k for k, t in KEYS if _P in t]
 PLAN = [k for k, t in KEYS if _L in t]

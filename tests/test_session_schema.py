@@ -28,7 +28,7 @@ SETUP_RESET = {"setup_media", "_setup_media_touched", "setup_phase", "setup_last
 def test_key_lists_come_from_one_declaration():
     assert S.PERSIST == OLD_KEEP + SETUP_PERSIST
     assert set(S.PLAN) == set(OLD_PLAN) | set(MONTH_LATER)          # 한 달 뒤 입력도 계획 파일에 (7e 3단계)
-    assert set(S.RESET) == set(OLD_KEEP) | {"coach_started", "coach_prev_rate", "coach_seen", "_budget_touched", "report_only"} | SETUP_RESET
+    assert set(S.RESET) == set(OLD_KEEP) | {"coach_started", "coach_prev_rate", "coach_seen", "_budget_touched", "report_only", "q_idx", "q_reached", "q_setup_phase"} | SETUP_RESET
     assert "repurchase_measured" not in S.RESET                     # '내 숫자로 시작'해도 주문 내역 실측은 남김 (지금과 같음)
 
 

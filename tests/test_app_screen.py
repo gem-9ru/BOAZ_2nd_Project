@@ -83,8 +83,24 @@ def test_first_screen_has_two_ways_in_and_report_only_skips_to_result():
     assert "처음부터 시작" in labels and "리포트만 올리기" in labels
     # '리포트만 올리기'를 누른 뒤 상태 (가게 숫자 3개 입력): 내 가게 다음 버튼이 바로 결과 올리기로
     # (내 가게 화면의 pills는 AppTest에서 클릭 뒤 다시 돌릴 수 없어, 버튼 이름과 도착 화면을 따로 확인)
-    at = _run("protein", step=0, coach_seen=0, report_only=True)
+    at = _run("protein", step=0, coach_seen=0, report_only=True, q_idx=4)
     assert any(b.label.startswith("다음: 광고 결과 올리기") for b in at.button)
     at = _run("protein", step=4, coach_seen=0, report_only=True)
     assert any(b.label == "이 날짜로 결과 보기" for b in at.button)
     assert not any(b.label == "② 실행 준비로" for b in at.button)      # 리포트만 올리는 사람에게는 실행 안내를 띄우지 않음
+
+
+def test_one_question_at_a_time_and_setup_phases():
+    """v1.1 (시안 C): ① 세팅 질문 5개가 한 화면에 하나씩 열리고, 지난 답은 칩 버튼으로 보임. 광고 세팅은 예산 고르기 → 세팅 단계."""
+    for qi in range(5):
+        at = _run("protein", step=0, q_idx=qi)
+        labels = [b.label for b in at.button]
+        assert ("다음 →" in labels) == (qi < 4) and ("← 이전" in labels) == (qi > 0)
+        if qi == 4:
+            assert "맞아요, 계산해 주세요 →" in labels
+    at = _run("protein", step=1)
+    assert any(b.label.startswith("월 50.0만") for b in at.button)          # 결과 화면에도 지난 답 칩
+    at = _run("protein", step=2)
+    assert any(b.label == "이 예산으로 세팅 시작 →" for b in at.button)
+    at = _run("protein", step=2, q_setup_phase=1)
+    assert any(b.label.startswith("세팅 다 했어요") for b in at.button) and any(b.label == "예산 다시 고르기" for b in at.button)
