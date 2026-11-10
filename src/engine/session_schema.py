@@ -27,18 +27,31 @@ KEYS: List[Tuple[str, Tuple[str, ...]]] = [
     ("q_total", (_P, _L, _R)),
     # 주문 내역 재구매 실측 (숫자 dict). '내 숫자로 시작'해도 남김
     ("repurchase_measured", (_L,)),
-    # 3 광고 준비 체크·링크 만들기
+    # 4 실행 준비 체크·링크 만들기 (v1.0: 3 광고 세팅과 나눔)
     ("prep_1", (_P, _R)), ("prep_2", (_P, _R)), ("prep_3", (_P, _R)),
     ("link_store", (_P, _R)), ("link_ch", (_P, _R)), ("link_url", (_P, _R)), ("link_product", (_P, _R)),
     ("link_detail", (_P, _R)),
-    # 3 광고 준비: 세팅 도우미 매체 고르기 (7d). 고른 값은 단계 이동 때 남기고 '내 숫자로 시작'에서 지움
+    # 3 광고 세팅: 세팅 도우미 매체 고르기 (7d). 고른 값은 단계 이동 때 남기고 '내 숫자로 시작'에서 지움
     ("setup_media", (_P, _R)), ("_setup_media_touched", (_R,)), ("setup_phase", (_R,)), ("setup_last", (_R,)),
     # 단계 진행
     ("coach_started", (_R,)), ("coach_prev_rate", (_R,)), ("coach_seen", (_R,)), ("_budget_touched", (_R,)),
+    # 첫 화면 '리포트만 올리기' (v1.0): 가게 숫자만 넣고 바로 최적화로. 계획 때 예측이 없어 예측 오차율을 숨김
+    ("report_only", (_R,)),
 ]
 PERSIST = [k for k, t in KEYS if _P in t]
 PLAN = [k for k, t in KEYS if _L in t]
 RESET = [k for k, t in KEYS if _R in t]
+
+
+# ── 단계 (v1.0: 화면에서는 ① 세팅 = 0·1·2, ② 실행 = 3, ③ 최적화 = 4) ──────────────
+SHOP, ANSWER, SETUP, RUN, RESULT = range(5)
+STEP_NAMES = ["내 가게", "답 보기", "광고 세팅", "실행 준비", "한 달 뒤"]
+STAGES = [("세팅", (SHOP, ANSWER, SETUP)), ("실행", (RUN,)), ("최적화", (RESULT,))]
+
+
+def stage_of(step: int) -> int:
+    """단계 번호 → 화면 묶음 번호 (0 세팅 · 1 실행 · 2 최적화)."""
+    return next(i for i, (_, steps) in enumerate(STAGES) if step in steps)
 
 
 # ── 단계 이동 (coach_step을 바꾸는 곳은 여기뿐) ─────────────────────────────
@@ -62,8 +75,8 @@ def reset(ss: MutableMapping) -> None:
 
 def clamp_step(ss: MutableMapping, has_answer: bool) -> Tuple[int, int]:
     """열린 단계까지로 지금 단계를 줄임 → (지금 단계, 열린 마지막 단계).
-    답이 없으면 1단계만, 답이 있으면 3단계(광고 준비)까지, '광고를 시작했어요' 뒤에는 4단계(한 달 뒤)까지."""
-    unlocked = 0 if not has_answer else (3 if ss.get("coach_started") else 2)
+    답이 없으면 내 가게만, 답이 있으면 모두 (v1.0: 최적화도 길을 막지 않음. 광고 시작 전이면 화면이 빈 화면 안내)."""
+    unlocked = RESULT if has_answer else SHOP
     ss["coach_step"] = min(ss.get("coach_step", 0), unlocked)
     return ss["coach_step"], unlocked
 
@@ -173,7 +186,7 @@ class Plan:
 
 
 def apply_plan(ss: MutableMapping, plan: Plan) -> None:
-    """불러온 계획을 화면 상태에 넣음. 고른 예산이 있으면 사장님이 고른 것으로, 시작일이 있으면 4단계(한 달 뒤)로."""
+    """불러온 계획을 화면 상태에 넣음. 고른 예산이 있으면 사장님이 고른 것으로, 시작일이 있으면 한 달 뒤(최적화)로."""
     for k, v in plan.inputs.items():
         ss[k] = v
     if "q_budget_pick" in plan.inputs:
@@ -181,4 +194,4 @@ def apply_plan(ss: MutableMapping, plan: Plan) -> None:
     ss["plan_pred"] = plan.prediction
     ss["coach_mode"] = "mine"
     if plan.started:
-        ss["coach_started"], ss["coach_step"], ss["coach_seen"] = plan.started, 3, 3
+        ss["coach_started"], ss["coach_step"], ss["coach_seen"] = plan.started, RESULT, RESULT

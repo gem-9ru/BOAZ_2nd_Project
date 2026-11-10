@@ -9,7 +9,8 @@
 ## 버전별 주소
 | 버전 | 앱 | 코드 |
 |---|---|---|
-| v0.9 (현재, main): 코치 4단계 화면(내 가게 → 답 보기 → 광고 준비 → 한 달 뒤), 예시 체험, 시험 예산 3안, 손해 금액 | https://ad-budget-simulator.streamlit.app/ | [v0.9.2](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.9.2) |
+| v1.0 (현재, main): 세팅 → 실행 → 최적화 스테퍼, 첫 화면 들어가는 길 두 개(처음부터 / 계획 파일·리포트만), 세팅값 복사 칸, 매체별 단계 비율 막대, 상태 배지, 다크 모드 ([기획안_개정본_세팅코치.md](기획안_개정본_세팅코치.md) 5장) | https://ad-budget-simulator.streamlit.app/ · 고정: https://ad-budget-simulator-v10.streamlit.app/ (`release/v1.0` 브랜치) | [v1.0](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v1.0) |
+| v0.9: 코치 4단계 화면(내 가게 → 답 보기 → 광고 준비 → 한 달 뒤), 예시 체험, 시험 예산 3안, 손해 금액 | (main에 덮어씀) | [v0.9.2](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.9.2) |
 | v0.8: 코치 + 측정 키트(광고 링크·쿠폰, 판매처 통계 파일) | (main에 덮어씀) | [v0.8](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.8) |
 | v0.7: 초보자 광고 코치 (고정) | https://ad-budget-simulator-v07.streamlit.app/ (`release/v0.7` 브랜치, Python 3.12) | [v0.7](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.7) |
 | v0.6.1 (밸류체인·공동구매, 코치 전) | — | [v0.6.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v0.6.1) |

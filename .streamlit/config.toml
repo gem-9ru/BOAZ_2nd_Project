@@ -8,3 +8,6 @@ gatherUsageStats = false
 
 [client]
 toolbarMode = "minimal"
+
+# v1.0 디자인 토큰은 [theme]에 넣지 않음: Streamlit 1.50은 [theme] 값을 하나라도 넣으면 라이트 고정 사용자 테마가 되어
+# 다크 모드가 꺼짐 (11/10 다크 모드 에뮬레이션으로 확인). 기준색 버튼·글꼴은 app/main.py의 CSS 한 곳에서 (DESIGN_CSS)

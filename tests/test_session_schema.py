@@ -28,7 +28,7 @@ SETUP_RESET = {"setup_media", "_setup_media_touched", "setup_phase", "setup_last
 def test_key_lists_come_from_one_declaration():
     assert S.PERSIST == OLD_KEEP + SETUP_PERSIST
     assert set(S.PLAN) == set(OLD_PLAN) | set(MONTH_LATER)          # 한 달 뒤 입력도 계획 파일에 (7e 3단계)
-    assert set(S.RESET) == set(OLD_KEEP) | {"coach_started", "coach_prev_rate", "coach_seen", "_budget_touched"} | SETUP_RESET
+    assert set(S.RESET) == set(OLD_KEEP) | {"coach_started", "coach_prev_rate", "coach_seen", "_budget_touched", "report_only"} | SETUP_RESET
     assert "repurchase_measured" not in S.RESET                     # '내 숫자로 시작'해도 주문 내역 실측은 남김 (지금과 같음)
 
 
@@ -70,7 +70,7 @@ def test_apply_plan_opens_month_later_when_started():
     S.apply_plan(ss, _full_plan())
     assert ss["q_price"] == 20_000 and ss["q_spent"] == 120_000 and ss["repurchase_measured"] == MEASURED
     assert ss["_budget_touched"] is True and ss["plan_pred"]["budget"] == 210_000
-    assert (ss["coach_mode"], ss["coach_started"], ss["coach_step"], ss["coach_seen"]) == ("mine", "2026-11-09", 3, 3)
+    assert (ss["coach_mode"], ss["coach_started"], ss["coach_step"], ss["coach_seen"]) == ("mine", "2026-11-09", S.RESULT, S.RESULT)
     ss2 = {"coach_step": 1}
     S.apply_plan(ss2, S.Plan(inputs={"q_price": 1}, prediction={}, started=None))
     assert ss2["coach_step"] == 1 and "_budget_touched" not in ss2 and ss2["coach_mode"] == "mine"
@@ -88,13 +88,19 @@ def test_go_to_reset_and_unlock_rules():
     assert not set(S.RESET) & set(full)
     assert full["coach_mode"] == "mine" and full["coach_step"] == 0 and "chat_hist" in full
     assert full["repurchase_measured"] == MEASURED
-    # 열림: 답이 없으면 1단계만, 답이 있으면 3단계까지, 광고를 시작했으면 4단계까지. 지금 단계는 열린 곳까지로 줄임
-    ss = {"coach_step": 3}
+    # 열림 (v1.0): 답이 없으면 내 가게만, 답이 있으면 최적화까지 모두 (광고 시작 전이면 최적화 화면이 빈 화면 안내)
+    ss = {"coach_step": S.RESULT}
     assert S.clamp_step(ss, has_answer=False) == (0, 0) and ss["coach_step"] == 0
-    ss = {"coach_step": 3}
-    assert S.clamp_step(ss, has_answer=True) == (2, 2)
-    ss = {"coach_step": 3, "coach_started": "2026-11-01"}
-    assert S.clamp_step(ss, has_answer=True) == (3, 3)
+    ss = {"coach_step": S.RESULT}
+    assert S.clamp_step(ss, has_answer=True) == (S.RESULT, S.RESULT)
+    ss = {"coach_step": S.SETUP}
+    assert S.clamp_step(ss, has_answer=True) == (S.SETUP, S.RESULT)
+
+
+def test_three_stages_cover_five_steps_once():
+    """화면 묶음 3개(세팅·실행·최적화)가 단계 5개를 빠짐없이 한 번씩 덮음."""
+    assert [s for _, steps in S.STAGES for s in steps] == list(range(len(S.STEP_NAMES)))
+    assert [S.stage_of(s) for s in range(5)] == [0, 0, 0, 1, 2]
 
 
 def test_plan_rejects_non_dict_sections():

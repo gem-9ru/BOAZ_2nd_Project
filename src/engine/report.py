@@ -17,18 +17,19 @@ from .uploads import guess_columns
 # ── 리포트 열 매핑 ─────────────────────────────────────────────
 METRICS = {
     "impressions": "노출", "clicks": "클릭", "cost": "광고비", "conversions": "전환(구매)", "revenue": "전환 매출",
-    "reach": "도달", "frequency": "빈도", "objective": "결과 종류(목적)",
+    "reach": "도달", "frequency": "빈도", "objective": "결과 종류(목적)", "landing": "랜딩 페이지 조회",
 }
 # 앞에 있는 이름이 먼저 맞으면 그 열. (정확히 같음 = '=', 포함 = 그대로)
 WORDS = {
     "naver": {
         "impressions": ["노출수"], "clicks": ["클릭수"], "cost": ["총비용", "비용"], "conversions": ["전환수"],
-        "revenue": ["전환매출액", "전환매출"], "reach": [], "frequency": [], "objective": [],
+        "revenue": ["전환매출액", "전환매출"], "reach": [], "frequency": [], "objective": [], "landing": [],
     },
     "meta": {
         "impressions": ["=노출", "노출"], "clicks": ["=링크 클릭", "링크 클릭"], "cost": ["지출 금액", "지출"],
         "conversions": ["=웹사이트 구매", "=구매", "=결과"], "revenue": ["구매 전환값", "전환값"],
         "reach": ["=도달"], "frequency": ["=빈도"], "objective": ["=결과 표시 도구"],
+        "landing": ["=랜딩 페이지 조회"],   # 실제 메타 내보내기 열 (v1.0 랜딩 도달률)
     },
 }
 EXCLUDE = ("률", "당", "비율", "평균", "CPC", "CPM", "CTR")   # '클릭률', '결과당 비용', '평균클릭비용' 같은 파생 열은 합계 대상 아님
@@ -73,9 +74,11 @@ def totals(df: pd.DataFrame, mapping: Dict[str, Optional[str]], platform: str) -
     text = df.select_dtypes(exclude="number").astype(str).apply(lambda s: s.str.strip())
     if not text.empty:
         df = df[~text.isin(TOTAL_ROW_WORDS).any(axis=1)]
-    for m in ("impressions", "clicks", "cost", "conversions", "revenue", "reach"):
+    for m in ("impressions", "clicks", "cost", "conversions", "revenue", "reach", "landing"):
         col = mapping.get(m)
         out[m] = float(_num(df[col]).sum()) if col and col in df.columns else None
+        if m == "landing" and col and col in df.columns and df[col].replace("", None).isna().all():
+            out[m] = None   # 메타는 랜딩 추적을 안 켜면 이 열을 비워 둠. 빈칸 = 모름이지 0번이 아님 (실제 내보내기 파일에서 확인)
     obj_col = mapping.get("objective")
     objective = None
     if obj_col and obj_col in df.columns and df[obj_col].notna().any():
@@ -99,6 +102,35 @@ def totals(df: pd.DataFrame, mapping: Dict[str, Optional[str]], platform: str) -
 CTR_HIGH = 0.01          # 링크 클릭률 1% 이상이면 '광고는 눌린다'
 FREQ_HIGH = 3.0          # 메타 빈도 3 이상이면 같은 사람이 여러 번 봄
 BUY_LOW_RATIO = 0.5      # 실측 구매 비율이 예측의 절반 미만이면 '상세페이지'
+LANDING_LOW = 0.8        # 링크 클릭 중 랜딩 페이지가 열린 비율 80% 미만이면 '페이지가 늦게 열림' (D 가정, v1.0)
+
+
+# 가장 많이 빠지는 단계 → 결론 한 문장 (차트 아래, 화면 읽기 프로그램도 같은 결론에 닿게)
+STEP_SENTENCE = {
+    "클릭률": "광고가 잘 안 눌려요. 메타는 문구·사진, 네이버는 검색어·제목부터 바꿔 보세요.",
+    "랜딩 도달": "눌렀는데 페이지가 열리기 전에 나가요. 링크와 휴대폰에서 페이지가 열리는 속도를 확인하세요.",
+    "구매 비율": "광고는 눌리는데 상세페이지에서 빠져요. 광고비를 늘리기 전에 사진·후기·가격부터 고치세요.",
+}
+
+
+def step_rates(rep: Dict, predicted_cvr: Optional[float]) -> Dict:
+    """매체 하나의 단계별 남는 비율 (v1.0 퍼널 막대). 건수가 수천 배 차이 나서 건수 대신 '단계 사이 비율 ÷ 기준'으로 그린다.
+    → {"rows": [{name, rate, base, base_label, ratio}], "counts": [(이름, 건수)], "worst": 기준보다 가장 낮은 행 또는 None}"""
+    imp, clk = rep.get("impressions") or 0, rep.get("clicks") or 0
+    land, conv = rep.get("landing"), rep.get("conversions")
+    rows, counts = [], [("노출", imp), ("클릭", clk)]
+    if imp:
+        rows.append({"name": "클릭률", "rate": clk / imp, "base": CTR_HIGH, "base_label": f"기준 {CTR_HIGH:.0%}"})
+    if land and clk:      # 네이버 리포트에는 랜딩 페이지 조회가 없음 → 그 단계를 건너뜀
+        rows.append({"name": "랜딩 도달", "rate": land / clk, "base": LANDING_LOW, "base_label": f"기준 {LANDING_LOW:.0%} (가정)"})
+        counts.append(("랜딩", land))
+    if conv is not None and clk and rep.get("objective_is_purchase", True) and predicted_cvr:
+        rows.append({"name": "구매 비율", "rate": conv / clk, "base": predicted_cvr, "base_label": f"예상 {predicted_cvr:.1%}"})
+        counts.append(("구매", conv))
+    for r in rows:
+        r["ratio"] = r["rate"] / r["base"] if r["base"] else None
+    below = [r for r in rows if r["ratio"] is not None and r["ratio"] < 1]
+    return {"rows": rows, "counts": counts, "worst": min(below, key=lambda r: r["ratio"]) if below else None}
 
 
 def diagnose(rep: Dict, predicted_cvr: Optional[float]) -> List[Dict[str, str]]:
@@ -121,6 +153,11 @@ def diagnose(rep: Dict, predicted_cvr: Optional[float]) -> List[Dict[str, str]]:
         out.append({"title": "메타: 같은 사람이 너무 자주 봐요 → 소재 피로",
                     "evidence": f"한 사람이 평균 {freq:.1f}번 봤고 클릭률은 {ctr:.1%}예요.",
                     "action": "새 사진·영상(소재) 2~3개를 추가하거나 보여 줄 사람(타깃)을 넓히세요."})
+    land = rep.get("landing")
+    if land is not None and clk and land / clk < LANDING_LOW:
+        out.append({"title": f"{name}: 눌렀는데 페이지가 열리기 전에 나가요",
+                    "evidence": f"링크 클릭 {clk:,.0f}번 중 페이지가 열린 건 {land:,.0f}번({land / clk:.0%})이에요 (기준 {LANDING_LOW:.0%}, 가정).",
+                    "action": "광고 링크가 맞는 상품 페이지로 가는지, 휴대폰에서 페이지가 빨리 열리는지 확인하세요."})
     if conv == 0 and clk > 0 and rep.get("objective_is_purchase", True):
         out.append({"title": f"{name}: 전환이 0건이에요 → 측정부터 확인",
                     "evidence": f"클릭 {clk:,.0f}번에 전환이 한 건도 잡히지 않았어요.",

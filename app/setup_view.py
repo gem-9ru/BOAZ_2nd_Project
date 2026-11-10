@@ -79,6 +79,15 @@ def settings_plan(a: dict, ss, stores: List[str]) -> AS.SettingsPlan:
     return AS.build_settings(**args, owner=owner) if owner else base
 
 
+def _plain(v) -> str:
+    """복사용 값: 정수면 쉼표 없이, 목록이면 줄바꿈으로."""
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    if isinstance(v, (list, tuple)):
+        return "\n".join(map(str, v))
+    return str(v)
+
+
 def _item_widget(ss, media: str, it: AS.Item, default):
     """세팅값 한 칸. 사장님이 안 고친 칸은 코치 숫자가 바뀌면 따라감 (마지막 기본값을 기억)."""
     wk = _wkey(media, it.key)
@@ -92,10 +101,20 @@ def _item_widget(ss, media: str, it: AS.Item, default):
         st.markdown(f"{label}: **{AS.show(it.value)}**")
     elif isinstance(default, bool):
         st.toggle(label, key=wk)
-    elif isinstance(default, (int, float)):
-        st.number_input(label, key=wk, min_value=0, step=10)
     else:
-        st.text_input(label, key=wk, placeholder="비워 두면 시트에도 빈칸" if it.source == AS.DRAFT else None)
+        # v1.0 5-3: 값은 st.code로 (복사 아이콘 기본, 광고 관리자 칸에 그대로 붙이게 쉼표 없이). 고치기는 팝오버 안에
+        num = isinstance(default, (int, float))
+        edit = (lambda: st.number_input(label, key=wk, min_value=0, step=10)) if num else \
+            (lambda: st.text_input(label, key=wk, placeholder="비워 두면 시트에도 빈칸" if it.source == AS.DRAFT else None))
+        val = ss.get(wk)
+        if val in (None, ""):
+            edit()          # 아직 값이 없는 칸(문구 초안 등)은 바로 입력
+        else:
+            st.markdown(label)
+            c1, c2 = st.columns([5, 1], vertical_alignment="center")
+            c1.code(_plain(val), language=None)
+            with c2.popover("고치기", use_container_width=True):
+                edit()
     if it.note:
         st.caption(SR.md_safe(it.note))
     kind = COPY_KINDS.get(it.key)
@@ -186,6 +205,7 @@ def _step_guide(a: dict, ss, plan: AS.SettingsPlan, phase: str, client):
             st.toast(f"{PHASE_NAMES[phase]} 세팅값을 다 모았어요. 아래 '광고 세팅값 시트'에서 받아 가세요.", icon="✅")
         else:
             ss[pk] = pos + 1
+            st.toast("값을 저장했어요. 다음 단계로 넘어갈게요.", icon=":material/check:")
         st.rerun()
     if b3.button("여기서 막혔어요", key=f"setup_stuck_{phase}"):
         ss["setup_stuck"] = (phase, step.key)

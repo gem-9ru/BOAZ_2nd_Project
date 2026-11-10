@@ -16,12 +16,13 @@ META_COLS = ['보고 시작', '보고 종료', '캠페인 이름', '캠페인 �
 NAVER_COLS = ["캠페인", "키워드", "노출수", "클릭수", "클릭률(%)", "평균클릭비용(VAT포함,원)", "총비용(VAT포함,원)", "전환수", "전환율(%)", "전환매출액(원)"]
 
 
-def meta_df(result_kind="actions:offsite_conversion.fb_pixel_purchase", results=(3, 2)):
+def meta_df(result_kind="actions:offsite_conversion.fb_pixel_purchase", results=(3, 2), landing=90):
     rows = []
     for i, r in enumerate(results):
         row = {c: 0 for c in META_COLS}
         row.update({"캠페인 이름": f"c{i}", "결과": r, "결과 표시 도구": result_kind, "도달": 2_000, "노출": 8_000,
-                    "지출 금액 (KRW)": "70,000", "링크 클릭": 100, "결과당 비용": 99_999, "CTR(링크 클릭률)": 1.25})
+                    "지출 금액 (KRW)": "70,000", "링크 클릭": 100, "결과당 비용": 99_999, "CTR(링크 클릭률)": 1.25,
+                    "랜딩 페이지 조회": landing, "랜딩 페이지 조회당 비용 (KRW)": 999})
         rows.append(row)
     return pd.DataFrame(rows, columns=META_COLS)
 
@@ -107,3 +108,31 @@ def test_b7_total_rows_are_dropped():
     assert t["clicks"] == 15 and t["cost"] == 19_500 and t["conversions"] == 1
     df.loc[2, "캠페인"] = "총계"
     assert R.totals(df, R.map_columns(list(df.columns), "naver"), "naver")["impressions"] == 1_500
+
+
+def test_landing_rate_column_rule_and_step_rates():
+    """v1.0: 메타 '랜딩 페이지 조회' 열 → 랜딩 도달률. '조회당 비용' 같은 파생 열은 합계하지 않음."""
+    m = R.map_columns(META_COLS, "meta")
+    assert m["landing"] == "랜딩 페이지 조회"
+    t = R.totals(meta_df(), m, "meta")
+    assert t["landing"] == 180                                     # 90 + 90 (조회당 비용 999는 안 더함)
+    assert not any("페이지가 열리기 전" in d["title"] for d in R.diagnose(t, 0.0126))   # 180/200 = 90% ≥ 80%
+    low = R.totals(meta_df(landing=60), m, "meta")
+    assert any("페이지가 열리기 전" in d["title"] for d in R.diagnose(low, 0.0126))      # 120/200 = 60%
+    # 단계 비율: 클릭률 200/16,000 = 1.25% (기준 1%), 랜딩 90%, 구매 5/200 = 2.5% vs 예상 10% → 가장 낮은 단계 = 구매
+    sr = R.step_rates(t, 0.10)
+    assert [r["name"] for r in sr["rows"]] == ["클릭률", "랜딩 도달", "구매 비율"]
+    assert sr["rows"][0]["ratio"] == pytest.approx(1.25) and sr["worst"]["name"] == "구매 비율"
+    assert sr["counts"] == [("노출", 16_000), ("클릭", 200), ("랜딩", 180), ("구매", 5)]
+    # 네이버는 랜딩 열이 없어 두 단계, 예상 구매 비율이 없으면 구매 단계도 빼고 그림
+    nv = R.step_rates({"platform": "naver", "impressions": 1_000, "clicks": 5, "conversions": 1, "landing": None}, None)
+    assert [r["name"] for r in nv["rows"]] == ["클릭률"] and nv["worst"]["name"] == "클릭률"
+
+
+def test_blank_landing_column_means_unknown_not_zero():
+    """실제 메타 내보내기: 링크 클릭 목적이면 '랜딩 페이지 조회'가 빈칸. 0으로 세면 '페이지가 안 열려요'가 잘못 뜸."""
+    m = R.map_columns(META_COLS, "meta")
+    t = R.totals(meta_df(landing=None), m, "meta")
+    assert t["landing"] is None
+    assert not any("페이지가 열리기 전" in d["title"] for d in R.diagnose(t, 0.0126))
+    assert [r["name"] for r in R.step_rates(t, 0.10)["rows"]] == ["클릭률", "구매 비율"]

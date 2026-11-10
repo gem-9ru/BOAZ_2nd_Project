@@ -226,3 +226,25 @@ def breakeven_map(g: dict):
     fig.update_xaxes(title="판매가 (원)", tickformat=",")
     fig.update_yaxes(title="1년 동안 다시 사는 횟수", range=[0, float(g["reps"][-1])])
     return _layout(fig, height=380)
+
+
+# ── v1.0 디자인 토큰 (기획안_개정본_세팅코치.md 5-5): 매체 색은 앱 전체에서 고정, 초록·빨강은 이익·손해에만 ──
+# 막대 색은 라이트(흰 바탕)·다크(#0E1117) 둘 다 3:1 넘게: 파랑 4.6 / 4.1, 강조 빨강 4.6 / 4.1 (11/10 계산)
+PRIMARY, NAVER_C, META_C, MUTED, DROP_C = "#4C78A8", "#4C78A8", "#C8661A", "rgba(127,127,127,.35)", "#D1432E"
+
+
+def step_rate_bars(rows: list, worst_name: str = None):
+    """단계마다 남는 비율 막대 (v1.0 퍼널). 막대 길이 = 기준 대비(1 = 기준), 세로선 = 기준.
+    노출과 구매가 수천 배 차이 나서 건수 막대로는 구매가 0처럼 보이므로 비율을 기준과 비교한다. 라벨을 막대 끝에 직접 씀."""
+    names = [r["name"] for r in rows][::-1]
+    ratios = [min(r["ratio"], 2.0) for r in rows][::-1]          # 기준의 2배 넘으면 끝에서 자름 (라벨에는 실제 값)
+    labels = [(f"{r['rate']:.1%}" if r["rate"] < 0.1 else f"{r['rate']:.0%}") + f" · {r['base_label']}" for r in rows][::-1]
+    colors = [DROP_C if n == worst_name else NAVER_C for n in names]
+    fig = go.Figure(go.Bar(y=names, x=ratios, orientation="h", marker_color=colors, text=labels, textposition="outside",
+                           cliponaxis=False, hoverinfo="skip"))
+    fig.add_vline(x=1, line_width=2, line_dash="dot", line_color="rgba(127,127,127,.9)",
+                  annotation_text="기준", annotation_position="top")
+    fig.update_xaxes(range=[0, 2.6], showticklabels=False, showgrid=False, zeroline=False)
+    fig.update_yaxes(showgrid=False)
+    fig.update_layout(height=70 + 48 * len(rows), margin=dict(l=10, r=10, t=30, b=10), showlegend=False)
+    return fig

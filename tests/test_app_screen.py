@@ -63,5 +63,28 @@ def test_chosen_budget_resplits_on_screen():
 
 
 def test_every_coach_step_opens():
-    for step in (0, 2, 3):
-        _run("protein", step=step, coach_started="2026-10-01")
+    """v1.0: 단계 5개 (① 세팅 = 내 가게·답 보기·광고 세팅, ② 실행 준비, ③ 한 달 뒤) 모두 멈추지 않고 열림."""
+    for step in range(5):
+        at = _run("protein", step=step, coach_started="2026-10-01", coach_seen=4)
+        assert at.session_state["coach_step"] == step
+
+
+def test_result_before_start_shows_next_action():
+    """광고를 시작하기 전에 ③을 누르면 빈 화면: 실행 준비로 가는 버튼 + 이미 돌린 사람의 시작일 칸."""
+    at = _run("protein", step=4)
+    assert any(b.label == "② 실행 준비로" for b in at.button)
+    assert len(at.date_input) == 1
+
+
+def test_first_screen_has_two_ways_in_and_report_only_skips_to_result():
+    at = AppTest.from_file(APP, default_timeout=90)
+    at.run()
+    labels = [b.label for b in at.button]
+    assert "처음부터 시작" in labels and "리포트만 올리기" in labels
+    # '리포트만 올리기'를 누른 뒤 상태 (가게 숫자 3개 입력): 내 가게 다음 버튼이 바로 결과 올리기로
+    # (내 가게 화면의 pills는 AppTest에서 클릭 뒤 다시 돌릴 수 없어, 버튼 이름과 도착 화면을 따로 확인)
+    at = _run("protein", step=0, coach_seen=0, report_only=True)
+    assert any(b.label.startswith("다음: 광고 결과 올리기") for b in at.button)
+    at = _run("protein", step=4, coach_seen=0, report_only=True)
+    assert any(b.label == "이 날짜로 결과 보기" for b in at.button)
+    assert not any(b.label == "② 실행 준비로" for b in at.button)      # 리포트만 올리는 사람에게는 실행 안내를 띄우지 않음

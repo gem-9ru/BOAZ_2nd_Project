@@ -1,4 +1,4 @@
-"""AARRR 기반 광고 예산 시뮬레이터 — Streamlit 프로토타입 v0.9 (첫 탭: 초보 사장님용 광고 코치).
+"""광고 세팅·최적화 코치 v1.0 — 세팅 → 실행 → 최적화 (화면 설계: 기획안_개정본_세팅코치.md 5장).
 
 실행: streamlit run app/main.py
 
@@ -8,6 +8,7 @@
 """
 import html
 import sys
+from datetime import timedelta
 from pathlib import Path
 
 import numpy as np
@@ -61,7 +62,7 @@ from src.engine import insights as insights_mod  # noqa: E402
 from src.engine.insights import biggest_drop, insights, prescription, warnings, won  # noqa: E402
 from src.engine.optimize import compare_options  # noqa: E402
 
-st.set_page_config(page_title="AARRR 광고 예산 시뮬레이터", page_icon="📈", layout="wide")
+st.set_page_config(page_title="광고 세팅·최적화 코치 v1.0", page_icon="📈", layout="wide")
 
 # 지표 정의서(실행계획 7장) 기반 툴팁 — 광고 용어를 모르는 사용자 기준으로 풀어 씀
 HELP = {
@@ -170,6 +171,20 @@ def chain_bar(billing: str) -> str:
     return '<div style="display:flex;gap:4px;margin:2px 0 10px">' + "".join(cells) + "</div>"
 
 
+# ───────────────────────────── v1.0 디자인 (기획안_개정본_세팅코치.md 5-5) ─────────────────────────────
+# [theme]을 쓰면 다크 모드가 꺼져서(.streamlit/config.toml 설명) CSS로: 한글 글꼴 Pretendard, 기본 버튼·진행 막대는 기준색 파랑
+# (Streamlit 기본 빨강은 이 앱에서 '손해·멈춤' 뜻이라 버튼에 쓰지 않음). 흰 글자 대비 4.6:1
+DESIGN_CSS = """<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+.stApp, .stApp p, .stApp li, .stApp label, .stApp button, .stApp input, .stApp textarea, .stApp h1, .stApp h2, .stApp h3, .stApp h4,
+.stApp [data-testid="stMarkdownContainer"] {font-family: 'Pretendard Variable', Pretendard, 'Noto Sans KR', sans-serif;}
+/* 아이콘(span)은 건드리지 않음: 글꼴을 덮으면 화살표가 'keyboard_arrow_right' 글자로 보임 (11/10 확인) */
+[data-testid="stBaseButton-primary"] {background-color: #4C78A8 !important; border-color: #4C78A8 !important; color: #fff !important;}
+[data-testid="stBaseButton-primary"]:hover {background-color: #3E6894 !important; border-color: #3E6894 !important;}
+[data-testid="stProgress"] [role="progressbar"] > div > div > div {background-color: #4C78A8 !important;}
+</style>"""
+st.markdown(DESIGN_CSS, unsafe_allow_html=True)
+
 # ───────────────────────────── 플로팅 도움말 ─────────────────────────────
 st.markdown("""<style>
 .st-key-help_fab {position: fixed; bottom: 4.5rem; right: 1.5rem; z-index: 1000; width: auto;}
@@ -180,8 +195,8 @@ help_fab = st.container(key="help_fab")  # 내용은 계산이 끝난 뒤 맨 �
 with st.sidebar:
     st.caption("처음이면 **🧭 광고 코치**부터. 모르는 말은 오른쪽 아래 💬 도우미에게 물어보세요.")
 
-st.title("📈 광고 예산 시뮬레이터")
-st.caption("광고를 처음 하는 사장님이 첫 광고비를 정하고, 한 달 뒤 계속할지 판단하도록 돕는 코치입니다. (프로토타입 v0.9)")
+st.title("광고 세팅·최적화 코치")
+st.caption("광고를 처음 하는 사장님이 네이버·메타 광고를 직접 세팅해 돌리고, 돌린 결과로 다음 달 광고를 고치도록 돕는 코치예요. (v1.0)")
 
 # 첫 화면은 광고 코치 하나 (MVP_기능정의.md 5장 4번). 다음 단계 탭 6개는 코치 아래 접힌 '더 보기' 안에 (코드·기능·코치 값 연결은 그대로)
 coach_tab = st.container()
@@ -201,20 +216,33 @@ def _closable_banner(key: str, text: str, icon: str = "ℹ️", kind: str = "inf
         st.rerun()
 
 
+# 상태 배지 (v1.0 디자인 5-5): 이모지 대신 아이콘 + 글자. 같은 색은 앱 전체에서 같은 뜻
+BADGES = {"go": ("해 볼 만해요", "green", ":material/check_circle:"), "small": ("작게 시험", "orange", ":material/error:"),
+          "prep": ("지금은 미뤄요", "red", ":material/pause_circle:"), "hold": ("판단 보류", "gray", ":material/hourglass_empty:"),
+          "keep": ("계속", "green", ":material/check_circle:"), "change": ("바꾸기", "orange", ":material/error:"),
+          "stop": ("멈춤", "red", ":material/pause_circle:")}
+VERDICT_BADGE = {0: "hold", 1: "keep", 2: "keep", 3: "stop", 4: "change"}   # CO.judge 단계 → 배지
+
+
+def badge(kind: str, label: str = None):
+    text, color, icon = BADGES[kind]
+    st.badge(label or text, color=color, icon=icon)
+
+
 for _i, t in enumerate(tabs):
     with t:
         if ss.get("store_funnel_df") is None:   # 잠김 빈 화면 (UX 6-2): 첫 다음 단계 탭은 배너, 나머지는 한 줄
             if _i == 0:
-                _closable_banner("locked", "광고 성과 파일이나 판매처 통계가 생기면 내 숫자로 바뀌어요. 지금은 예시 값입니다.", "🔒")
+                _closable_banner("locked", "광고 성과 파일이나 판매처 통계가 생기면 내 숫자로 바뀌어요. 지금은 예시 값입니다.", ":material/lock:")
             else:
-                st.caption("🔒 광고 성과 파일이나 판매처 통계가 생기면 내 숫자로 바뀌어요. 지금은 예시 값입니다.")
+                st.caption(":material/lock: 광고 성과 파일이나 판매처 통계가 생기면 내 숫자로 바뀌어요. 지금은 예시 값입니다.")
         heads.append(st.container())
         st.divider()
 
 # ───────────────────────────── 🧭 광고 코치 (주 사용자: 광고를 처음 하는 사장님) ─────────────────────────────
 # 계산 규칙·확정 값: 초보자_코치_설계안.md 8장 (src/engine/coach.py). 화면 구성: UX_개편안.md (v0.9)
 #  4단계(내 가게 → 답 보기 → 광고 준비 → 한 달 뒤), 앞 단계가 채워져야 다음이 열림, 한 달 뒤는 "광고를 시작했어요" 뒤에 열림
-COACH_STEPS = ["내 가게", "답 보기", "광고 준비", "한 달 뒤"]
+COACH_STEPS = SS.STEP_NAMES   # v1.0: 내 가게 · 답 보기 · 광고 세팅 (① 세팅) · 실행 준비 (② 실행) · 한 달 뒤 (③ 최적화)
 # 예시 페르소나 (노션 11/9): 스마트스토어 원두 로스터리, 판매가 2만·마진 35%(남는 돈 7천)·월 최대 30만
 EXAMPLE = {"q_category": "식품", "q_stores": ["스마트스토어"], "q_price": 20_000, "q_profit": 7_000, "q_repurchase": "매달(정기)",
            "q_budget": 300_000, "q_baseline": None, "q_keyword": "원두커피"}
@@ -498,6 +526,30 @@ def report_section(a: dict, verdict=None):
     for r in reps:
         if r.get("conversions_note"):
             st.caption(f"{r['file']}: {r['conversions_note']}")
+    pred_cvr = pred.get("cvr") or cparams.cvr
+    for name, rs in by.items():   # 손님이 빠지는 곳 (v1.0 5-3): 매체별로 따로, 건수 대신 단계 비율 ÷ 기준
+        if not rs:
+            continue
+        merged = {"platform": name, "impressions": sumk(rs, "impressions"), "clicks": sumk(rs, "clicks"),
+                  "conversions": sumk(rs, "conversions") if any(r.get("conversions") is not None for r in rs) else None,
+                  "landing": sumk(rs, "landing") if any(r.get("landing") for r in rs) else None,
+                  "objective_is_purchase": all(r.get("objective_is_purchase", True) for r in rs)}
+        sr = RP.step_rates(merged, pred_cvr)
+        if not sr["rows"]:
+            continue
+        label = "네이버" if name == "naver" else "메타"
+        w = sr["worst"]
+        with st.container(border=True):
+            st.markdown(f"**{label} · 손님이 빠지는 곳** (단계마다 남는 비율, 점선 = 기준)")
+            st.plotly_chart(charts.step_rate_bars(sr["rows"], w["name"] if w else None), use_container_width=True,
+                            config={"displayModeBar": False}, key=f"step_rates_{name}")
+            st.caption(" → ".join(f"{n} {v:,.0f}" for n, v in sr["counts"]))
+            st.markdown(RP.STEP_SENTENCE[w["name"]] if w else "모든 단계가 기준 이상이에요. 같은 방식으로 예산을 조금씩 늘려 보세요.")
+            with st.expander("표로 보기"):
+                st.dataframe(pd.DataFrame([{"단계": r["name"], "남는 비율": f"{r['rate']:.2%}", "기준": r["base_label"],
+                                            "기준 대비": f"{r['ratio']:.0%}"} for r in sr["rows"]]), hide_index=True, use_container_width=True)
+            if name == "naver":
+                st.caption("네이버 리포트에는 랜딩 페이지 조회가 없어서 클릭률 → 구매 비율로 봐요.")
     # 가게 퍼널(판매처 통계)과 광고 클릭률을 합친 한 줄 (7a)
     imp_all, clk_all = sumk(reps, "impressions"), sumk(reps, "clicks")
     combo = MS.ad_or_store(clk_all / imp_all if imp_all else None, ss.get("store_diag"))
@@ -512,14 +564,18 @@ def report_section(a: dict, verdict=None):
     # 과대 집계율 · 예측 오차율
     rep_conv = sumk(reps, "conversions")
     total_clicks, total_cost = sumk(reps, "clicks"), sumk(reps, "cost")
-    m1, m2, m3 = st.columns(3)
+    show_err = bool(ss.get("plan_pred")) or not ss.get("report_only")   # 리포트만 올렸으면 계획 때 예측이 없음 (v1.0)
+    m1, m2, m3 = st.columns(3) if show_err else (st.columns(3)[0], None, None)
     oc = RP.over_count_rate(rep_conv, orders) if orders is not None else None
     m1.metric("플랫폼 과대 집계율", f"{oc:+.0%}" if oc is not None else "-",
               help="(네이버 + 메타 리포트 전환 − 실제 주문) ÷ 실제 주문. 두 광고가 같은 주문을 각자 자기 몫으로 세면 커져요.")
-    e_new = RP.prediction_error(pred.get("new"), orders) if orders is not None else None
-    m2.metric("예측 오차율 (주문)", f"{e_new:.0%}" if e_new is not None else "-", help="|예측 − 실제| ÷ 실제")
-    e_clk = RP.prediction_error(pred.get("clicks"), total_clicks)
-    m3.metric("예측 오차율 (클릭)", f"{e_clk:.0%}" if e_clk is not None else "-", help="|예측 − 실제| ÷ 실제")
+    if show_err:
+        e_new = RP.prediction_error(pred.get("new"), orders) if orders is not None else None
+        m2.metric("예측 오차율 (주문)", f"{e_new:.0%}" if e_new is not None else "-", help="|예측 − 실제| ÷ 실제")
+        e_clk = RP.prediction_error(pred.get("clicks"), total_clicks)
+        m3.metric("예측 오차율 (클릭)", f"{e_clk:.0%}" if e_clk is not None else "-", help="|예측 − 실제| ÷ 실제")
+    else:
+        st.caption("계획 파일 없이 리포트만 올려서, 계획 때 예측과 비교하는 예측 오차율은 숨겼어요.")
     if orders is None:
         st.info("광고로 온 주문 수를 넣으면 실측 구매율로 다시 계산해요 (판매처 전체 판매에는 광고 외 손님이 섞여 있어요).", icon="✏️")
     st.caption(f"리포트 전환 합 {rep_conv:,.0f}건 vs 광고로 온 주문 {'-' if orders is None else f'{orders:,}건'}. "
@@ -544,11 +600,28 @@ def report_section(a: dict, verdict=None):
 
 
 def hundred_bar(wins: int) -> str:
-    """100칸 막대 (자연 빈도 표현): 남는 경우는 초록, 손해는 회색. 색은 보조라 숫자 문장이 먼저 나옴."""
-    cells = "".join(f"<div style='width:9px;height:9px;border-radius:2px;background:{'#2e9e5b' if i < wins else 'rgba(127,127,127,.35)'}'></div>"
+    """10×10 격자 (v1.0, 자연 빈도 표현): 남는 경우는 기준색, 손해는 회색. 휴대폰 너비에서도 한 덩어리. 숫자 문장이 먼저 나옴."""
+    cells = "".join(f"<div style='width:14px;height:14px;border-radius:3px;background:{charts.NAVER_C if i < wins else charts.MUTED}'></div>"
                     for i in range(100))
-    return (f"<div role='img' aria-label='100번 중 {wins}번 남음' style='display:grid;grid-template-columns:repeat(50,9px);gap:3px;"
-            f"margin:4px 0 10px'>{cells}</div>")
+    return (f"<div role='img' aria-label='100번 중 {wins}번 남음' style='display:grid;grid-template-columns:repeat(10,14px);gap:4px;"
+            f"margin:6px 0 12px'>{cells}</div>")
+
+
+def range_bar(p10: float, p50: float, p90: float) -> str:
+    """이익 범위 막대 (v1.0): 100번 중 가운데 80번의 범위, 본전(0) 세로선, 가운데값 점. 라벨은 아래 한 줄 글자로."""
+    lo, hi = min(p10, 0.0), max(p90, 0.0)
+    span = (hi - lo) or 1.0
+    pos = lambda v: (v - lo) / span * 100   # noqa: E731
+    return (f"<div role='img' aria-label='1년 동안 남는 돈 {won(p10)}에서 {won(p90)}, 가운데값 {won(p50)}' "
+            f"style='position:relative;height:26px;margin:8px 6px 2px'>"
+            f"<div style='position:absolute;top:11px;left:0;right:0;height:4px;background:{charts.MUTED};border-radius:2px'></div>"
+            f"<div style='position:absolute;top:8px;height:10px;left:{pos(p10):.1f}%;width:{pos(p90) - pos(p10):.1f}%;"
+            f"background:{charts.NAVER_C};opacity:.55;border-radius:5px'></div>"
+            f"<div style='position:absolute;top:0;height:26px;left:{pos(0):.1f}%;border-left:2px solid currentColor'></div>"
+            f"<div style='position:absolute;top:6px;left:calc({pos(p50):.1f}% - 7px);width:14px;height:14px;border-radius:50%;"
+            f"background:{charts.NAVER_C};border:2px solid white'></div></div>"
+            f"<div style='font-size:.875rem;opacity:.8;margin:0 6px 10px'>세로선 = 본전(0원) · 점 = 가운데값 "
+            f"<b>{won(p50)}</b> · 범위 {won(p10)} ~ {won(p90)} (100번 중 가운데 80번)</div>")
 
 
 def grade_rows(a: dict) -> list:
@@ -643,25 +716,39 @@ if price and profit and max_budget and not input_error:
 
 cur, unlocked = SS.clamp_step(ss, has_answer=ans is not None)
 # 끝낸 단계: 내 가게 = 답이 나옴, 답 보기 = 다음 단계로 넘어감, 광고 준비 = 광고 시작
-done = [ans is not None, ans is not None and ss.get("coach_seen", 0) >= 2, bool(ss.get("coach_started")), False]
+done = [ans is not None, ans is not None and ss.get("coach_seen", 0) >= SS.SETUP, ans is not None and ss.get("coach_seen", 0) >= SS.RUN,
+        bool(ss.get("coach_started")), False]
 
 with coach_tab:
     mode = ss.get("coach_mode")
     if mode is None and ans is None:
-        # 첫 사용 빈 화면: 다음 행동 하나 + 예시 체험 (UX 3-2)
-        st.markdown("### 판매가와 1개 팔면 남는 돈만 넣으면, 광고비를 얼마까지 써도 되는지 알려 드려요.")
+        # 첫 화면 (v1.0 5-2): 들어가는 길 두 개를 같은 무게로. 새로고침하면 입력이 사라져서, 한 달 뒤 온 사장님이 처음부터 하지 않게
+        st.markdown("### 광고를 처음 세팅하는 것부터, 한 달 뒤 고치는 것까지 같이 해요")
         chat_ok = CI.make_client() is not None     # 키가 없으면 대화 입구를 숨기고 질문 폼만 (가정 A3)
-        b0, b1, b2 = st.columns([1.2, 1, 1.4]) if chat_ok else (None, *st.columns([1, 1.4]))
-        if chat_ok and b0.button("💬 대화로 시작하기", type="primary"):
-            ss["coach_mode"], ss["chat_hist"], ss["chat_fields"] = "chat", [], {}
-            st.rerun()
-        if b1.button("내 가게 숫자 넣기", type="secondary" if chat_ok else "primary"):
-            ss["coach_mode"] = "mine"
-            st.rerun()
+        left, right = st.columns(2, gap="large")
+        with left, st.container(border=True):
+            st.markdown("**광고를 처음 세팅해요**")
+            st.caption("판매가와 1개 팔면 남는 돈만 알면 돼요. 얼마를 어디에 쓸지 정하고, 광고 관리자에 넣을 값을 단계별로 알려 드려요.")
+            if chat_ok and st.button("대화로 시작하기", type="primary", icon=":material/chat:", use_container_width=True):
+                ss["coach_mode"], ss["chat_hist"], ss["chat_fields"] = "chat", [], {}
+                st.rerun()
+            if st.button("처음부터 시작", type="secondary" if chat_ok else "primary", use_container_width=True):
+                ss["coach_mode"] = "mine"
+                st.rerun()
+        with right, st.container(border=True):
+            st.markdown("**한 달 돌려 봤어요**")
+            st.caption("지난달 이 앱에서 받은 계획 파일을 올리면 숫자와 예측을 불러와 바로 결과 보기로 가요.")
+            plan_upload("plan_up_empty")
+            st.caption("계획 파일이 없어도 괜찮아요. 가게 숫자 3개만 넣고 광고 리포트를 올리면 돼요.")
+            if st.button("리포트만 올리기", use_container_width=True):
+                ss["coach_mode"], ss["report_only"] = "mine", True
+                st.rerun()
+        st.markdown("**예시로 먼저 보기**")
+        x1, x2 = st.columns(2)
         ex_pick = None
-        if b2.button("예시 1: 원두 로스터리"):
+        if x1.button("예시 1: 원두 로스터리 (준비가 먼저인 경우)", use_container_width=True):
             ex_pick = "coffee"
-        if b2.button("예시 2: 단백질 쉐이크 정기구매 (광고가 맞는 경우)"):
+        if x2.button("예시 2: 단백질 쉐이크 정기구매 (광고가 맞는 경우)", use_container_width=True):
             ex_pick = "protein"
         if ex_pick:
             for k, v in EXAMPLES[ex_pick][1].items():
@@ -672,8 +759,6 @@ with coach_tab:
             st.rerun()
         st.caption("예시 1: 스마트스토어 원두 로스터리, 1개 2만 원, 남는 돈 7천 원(마진 35%), 다 쓰면 매달 다시 삼, 월 최대 30만 원, 검색어 '원두커피'  \n"
                    "예시 2: 스마트스토어 단백질 쉐이크(한 달분), 1개 7.9만 원, 남는 돈 3.95만 원(50%), 매달 정기구매, 월 최대 50만 원, 검색어 '프로틴쉐이크'")
-        with st.expander("한 달 전에 계획을 세웠나요? 계획 파일 불러오기"):
-            plan_upload("plan_up_empty")
     elif mode == "chat":
         chat_intake()
     else:
@@ -687,12 +772,22 @@ with coach_tab:
                 ss["_closed_example"] = True
                 st.rerun()
         hold_slot = st.container()   # "판단 보류" 배너 자리 (판정 뒤에 채움, 맨 위에 보이게)
-        # 단계 표시(스테퍼, UX 6-2): 끝낸 단계는 ✓, 지금 단계는 강조, 아직 안 열린 단계는 흐리게
-        nav = st.columns(len(COACH_STEPS))
-        for i, (col, name) in enumerate(zip(nav, COACH_STEPS)):
-            mark = "✓ " if done[i] and i != cur else ""
-            col.button(f"{mark}{i + 1} {name}", key=f"nav_{i}", type="primary" if i == cur else "secondary",
-                       disabled=i > unlocked, on_click=_go, args=(i,), use_container_width=True)
+        # 단계 표시 (v1.0 5-2): 맨 위 스테퍼 하나 = ① 세팅 · ② 실행 · ③ 최적화. 끝낸 묶음은 ✓, 지금 묶음은 강조
+        stage = SS.stage_of(cur)
+        nav = st.columns(len(SS.STAGES))
+        for i, (col, (sname, steps)) in enumerate(zip(nav, SS.STAGES)):
+            open_steps = [x for x in steps if x <= unlocked]
+            seen = [x for x in open_steps if x <= ss.get("coach_seen", 0)]
+            target = (seen or open_steps or [steps[0]])[-1]
+            mark = "✓ " if all(done[x] for x in steps) and i != stage else ""
+            col.button(f"{mark}{'①②③'[i]} {sname}", key=f"nav_{i}", type="primary" if i == stage else "secondary",
+                       disabled=not open_steps, on_click=_go, args=(target,), use_container_width=True)
+        if stage == 0:   # ① 세팅 안의 작은 단계 3개
+            subs = st.columns([1, 1, 1, 3])
+            for j, x in enumerate(SS.STAGES[0][1]):
+                mark = "●" if x == cur else ("✓" if done[x] else "○")
+                subs[j].button(f"{mark} {COACH_STEPS[x]}", key=f"sub_{x}", type="tertiary", disabled=x > unlocked,
+                               on_click=_go, args=(x,))
 
         # ── 1 내 가게 ──
         if cur == 0:
@@ -725,9 +820,14 @@ with coach_tab:
                           help="네이버에서 한 달에 몇 번 검색되는지, 클릭 1번이 대략 얼마인지 가져옵니다.")
             if any(s in stores for s in ("스마트스토어", "쿠팡")):
                 st.caption("오픈마켓에서 팔면 판매 수는 마켓 통계 화면에서 보고, 같은 손님이 다시 샀는지는 확인하기 어렵습니다.")
-            st.button("다음: 답 보기 →", type="primary", disabled=ans is None, on_click=_go, args=(1,))
+            if ss.get("report_only"):
+                st.button("다음: 광고 결과 올리기 →", type="primary", disabled=ans is None, on_click=_go, args=(SS.RESULT,))
+            else:
+                st.button("다음: 답 보기 →", type="primary", disabled=ans is None, on_click=_go, args=(SS.ANSWER,))
             if ans is None and not input_error:
                 st.caption("받는 돈, 남는 돈, 한 달 최대 광고비를 넣으면 다음 단계가 열려요.")
+            if ss.get("report_only"):
+                st.info("리포트만 올리기: 위 숫자 3개(받는 돈·남는 돈·한 달 최대 광고비)만 넣으면 바로 결과 올리기로 가요.", icon=":material/upload_file:")
 
         # ── 2 답 보기: 한도 → 필요한 비율 → 신호등 한 줄 (UX 3-3, 3-5) ──
         elif cur == 1:
@@ -736,15 +836,17 @@ with coach_tab:
             mc = a["mc"]
             wins, act = mc["wins"], MC.action(mc["wins"])
             st.markdown(f"#### 시험 예산 {won(a['budget0'])}으로 한 달 광고하면 남을까요?")
+            badge(act)   # 이 화면의 신호등은 이것 하나: 1년 동안 이익이 날 확률 (80번 이상 / 50~79번 / 50번 미만)
             st.markdown(f"### 100번 해 보면 1년 동안 {wins}번은 남고, {100 - wins}번은 손해예요")
             st.markdown(hundred_bar(wins), unsafe_allow_html=True)
-            st.markdown(f"1년 동안 남는 돈: 보통 **{won(mc['p10'])} ~ {won(mc['p90'])}** (100번 중 가운데 80번의 범위)")
-            getattr(st, {"go": "success", "small": "warning", "prep": "error"}[act])(
+            st.markdown(
                 f"**{MC.ACTION_TEXT[act]}.** " + {
                     "go": "100번 중 80번 넘게 남아요. 권장 예산으로 시작하고 한 달 뒤 실제 숫자로 다시 계산하세요.",
                     "small": "남는 경우가 손해보다 많지만 확실하진 않아요. 작게 시작해서 실제 숫자를 먼저 확인하세요.",
                     "prep": "100번 중 절반도 남지 않아요. 상세페이지·후기·가격 구성을 먼저 다듬거나, 팔린 만큼만 내는 방식을 보세요.",
                 }[act])
+            st.markdown("**1년 동안 남는 돈**")
+            st.markdown(range_bar(mc["p10"], mc["p50"], mc["p90"]), unsafe_allow_html=True)
             st.markdown(f"첫 구매만 보면 100번 중 **{mc['wins_first']}번** 남아요. "
                         "다시 사는 손님까지 봐야 광고의 진짜 값이 보여요.")
             cpa_now = a["budget0"] / max(a["prediction"]["new"], 1e-9)
@@ -795,12 +897,12 @@ with coach_tab:
             with st.expander(f"클릭 비용 출처: {a['cpc_src']} · 알면 직접 넣기"):
                 _num_input("메타 클릭 1번 비용을 알면 (원)", "q_cpc", min_value=0, max_value=100_000, step=50,
                            help="메타 광고 관리자의 'CPC(링크 클릭당 비용)'. 넣으면 배분과 답이 이 값으로 다시 계산돼요.")
-            st.button("다음: 광고 준비 →", type="primary", on_click=_go, args=(2,))
+            st.button("다음: 광고 세팅 →", type="primary", on_click=_go, args=(SS.SETUP,))
 
-        # ── 3 광고 준비: 첫 채널, 시험 예산 3안, 준비 3개, 링크·쿠폰 (UX 3-4) ──
-        elif cur == 2:
+        # ── ① 세팅 3 광고 세팅: 시험 예산 3안, 배분, 광고 관리자 세팅 도우미 (v1.0: 실행 준비와 나눔) ──
+        elif cur == SS.SETUP:
             a = ans
-            st.markdown("#### 첫 달에 이렇게 시작하세요")
+            st.markdown("#### 첫 달 예산을 고르고, 광고 관리자에 넣을 값을 받아 가세요")
             split_card(a, budget_label=True)
             _, short_warn = CO.test_budget(max_budget, a["be"].first)
             if short_warn:   # 설계안 8-1 #5
@@ -828,6 +930,18 @@ with coach_tab:
                 if loss > 0:
                     st.warning(f"고른 예산 {won(a['budget0'])}이면 약 {won(loss)} 손해가 예상돼요. 작게 시작하거나 상세페이지부터 다듬어 보세요.")
                     st.caption(f"계산: 예산 {won(a['budget0'])} ÷ 클릭 {won(a['cpc'])} × 구매 비율 {CO.LOSS_REFERENCE_RATE * 100:.2f}% = 판매 약 {sales:.0f}건, 예산 − 판매 × 남는 돈 {won(profit)} = 손해. 구매 비율 출처: GA4 공개 샘플 쇼핑몰 검색광고 손님 (참고 기준)")
+            ads_guide(a)
+            setup_view.render(a, ss, stores, price)   # 세팅 도우미 (app/setup_view.py)
+            if no_ad:
+                st.info("이번 달은 광고 없이 준비부터 해요. 다음 화면의 준비 3가지를 먼저 해 보세요.", icon=":material/build:")
+            st.button("다음: ② 실행 준비 →", type="primary", on_click=_go, args=(SS.RUN,))
+
+        # ── ② 실행: 준비 3개, 광고 링크·쿠폰, 계획 파일, 광고 시작 (UX 3-4) ──
+        elif cur == SS.RUN:
+            a = ans
+            no_ad = ss.get("q_budget_pick") == "none"
+            st.markdown("#### 광고를 켜기 전에 이것만 준비해요")
+            st.caption("광고는 사장님이 광고 관리자에서 직접 켜요. 이 앱은 광고 계정에 접속하지 않아요.")
             n_prep = sum(bool(ss.get(f"prep_{i}")) for i in (1, 2, 3))
             st.markdown(f"**광고 전에 준비할 것 3가지** · 준비 {n_prep}/3")
             st.progress(n_prep / 3)
@@ -858,8 +972,6 @@ with coach_tab:
                 st.markdown("**이 광고 전용 쿠폰 코드** (판매처에서 이 이름으로 쿠폰을 만드세요)")
                 st.code(MS.coupon_code(link_ch, month, product_en), language=None)
                 st.caption(MS.STORE_NOTES.get(link_store, "") + f" 같은 채널은 늘 같은 이름(캠페인 '{camp}')으로 써야 나중에 합쳐 볼 수 있습니다.")
-            ads_guide(a)
-            setup_view.render(a, ss, stores, price)   # 세팅 도우미 (app/setup_view.py)
             if n_prep == 3:   # 모두 완료 빈 화면 (UX 6-2)
                 st.success("준비 끝! 광고를 시작했다면 아래 버튼을 눌러 주세요.", icon="✅")
             if no_ad:
@@ -868,12 +980,27 @@ with coach_tab:
                 plan_download(a, "plan_dl_3")
             if not no_ad and st.button("광고를 시작했어요 ▶", type="primary"):
                 ss["coach_started"] = CO.today_kst().isoformat()   # 한국 날짜 (서버는 UTC)
-                SS.go_to(ss, 3)
+                SS.go_to(ss, SS.RESULT)
                 st.toast(f"시작일 {ss['coach_started']}을 기억해 둘게요. {CO.MIN_DAYS}일 뒤부터 판정할 수 있어요.", icon="📅")
                 st.rerun()
 
-        # ── 4 한 달 뒤 (UX 3-1·3-5·3-6) ──
-        elif cur == 3:
+        # ── ③ 최적화: 광고를 시작하기 전 (v1.0 빈 화면: 다음 행동 하나 + 이미 돌린 사람의 길) ──
+        elif cur == SS.RESULT and not ss.get("coach_started"):
+            st.markdown("#### 한 달 뒤: 광고 결과로 다음 달을 고쳐요")
+            if not ss.get("report_only"):
+                st.info(f"광고를 켜고 {CO.MIN_DAYS}일 뒤에 결과를 올려 주세요. 그 전 숫자는 우연이 많이 섞여요.", icon=":material/hourglass_empty:")
+                st.button("② 실행 준비로", type="primary", on_click=_go, args=(SS.RUN,))
+            with st.container(border=True):
+                st.markdown("**이미 광고를 돌렸어요**")
+                start_pick = st.date_input("광고를 시작한 날", value=CO.today_kst() - timedelta(days=30), max_value=CO.today_kst(),
+                                           key="start_pick", format="YYYY-MM-DD")
+                if st.button("이 날짜로 결과 보기", type="primary" if ss.get("report_only") else "secondary"):
+                    ss["coach_started"] = start_pick.isoformat()
+                    st.rerun()
+                plan_upload("plan_up_result")
+
+        # ── ③ 최적화: 한 달 뒤 (UX 3-1·3-5·3-6) ──
+        elif cur == SS.RESULT:
             a = ans
             be = a["be"]
             start_day = pd.Timestamp(ss["coach_started"])
@@ -952,7 +1079,7 @@ with coach_tab:
                         todo = f"같은 예산으로 2주 더 돌려 광고 판매를 {CO.MIN_SALES}건 넘게 모은 뒤 다시 와 주세요."
                         why_hold = f"광고로 온 판매가 {CO.MIN_SALES}건이 안 돼서 우연일 수 있어요. 2주 더 모은 뒤 다시 와 주세요."
                     with hold_slot:
-                        _closable_banner("hold", f"판단 보류: {why_hold}", "⏸️")
+                        _closable_banner("hold", f"판단 보류: {why_hold}", ":material/hourglass_empty:")
                 elif v.paused:
                     todo = f"상세페이지 사진·후기부터 고치기 → 고친 뒤 {won(v.next_budget)}으로 다시 시험"
                 elif v.step == 4:
@@ -961,7 +1088,9 @@ with coach_tab:
                     todo = f"다음 달 {won(v.next_budget)} 그대로, 산 손님에게 다시 살 이유(쿠폰·소식) 보내기"
                 else:
                     todo = f"다음 달 예산을 {won(v.next_budget)}으로 늘리기"
-                getattr(st, v.level)(f"### {v.title}\n**다음 할 일:** {todo}")
+                with st.container(border=True):   # 결론 먼저 (v1.0): 판정 배지 + 다음 할 일 하나
+                    badge(VERDICT_BADGE.get(v.step, "hold"))
+                    st.markdown(f"### {v.title}\n**다음 할 일:** {todo}")
                 notes = [f"광고로 온 판매: {basis.value:,.0f}건 ({basis.source})"]
                 if basis.side_by_side:
                     notes.append(f"쿠폰 {basis.side_by_side[0]:,.0f}건 · 광고 화면 {basis.side_by_side[1]:,.0f}건 "
