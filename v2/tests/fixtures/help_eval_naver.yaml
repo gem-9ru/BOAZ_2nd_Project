@@ -1,0 +1,33 @@
+# 네이버 칸별 도움말 시험 질문 (사장님 말투). step = 지금 묻는 칸, expect = 맞는 칸 id 또는 none
+- {q: "광고비 미리 넣어야 하는 거예요? 어디서 돈 넣어요?", step: naver.pre.bizmoney, expect: naver.pre.bizmoney}
+- {q: "잔고가 하나도 없으면 광고 못 켜나요", step: naver.pre.bizmoney, expect: naver.pre.bizmoney}
+- {q: "내 스마트스토어를 광고에 연결하려면 어디서 등록해요?", step: naver.pre.bizchannel, expect: naver.pre.bizchannel}
+- {q: "쇼핑파트너센터 아이디가 기억 안 나요", step: naver.pre.bizchannel, expect: naver.pre.bizchannel}
+- {q: "사진이랑 가격이 나오는 광고랑 글만 나오는 광고 뭐가 달라요?", step: naver.campaign.type, expect: naver.campaign.type}
+- {q: "쇼핑검색이랑 파워링크 둘 다 해도 되나요", step: naver.campaign.type, expect: naver.campaign.type}
+- {q: "캠페인 이름 아무거나 지어도 되나요? 손님한테 보여요?", step: naver.campaign.name, expect: naver.campaign.name}
+- {q: "하루에 최대 얼마까지 나가게 막을 수 있어요?", step: naver.campaign.daily_budget, expect: naver.campaign.daily_budget}
+- {q: "한 달 예산 30만 원을 여기 다 적으면 어떻게 돼요", step: naver.campaign.daily_budget, expect: naver.campaign.daily_budget}
+- {q: "광고 언제까지 나가게 해야 해요? 끝나는 날 꼭 넣어요?", step: naver.campaign.period, expect: naver.campaign.period}
+- {q: "클릭 한 번에 얼마까지 낼지 정하는 게 뭐예요", step: naver.group.bid, expect: naver.group.bid}
+- {q: "70원보다 낮게는 못 하나요", step: naver.group.bid, expect: naver.group.bid}
+- {q: "네이버가 알아서 가격 조절해 주는 거 켜도 돼요?", step: naver.group.auto_bid, expect: naver.group.auto_bid}
+- {q: "휴대폰에서만 보이게 하고 싶어요", step: naver.group.device, expect: naver.group.device}
+- {q: "블로그나 카페 같은 데서도 내 광고가 나가요?", step: naver.group.device, expect: naver.group.device}
+- {q: "밤 12시 이후엔 광고 안 나가게 할 수 있어요?", step: naver.group.schedule, expect: naver.group.schedule}
+- {q: "주말에만 광고하고 싶은데요", step: naver.group.schedule, expect: naver.group.schedule}
+- {q: "30대 여자 손님한테만 광고 나가게 하려면요?", step: naver.group.age_gender_bid, expect: naver.group.age_gender_bid}
+- {q: "일치검색이랑 확장검색 중에 뭘 골라요", step: naver.keywords.list, expect: naver.keywords.list}
+- {q: "검색어 몇 개나 넣어야 해요?", step: naver.keywords.list, expect: naver.keywords.list}
+- {q: "만들기 찾는 사람한테는 광고 안 나가게 하고 싶어요", step: naver.keywords.negative, expect: naver.keywords.negative}
+- {q: "빼고 싶은 단어는 최대 몇 개까지 적어요?", step: naver.keywords.negative, expect: naver.keywords.negative}
+- {q: "광고 누르면 어디로 가는지 주소 넣는 거예요?", step: naver.ad.landing_url, expect: naver.ad.landing_url}
+- {q: "스토어 첫 페이지 말고 상품 링크 넣어도 돼요?", step: naver.ad.landing_url, expect: naver.ad.landing_url}
+- {q: "광고 문구 글자 수 제한이 얼마예요?", step: naver.ad.copy, expect: naver.ad.copy}
+- {q: "느낌표 넣었더니 등록이 안 된대요", step: naver.ad.copy, expect: naver.ad.copy}
+# 칸과 상관없는 질문
+- {q: "오늘 점심 뭐 먹을까요?", step: naver.campaign.daily_budget, expect: none}
+- {q: "내일 서울 날씨 어때요?", step: naver.group.bid, expect: none}
+- {q: "휘낭시에 레시피 알려 주세요", step: naver.keywords.list, expect: none}
+- {q: "사업자 등록증은 어떻게 발급받아요?", step: naver.pre.bizchannel, expect: none}
+- {q: "인스타그램 릴스 조회수 올리는 법 알려 줘", step: naver.ad.copy, expect: none}

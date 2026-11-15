@@ -1,0 +1,96 @@
+# 메타 칸별 도움말 시험 질문 (사장님 말투). step = 지금 묻고 있는 칸, expect = 맞는 칸 id 또는 none
+- {q: "인스타그램 계정밖에 없는데 페이스북 쪽도 따로 준비해야 하나요?", step: meta.pre.ig_account, expect: meta.pre.fb_page}
+- {q: "페이지 없는데 어떻게 만들죠", step: meta.pre.fb_page, expect: meta.pre.fb_page}
+- {q: "내 인스타는 그냥 평범한 계정이에요. 이걸로 광고 가능해요?", step: meta.pre.ig_account, expect: meta.pre.ig_account}
+- {q: "페이지랑 인스타를 이어 붙이는 메뉴가 어디 있어요", step: meta.pre.fb_page, expect: meta.pre.ig_account}
+- {q: "캠페인 이름 아무거나 지어도 되나요", step: meta.campaign.name, expect: meta.campaign.name}
+- {q: "경매 방식이 뭔지 모르겠어요", step: meta.campaign.buying_type, expect: meta.campaign.buying_type}
+- {q: "경매 말고 예약 방식으로 광고 돌리고 싶은데 되나요", step: meta.campaign.objective, expect: meta.campaign.buying_type}
+- {q: "트래픽이랑 인지도 중에 뭐가 나아요?", step: meta.campaign.objective, expect: meta.campaign.objective}
+- {q: "처음인데 목표는 판매로 해도 되나요", step: meta.campaign.objective, expect: meta.campaign.objective}
+- {q: "케이크 파는데 특별 광고 카테고리 해당되나요", step: meta.campaign.special_category, expect: meta.campaign.special_category}
+- {q: "정치나 대출 광고면 어떻게 되는 거예요", step: meta.campaign.special_category, expect: meta.campaign.special_category}
+- {q: "돈을 캠페인에 걸어 두는 거랑 세트별로 두는 거랑 어떻게 달라요", step: meta.campaign.budget_strategy, expect: meta.campaign.budget_strategy}
+- {q: "세트끼리 예산 같이 쓰게 하면 결제 금액이 늘어나나요", step: meta.campaign.budget_strategy, expect: meta.campaign.budget_share}
+- {q: "예산 최대 20% 옮겨 쓴다는 게 뭐죠", step: meta.campaign.budget_share, expect: meta.campaign.budget_share}
+- {q: "입찰 전략 최고 볼륨이 뭐예요", step: meta.campaign.bid_strategy, expect: meta.campaign.bid_strategy}
+- {q: "입찰 한도라는 건 어떤 사람이 쓰는 거예요", step: meta.campaign.bid_strategy, expect: meta.campaign.bid_strategy}
+- {q: "AB테스트라는 게 정확히 무슨 기능이죠", step: meta.campaign.ab_test, expect: meta.campaign.ab_test}
+- {q: "사진 두 장 비교하는 기능 켜야 해요?", step: meta.campaign.ab_test, expect: meta.campaign.ab_test}
+- {q: "세트 이름칸에 뭐라고 적어야 하죠", step: meta.adset.name, expect: meta.adset.name}
+- {q: "손님이 누르면 어디로 가게 해야 해요? 프로필이 낫나요", step: meta.adset.conversion_location, expect: meta.adset.conversion_location}
+- {q: "전환 위치가 무슨 뜻이에요", step: meta.adset.conversion_location, expect: meta.adset.conversion_location}
+- {q: "성과 목표에서 링크 클릭과 랜딩 페이지 조회 중 어느 쪽이 맞아요", step: meta.adset.performance_goal, expect: meta.adset.performance_goal}
+- {q: "랜딩 페이지 조회 항목을 눌러도 반응이 없어요", step: meta.adset.performance_goal, expect: meta.adset.performance_goal}
+- {q: "기여 기간 7일 클릭이 무슨 말이에요", step: meta.adset.attribution_model, expect: meta.adset.attribution_model}
+- {q: "증대로 못 바꾸나요?", step: meta.adset.attribution_model, expect: meta.adset.attribution_model}
+- {q: "클릭 한 번에 얼마까지 쓰게 정해야 하나요", step: meta.adset.cost_goal, expect: meta.adset.cost_goal}
+- {q: "한 건당 비용 목표는 아무것도 안 써도 광고가 나가나요", step: meta.adset.cost_goal, expect: meta.adset.cost_goal}
+- {q: "가치 조정은 뭐하는 기능이에요", step: meta.adset.value_rules, expect: meta.adset.value_rules}
+- {q: "20대 여성한테 입찰을 더 높이고 싶어요", step: meta.adset.value_rules, expect: meta.adset.value_rules}
+- {q: "빨리 노출시키는 가속 옵션 쓰면 주문도 빨리 들어와요?", step: meta.adset.delivery_type, expect: meta.adset.delivery_type}
+- {q: "예산을 빨리 쓰는 옵션이 뭐죠", step: meta.adset.delivery_type, expect: meta.adset.delivery_type}
+- {q: "사진이랑 문구 자동으로 섞어 주는 기능 뭐예요", step: meta.adset.dynamic_creative, expect: meta.adset.dynamic_creative}
+- {q: "다이내믹 소재 기능을 쓰면 득이 되는 게 있어요", step: meta.adset.dynamic_creative, expect: meta.adset.dynamic_creative}
+- {q: "라이브 방송 광고는 저 방송 안 하는데 켜요?", step: meta.adset.live, expect: meta.adset.live}
+- {q: "오늘 쓰기로 한 금액을 넘겨서 빠져나갈 때도 있어요?", step: meta.adset.daily_budget, expect: meta.adset.daily_budget}
+- {q: "하루 예산이 왜 이 금액이에요?", step: meta.adset.daily_budget, expect: meta.adset.daily_budget}
+- {q: "광고 끝나는 날 안 정하면 계속 돈 나가요?", step: meta.adset.end_date, expect: meta.adset.end_date}
+- {q: "광고 며칠이 좋은가요", step: meta.adset.end_date, expect: meta.adset.end_date}
+- {q: "우리 동네 사람한테만 보이게 하려면요", step: meta.adset.location, expect: meta.adset.location}
+- {q: "전국으로 하면 괜찮을까요? 택배 보내요", step: meta.adset.location, expect: meta.adset.location}
+- {q: "나이를 30대로만 좁히면 안 되나요", step: meta.adset.age_gender, expect: meta.adset.age_gender}
+- {q: "성별은 꼭 정해야 하나요", step: meta.adset.age_gender, expect: meta.adset.age_gender}
+- {q: "광고 투명성 인증이라는 창이 떴는데 이게 뭐죠", step: meta.adset.transparency, expect: meta.adset.transparency}
+- {q: "수혜자 결제자가 뭐예요", step: meta.adset.transparency, expect: meta.adset.transparency}
+- {q: "오디언스 네트워크가 뭐예요", step: meta.adset.placements, expect: meta.adset.placements}
+- {q: "페이스북은 빼고 인스타 피드 화면에만 광고가 뜨게 하려면요", step: meta.adset.placements, expect: meta.adset.placements}
+- {q: "브랜드 안전 필터를 높이면 좋은 건가요", step: meta.adset.brand_safety, expect: meta.adset.brand_safety}
+- {q: "어떤 웹사이트에는 내 광고가 안 붙었으면 좋겠어요", step: meta.adset.brand_safety, expect: meta.adset.brand_safety}
+- {q: "광고 이름은 손님한테 보이나요", step: meta.ad.name, expect: meta.ad.name}
+- {q: "크리에이터랑 같이 내는 광고가 뭐예요", step: meta.ad.partnership, expect: meta.ad.partnership}
+- {q: "협찬 광고 설정은 혼자 해도 필요해요?", step: meta.ad.partnership, expect: meta.ad.partnership}
+- {q: "쓰레드 계정 따로 만들어야 하나요", step: meta.ad.threads, expect: meta.ad.threads}
+- {q: "스레드에도 광고가 나가나요", step: meta.ad.threads, expect: meta.ad.threads}
+- {q: "카탈로그 연결하라고 뜨는데 저는 상품이 몇 개 없어요", step: meta.ad.catalog, expect: meta.ad.catalog}
+- {q: "제품 링크 추가는 상품 많을 때 쓰는 건가요", step: meta.ad.catalog, expect: meta.ad.catalog}
+- {q: "수동으로 올린다는 건 제가 직접 사진을 올리는 걸 말해요?", step: meta.ad.creative_source, expect: meta.ad.creative_source}
+- {q: "제품 미디어가 회색으로 안 눌려요", step: meta.ad.creative_source, expect: meta.ad.creative_source}
+- {q: "슬라이드 광고로 사진 여러 장 올리고 싶어요", step: meta.ad.format, expect: meta.ad.format}
+- {q: "사진 한 장 광고가 나아요 슬라이드가 나아요", step: meta.ad.format, expect: meta.ad.format}
+- {q: "내 광고가 다른 가게 광고랑 같이 보이는 거예요?", step: meta.ad.multi_advertiser, expect: meta.ad.multi_advertiser}
+- {q: "상품 페이지 링크는 어디서 복사해요", step: meta.ad.website_url, expect: meta.ad.website_url}
+- {q: "상품 말고 우리 스토어 메인 링크를 써도 되나요", step: meta.ad.website_url, expect: meta.ad.website_url}
+- {q: "주소 뒤에 UTM 같은 꼬리표가 왜 붙어요", step: meta.ad.website_url, expect: meta.ad.tracking_url}
+- {q: "어디서 온 손님인지 추적하려면 어떻게 해요", step: meta.ad.tracking_url, expect: meta.ad.tracking_url}
+- {q: "표시 링크는 뭐예요", step: meta.ad.display_link, expect: meta.ad.display_link}
+- {q: "광고에 보이는 주소 글자를 바꿀 수 있나요", step: meta.ad.display_link, expect: meta.ad.display_link}
+- {q: "사진이 잘려 보여요 비율을 어떻게 해요", step: meta.ad.media, expect: meta.ad.media}
+- {q: "정사각형이랑 세로 사진 크기가 몇이에요", step: meta.ad.media, expect: meta.ad.media}
+- {q: "사진 여러 개로 어떤 게 나은지 비교하고 싶어요", step: meta.ad.creative_test, expect: meta.ad.creative_test}
+- {q: "소재 테스트는 언제부터 하는 게 좋아요", step: meta.ad.creative_test, expect: meta.ad.creative_test}
+- {q: "자동 번역 켜야 해요? 한국 손님만 있는데", step: meta.ad.language, expect: meta.ad.language}
+- {q: "픽셀이 뭐예요 꼭 달아야 해요?", step: meta.ad.pixel, expect: meta.ad.pixel}
+- {q: "구매 숫자가 비어 있는데 픽셀 때문이에요?", step: meta.ad.pixel, expect: meta.ad.pixel}
+- {q: "매장 판매도 연결할 수 있나요", step: meta.ad.offline_events, expect: meta.ad.offline_events}
+- {q: "오프라인 이벤트는 온라인만 팔면 안 해도 되죠", step: meta.ad.offline_events, expect: meta.ad.offline_events}
+- {q: "구글 애널리틱스 숫자랑 메타 숫자가 달라요", step: meta.ad.third_party, expect: meta.ad.third_party}
+- {q: "구글 계정 이어 붙이는 건 안 해도 광고 나가요?", step: meta.ad.third_party, expect: meta.ad.third_party}
+- {q: "광고 문구 뭐라고 써야 할지 모르겠어요", step: meta.creative.copy, expect: meta.creative.copy}
+- {q: "광고 글을 여러 버전으로 넣을 수 있나요", step: meta.creative.copy, expect: meta.creative.copy}
+- {q: "광고 밑 버튼 글자를 구매하기로 하고 싶어요", step: meta.creative.cta, expect: meta.creative.cta}
+- {q: "광고 아래 버튼 글자는 뭐가 좋아요", step: meta.creative.cta, expect: meta.creative.cta}
+- {q: "사람마다 다른 문구가 보인다는데 뭐예요", step: meta.creative.per_person_text, expect: meta.creative.per_person_text}
+- {q: "어느 문구가 잘됐는지 알려면 이걸 꺼야 하나요", step: meta.creative.per_person_text, expect: meta.creative.per_person_text}
+- {q: "AI로 배경 바꾼 이미지 써도 돼요", step: meta.creative.ai_image, expect: meta.creative.ai_image}
+- {q: "AI로 만든 사진이면 손님이 알아볼 수 있게 라벨이 붙어요?", step: meta.creative.ai_image, expect: meta.creative.ai_image}
+- {q: "저도 모르게 켜진 자동 개선 옵션을 끄면 문제 생기나요", step: meta.creative.advantage_enhancements, expect: meta.creative.advantage_enhancements}
+- {q: "내 사진 밝기가 멋대로 바뀌는 것 같아요", step: meta.creative.advantage_enhancements, expect: meta.creative.advantage_enhancements}
+- {q: "오늘 점심 뭐 먹을까요", step: meta.adset.location, expect: none}
+- {q: "휘낭시에 맛있게 굽는 법 알려줘", step: meta.creative.copy, expect: none}
+- {q: "택배 송장은 어떻게 출력해요", step: meta.ad.website_url, expect: none}
+- {q: "네이버 키워드 입찰가는 얼마가 적당해요", step: meta.campaign.bid_strategy, expect: none}
+- {q: "세금 신고는 언제 해야 해요", step: meta.adset.daily_budget, expect: none}
+- {q: "로고 만드는 프로그램 추천해 주세요", step: meta.ad.media, expect: none}
+- {q: "사업자 등록은 어떻게 하나요", step: meta.pre.fb_page, expect: none}
+- {q: "내일 날씨 알려줘", step: meta.adset.end_date, expect: none}
