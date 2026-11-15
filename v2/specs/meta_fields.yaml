@@ -1,0 +1,388 @@
+# 메타 광고 관리자 칸 사양 (트래픽 목표 기준)
+# 원본: 희수 '메타 트래픽 광고 분석 — 챗봇 질문 설계 & 리포트 컬럼 분석' 3-1~3-4 (11/12)
+#
+# kind
+#   question   사장님 상황에 따라 답이 달라짐 → 챗봇이 쉬운 말로 물음
+#   precheck   광고 만들기 전 준비 확인 (질문으로 물음)
+#   llm        사장님 답을 바탕으로 챗봇이 써서 고르게 함 (키 없으면 문장 틀)
+#   auto       규칙대로 앱이 만들어 넣음 (이름, 추적 링크, 일 예산)
+#   default    초보에게 정답이 거의 정해짐 → 묻지 않고 기본값 + 한 줄 설명
+#   next_cycle 결과를 봐야 바꿀 근거가 생김 → 첫 달은 기본값, 한 달 뒤 규칙이 바꿈
+# next_cycle: 이 칸을 바꿀 수 있는 규칙 id (rules.yaml)
+# 순서는 광고 관리자 화면 순서
+
+media: meta
+title: 메타 (인스타그램·페이스북) 광고
+fields:
+  # ── 사전 점검 ──
+  - id: meta.pre.fb_page
+    stage: 사전 점검
+    label: 대표 계정 – Facebook 페이지
+    kind: precheck
+    ask: 페이스북 페이지가 있으세요? 인스타그램만 쓰셔도 광고를 내려면 꼭 있어야 해요.
+    options: [있어요, 없어요]
+    default: 있어요
+    why: 페이지가 없으면 광고를 만들 수 없어요. 없다면 '페이지 만들기'부터 하세요 (무료, 5분).
+
+  - id: meta.pre.ig_account
+    stage: 사전 점검
+    label: 대표 계정 – Instagram 프로필
+    kind: question
+    ask: 광고에 보일 인스타그램 계정 이름을 알려 주세요.
+    input: text
+    default: ""
+    why: 개인 계정과 가게 계정이 여러 개면 가게 계정을 골라야 해요.
+
+  # ── 캠페인 ──
+  - id: meta.campaign.name
+    stage: 캠페인
+    label: 캠페인 이름
+    kind: auto
+    auto: campaign_name
+    why: 나중에 헷갈리지 않게 '상품_목표_월' 규칙으로 만들어요.
+
+  - id: meta.campaign.buying_type
+    stage: 캠페인
+    label: 구매 유형
+    kind: default
+    default: 경매
+    why: 다른 광고와 경쟁해서 노출되는 방식이에요. 트래픽 목표에서는 경매만 보여요.
+
+  - id: meta.campaign.objective
+    stage: 캠페인
+    label: 캠페인 목표
+    kind: question
+    ask: 광고로 가장 원하는 게 뭐예요?
+    options: [스토어 방문 늘리기, 가게 알리기]
+    map: {스토어 방문 늘리기: 트래픽, 가게 알리기: 인지도}
+    default: 스토어 방문 늘리기
+    why: 판매 목표는 구매 데이터가 있어야 잘 돌아가요. 첫 달은 방문을 늘리고, 판매는 스토어 주문으로 직접 확인해요.
+
+  - id: meta.campaign.special_category
+    stage: 캠페인
+    label: 특별 광고 카테고리
+    kind: question
+    ask: 금융·고용·주택·사회문제·선거·정치 관련 상품인가요?
+    options: [아니요, 네]
+    default: 아니요
+    why: 해당하면 타겟 설정이 제한돼요. 디저트·생활용품은 대부분 '아니요'예요.
+
+  - id: meta.campaign.budget_strategy
+    stage: 캠페인
+    label: 예산 전략 (캠페인 예산 / 광고 세트 예산)
+    kind: next_cycle
+    default: 광고 세트 예산
+    why: 광고 세트가 1개면 차이가 없어요. 여러 타겟을 비교할 때 바꿔요.
+
+  - id: meta.campaign.budget_share
+    stage: 캠페인
+    label: 예산 최대 20% 공유
+    kind: default
+    default: 그대로 둠
+    why: 같은 캠페인 안 다른 광고 세트로 예산의 최대 20%를 옮겨 쓰는 기능이에요. 전체 지출은 그대로이고, 광고 세트가 1개면 효과가 없어요.
+
+  - id: meta.campaign.bid_strategy
+    stage: 캠페인
+    label: 입찰 전략
+    kind: next_cycle
+    default: 최고 볼륨
+    next_cycle: [rule.cost_rising]
+    why: 예산 안에서 클릭을 최대한 많이 받는 방식이에요. 적정 비용 기준이 없는 첫 달은 이게 맞아요.
+
+  - id: meta.campaign.ab_test
+    stage: 캠페인
+    label: A/B 테스트
+    kind: next_cycle
+    default: 끄기
+    next_cycle: [rule.creative_weak, rule.creative_fatigue]
+    why: 비교 기준이 생기는 한 달 뒤, 소재를 비교할 때 켜요.
+
+  # ── 광고 세트 ──
+  - id: meta.adset.name
+    stage: 광고 세트
+    label: 광고 세트 이름
+    kind: auto
+    auto: adset_name
+    why: 나중에 헷갈리지 않게 규칙으로 만들어요.
+
+  - id: meta.adset.conversion_location
+    stage: 광고 세트
+    label: 전환 위치
+    kind: question
+    ask: 손님이 광고를 누르면 어디로 가면 좋겠어요?
+    options: [스토어 상품 페이지, 인스타그램 프로필, DM 문의]
+    default: 스토어 상품 페이지
+    why: 스토어로 보내야 한 달 뒤 스토어 주문으로 결과를 확인할 수 있어요.
+
+  - id: meta.adset.performance_goal
+    stage: 광고 세트
+    label: 성과 목표
+    kind: default
+    default: 랜딩 페이지 조회수 극대화
+    why: 페이지가 실제로 열린 사람을 늘리는 방식이에요. 링크 클릭보다 허수가 적어요.
+
+  - id: meta.adset.attribution_model
+    stage: 광고 세트
+    label: 기여 모델
+    kind: default
+    default: 일반
+    why: 트래픽 목표에서는 '증대'를 고를 수 없어요. 판매는 스토어 주문으로 따로 확인해요.
+
+  - id: meta.adset.cost_goal
+    stage: 광고 세트
+    label: 결과당 비용 목표
+    kind: next_cycle
+    default: 비워 둠
+    next_cycle: [rule.cost_rising]
+    why: 첫 달 평균을 알아야 목표를 정할 수 있어요.
+
+  - id: meta.adset.value_rules
+    stage: 광고 세트
+    label: 가치 조정 (규칙 세트)
+    kind: next_cycle
+    default: 비워 둠
+    next_cycle: [rule.segment_winner]
+    why: 특정 연령·노출 위치의 우선순위를 높이는 기능이에요. 잘되는 그룹이 확인되면 써요.
+
+  - id: meta.adset.delivery_type
+    stage: 광고 세트
+    label: 게재 유형
+    kind: default
+    default: 일반 게재
+    why: 예산을 하루 동안 고르게 나눠 써요. 가속 게재는 예산이 빨리 사라져서 초보에게 맞지 않아요.
+
+  - id: meta.adset.dynamic_creative
+    stage: 광고 세트
+    label: 다이내믹 크리에이티브
+    kind: next_cycle
+    default: 끄기
+    next_cycle: [rule.creative_weak]
+    why: 조합할 사진·문구가 여러 개 생기면 켜요.
+
+  - id: meta.adset.live
+    stage: 광고 세트
+    label: 라이브 방송 광고
+    kind: default
+    default: 끄기
+    why: 인스타그램 라이브를 할 때만 쓰는 설정이에요.
+
+  - id: meta.adset.daily_budget
+    stage: 광고 세트
+    label: 일일 예산
+    kind: auto
+    auto: meta_daily_budget
+    why: 코치가 나눈 메타 몫을 광고 기간으로 나눈 값이에요. 메타는 하루 최대 1.75배까지 쓸 수 있으니 주 단위로 확인하세요.
+
+  - id: meta.adset.end_date
+    stage: 광고 세트
+    label: 종료 날짜
+    kind: question
+    ask: 광고를 얼마 동안 하실 건가요?
+    options: [7일, 14일, 30일]
+    default: 14일
+    next_cycle: [rule.awareness_freq_low]
+    why: 종료 날짜는 기본으로 비어 있어서, 끄지 않으면 계속 돈이 나가요. 소액이면 짧고 굵게(7~14일)가 사람들에게 더 기억돼요.
+
+  - id: meta.adset.location
+    stage: 광고 세트
+    label: 타겟 – 위치
+    kind: question
+    ask: 어느 지역 손님까지 받을 수 있나요?
+    options: [전국 (택배), 내 지역만]
+    default: 전국 (택배)
+    next_cycle: [rule.target_saturation]
+    why: 택배로 보낼 수 있으면 전국으로 둬야 새 손님이 계속 생겨요.
+
+  - id: meta.adset.age_gender
+    stage: 광고 세트
+    label: 타겟 – 연령·성별
+    kind: question
+    ask: 주로 사는 손님이 누구인가요? (메타가 이 범위를 출발점으로 더 넓게 찾아요)
+    input: text
+    default: 넓게 (어드밴티지+ 타겟 추천)
+    suggest_from: market_age_gender
+    next_cycle: [rule.target_saturation, rule.segment_winner]
+    why: 소액에서 타겟을 좁히면 같은 사람에게만 계속 보여요. 나이는 문구·사진 방향으로 쓰고 타겟은 넓게 두세요.
+
+  - id: meta.adset.transparency
+    stage: 광고 세트
+    label: 광고 투명성 (게재 주체 인증)
+    kind: default
+    default: 인증하기
+    why: 게시 전에 인증이 필요해요. 무료이고 몇 분 걸려요.
+
+  - id: meta.adset.placements
+    stage: 광고 세트
+    label: 노출 위치
+    kind: next_cycle
+    default: 어드밴티지+ 노출 위치, Audience Network 제외
+    next_cycle: [rule.placement_quality, rule.ig_share_low]
+    why: 다른 앱 광고 자리(Audience Network)는 클릭은 싸지만 구매로 잘 안 이어져서 처음부터 빼요.
+
+  - id: meta.adset.brand_safety
+    stage: 광고 세트
+    label: 브랜드 적합성
+    kind: default
+    default: 그대로 둠
+    why: 불쾌한 콘텐츠 차단은 모든 광고에 기본 적용돼요. 필터를 더 켜면 도달이 줄고 비용이 올라요.
+
+  # ── 광고 ──
+  - id: meta.ad.name
+    stage: 광고
+    label: 광고 이름
+    kind: auto
+    auto: ad_name
+    why: 어떤 사진의 결과인지 구분하려고 규칙으로 만들어요.
+
+  - id: meta.ad.partnership
+    stage: 광고
+    label: 파트너십 광고
+    kind: default
+    default: 끄기
+    why: 다른 크리에이터와 함께 내는 광고예요. 처음엔 필요 없어요.
+
+  - id: meta.ad.threads
+    stage: 광고
+    label: Threads 프로필 / 브랜딩
+    kind: default
+    default: 그대로 둠
+    why: 인스타그램 계정을 그대로 써요. 따로 만들 필요 없어요.
+
+  - id: meta.ad.catalog
+    stage: 광고
+    label: 제품 링크 추가 (카탈로그)
+    kind: next_cycle
+    default: 쓰지 않음
+    why: 상품이 많아지면 써요.
+
+  - id: meta.ad.creative_source
+    stage: 광고
+    label: 크리에이티브 소스
+    kind: default
+    default: 수동 업로드
+    why: 사진을 직접 올린다는 뜻이에요. 회색 '제품 미디어'는 카탈로그가 있을 때만 써요.
+
+  - id: meta.ad.format
+    stage: 광고
+    label: 형식
+    kind: question
+    ask: 보여 줄 사진이 1장이에요, 여러 장이에요?
+    options: [1장 (단일 이미지), 여러 장 (슬라이드)]
+    default: 1장 (단일 이미지)
+    why: 사진이 여러 장이면 슬라이드로 상품을 여러 각도에서 보여 줄 수 있어요.
+
+  - id: meta.ad.multi_advertiser
+    stage: 광고
+    label: 여러 광고주의 광고
+    kind: default
+    default: 끄기
+    why: 켜면 다른 광고와 함께 보이고 사진이 잘릴 수 있어요.
+
+  - id: meta.ad.website_url
+    stage: 광고
+    label: 웹사이트 URL
+    kind: question
+    ask: 광고를 누르면 보여 줄 상품 페이지 주소를 알려 주세요.
+    input: url
+    default: ""
+    why: 이 주소 뒤에 추적 꼬리표를 붙여서, 한 달 뒤 '메타로 온 손님'을 스토어 통계에서 구분해요.
+
+  - id: meta.ad.tracking_url
+    stage: 광고
+    label: 추적 – URL 매개변수
+    kind: auto
+    auto: meta_tracking
+    why: 스마트스토어는 NT 꼬리표, 자사몰은 UTM으로 만들어요. 값이 매번 달라지면 통계가 섞여서 코치가 규칙을 고정해요.
+
+  - id: meta.ad.display_link
+    stage: 광고
+    label: 표시 링크 / 브라우저 추가 기능
+    kind: default
+    default: 비워 둠
+    why: 표시 링크는 광고에 보이는 주소일 뿐이고, 실제 이동은 웹사이트 URL로 돼요.
+
+  - id: meta.ad.media
+    stage: 광고
+    label: 미디어 · 자르기
+    kind: question
+    ask: 광고에 쓸 사진이나 영상을 준비해 주세요. 정사각형(1:1)이나 세로(9:16)가 좋아요.
+    options: [정사각형 사진, 세로 사진·영상, 둘 다]
+    default: 정사각형 사진
+    next_cycle: [rule.ig_share_low]
+    why: 노출 위치마다 잘리니 상품이 가운데 오게 찍으세요.
+
+  - id: meta.ad.creative_test
+    stage: 광고
+    label: 크리에이티브 테스트
+    kind: next_cycle
+    default: 끄기
+    next_cycle: [rule.creative_weak, rule.creative_fatigue]
+    why: 클릭률이 낮게 나오면 사진 2~3개를 비교해요.
+
+  - id: meta.ad.language
+    stage: 광고
+    label: 언어 (자동 번역)
+    kind: default
+    default: 끄기
+    why: 국내 손님 대상이면 필요 없어요.
+
+  - id: meta.ad.pixel
+    stage: 광고
+    label: 추적 – 웹사이트 이벤트 (픽셀)
+    kind: default
+    default: 없음 (스마트스토어는 설치 불가)
+    why: 스마트스토어에는 메타 픽셀을 달 수 없어서 메타 리포트의 '구매'는 비어 있어요. 판매는 스토어 주문으로 확인해요.
+
+  - id: meta.ad.offline_events
+    stage: 광고
+    label: 추적 – 오프라인 이벤트
+    kind: default
+    default: 생략
+    why: 매장 판매를 연결하는 기능이에요. 온라인 판매만 하면 필요 없어요.
+
+  - id: meta.ad.third_party
+    stage: 광고
+    label: 타사 보고 (Google 연결)
+    kind: default
+    default: 생략
+    why: 실제 판매는 스토어 주문으로 확인해요. 플랫폼마다 숫자를 세는 방식이 달라요.
+
+  # ── 광고 크리에이티브 ──
+  - id: meta.creative.copy
+    stage: 광고 크리에이티브
+    label: 기본 문구 · 제목
+    kind: llm
+    ask: 상품의 장점을 한두 마디로 알려 주세요.
+    input: text
+    default: ""
+    next_cycle: [rule.creative_weak, rule.creative_fatigue, rule.click_without_visit]
+    why: 알려 주신 장점으로 문구 3개를 써 드려요. 사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.
+
+  - id: meta.creative.cta
+    stage: 광고 크리에이티브
+    label: 행동 유도 (CTA)
+    kind: default
+    default: 자세히 보기
+    next_cycle: [rule.click_without_visit]
+    why: 상품 페이지로 보내면 기본값으로 충분해요.
+
+  - id: meta.creative.per_person_text
+    stage: 광고 크리에이티브
+    label: 사람마다 문구 최적화
+    kind: default
+    default: 켜짐 (기본)
+    why: 문구를 여러 개 넣으면 사람마다 다르게 보여요. 어떤 문구가 효과였는지 비교하려면 끄고 테스트로 나눠요.
+
+  - id: meta.creative.ai_image
+    stage: 광고 크리에이티브
+    label: 이미지 생성 (Meta AI)
+    kind: next_cycle
+    default: 쓰지 않음
+    why: 원본 사진과 다르게 보일 수 있어요. 나중에 원본과 비교할 때 써요.
+
+  - id: meta.creative.advantage_enhancements
+    stage: 광고 크리에이티브
+    label: 어드밴티지+ 개선 사항
+    kind: default
+    default: 자동으로 켜진 항목 확인 후, 사진이 바뀌는 게 싫으면 끄기
+    why: 음악·애니메이션·밝기 조정 같은 항목이 일부 자동으로 켜져 있어요. 모르는 사이 광고가 바뀔 수 있어요.
