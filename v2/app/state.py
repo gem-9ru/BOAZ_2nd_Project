@@ -12,7 +12,7 @@ from typing import Dict, List, Optional, Tuple
 import pandas as pd
 import streamlit as st
 
-from v2.engine import copywriter, intake, plan_io, planner, specs, tracking
+from v2.engine import conversation, copywriter, intake, plan_io, planner, specs, tracking
 
 # ── 예시 (소연베이크) ───────────────────────────────────────
 DEMO_SEEDS = ["휘낭시에", "쿠키선물세트", "답례품쿠키", "디저트선물", "수제쿠키"]
@@ -32,7 +32,8 @@ CASE_NAMES = {"C1": "추천 경로", "C2": "플랫폼 기본값", "C3": "좁게�
               "C0": "광고 안 함", "C1b": "개선 사이클"}
 MODE_NAMES = {"sim": "가상 실제", "forecast": "추천 예측", "real": "실제"}
 
-STEPS = ["가게 정보", "내 손님 찾기", "예산·예측", "질문", "세팅값 시트"]
+# 대화 단계(가게 → 확인 → 손님 → 예산 → 세팅 질문) 다음이 세팅값 시트. setup_step은 지금 대화 단계 번호.
+STEPS = list(conversation.STAGES) + ["세팅값 시트"]
 LAST_STEP = len(STEPS) - 1
 # 예산·예측 단계에서 정하므로 질문 목록에서는 뺀다 (같은 걸 두 번 묻지 않음)
 ASKED_IN_BUDGET = ("meta.campaign.objective", "meta.adset.end_date")
@@ -47,9 +48,9 @@ def _defaults() -> Dict[str, object]:
         "store": {"name": "", "product": "", "product_slug": "", "store_type": "smartstore", "price": 20000,
                   "margin_per_order": 7000, "budget": 300000, "month": "{}월".format(dt.date.today().month),
                   "seeds": []},
-        "media": ["meta", "naver"], "answers": {}, "budget_plan": None, "market": None, "market_msg": "",
-        "setup_step": 0, "setup_max": 0, "q_index": 0, "month_index": 1, "history": [], "created": "",
-        "copy_options": {}, "is_demo": False, "use_live": False, "ad_start": None, "run_checks": {},
+        "media": ["meta", "naver"], "answers": {}, "budget_plan": None, "market": None,
+        "setup_step": 0, "month_index": 1, "history": [], "created": "",
+        "chat": None, "chat_pending": None, "is_demo": False, "ad_start": None, "run_checks": {},
         "sheet_checked": [], "diag_done": False,
     }
 
@@ -61,7 +62,7 @@ def init() -> None:
             st.session_state[k] = v
 
 
-_WIDGET_PREFIXES = ("w_", "kw_use_", "kw_neg_", "aud_pick", "copy_pick", "q_meta.", "q_naver.", "chk_",
+_WIDGET_PREFIXES = ("w_", "chat_text", "chip_", "chk_", "sheet_media", "sheet_editor",
                     "diag_case", "diag_mode", "diag_period")
 
 
@@ -83,9 +84,129 @@ def setup_done() -> bool:
 
 
 def go_step(step: int) -> None:
-    step = max(0, min(LAST_STEP, step))
-    st.session_state["setup_step"] = step
-    st.session_state["setup_max"] = max(st.session_state.get("setup_max", 0), step)
+    st.session_state["setup_step"] = max(0, min(LAST_STEP, step))
+
+
+# ── 챗봇 세팅 (대화 상태는 st.session_state["chat"], 엔진은 v2/engine/conversation.py) ──
+
+_SERVICES: List[object] = []   # 테스트는 set_services로 가짜를 넣는다
+
+
+def set_services(sv: Optional[conversation.Services]) -> None:
+    """대화에 쓸 서비스를 바꿔 끼운다 (None이면 진짜로 되돌림)."""
+    _SERVICES.clear()
+    if sv is not None:
+        _SERVICES.append(sv)
+
+
+def services() -> conversation.Services:
+    """대화 엔진이 쓰는 서비스. 내 손님 찾기 결과 원본(연령·월별 그래프용)은 session_state["market"]에 따로 둔다."""
+    if _SERVICES:
+        return _SERVICES[0]
+    real = conversation.make_services(online=True)
+    inner = real.market
+
+    def market(seeds):
+        report = inner(seeds)
+        st.session_state["market"] = report
+        return report
+
+    inner_plan = real.plan
+
+    def plan(store, mkt, objective, days):
+        kept = _kept_plan((st.session_state.get("chat") or {}).get("loaded"), store, objective, days)
+        if kept is not None:
+            return kept
+        p = inner_plan(store, mkt, objective, days)
+        return _fix_notes(p, store)
+
+    real.market = market
+    real.plan = plan
+    _SERVICES.append(real)
+    return real
+
+
+def _kept_plan(loaded: Optional[dict], store: dict, objective: str, days: int) -> Optional[dict]:
+    """불러온 계획의 예산은 광고비·목표·기간·검색 단어를 바꾸지 않았으면 그대로 둔다 (진단이 바꾼 하루 예산을 지키려고)."""
+    if not loaded:
+        return None
+    same = (int(store.get("budget") or 0) == loaded["budget"] and objective == loaded["objective"]
+            and int(days) == loaded["days"] and [str(w) for w in (store.get("seeds") or [])] == loaded["picked"])
+    return dict(loaded["plan"]) if same else None
+
+
+def _fix_notes(plan, store: dict):
+    """검색 단어는 골랐는데 검색량 표가 없어 다시 계산한 경우, '키워드를 아직 고르지 않아서'라는 틀린 문장을 바로잡는다."""
+    notes = getattr(plan, "notes", None)
+    if notes is None or not store.get("seeds") or getattr(plan, "naver_cap_month", 0) is not None:
+        return plan
+    plan.notes = ["검색어는 골랐지만 검색량 자료가 없어서, 네이버에는 예산의 절반까지만 잡았어요." if "아직 고르지 않아서" in n else n
+                  for n in notes]
+    return plan
+
+
+def start_chat() -> None:
+    """새 대화를 시작한다 (첫 질문까지)."""
+    s = st.session_state
+    s["chat"] = conversation.start(list(s["media"]), s["store"].get("month"))
+    s["chat_pending"] = None
+    s["market"] = None
+
+
+def sync_from_chat() -> None:
+    """대화 상태 → 계획(store·answers·budget_plan). 대화가 끝나면 세팅값 시트로, 아니면 지금 대화 단계로."""
+    s = st.session_state
+    cs = s.get("chat")
+    if cs is None:
+        return
+    if cs["phase"] == "done" and cs.get("plan"):
+        store = conversation.to_store(cs)
+        store["keywords"] = list(store.get("seeds") or [])
+        s["store"] = store
+        s["media"] = list(cs["media"])
+        s["answers"] = conversation.to_answers(cs)
+        s["budget_plan"] = dict(cs["plan"])
+        s["sheet_checked"] = []
+        go_step(LAST_STEP)
+    else:
+        go_step(min(conversation.PHASE_STAGE.get(cs["phase"], 0), LAST_STEP - 1))
+
+
+def _saved_rows(seeds: List[str]) -> List[dict]:
+    """저장해 둔 검색량 표(캐시)가 있으면 고른 단어의 행을 되살린다. 없으면 빈 목록."""
+    if not seeds:
+        return []
+    try:
+        from v2.engine import market
+        report = market.build(list(seeds), online=False)
+        return conversation._rows(report, list(seeds)) if report is not None else []
+    except Exception:  # noqa: BLE001  저장본이 없어도 대화는 열려야 함
+        return []
+
+
+def restore_chat() -> None:
+    """불러온 계획(파일·다음 달)으로 '끝난 대화'를 만든다. 지난 답 고치기를 쓰려고. 가게 숫자·답·예산은 계획 그대로."""
+    s = st.session_state
+    store, media = s["store"], list(s["media"])
+    cs = conversation.start(media, store.get("month"))
+    seeds = [str(x) for x in (store.get("seeds") or [])]
+    cs["store"] = {"name": store.get("name", ""), "product": store.get("product", ""), "price": store.get("price", 0),
+                   "margin": store.get("margin_per_order", 0), "budget": store.get("budget", 0),
+                   "store_type": store.get("store_type", "smartstore"), "slug": store.get("product_slug", "")}
+    cs["market"] = {"seeds": list(store.get("search_words") or seeds), "recommended": seeds, "picked": seeds,
+                    "negatives": list(store.get("negatives") or []), "headline": "",
+                    "audience_hint": store.get("audience_hint"), "groups": [], "rows": []}
+    cs["plan"] = dict(s["budget_plan"] or {})
+    cs["objective"] = store.get("objective") or cs["plan"].get("objective") or "트래픽"
+    cs["days"] = int(store.get("days") or cs["plan"].get("days") or 14)
+    cs["market"]["rows"] = _saved_rows(seeds)
+    cs["loaded"] = {"plan": dict(cs["plan"]), "budget": int(store.get("budget") or 0), "objective": cs["objective"],
+                    "days": cs["days"], "picked": list(seeds)}
+    cs["answers"] = dict(s["answers"])
+    cs["phase"], cs["step"], cs["confirmed"], cs["ask_intro"] = "done", "done", True, True
+    cs["turns"] = []
+    conversation._say(cs, "지난 계획을 불러왔어요. 고치고 싶은 답이 있으면 '지난 답 고치기'를 눌러 골라 주세요. 모르는 게 있으면 물어보셔도 돼요.")
+    s["chat"], s["chat_pending"] = cs, None
 
 
 # ── 계산 (순수 함수) ───────────────────────────────────────
@@ -209,18 +330,27 @@ def load_plan(plan: plan_io.Plan, demo: bool = False) -> None:
     s["sheet_checked"] = []
     s["run_checks"] = {}
     s["diag_done"] = False
-    s["q_index"] = len(asked_questions(plan.media))
+    s["chat"], s["chat_pending"] = None, None
     go_step(LAST_STEP)
 
 
-def load_demo(to_step: int = 1) -> None:
-    """예시(소연베이크)로 처음부터: 가게 정보와 상품 단어는 채우고, 내 손님 찾기 결과(저장본)도 바로 보여 준다."""
+def load_demo() -> None:
+    """예시(소연베이크)로 시작: 가게 정보를 채워 '이렇게 이해했어요' 확인 카드까지 온 대화."""
+    reset()
+    s = st.session_state
+    s["store"] = dict(DEMO_STORE, seeds=list(DEMO_SEEDS))
+    s["is_demo"] = True
+    s["chat"] = conversation.demo_state(services())
+    sync_from_chat()
+
+
+def _load_demo_store() -> None:
+    """예시 가게 정보와 저장된 손님 조사로 채운 계획 상태 (대화 없이)."""
     from v2.engine import market
     reset()
     s = st.session_state
     s["store"] = dict(DEMO_STORE, seeds=list(DEMO_SEEDS))
     s["is_demo"] = True
-    s["use_live"] = False
     try:
         report = market.build(list(DEMO_SEEDS), online=False)
     except Exception:  # noqa: BLE001  저장본이 없어도 화면은 열려야 함 (단어만 채워짐)
@@ -229,13 +359,13 @@ def load_demo(to_step: int = 1) -> None:
     if report is not None:
         s["store"]["keywords"], s["store"]["negatives"] = list(report.recommended), list(report.negatives)
         s["store"]["audience_hint"] = audience_hint(report)
-    go_step(to_step)
+    go_step(LAST_STEP)
 
 
 def load_demo_plan() -> None:
     """예시 계획을 끝까지 채워서 불러온다 (③ 진단을 바로 해 볼 때). 키 없이도 같은 결과."""
     from v2.engine import market
-    load_demo(to_step=LAST_STEP)
+    _load_demo_store()
     s = st.session_state
     store, media = s["store"], s["media"]
     report = market.build(store["seeds"], online=False)
@@ -251,7 +381,6 @@ def load_demo_plan() -> None:
     answers["meta.campaign.objective"] = objective_label
     answers["meta.adset.end_date"] = "14일"
     s["answers"] = answers
-    s["q_index"] = len(qs)
     store["audience_hint"] = audience_hint(report)
 
 

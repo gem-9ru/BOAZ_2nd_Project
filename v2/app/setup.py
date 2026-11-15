@@ -1,529 +1,160 @@
-"""① 세팅: 가게 정보 → 내 손님 찾기 → 예산·예측 → 질문(한 번에 하나) → 세팅값 시트."""
+"""① 세팅: 챗봇 대화(오른쪽)가 가게 정보 → 내 손님 → 예산 → 광고 관리자 칸 질문을 차례로 묻고,
+왼쪽 작업판이 답하는 대로 채워진다. 대화가 끝나면 세팅값 시트와 내려받기.
+
+대화 엔진 v2/engine/conversation.py · 대화 화면 v2/app/chat.py · 상태 연결 v2/app/state.py
+"""
 import sys
-from dataclasses import asdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-import datetime as dt  # noqa: E402
-
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from v2.app import data, state, ui  # noqa: E402
-from v2.engine import intake, plan_io, tracking  # noqa: E402
+from v2.app import chat, state, ui  # noqa: E402
+from v2.engine import conversation, intake, plan_io  # noqa: E402
 
 MEDIA_NAMES = {"meta": "메타 (인스타그램·페이스북)", "naver": "네이버 검색광고"}
-MONTHS = ["{}월".format(m) for m in range(1, 13)]
+NAVER_COLOR, META_COLOR = "#4C78A8", "#C8661A"
 
 
 def _s() -> dict:
     return st.session_state
 
 
-# ───────────────────────── 맨 위: 단계 이동 ─────────────────────────
-
-def _jump() -> None:
-    """단계 이동 막대에서 고른 단계로 (이미 지나온 단계까지만)."""
-    label = _s().get("setup_nav")
-    if label in state.STEPS:
-        state.go_step(state.STEPS.index(label))
+def _tid(text: object) -> str:
+    """칸·카드를 가리킬 수 있는 컨테이너 키: 't-' + id ('.'는 '-')."""
+    return "t-" + str(text).replace(".", "-")
 
 
-def sub_stepper(step: int) -> None:
-    reached = max(_s()["setup_max"], step)
-    _s()["setup_nav"] = state.STEPS[step]
-    st.progress((step + 1) / len(state.STEPS), text="{}/{} · {}".format(step + 1, len(state.STEPS), state.STEPS[step]))
-    st.radio("단계 이동", state.STEPS[:reached + 1], key="setup_nav", on_change=_jump, horizontal=True,
-             label_visibility="collapsed")
-    if reached < state.LAST_STEP:
-        st.caption("다음 단계는 지금 단계를 마치면 열려요.")
+# ───────────────────────── 왼쪽 작업판 ─────────────────────────
 
-
-# ───────────────────────── 1. 가게 정보 ─────────────────────────
-
-def _store_values() -> dict:
-    g = _s().get
-    return {"name": (g("w_name") or "").strip(), "product": (g("w_product") or "").strip(),
-            "price": g("w_price"), "margin_per_order": g("w_margin"), "budget": g("w_budget"),
-            "month": g("w_month"), "store_type": state.STORE_TYPES.get(g("w_type"), "smartstore"),
-            "slug": g("w_slug") or ""}
-
-
-def store_errors(v: dict) -> dict:
-    """칸 이름 → 어떻게 고치면 되는지."""
-    e = {}
-    if not v["name"]:
-        e["name"] = "가게 이름을 적어 주세요. 예: 소연베이크"
-    if not v["product"]:
-        e["product"] = "무엇을 파는지 한 마디로 적어 주세요. 예: 수제 구움과자"
-    if not v["budget"] or v["budget"] < 10000:
-        e["budget"] = "한 달 광고비는 1만 원 이상으로 적어 주세요. 처음이라면 10만~30만 원이 무난해요."
-    if v["margin_per_order"] is not None and v["price"] and v["margin_per_order"] >= v["price"]:
-        e["margin"] = "남는 돈이 판매가보다 클 수 없어요. 판매가에서 재료비·포장비·수수료·배송비를 뺀 금액을 적어 주세요."
-    return e
-
-
-def _store_next() -> None:
-    v = _store_values()
-    if store_errors(v):
-        _s()["store_tried"] = True
-        return
-    s = _s()["store"]
-    slug = tracking.slugify(v["slug"] or s.get("product_slug"),
-                            fallback=tracking.slugify(v["name"], fallback=tracking.slugify(v["product"], "shop")))
-    s.update(name=v["name"], product=v["product"], price=v["price"], margin_per_order=v["margin_per_order"],
-             budget=int(v["budget"]), month=v["month"], store_type=v["store_type"], product_slug=slug)
-    _s()["store_tried"] = False
-    state.go_step(1)
-
-
-def step_store() -> None:
-    s = _s()["store"]
-    st.markdown("#### 가게 정보")
-    st.caption("딱 필요한 것만 물어봐요. 모두 나중에 바꿀 수 있어요.")
-    tried = _s().get("store_tried", False)
-    types = list(state.STORE_TYPES)
-    ui.init_widget("w_name", s.get("name", ""))
-    ui.init_widget("w_product", s.get("product", ""))
-    ui.init_widget("w_type", next((k for k in types if state.STORE_TYPES[k] == s.get("store_type", "smartstore")), types[0]))
-    ui.init_widget("w_price", int(s.get("price") or 0))
-    ui.init_widget("w_margin", int(s.get("margin_per_order") or 0))
-    ui.init_widget("w_budget", int(s.get("budget") or 0))
-    ui.init_widget("w_month", s["month"] if s.get("month") in MONTHS else MONTHS[0])
-    ui.init_widget("w_slug", s.get("product_slug", ""))
-    errs = store_errors(_store_values()) if "w_name" in _s() else {}
-
-    def show(key: str) -> None:
-        if tried and key in errs:
-            st.error(errs[key])
-
-    st.text_input("가게 이름", key="w_name", placeholder="예: 소연베이크")
-    show("name")
-    st.text_input("무엇을 파세요?", key="w_product", placeholder="예: 수제 구움과자")
-    show("product")
-    st.radio("판매하는 곳", types, key="w_type", horizontal=True)
-    c1, c2, c3 = st.columns(3)
-    c1.number_input("대표 상품 판매가 (원)", min_value=0, step=1000, key="w_price")
-    c2.number_input("한 개 팔면 남는 돈 (원)", min_value=0, step=500, key="w_margin",
-                    help="판매가에서 재료비·포장비·수수료·배송비를 뺀 금액이에요. 이 숫자가 '손님 1명에게 쓸 수 있는 광고비 한도'가 돼요.")
-    c3.number_input("한 달 광고비 (원)", min_value=0, step=10000, key="w_budget")
-    with c2:
-        show("margin")
-    with c3:
-        show("budget")
-    st.caption("모르겠다면 남는 돈은 판매가의 30~40%, 광고비는 10만~30만 원으로 시작해도 돼요.")
-    st.selectbox("광고를 시작하는 달", MONTHS, key="w_month")
-    with st.expander("고급: 링크 꼬리표에 쓸 영문 이름"):
-        st.text_input("영문 소문자·숫자·밑줄만", key="w_slug",
-                      help="비워 두면 자동으로 만들어요. 광고 결과를 스토어 통계에서 구분하는 이름이에요.")
-    st.button("다음: 내 손님 찾기", type="primary", on_click=_store_next, key="store_next", icon=":material/arrow_forward:")
-
-
-# ───────────────────────── 2. 내 손님 찾기 ─────────────────────────
-
-def parse_seeds(text: str) -> list:
-    return [x.strip() for x in (text or "").replace("\n", ",").split(",") if x.strip()][:10]
-
-
-def _fill_demo_seeds() -> None:
-    _s()["w_seeds"] = ", ".join(state.DEMO_SEEDS)
-
-
-def age_chart(aud: dict) -> go.Figure:
-    ages = aud["ages"]
-    idx = aud.get("index", {})
-    labels = ["{}대".format(a) for a in ages]
-    fig = go.Figure(go.Bar(x=labels, y=[v * 100 for v in ages.values()],
-                           text=["{:.0f}%\n(분야 평균의 {:g}배)".format(v * 100, idx.get(a, 0)) if idx.get(a) else "{:.0f}%".format(v * 100)
-                                 for a, v in ages.items()], textposition="outside", marker_color="#4C78A8"))
-    fig.update_layout(height=320, margin=dict(l=10, r=10, t=30, b=10), yaxis_title="비중 (%)", showlegend=False)
-    return fig
-
-
-def month_chart(aud: dict) -> go.Figure:
-    m = aud.get("monthly") or {}
-    fig = go.Figure(go.Scatter(x=list(m), y=list(m.values()), mode="lines+markers", line=dict(color="#4C78A8")))
-    fig.update_layout(height=280, margin=dict(l=10, r=10, t=30, b=10), yaxis_title="검색 관심도(상대값)", showlegend=False)
-    return fig
-
-
-def _clear_picks() -> None:
-    """검색어 고르기 칸의 기억을 지운다 (새로 찾으면 추천 검색어부터 다시 보이게)."""
-    for k in [k for k in _s() if str(k).startswith(("kw_use_", "kw_neg_"))]:
-        del _s()[k]
-
-
-def _use_saved_example() -> None:
-    """실시간 조회가 안 될 때: 토글을 끄고 예시 단어의 저장본으로 바로 채운다."""
-    _s()["use_live"] = False
-    _s()["market_error"] = None
-    _s()["w_seeds"] = ", ".join(state.DEMO_SEEDS)
-    seeds = list(state.DEMO_SEEDS)
-    report, _ = data.market_report(tuple(seeds), False)
-    st_ = _s()["store"]
-    st_["seeds"] = seeds
-    _clear_picks()
-    _s()["market"] = report
-    if report is not None:
-        st_["keywords"], st_["negatives"] = list(report.recommended), list(report.negatives)
-        st_["audience_hint"] = state.audience_hint(report)
-
-
-def _skip_market() -> None:
-    _s()["store"].update(keywords=[], negatives=[])
-    _s()["market"] = None
-    state.go_step(2)
-
-
-def _market_next() -> None:
-    state.go_step(2)
-
-
-@st.fragment
-def keyword_picker(report) -> None:
-    """검색어 고르기 (이 부분만 다시 그려서 화면이 깜빡이지 않게)."""
-    s = _s()["store"]
-    uid = "_".join(report.seeds)
-    allk = report.keywords["keyword"].tolist()
-    use = [k for k in allk if k not in set(report.negatives)]
-    chosen = [k for k in (s.get("keywords") or report.recommended) if k in allk]
-    neg = [k for k in (s.get("negatives") or report.negatives) if k in allk]
-    ui.init_widget("kw_use_" + uid, chosen)
-    ui.init_widget("kw_neg_" + uid, neg)
-    s["keywords"] = st.multiselect("광고에 쓸 검색어", use + [k for k in allk if k not in use],
-                                   key="kw_use_" + uid, help="사러 온 사람이 찾는 단어만 골랐어요. 빼고 싶은 건 지워 주세요.")
-    s["negatives"] = st.multiselect("제외할 검색어 (이 말로 들어오면 광고를 보여 주지 않아요)", allk,
-                                    key="kw_neg_" + uid, help="'만들기'처럼 사려는 게 아니라 배우려는 사람, 다른 지역 매장을 찾는 사람이에요.")
-
-
-def step_market() -> None:
-    s = _s()["store"]
-    st.markdown("#### 내 손님 찾기")
-    st.caption("상품을 나타내는 단어를 적으면, 사람들이 어떤 말로 찾는지와 누가 찾는지 알려 드려요.")
-    ui.init_widget("w_seeds", ", ".join(s.get("seeds") or []))
-    ui.init_widget("use_live", False)
-    st.text_input("상품 단어 (쉼표로 구분)", key="w_seeds",
-                  placeholder="예: 휘낭시에, 쿠키선물세트, 답례품쿠키")
-    c1, c2 = st.columns([1, 3])
-    go_find = c1.button("내 손님 찾기", type="primary", key="market_find", icon=":material/search:")
-    c2.toggle("실시간으로 네이버에 물어보기 (키가 있을 때)", key="use_live",
-              help="끄면 저장된 예시 데이터만 써요. 시연이나 키가 없을 때는 꺼 두세요.")
-    if go_find:
-        seeds = parse_seeds(_s().get("w_seeds"))
-        if not seeds:
-            st.error("상품 단어를 한 개 이상 적어 주세요. 예: 휘낭시에")
-        else:
-            with st.spinner("검색어와 손님 정보를 모으는 중이에요…"):
-                report, api_error = data.market_report(tuple(seeds), bool(_s()["use_live"]))
-            _s()["market_error"] = api_error
-            s["seeds"] = seeds
-            _clear_picks()
-            _s()["market"] = report
-            if report is not None:
-                s["keywords"], s["negatives"] = list(report.recommended), list(report.negatives)
-                s["audience_hint"] = state.audience_hint(report)
-    report = _s().get("market")
-    if not _s().get("use_live"):
-        _s()["market_error"] = None                      # 실시간을 끄면 지난 오류 안내도 지운다
-    api_error = _s().get("market_error") if _s().get("use_live") else None
-    if report is None:
-        with st.container(border=True):
-            if api_error:
-                st.warning(api_error)
-                st.caption("잠시 뒤 '내 손님 찾기'를 다시 누르거나, 아래 '저장된 예시로 계속하기'로 먼저 진행해 보세요.")
-            elif go_find:
-                st.warning("이 단어로는 검색 예상치를 찾지 못했어요. 더 넓은 단어(예: 디저트선물)로 다시 찾아 보세요.")
+def _store_card(cs: dict, open_: bool) -> None:
+    focus = cs["step"] if cs["phase"] == "store" else None
+    s = cs["store"]
+    with st.expander("가게 카드", expanded=open_, icon=":material/storefront:"):
+        for key, label in conversation.STORE_STEPS:
+            v = s.get({"margin": "margin", "channel": "store_type"}.get(key, key))
+            if v in (None, ""):
+                shown = "아직"
+            elif key in ("price", "budget", "margin"):
+                shown = ui.won(v)
+                if key == "margin" and s.get("price"):
+                    shown += " (판매가의 {}%)".format(int(round(100.0 * v / s["price"])))
+            elif key == "channel":
+                shown = next(c for c in conversation.CHANNELS if conversation.CHANNEL_KEY[c] == v)
             else:
-                st.write("아직 찾지 않았어요. 위 칸에 단어를 적고 '내 손님 찾기'를 눌러 주세요.")
-            b1, b2 = st.columns(2)
-            if api_error:
-                b1.button("저장된 예시로 계속하기", on_click=_use_saved_example, key="market_use_saved")
-            else:
-                b1.button("예시 단어로 채우기", on_click=_fill_demo_seeds, key="market_demo_seeds")
-            b2.button("검색어 없이 다음으로", on_click=_skip_market, key="market_skip",
-                      help="네이버 검색 수요를 몰라서, 네이버 예산은 보수적으로 잡혀요.")
+                shown = str(v)
+            with st.container(border=(key == focus), key=_tid("store-" + key)):
+                st.markdown("{}**{}** · {}".format(":material/arrow_right: " if key == focus else "", label, shown))
+                chat.guide_here(cs, "store-" + key)
+        st.markdown("**광고 매체** · " + "·".join(MEDIA_NAMES[m] for m in cs["media"]))
+
+
+def _audience_charts(report) -> None:
+    aud = next(iter(report.audiences.values()), None) if getattr(report, "audiences", None) else None
+    if not aud:
         return
-    if api_error:
-        st.warning(api_error)
-        st.caption("지금 보이는 값은 저장해 둔 값이에요. 잠시 뒤 '내 손님 찾기'를 다시 누르면 최신 값으로 바꿔 봐요.")
-    st.success(report.headline or "검색어를 찾았어요.")
-    st.caption("{} · 검색량은 네이버 추산이라 실제와 다를 수 있어요.".format(ui.grade("B")))
-    t1, t2, t3 = st.tabs(["검색어 묶음", "손님은 누구?", "언제 많이 찾나?"])
-    with t1:
-        st.dataframe(report.groups, hide_index=True, width="stretch", column_config={
-            "intent": st.column_config.TextColumn("어떤 말인가요"), "count": st.column_config.NumberColumn("검색어 수"),
-            "total_qc": st.column_config.NumberColumn("한 달 검색 수", format="%d"),
-            "mobile_ctr": st.column_config.NumberColumn("모바일 클릭률", format="%.1f%%"),
-            "top_keyword": st.column_config.TextColumn("대표 검색어")})
-        st.caption("'제외' 묶음은 사러 온 사람이 아니라서 제외 검색어로 넣어요.")
-    names = list(report.audiences)
-    with t2:
-        if names:
-            who = st.selectbox("검색어", names, key="aud_pick")
-            st.plotly_chart(age_chart(report.audiences[who]), use_container_width=True)
-            a = report.audiences[who]
-            st.caption("여성 {:.0f}% · 모바일 {} · {}".format(a["female"] * 100,
-                       "{:.0f}%".format(a["mobile"] * 100) if a.get("mobile") else "-", ui.grade(a.get("grade", "B"))))
-        else:
-            st.info("손님 정보를 가져오지 못했어요. 그대로 다음 단계로 가도 괜찮아요.")
-    with t3:
-        if names:
-            who = st.selectbox("검색어", names, key="aud_pick_month")
-            st.plotly_chart(month_chart(report.audiences[who]), use_container_width=True)
-        else:
-            st.info("월별 흐름을 가져오지 못했어요.")
-    keyword_picker(report)
-    st.button("다음: 예산·예측", type="primary", on_click=_market_next, key="market_next", icon=":material/arrow_forward:")
+    ages = aud.get("ages") or {}
+    if ages:
+        fig = go.Figure(go.Bar(x=["{}대".format(a) for a in ages], y=[round(v * 100) for v in ages.values()],
+                               marker_color=NAVER_COLOR))
+        fig.update_layout(title="누가 찾나요 (연령별 %, 여성 {}%)".format(round(aud.get("female", 0) * 100)),
+                          height=220, margin=dict(l=10, r=10, t=40, b=10), yaxis_title=None, xaxis_title=None)
+        st.plotly_chart(fig, key="chart_age", use_container_width=True)
+    monthly = aud.get("monthly") or {}
+    if monthly:
+        fig = go.Figure(go.Scatter(x=list(monthly), y=list(monthly.values()), mode="lines+markers",
+                                   line=dict(color=NAVER_COLOR)))
+        fig.update_layout(title="언제 찾나요 (월별 검색 관심도)", height=220, margin=dict(l=10, r=10, t=40, b=10),
+                          yaxis_title=None, xaxis_title=None)
+        st.plotly_chart(fig, key="chart_month", use_container_width=True)
+    st.caption(ui.grade(aud.get("grade", "B")))
 
 
-# ───────────────────────── 3. 예산·예측 ─────────────────────────
-
-def _budget_next() -> None:
-    d = _s().get("_draft")
-    if not d:
+def _market_board(cs: dict, open_: bool) -> None:
+    m = cs.get("market") or {}
+    if not m.get("recommended"):
         return
-    s = _s()["store"]
-    s.update(objective=d["objective"], days=d["days"])
-    _s()["media"] = d["media"]
-    _s()["budget_plan"] = d["bp"]
-    a = _s()["answers"]
-    a["meta.campaign.objective"] = d["objective_label"]
-    a["meta.adset.end_date"] = "{}일".format(d["days"])
-    _s()["q_index"] = 0
-    state.go_step(3)
+    with st.expander("내 손님 판", expanded=open_, icon=":material/groups:"):
+        with st.container(key=_tid("market"), border=(cs["phase"] == "market")):
+            chat.guide_here(cs, "market")
+            if m.get("headline"):
+                st.markdown("**{}**".format(m["headline"]))
+            report = _s().get("market")
+            if report is not None and m.get("headline"):
+                _audience_charts(report)
+            for g in m.get("groups") or []:
+                st.markdown("· {} · {}개 · 월 검색 {:,}회 · 대표 {}".format(
+                    g.get("intent", ""), int(g.get("count", 0) or 0), int(g.get("total_qc", 0) or 0), g.get("top_keyword", "")))
+            st.markdown("**광고 검색어** · " + ", ".join("`{}`".format(w) for w in (m.get("picked") or m["recommended"])[:10]))
+            if m.get("negatives"):
+                st.markdown("**제외어** · " + ", ".join("`{}`".format(w) for w in m["negatives"][:8]))
 
 
-def budget_chart(bp: dict) -> go.Figure:
-    fig = go.Figure(go.Pie(labels=["네이버", "메타"], values=[bp["naver_month"], bp["meta_month"]], hole=0.55,
-                           marker=dict(colors=["#2CA02C", "#4C78A8"]), textinfo="label+percent"))
-    fig.update_layout(height=260, margin=dict(l=10, r=10, t=10, b=10), showlegend=False)
-    return fig
-
-
-def step_budget() -> None:
-    s = _s()["store"]
-    report = _s().get("market")
-    st.markdown("#### 예산·예측")
-    margin = int(s.get("margin_per_order") or 0)
-    k1, k2 = st.columns(2)
-    k1.metric("손님 1명에게 쓸 수 있는 광고비 한도", ui.won(margin) if margin else "미입력",
-              help="한 개 팔면 남는 돈이에요. 이보다 많이 쓰면 팔수록 손해예요.")
-    k2.metric("한 달 광고비", ui.won(s["budget"]))
-    labels, mapping = state.objective_options()
-    cur_label = _s()["answers"].get("meta.campaign.objective") or labels[0]
-    ui.init_widget("w_obj", cur_label if cur_label in labels else labels[0])
-    obj_label = st.radio("광고로 가장 원하는 게 뭐예요?", labels, horizontal=True, key="w_obj")
-    st.caption("첫 달은 '스토어 방문 늘리기'를 권해요. 판매 목표는 구매 데이터가 쌓여야 잘 돌아가요. {}".format(
-        "" if mapping.get(obj_label) == "트래픽" else "(가게 알리기는 클릭이 아니라 '얼마나 많은 사람에게 보였나'로 봐요.)"))
-    objective = mapping.get(obj_label, "트래픽")
-    days_opts = state.days_options()
-    cur_days = "{}일".format(s.get("days", 14))
-    ui.init_widget("w_days", cur_days if cur_days in days_opts else days_opts[min(1, len(days_opts) - 1)])
-    days_label = st.radio("메타 광고 기간", days_opts, horizontal=True, key="w_days")
-    st.caption("7일보다 짧으면 광고가 자리를 잡기 어려워요. 기본은 14일이에요.")
-    days = int(days_label.replace("일", ""))
-    ui.init_widget("w_media", list(_s()["media"]))
-    media = st.pills("쓸 광고", list(MEDIA_NAMES), selection_mode="multi",
-                     format_func=lambda m: MEDIA_NAMES[m], key="w_media")
-    if not media:
-        st.error("광고를 하나 이상 골라 주세요. 처음이라면 둘 다 켜 두는 걸 권해요.")
+def _budget_board(cs: dict, open_: bool) -> None:
+    p = cs.get("plan")
+    if not p:
         return
-    with st.expander("고급: 네이버에 쓸 최대 비중"):
-        ui.init_widget("w_share", 50)
-        share = st.slider("예산 중 네이버 최대 비중", 0, 100, step=5, key="w_share", format="%d%%")
-    bp = state.compute_budget(s, media, report, objective, days, share / 100.0)
-    bpd = asdict(bp)
-    _s()["_draft"] = {"bp": bpd, "media": list(media), "objective": objective, "objective_label": obj_label, "days": days}
-
-    st.markdown("##### 이렇게 나눠 쓰길 권해요")
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("네이버 하루 예산", ui.won(bp.naver_daily), help="한 달 ÷ 30일")
-    c2.metric("메타 하루 예산", ui.won(bp.meta_daily), help="한 달 ÷ 광고 기간")
-    c3.metric("예상 클릭 (네이버)", "{:,}번".format(int(bp.naver_forecast["clicks"])))
-    c4.metric("예상 도달 (메타)", "{:,}명".format(int(bp.meta_forecast["reach"])))
-    left, right = st.columns([2, 1])
-    with left:
-        for n in bp.notes:
-            st.write("• " + n)
-        lo, hi = state.expected_orders(bpd)
-        if hi > 0:
-            line = "예상 주문은 한 달에 약 {:.0f}~{:.0f}건이에요. ({}: 클릭 뒤 구매율은 우리 가정이라 틀릴 수 있어요)".format(lo, hi, ui.grade("D"))
-            st.write("• " + line)
-            if margin and bp.budget / max(hi, 0.5) > margin:
-                gap = bp.budget / max(hi, 0.5) - margin
-                st.warning("이 예상대로면 손님 1명에 최소 약 {} 들고, 한 개 팔아 남는 {}보다 {} 많아요. "
-                           "(계산: 한 달 광고비 {} ÷ 예상 주문 {:.0f}건). 첫 달은 '배우는 비용'으로 보고, 결과를 보고 줄이거나 바꾸세요."
-                           .format(ui.won(bp.budget / hi), ui.won(margin), ui.won(gap), ui.won(bp.budget), hi))
-    with right:
-        st.plotly_chart(budget_chart(bpd), use_container_width=True)
-    ui.grade_legend()
-    st.button("다음: 질문 시작", type="primary", on_click=_budget_next, key="budget_next", icon=":material/arrow_forward:")
+    with st.expander("예산 판", expanded=open_, icon=":material/payments:"):
+        with st.container(key=_tid("budget"), border=(cs["phase"] == "budget")):
+            chat.guide_here(cs, "budget")
+            nf, mf = p.get("naver_forecast") or {}, p.get("meta_forecast") or {}
+            lo, hi = state.expected_orders(p)
+            cells = [("한 달 광고비", ui.won(p.get("budget"))), ("예상 주문", "{:.0f}~{:.0f}건".format(lo, hi)),
+                     ("네이버 하루 예산", ui.won(p.get("naver_daily"))), ("예상 네이버 클릭", "{:,.0f}회".format(nf.get("clicks", 0) or 0)),
+                     ("메타 하루 예산", ui.won(p.get("meta_daily"))), ("예상 메타 도달", "{:,.0f}명".format(mf.get("reach", 0) or 0))]
+            for i in range(0, len(cells), 2):
+                row = st.columns(2)
+                for col, (label, val) in zip(row, cells[i:i + 2]):
+                    col.metric(label, val)
+            st.caption("예상 주문은 클릭 × 구매율 가정이에요. " + ui.grade("D"))
+            margin = (cs.get("store") or {}).get("margin") or 0
+            if margin and p.get("budget"):
+                be = p["budget"] / margin
+                if hi < be:
+                    st.warning("광고비를 본전으로 돌리려면 {:.0f}건 넘게 팔려야 하는데, 예상은 최대 {:.0f}건이에요. "
+                               "첫 달은 손해일 수 있어요.".format(be, hi))
+                else:
+                    st.caption("본전은 약 {:.0f}건이에요. 예상 주문이 넘어도 실제로는 달라질 수 있어요.".format(be))
+            for n in p.get("notes") or []:
+                st.caption(n)
 
 
-# ───────────────────────── 4. 질문 (한 번에 하나) ─────────────────────────
-
-def _finish_questions() -> None:
-    _s()["created"] = _s().get("created") or dt.date.today().isoformat()
-    _s()["q_index"] = len(state.asked_questions(_s()["media"]))
-    state.go_step(state.LAST_STEP)
-
-
-def _save_and_next(qid: str, value: object, extra: dict = None) -> None:
-    a = _s()["answers"]
-    a[qid] = value
-    a.update(extra or {})
-    qs = state.asked_questions(_s()["media"])
-    if _s()["q_index"] + 1 >= len(qs):
-        _finish_questions()
-    else:
-        _s()["q_index"] += 1
-
-
-def _use_choice(qid: str, key: str, default: object) -> None:
-    _save_and_next(qid, _s().get(key) or default)
-
-
-def _use_default(qid: str, default: object) -> None:
-    _save_and_next(qid, default)
-
-
-def _prev_question() -> None:
-    if _s()["q_index"] > 0:
-        _s()["q_index"] -= 1
-    else:
-        state.go_step(2)
-
-
-def _skip_rest() -> None:
-    """남은 질문은 권장 답(예시에서는 예시 값)으로 채우고 시트로."""
+def _setting_board(cs: dict) -> None:
+    """세팅 보드: 매체 → 단계 → 칸 줄 (답하면 값이 바로 바뀜). 지금 묻는 칸은 굵은 테두리."""
     s = _s()
-    qs = state.asked_questions(s["media"])
-    rest = qs[s["q_index"]:]
-    filled = state.default_answers(rest, s["store"].get("product", ""), s.get("is_demo", False))
-    hint = s["store"].get("audience_hint") or state.audience_hint(s.get("market"))
-    for q in rest:
-        if q.get("suggest_from") == "market_age_gender" and hint:
-            filled[q["id"]] = hint
-    for k, v in filled.items():
-        s["answers"].setdefault(k, v)
-    for q in rest:
-        if q["kind"] == "llm" and q["id"] not in s["answers"]:
-            try:
-                c = state.make_copies(s["store"].get("product", ""), "", False)
-                s["answers"][q["id"]] = c[q["media"]][0]
-                s["answers"].setdefault("naver.ad.copy", c["naver"][0])
-            except Exception:  # noqa: BLE001  문구는 나중에 시트에서 다시 만들 수 있음
-                pass
-    _finish_questions()
+    store = conversation.to_store(cs)
+    store["keywords"] = list(store.get("seeds") or [])
+    ctx = state.make_ctx(store, cs["media"], cs.get("plan"), s.get("market"))
+    sheet = intake.build_sheet(conversation.to_answers(cs), ctx)
+    focus = cs["step"] if cs["phase"] == "ask" else None
+    st.markdown("#### 세팅 보드")
+    st.caption("광고 관리자 칸이에요. 오른쪽 대화에서 답하면 이 값이 바로 바뀌어요.")
+    for media, mdf in sheet.groupby("media", sort=False):
+        st.markdown("**{}**".format(MEDIA_NAMES.get(media, media)))
+        for stage, sdf in mdf.groupby("stage", sort=False):
+            with st.expander("{} · {}칸".format(stage, len(sdf)), expanded=bool(focus and focus in set(sdf["field_id"]))):
+                for _, r in sdf.iterrows():
+                    here = r["field_id"] == focus
+                    with st.container(border=here, key=_tid(r["field_id"])):
+                        a, b, c = st.columns([3, 5, 2])
+                        a.markdown("{}**{}**".format(":material/arrow_right: " if here else "", r["label"]))
+                        b.write(str(r["value"]) or "-")
+                        c.markdown(ui.kind_badge(r["kind_label"]))
+                        if here:
+                            chat.guide_here(cs, r["field_id"].replace(".", "-"))
 
 
-def _validate_url(text: str) -> str:
-    t = text.strip()
-    if t and not (t.startswith("http://") or t.startswith("https://")):
-        return "주소는 http:// 또는 https:// 로 시작해야 해요. 상품 페이지 주소를 그대로 복사해 붙여 넣어 주세요."
-    if t and "." not in t:
-        return "주소가 끝까지 복사되지 않은 것 같아요. 브라우저 주소창의 전체 주소를 붙여 넣어 주세요."
-    return ""
-
-
-def _copy_choice(q: dict) -> None:
-    s = _s()
-    opts = s["copy_options"]
-    st.caption("알려 주신 장점: {}".format(opts.get("strengths", "")))
-    base = opts[q["media"]]
-    ui.init_widget("copy_pick", 0)
-    pick = st.radio("마음에 드는 문구를 고르세요", range(len(base)), key="copy_pick",
-                    format_func=lambda i: "{} — {}".format(base[i]["headline"], base[i]["text"]))
-    st.caption("사실이 아닌 말(최저가·1위 등)은 넣지 않았어요. 네이버는 제목 15자·설명 20~45자에 맞췄어요.")
-    c1, c2 = st.columns(2)
-    extra = {}
-    if "naver" in s["media"] and "meta" in s["media"]:
-        extra["naver.ad.copy"] = opts["naver"][min(pick, len(opts["naver"]) - 1)]
-    c1.button("이 문구로 다음", type="primary", key="copy_ok", on_click=_save_and_next,
-              args=(q["id"], base[pick], extra), icon=":material/check:")
-    c2.button("다시 만들기", key="copy_redo", on_click=lambda: s["copy_options"].clear())
-
-
-def step_questions() -> None:
-    s = _s()
-    media = s["media"]
-    qs = state.asked_questions(media)
-    i = min(s["q_index"], len(qs) - 1)
-    q = qs[i]
-    st.markdown("#### 질문 {}/{}".format(i + 1, len(qs)))
-    st.progress(i / len(qs), text="남은 질문 {}개".format(len(qs) - i))
-    answers = s["answers"]
-    cur = answers.get(q["id"], q["default"])
-    hint = s["store"].get("audience_hint") or state.audience_hint(s.get("market"))
-    if q.get("suggest_from") == "market_age_gender" and hint and q["id"] not in answers:
-        cur = hint
-    for prev in qs[max(0, i - 2):i]:   # 방금 한 대화만 위에 남겨 둠
-        with st.chat_message("assistant"):
-            st.write(prev["ask"])
-        with st.chat_message("user"):
-            st.write(intake.show({"id": prev["id"], "kind": prev["kind"]}, answers.get(prev["id"], prev["default"])))
-    with st.chat_message("assistant"):
-        st.markdown("**[{}] {}**".format(q["media"].replace("meta", "메타").replace("naver", "네이버"), q["ask"]))
-        st.caption("왜 묻나요? " + q["why"])
-    prev_col, skip_col = st.columns(2)
-    prev_col.button("이전", on_click=_prev_question, key="q_prev", icon=":material/arrow_back:")
-    skip_col.button("남은 질문은 권장 답으로 넘기기", on_click=_skip_rest, key="q_skip_rest",
-                    help="예시나 기본값으로 채워요. 시트에서 언제든 다시 고칠 수 있어요.")
-
-    if q["kind"] == "llm":
-        if s["copy_options"].get("for") == q["id"]:
-            _copy_choice(q)
-            return
-        st.button("예시 장점으로 채우기", key="copy_demo",
-                  on_click=lambda: _make_copy_options(q, state.DEMO_STRENGTHS))
-        txt = st.chat_input("예: 국내산 버터로 매일 구워요", key="chat_copy")
-        if txt:
-            _make_copy_options(q, txt)
-            st.rerun()
-        return
-    if q["input"] == "choice":
-        default_opt = q["default"]
-        ui.init_widget("q_" + q["id"], cur if cur in q["options"] else default_opt)
-        st.radio(q["label"], q["options"],
-                 key="q_" + q["id"], label_visibility="collapsed",
-                 format_func=lambda o: o + ("  · 권장" if o == default_opt else ""))
-        st.button("이 답으로 다음", type="primary", key="q_ok", on_click=_use_choice,
-                  args=(q["id"], "q_" + q["id"], default_opt), icon=":material/arrow_forward:")
-        return
-    # 글로 쓰는 답 (계정 이름, 주소, 연령·성별)
-    if cur:
-        st.button("{} → 이대로 다음".format(("권장: " if cur == q["default"] or cur == hint else "") + str(cur)[:40]),
-                  key="q_use_default", type="primary", on_click=_use_default, args=(q["id"], cur))
-    else:
-        st.button("나중에 입력하고 다음", key="q_later", on_click=_use_default, args=(q["id"], ""),
-                  help="비워 두면 세팅값 시트에 '아직 입력 전이에요'로 보여요.")
-    txt = st.chat_input("직접 입력하려면 여기에 쓰고 Enter", key="chat_text")
-    if txt:
-        err = _validate_url(txt) if q["input"] == "url" else ""
-        if err:
-            st.error(err)
-        else:
-            _save_and_next(q["id"], txt.strip())
-            st.rerun()
-
-
-def _make_copy_options(q: dict, strengths: str) -> None:
-    s = _s()
-    try:
-        c = state.make_copies(s["store"].get("product", "상품"), strengths, bool(s.get("use_live")))
-    except Exception:  # noqa: BLE001  외부 서비스 오류는 문장 틀로 대신함
-        c = state.make_copies(s["store"].get("product", "상품"), strengths, False)
-    s["copy_options"] = {"for": q["id"], "strengths": strengths, **c}
-
-
-# ───────────────────────── 5. 세팅값 시트 ─────────────────────────
-
-def _back_to_questions() -> None:
-    _s()["q_index"] = 0
-    state.go_step(3)
+def work_board(cs: dict) -> None:
+    ph = cs["phase"]
+    _store_card(cs, open_=ph in ("store", "confirm") or (ph == "market" and not (cs.get("market") or {}).get("recommended")))
+    _market_board(cs, open_=ph == "market")
+    _budget_board(cs, open_=ph == "budget")
+    if ph == "ask":
+        _setting_board(cs)
 
 
 def sheet_frame(plan_df, media_pick: str):
@@ -586,8 +217,7 @@ def step_sheet() -> None:
     s = _s()
     plan = state.build_plan()
     if plan is None:
-        st.warning("세팅이 아직 끝나지 않았어요. 질문 단계로 돌아가 주세요.")
-        st.button("질문으로", on_click=_back_to_questions, key="sheet_to_q")
+        st.warning("세팅이 아직 끝나지 않았어요. 오른쪽 대화에서 질문에 답해 주세요.")
         return
     ctx = state.make_ctx(s["store"], s["media"], s["budget_plan"], s.get("market"))
     sheet = intake.build_sheet(s["answers"], ctx)
@@ -643,7 +273,11 @@ def step_sheet() -> None:
     else:
         st.markdown("**다음 할 일: 광고를 켜기 전 준비를 확인해요.**")
     ui.next_link("run", "② 실행으로 가기", ":material/arrow_forward:")
-    st.button("질문 답 다시 고치기", on_click=_back_to_questions, key="sheet_redo")
+    if s.get("chat") is None:
+        st.button("답 고치기 (대화 열기)", on_click=state.restore_chat, key="sheet_redo", icon=":material/edit:",
+                  help="불러온 계획의 답을 대화로 다시 고쳐요.")
+    else:
+        st.caption("답을 고치려면 오른쪽 대화의 '지난 답 고치기'를 누르세요.")
 
 
 # ───────────────────────── 화면 ─────────────────────────
@@ -652,18 +286,28 @@ def render() -> None:
     state.init()
     st.title("① 세팅")
     ui.stepper(0)
-    step = _s()["setup_step"]
-    sub_stepper(step)
-    if step == 0:
-        step_store()
-    elif step == 1:
-        step_market()
-    elif step == 2:
-        step_budget()
-    elif step == 3:
-        step_questions()
-    else:
+    s = _s()
+    if s.get("chat") is None and not state.setup_done():
+        state.start_chat()
+    chat.process_pending()
+    cs = s.get("chat")
+    if cs is None:                      # 불러온 계획: 세팅값 시트만 (원하면 대화를 열어 고침)
         step_sheet()
+        return
+    st.markdown(chat.GUIDE_CSS, unsafe_allow_html=True)
+    chat.guide_on()                        # 처음 값(켜짐)을 한 번만 넣는다
+    st.toggle("캐릭터 보이기", key="w_guide",
+              help="끄면 왼쪽 작업판에서 칸을 가리키는 캐릭터가 사라져요. 강조 테두리는 그대로예요.")
+    with st.container(key="setup_cols"):   # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
+        left, right = st.columns([7, 5])
+        with right:
+            chat.render()
+        with left:
+            if s["chat"]["phase"] == "done":
+                step_sheet()
+            else:
+                work_board(s["chat"])
+                chat.scroll_to_focus(s["chat"])
 
 
 if __name__ == "__main__":

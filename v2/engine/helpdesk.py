@@ -32,7 +32,8 @@ LLM_TIMEOUT = 15.0          # 첫 글자가 올 때까지 기다리는 시간(�
 LLM_TOTAL_LIMIT = 45.0      # 스트리밍 전체 상한(초)
 
 MATCH_MIN = 0.25            # 이 점수 이상이면 미리 쓴 답
-DOMAIN_MIN = 0.12           # 이 점수 미만이고 광고 낱말도 없으면 광고와 상관없는 질문으로 보고 LLM도 부르지 않음
+DOMAIN_MIN = 0.2            # 이 점수 미만이고 광고 낱말도 없으면 광고와 상관없는 질문으로 보고 LLM도 부르지 않음
+HIGH_MIN = 0.5             # 지금 칸이 아닌 칸은 이 점수 이상일 때만 바로 답 (낮으면 LLM이 있을 때 한 번 더 확인)
 CUR_BONUS = 1.12            # 지금 칸 가산점
 STAGE_BONUS = 1.05          # 같은 단계 가산점
 UNKNOWN_W = 0.25           # 어느 칸에도 없는 글자 묶음이 점수 분모에 끼치는 무게 (말투 차이로 점수가 무너지지 않게)
@@ -134,10 +135,11 @@ _SYN_GROUPS = [
     "손님 고객 사람",
     "결제 청구 과금",
     "시간 요일 시간대",
-    "비즈머니 잔고 잔액 충전 머니",
+    "비즈머니 잔고 잔액 충전 머니 넣어 넣기 입금",
     "연결 이어 붙이 연동 이어붙",
     "개인 평범 평범한 일반 일반적 보통",
     "비교 견주",
+    "사이트 웹사이트 웹페이지",
 ]
 _SYN: Dict[str, str] = {}
 for _g in _SYN_GROUPS:
@@ -269,6 +271,22 @@ class _Index:
         return cov
 
 
+    def evidence(self, question: str, fid: str) -> int:
+        """질문의 낱말(2글자 이상, 가게 상품 이름 같은 약한 말 제외) 중 이 칸 글에 통째로 들어 있는 것의 수."""
+        doc = self.docs[fid]
+        given = _given_words(question)
+        seen = set()
+        for w in _words(question):
+            if len(w) >= 2 and w not in _WEAK_WORDS and w not in given and not w.isdigit() and ("w:" + w) in doc:
+                seen.add(w)
+        return len(seen)
+
+    def unknown(self, question: str) -> int:
+        """질문의 낱말(2글자 이상) 중 어느 칸 글에도 없는 것의 수."""
+        return sum(1 for w in set(_words(question))
+                   if len(w) >= 2 and w not in _WEAK_WORDS and not w.isdigit() and not any(("w:" + w) in d for d in self.docs.values()))
+
+
 @lru_cache(maxsize=4)
 def _index(dir_: str) -> _Index:
     return _Index(_load_help(dir_))
@@ -276,6 +294,17 @@ def _index(dir_: str) -> _Index:
 
 def _get_index(dir: Optional[Path] = None) -> _Index:
     return _index(str(dir or (SPEC_DIR / "help")))
+
+
+def _has_evidence(idx: _Index, q: str, fid: str, step_id: Optional[str], score: float) -> bool:
+    """낱말 둘 이상이 겹치거나 광고 낱말이 있어야 한다. 지금 칸이면 겹친 낱말 하나도 인정하되, 칸과 상관없는 낱말이 섞이면 안 된다."""
+    ev = idx.evidence(q, fid)
+    if ev >= 2 or _DOMAIN_RE.search(q.lower()):
+        return True
+    if fid != step_id or ev != 1:
+        return False
+    u = idx.unknown(q)
+    return u == 0 or (u == 1 and score >= 0.4)
 
 
 def rank(question: str, step_id: Optional[str] = None, dir: Optional[Path] = None) -> List[Tuple[float, str]]:
@@ -329,13 +358,14 @@ def _pick_text(idx: _Index, fid: str, question: str) -> str:
 _Q_START_RE = re.compile(r"^(어떻게|어떤|무슨|뭐|뭘|뭔|왜|언제|어디|누가|얼마|몇|어느|혹시|이게|그게|이건|그건)(\s|$|가|는|를|를|이)")
 _Q_END = ("나요", "가요", "까요", "뭐예요", "뭔가요", "인가요", "되나요", "할까요", "건가요", "있나요", "없나요", "어때요",
           "알려줘", "알려 줘", "알려주세요", "알려 주세요", "모르겠어요", "모르겠네요", "뭐야", "뭐죠", "인지요", "어떨까요",
-          "맞나요", "돼요", "되죠", "되는지", "인지", "뭔지", "건지", "할지", "궁금해요", "궁금합니다", "무엇인가요",
+          "맞나요", "되는지", "인지", "뭔지", "건지", "할지", "궁금해요", "궁금합니다", "무엇인가요",
           "무엇이에요", "뭐에요", "뭔데요", "어디예요", "어디에요", "어딘가요", "얼마예요", "얼마에요", "몇이에요",
-          "있어요", "없어요", "되나", "할까", "인가", "일까요", "을까요", "ㄹ까요", "죠")
-_Q_ANY_RE = re.compile(r"(어떻게|무슨\s|뭐예요|뭔가요|뭐죠|뭔지|왜\s|왜요|얼마(?:\s|$|예요|에요|죠|나\s|인가요|까지)|궁금|가능한가요|가능해요|해도 돼요|해도 되나요|어디서|어디에|어디로|어디가|"
-                       r"차이가|뭐가 달라|뭐가 나아|어느 쪽|뭘 골라|몇 개|몇 명|몇 번|뭐하는|뭐가\s*(좋|나아|달라|맞)|나아요|적당해요|추천해|"
-                       r"언제(?:부터|까지|쯤|가|\s)|려면요|거예요|달라요|안\s*(?:돼요|된대요|눌려요|보여요|나와요)|된대요|것 같아요|어떡해|어쩌|"
+          "되나", "할까", "일까요", "을까요")
+_Q_ANY_RE = re.compile(r"(어떻게(?!든)|무슨\s(?!\S*든)|뭐예요|뭔가요|뭐죠|뭔지|왜\s|왜요|얼마(?:\s|$|예요|에요|죠|나\s|인가요|까지)|궁금|가능한가요|가능해요|해도 돼요|해도 되나요|어디서(?!든)|어디에|어디로|어디가|"
+                       r"차이가|뭐가 달라|뭐가 나아|어느 쪽|뭘 골라|몇 (?:개|명|번)(?!\S*든)|뭐하는|뭐가\s*(좋|나아|달라|맞)|나아요|적당해요|추천해|"
+                       r"언제(?:부터|까지|쯤|가|\s)|려면요|달라요|안\s*(?:돼요|된대요|눌려요|보여요|나와요)|어떡해|어쩌|"
                        r"해야\s*(?:해요|하나요|돼요)|해도\s*(?:돼요|될까요)|가능해요)")
+_ANY_OF_RE = re.compile(r"(?:어디서?|어떻게|몇\s*\S{1,2}|무슨\s*\S+|어느\s*\S+|언제|누가|뭐|얼마)(?:든지|든)(?:\s|$|요|[^가-힣])")
 _ANSWER_ONLY_RE = re.compile(r"^[\d\s,.원만천백십억개일%~\-]+$")
 _YESNO = {"네", "예", "응", "넵", "아니요", "아니", "아뇨", "맞아요", "맞아", "좋아요", "그래요", "안 해요", "했어요", "아직이에요"}
 
@@ -355,10 +385,13 @@ def is_question(text: str) -> bool:
         return False
     if re.search(r"(?:만|천|백)\s*원?$", n) and not _Q_ANY_RE.search(n) and not n.endswith(_Q_END):
         return False
-    if n.endswith(_Q_END) or _Q_START_RE.match(n) or _Q_ANY_RE.search(n):
-        # '좋아요'로 끝나는 말은 답일 때가 많다 ("선물 위주로 하는 게 좋아요")
-        return not n.endswith(("좋아요", "좋겠어요"))
-    return False
+    # '어디서든', '몇 개든', '무슨 맛이든'은 묻는 말이 아니라 "뭐든 괜찮다"는 답
+    if _ANY_OF_RE.search(n) and not n.endswith(_Q_END):
+        return False
+    if _Q_START_RE.match(n) or _Q_ANY_RE.search(n):
+        return True
+    # '좋아요'로 끝나는 말은 답일 때가 많다 ("선물 위주로 하는 게 좋아요")
+    return n.endswith(_Q_END) and not n.endswith(("좋아요", "좋겠어요"))
 
 
 # ── 코치 숫자 질문 (ctx의 엔진 값만) ───────────────────────
@@ -651,6 +684,13 @@ def _none(step_id: Optional[str], dir_: str, text: str = NONE_TEXT) -> HelpAnswe
     return HelpAnswer("none", text, step_id if e else None, _sources(e), None)
 
 
+def _help_answer(idx: _Index, fid: str, question: str, step_id: Optional[str]) -> HelpAnswer:
+    text = _pick_text(idx, fid, question)
+    if step_id and fid != step_id and step_id in idx.help:
+        text = "(‘%s’ 칸 설명이에요) %s" % (_label_of(fid), text)
+    return HelpAnswer("help", text, fid, _sources(idx.help[fid]), None)
+
+
 def answer(question: str, step_id: Optional[str] = None, ctx: Optional[dict] = None, client=None,
            dir: Optional[Path] = None) -> HelpAnswer:
     """질문에 답한다. 찾는 순서: 코치 숫자 → 미리 쓴 도움말 → (client가 있으면) LLM → 자료에 없어요."""
@@ -666,17 +706,20 @@ def answer(question: str, step_id: Optional[str] = None, ctx: Optional[dict] = N
     idx = _get_index(Path(d))
     ranked = rank(q, step_id, Path(d))
     best, fid = ranked[0] if ranked else (0.0, None)
-    if fid and best >= MATCH_MIN:
-        text = _pick_text(idx, fid, q)
-        if step_id and fid != step_id and step_id in idx.help:
-            text = "(‘%s’ 칸 설명이에요) %s" % (_label_of(fid), text)
-        return HelpAnswer("help", text, fid, _sources(idx.help[fid]), None)
+    found = bool(fid) and best >= MATCH_MIN
+    # 글자 묶음 하나만 우연히 겹친 걸로는 답하지 않는다: 낱말 둘 이상이 겹치거나, 광고 낱말이 있어야 함
+    if found and not _has_evidence(idx, q, fid, step_id, best):
+        found, best = False, min(best, DOMAIN_MIN - 0.01)
+    if found and (fid == step_id or best >= HIGH_MIN):
+        return _help_answer(idx, fid, q, step_id)
 
     if client is not None and _looks_on_topic(q, best):
         src_fid = step_id if step_id in idx.help else (fid if best >= DOMAIN_MIN else None)
         ans = _llm_answer(client, q, step_id, ctx, d, idx.help.get(src_fid) if src_fid else None, src_fid)
         if ans is not None:
             return ans
+    if found:                                   # 애매하지만 LLM이 없거나 못 답함: 가장 가까운 칸의 답 (어느 칸 설명인지 밝힘)
+        return _help_answer(idx, fid, q, step_id)
     if not _looks_on_topic(q, best):
         return _none(step_id, d, OFFTOPIC_TEXT)
     return _none(step_id, d)

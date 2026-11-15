@@ -1,6 +1,6 @@
-"""P7 app 테스트: 페이지별 렌더링, 예시(소연베이크) 3분 경로, 한 번에 한 질문, 올린 파일 읽기.
+"""P7 app 테스트: 페이지별 렌더링, 챗봇 세팅 대화(예시 소연베이크 경로), 올린 파일 읽기, 다음 달 이어 하기.
 
-네트워크·API 키를 쓰지 않는다 (시장 조사는 저장본, 문구는 문장 틀).
+네트워크·API 키를 쓰지 않는다 (시장 조사는 저장본, 문구는 문장 틀, 도움말은 미리 쓴 답).
 """
 from pathlib import Path
 
@@ -8,10 +8,20 @@ import pytest
 from streamlit.testing.v1 import AppTest
 
 from v2.app import data, state
-from v2.engine import ingest, market, naver_api, plan_io
+from v2.engine import conversation, copywriter, ingest, intake, plan_io, specs
 
 MAIN = str(Path(__file__).resolve().parents[1] / "app" / "main.py")
 SETUP, RUN, DIAG = "setup.py", "run.py", "diagnose.py"
+
+
+@pytest.fixture(autouse=True)
+def offline(monkeypatch):
+    """Claude 키가 있어도 쓰지 않는다 (도움말 LLM·문구 모두 키 없는 경로)."""
+    monkeypatch.setattr(conversation, "_client", lambda: None)
+    monkeypatch.setattr(copywriter, "_read_key", lambda: None)
+    state.set_services(None)
+    yield
+    state.set_services(None)
 
 
 def fresh() -> AppTest:
@@ -25,6 +35,7 @@ def into(at: AppTest, key: str, page: str) -> AppTest:
     """st.switch_page를 부르는 버튼을 누른다. AppTest는 쪽 이동을 기억하지 못해서 같은 쪽으로 다시 맞춰 준다."""
     at.button(key=key).click().run()
     at.switch_page(page)
+    at.run()
     return at
 
 
@@ -40,37 +51,51 @@ def texts(at) -> str:
     return "\n".join(parts)
 
 
-def demo_to_sheet(at: AppTest) -> AppTest:
-    into(at, "home_demo", SETUP)
-    at.button(key="market_find").click().run()
-    at.button(key="market_next").click().run()
-    at.button(key="budget_next").click().run()
-    at.button(key="q_skip_rest").click().run()
+def chip(at: AppTest, label: str) -> AppTest:
+    """대화 칩(버튼)을 글자로 찾아 누른다."""
+    hits = [b for b in at.button if b.label == label]
+    assert hits, "칩 없음: {} (있는 버튼: {})".format(label, [b.label for b in at.button])
+    hits[0].click().run()
     assert not at.exception, at.exception
     return at
 
 
-# ── 페이지마다 예외 없이 그려진다 ───────────────────────────
+def say(at: AppTest, text: str) -> AppTest:
+    at.chat_input[0].set_value(text).run()
+    assert not at.exception, at.exception
+    return at
+
+
+def phase(at: AppTest) -> tuple:
+    c = at.session_state["chat"]
+    return c["phase"], c["step"]
+
+
+def demo_to_budget(at: AppTest) -> AppTest:
+    """예시 → 확인(맞아요) → 내 손님 카드 → 목표·기간 → 예산 카드 → 세팅 질문 시작."""
+    into(at, "home_demo", SETUP)
+    chip(at, "맞아요")
+    say(at, ", ".join(state.DEMO_SEEDS))
+    chip(at, "이대로 쓸게요")
+    chip(at, "스토어 방문 늘리기")
+    chip(at, "14일")
+    chip(at, "이대로 할게요")
+    return at
+
+
+def demo_to_sheet(at: AppTest) -> AppTest:
+    demo_to_budget(at)
+    chip(at, "있어요")                                  # 페이스북 페이지
+    say(at, "soyeonbake")                               # 인스타그램 계정
+    chip(at, "남은 질문은 권장 답으로")
+    return at
+
 
 def test_home_renders():
     at = fresh()
     assert titles(at) == ["광고 코치"]
     assert any("예시로 해 보기" in b.label for b in at.button)
     assert "근거 등급" in texts(at)
-
-
-def test_setup_first_page_renders_and_validates():
-    at = fresh()
-    into(at, "home_mine", SETUP)
-    assert titles(at) == ["① 세팅"]
-    at.button(key="store_next").click().run()          # 아무것도 안 적고 다음
-    assert "가게 이름을 적어 주세요" in "".join(e.value for e in at.error)
-    assert at.session_state["setup_step"] == 0
-    at.text_input(key="w_name").set_value("소연베이크")
-    at.text_input(key="w_product").set_value("수제 구움과자")
-    at.button(key="store_next").click().run()
-    assert at.session_state["setup_step"] == 1
-    assert at.session_state["store"]["name"] == "소연베이크"
 
 
 def test_run_and_diag_are_locked_without_plan():
@@ -91,189 +116,122 @@ def test_diag_demo_plan_button_opens_the_page():
     assert any("진단: 고쳐 볼 곳" in m.value for m in at.markdown)
 
 
-# ── 예시 3분 경로 ─────────────────────────────────────────
+# ── 챗봇 세팅 ────────────────────────────────────────────
 
-def test_demo_path_market_card():
+def test_home_demo_opens_chat_at_confirm_card_with_filled_store_card():
     at = fresh()
     into(at, "home_demo", SETUP)
-    assert at.session_state["setup_step"] == 1 and at.session_state["store"]["name"] == "소연베이크"
-    at.button(key="market_find").click().run()
-    assert not at.exception, at.exception
-    assert any("찾는 사람은" in s.value for s in at.success)     # 한 줄 요약(헤드라인)
-    assert at.session_state["store"]["keywords"] and at.session_state["store"]["negatives"]
-    assert "근거 B" in texts(at)
+    assert titles(at) == ["① 세팅"] and len(at.chat_input) == 1
+    assert phase(at) == ("confirm", "ok")
+    assert at.session_state["is_demo"] and at.session_state["store"]["name"] == "소연베이크"
+    body = texts(at)
+    assert "이렇게 이해했어요" in body and "소연베이크" in body and "26,000원" in body
+    assert {b.label for b in at.button} >= {"맞아요", "고칠래요"}
 
 
-def test_market_not_found_gives_one_next_action():
+def test_own_store_start_asks_name_first_and_invalid_money_shows_inline_error():
+    at = fresh()
+    into(at, "home_mine", SETUP)
+    assert phase(at) == ("store", "name") and "가게 이름이 뭐예요" in texts(at)
+    say(at, "소연베이크")
+    say(at, "수제 구움과자")
+    assert phase(at) == ("store", "price")
+    say(at, "얼마였더라")                                # 못 읽는 금액
+    assert phase(at) == ("store", "price")              # 단계 그대로
+    assert any("금액으로 읽지 못했어요" in e.value for e in at.error)
+    say(at, "2만 6천원")
+    assert phase(at) == ("store", "margin") and "26,000원으로 이해했어요" in texts(at)
+    assert at.session_state["setup_step"] == 0
+
+
+def test_budget_too_small_shows_inline_error_and_keeps_step():
+    at = fresh()
+    into(at, "home_mine", SETUP)
+    for text in ("가게", "쿠키", "20000", "7000"):
+        say(at, text)
+    say(at, "500원")
+    assert phase(at) == ("store", "budget") and any("광고비" in e.value for e in at.error)
+
+
+def test_demo_chat_path_cards_help_source_and_skip_to_sheet():
     at = fresh()
     into(at, "home_demo", SETUP)
-    at.text_input(key="w_seeds").set_value("존재하지않는상품단어xyz")
-    at.button(key="market_find").click().run()
-    assert not at.exception
-    assert "더 넓은 단어" in "".join(w.value for w in at.warning)
-    assert any(b.key == "market_demo_seeds" for b in at.button)
-
-
-FRIENDLY = "네이버 키가 맞지 않는 것 같아요. 키를 다시 확인해 주세요."
-
-
-def _live_find(monkeypatch, fake_build):
-    """실시간 토글을 켜고 '내 손님 찾기'. 네트워크 없이 market.build를 바꿔 끼운다."""
-    monkeypatch.setattr(market, "build", fake_build)
-    at = fresh()
-    into(at, "home_demo", SETUP)
-    at.toggle(key="use_live").set_value(True)
-    at.button(key="market_find").click().run()
-    assert not at.exception, at.exception
-    return at
-
-
-def test_live_failure_shows_friendly_message_and_next_action(monkeypatch):
-    def fail(seeds, online=True):
-        naver_api._set_error(FRIENDLY)
-        return None
-    at = _live_find(monkeypatch, fail)
-    assert FRIENDLY in "".join(w.value for w in at.warning)
-    assert any(b.key == "market_use_saved" for b in at.button)
-    assert "다시" in texts(at)
-    at.button(key="market_use_saved").click().run()                 # 다음 행동: 저장된 예시로 계속하기
-    assert not at.exception, at.exception
-    assert at.session_state["market"] is not None and not at.session_state["use_live"]
-    assert FRIENDLY not in "".join(w.value for w in at.warning)
-
-
-def test_live_error_warning_persists_on_later_reruns(monkeypatch):
-    def fail(seeds, online=True):
-        naver_api._set_error(FRIENDLY)
-        return None
-    at = _live_find(monkeypatch, fail)
-    at.text_input(key="w_seeds").set_value("휘낭시에, 수제쿠키").run()     # 찾기 버튼은 누르지 않은 다시 그리기
-    assert not at.exception, at.exception
-    assert FRIENDLY in "".join(w.value for w in at.warning)
-    assert any(b.key == "market_use_saved" for b in at.button)
-    at.toggle(key="use_live").set_value(False).run()                 # 실시간을 끄면 안내도 사라진다
-    assert at.session_state["market_error"] is None
-    assert FRIENDLY not in "".join(w.value for w in at.warning)
-
-
-def test_live_failure_then_successful_retry_clears_warning(monkeypatch):
-    real = market.build
-    state_ = {"fail": True}
-
-    def flaky(seeds, online=True):
-        if state_["fail"]:
-            naver_api._set_error(FRIENDLY)
-            return None
-        naver_api._set_error(None)
-        return real(seeds, online=False)
-    at = _live_find(monkeypatch, flaky)
-    assert FRIENDLY in "".join(w.value for w in at.warning)
-    state_["fail"] = False
-    at.button(key="market_find").click().run()                       # 다시 찾기: 이번엔 성공
-    assert not at.exception, at.exception
-    assert not at.warning and at.session_state["market_error"] is None
-    assert any("찾는 사람은" in s.value for s in at.success)
-    at.text_input(key="w_seeds").set_value("휘낭시에, 수제쿠키").run()     # 이후 다시 그리기에도 안 돌아온다
-    assert not at.exception, at.exception
-    assert not at.warning and at.session_state["market_error"] is None
-
-
-def test_demo_path_offline_shows_no_warning(monkeypatch):
-    def boom(*args, **kwargs):
-        raise AssertionError("network must not be used on the demo path")
-    for name in ("_http_ad", "_http_hub"):                          # raising=True: 이름이 틀리면 바로 실패
-        monkeypatch.setattr(naver_api, name, boom)
-    monkeypatch.setattr(naver_api.requests, "get", boom)
-    monkeypatch.setattr(naver_api.requests, "post", boom)
-    real = market.build
-    online_args = []
-
-    def spy(seeds, online=True):
-        online_args.append(online)
-        return real(seeds, online=online)
-    monkeypatch.setattr(market, "build", spy)
-    naver_api._set_error(None)
-    at = fresh()
-    into(at, "home_demo", SETUP)
-    at.button(key="market_find").click().run()
-    assert not at.exception, at.exception
-    assert online_args and all(o is False for o in online_args), online_args
-    assert not at.warning
-    assert at.session_state["market_error"] is None
-    assert naver_api.last_error() is None
-    assert any("찾는 사람은" in s.value for s in at.success)
-
-
-def test_live_fallback_to_saved_data_still_warns(monkeypatch):
-    real = market.build
-
-    def fallback(seeds, online=True):
-        rep = real(seeds, online=False)
-        naver_api._set_error(FRIENDLY)
-        return rep
-    at = _live_find(monkeypatch, fallback)
-    assert FRIENDLY in "".join(w.value for w in at.warning)
-    assert any("찾는 사람은" in s.value for s in at.success)       # 저장된 값으로 결과는 보인다
-
-
-def test_live_success_shows_no_warning(monkeypatch):
-    real = market.build
-
-    def ok(seeds, online=True):
-        naver_api._set_error(None)
-        return real(seeds, online=False)
-    at = _live_find(monkeypatch, ok)
-    assert not at.warning
-    assert any("찾는 사람은" in s.value for s in at.success)
-
-
-def test_budget_step_has_metrics_and_grades():
-    at = fresh()
-    into(at, "home_demo", SETUP)
-    at.button(key="market_find").click().run()
-    at.button(key="market_next").click().run()
-    assert at.session_state["setup_step"] == 2
+    chip(at, "맞아요")
+    assert phase(at) == ("market", "seeds") and at.session_state["setup_step"] == 2
+    assert any(b.label == "예시 단어로 찾기" for b in at.button)
+    say(at, ", ".join(state.DEMO_SEEDS))
+    assert phase(at) == ("market", "pick")
+    assert any("찾는 사람은" in m.value for m in at.markdown)           # 손님 카드: 한 줄 요약
+    assert at.session_state["chat"]["market"]["recommended"] and at.session_state["chat"]["market"]["negatives"]
+    chip(at, "이대로 쓸게요")
+    chip(at, "스토어 방문 늘리기")
+    chip(at, "14일")
+    assert phase(at) == ("budget", "ok")
     labels = [m.label for m in at.metric]
     assert "한 달 광고비" in labels and "네이버 하루 예산" in labels and "메타 하루 예산" in labels
-    assert "근거 C" in texts(at) or "근거 D" in texts(at)
-    at.button(key="budget_next").click().run()
-    bp = at.session_state["budget_plan"]
-    assert at.session_state["setup_step"] == 3 and bp["naver_daily"] > 0 and bp["meta_daily"] > 0
-    assert at.session_state["answers"]["meta.adset.end_date"] == "14일"
-
-
-def test_questions_one_at_a_time_then_sheet():
-    at = fresh()
-    into(at, "home_demo", SETUP)
-    at.button(key="market_find").click().run()
-    at.button(key="market_next").click().run()
-    at.button(key="budget_next").click().run()
-    first = at.session_state["q_index"]
-    assert "질문 1/" in "".join(m.value for m in at.markdown)
-    at.button(key="q_ok").click().run()                 # 첫 질문(선택형)은 권장 답으로
-    assert at.session_state["q_index"] == first + 1
+    assert "근거 D" in texts(at) or "근거 C" in texts(at)
+    chip(at, "이대로 할게요")
+    assert phase(at)[0] == "ask" and at.session_state["setup_step"] == 4
+    assert "세팅 보드" in texts(at)
+    chip(at, "있어요")                                  # 페이스북 페이지 (사전 점검)
+    say(at, "soyeonbake")                               # 인스타 계정은 글로 답
+    assert at.session_state["chat"]["answers"]["meta.pre.ig_account"] == "soyeonbake"
+    # 도움말 질문: 같은 질문을 다시 묻고, 미리 쓴 답에 출처(확인 표시 + 링크)가 붙는다
+    step = phase(at)[1]
+    n_before = len(at.session_state["chat"]["turns"])
+    say(at, "특별 광고 카테고리가 뭐예요?")
+    helps = [t for t in at.session_state["chat"]["turns"][n_before:] if t["kind"] == "help"]
+    assert helps and helps[0]["data"]["sources"], helps
+    assert phase(at)[1] == step                          # 답이 아니라 질문이었으니 단계 그대로
+    shown = "\n".join(c.value for c in at.caption)
+    assert "출처" in shown and "http" in shown and any(x in shown for x in ("✅", "△", "❓"))
+    chip(at, "아니요")
+    assert phase(at)[1] != step
+    chip(at, "남은 질문은 권장 답으로")                    # 나머지는 권장 답
     assert not at.exception, at.exception
-    at.button(key="q_skip_rest").click().run()          # 나머지는 예시 답으로
-    assert at.session_state["setup_step"] == state.LAST_STEP
+    assert at.session_state["setup_step"] == state.LAST_STEP and phase(at)[0] == "done"
     a = at.session_state["answers"]
     assert isinstance(a["meta.creative.copy"], dict) and isinstance(a["naver.ad.copy"], dict)
     assert len(a["naver.ad.copy"]["headline"]) <= 15
-    assert a["meta.ad.website_url"].startswith("https://")
+    assert at.session_state["budget_plan"]["naver_daily"] > 0 and at.session_state["budget_plan"]["meta_daily"] > 0
+    assert a["meta.adset.end_date"] == "14일"
+    # 세팅값 시트: 광고 관리자 칸 전부
+    ctx = state.make_ctx(at.session_state["store"], at.session_state["media"], at.session_state["budget_plan"])
+    assert len(intake.build_sheet(a, ctx)) == len(specs.all_fields()) == 62
+    assert "준비가 끝났어요" in texts(at) and len(at.get("arrow_data_frame")) >= 1
 
 
-def test_text_question_rejects_bad_url_inline():
+def test_edit_past_answer_goes_back_and_returns_to_sheet():
+    at = demo_to_sheet(fresh())
+    assert phase(at)[0] == "done"
+    at.button(key="edit_price").click().run()
+    assert not at.exception, at.exception
+    assert phase(at) == ("store", "price") and at.session_state["setup_step"] < state.LAST_STEP
+    say(at, "30,000원")
+    assert phase(at) == ("confirm", "ok")
+    chip(at, "맞아요")
+    assert phase(at)[0] == "done" and at.session_state["store"]["price"] == 30000
+
+
+def test_streamed_llm_help_is_written_and_saved(monkeypatch):
+    """kind=="llm" 답은 st.write_stream으로 흘리고, 끝나면 대화 기록에 글이 남는다."""
+    from types import SimpleNamespace
+    real = conversation.make_services(online=True)
+
+    def help_(question, step_id, ctx):
+        if "스트림" in question:
+            return SimpleNamespace(kind="llm", text="", field_id=step_id, stream=iter(["안녕", "하세요"]),
+                                   sources=[{"title": "공식 도움말", "url": "https://example.com/x", "check": "✅"}])
+        return real.help(question, step_id, ctx)
+
+    real.help = help_
+    state.set_services(real)
     at = fresh()
     into(at, "home_demo", SETUP)
-    at.button(key="market_find").click().run()
-    at.button(key="market_next").click().run()
-    at.button(key="budget_next").click().run()
-    qs = state.asked_questions(["meta", "naver"])
-    url_idx = [q["id"] for q in qs].index("meta.ad.website_url")
-    at.session_state["q_index"] = url_idx
-    at.run()
-    at.chat_input[0].set_value("smartstore").run()
-    assert "http" in "".join(e.value for e in at.error)
-    assert at.session_state["q_index"] == url_idx       # 넘어가지 않음
+    say(at, "스트림 질문이에요?")
+    helps = [t for t in at.session_state["chat"]["turns"] if t["kind"] == "help"]
+    assert helps and helps[-1]["text"] == "안녕하세요" and helps[-1]["data"]["stream"] is False
+    assert "AI가 도움말을 바탕으로" in texts(at) and "example.com" in texts(at)
 
 
 def test_sheet_page_has_table_downloads_and_next_link():
@@ -392,18 +350,6 @@ def test_keyed_widgets_never_pass_default_values():
     assert not bad, bad
 
 
-def test_fill_demo_seeds_sets_state_before_widget_exists():
-    """'예시 단어로 채우기' 뒤에도 입력칸 값이 예시 단어로 바뀌고 예외가 없다."""
-    at = fresh()
-    into(at, "home_mine", SETUP)
-    at.text_input(key="w_name").set_value("가게")
-    at.text_input(key="w_product").set_value("쿠키")
-    at.button(key="store_next").click().run()
-    at.button(key="market_demo_seeds").click().run()
-    assert not at.exception, at.exception
-    assert at.text_input(key="w_seeds").value == ", ".join(state.DEMO_SEEDS)
-
-
 def test_josa_helper():
     from v2.app import ui
     assert ui.josa("10,529원", "이에요") == "10,529원이에요"
@@ -423,26 +369,6 @@ def test_no_wrong_particle_after_won_in_source():
     pat = re.compile(r"\{[^}]*\}원(예요|로[ ,.])")
     for path in app_dir.glob("*.py"):
         assert not pat.search(path.read_text(encoding="utf-8")), path.name
-
-
-def test_demo_entry_prefilled_with_market_card_ready():
-    at = fresh()
-    into(at, "home_demo", SETUP)
-    assert not at.exception, at.exception
-    assert at.session_state["setup_step"] == 1
-    assert at.text_input(key="w_seeds").value == ", ".join(state.DEMO_SEEDS)
-    assert any("찾는 사람은" in s.value for s in at.success)       # 누르지 않아도 결과 카드가 이미 있음
-    assert at.session_state["store"]["keywords"]
-    at.button(key="market_next").click().run()                      # 다음만 누르면 예산 단계
-    assert at.session_state["setup_step"] == 2 and not at.exception
-
-
-def test_demo_entry_after_a_previous_visit_still_prefilled():
-    at = fresh()
-    into(at, "home_mine", SETUP)
-    at.switch_page("home.py").run()
-    into(at, "home_demo", SETUP)
-    assert at.text_input(key="w_seeds").value == ", ".join(state.DEMO_SEEDS)
 
 
 def test_calc_grade_text_and_unknown_grade_fallback():
@@ -526,3 +452,70 @@ def test_c2_then_c4_chain_shows_only_c4_change():
 def test_month_one_sheet_has_exactly_one_run_link():
     at = demo_to_sheet(fresh())
     assert _run_links(at) == 1
+
+
+def test_loaded_plan_shows_sheet_only_and_can_open_chat_to_edit():
+    at = _next_month_with(demo_to_sheet(fresh()), "C2")
+    assert at.session_state["chat"] is None and len(at.chat_input) == 0      # 이어 하기: 시트만
+    at.button(key="sheet_redo").click().run()
+    assert not at.exception, at.exception
+    assert phase(at) == ("done", "done") and len(at.chat_input) == 1
+    at.button(key="edit_margin").click().run()
+    assert phase(at) == ("store", "margin") and not at.exception
+    say(at, "9,000원")
+    chip(at, "맞아요")
+    assert phase(at)[0] == "done" and at.session_state["store"]["margin_per_order"] == 9000
+    assert at.session_state["month_index"] == 2 and at.session_state["history"]
+
+
+def _edit_margin_in_month_two(at):
+    at.button(key="sheet_redo").click().run()
+    at.button(key="edit_margin").click().run()
+    say(at, "9,000원")
+    chip(at, "맞아요")
+    assert not at.exception, at.exception
+    return at
+
+
+def test_month_two_c4_margin_edit_keeps_diagnosis_budget():
+    at = _next_month_with(demo_to_sheet(fresh()), "C4")
+    before = dict(at.session_state["budget_plan"])
+    _edit_margin_in_month_two(at)
+    bp = at.session_state["budget_plan"]
+    assert at.session_state["store"]["margin_per_order"] == 9000
+    assert bp["naver_daily"] == before["naver_daily"] and bp["meta_daily"] == before["meta_daily"]
+    assert bp["naver_daily"] == at.session_state["answers"]["naver.campaign.daily_budget"]
+    assert "아직 고르지 않아서" not in "".join(t["text"] for t in at.session_state["chat"]["turns"])
+
+
+def test_month_two_c2_margin_edit_keeps_cap_and_notes():
+    at = _next_month_with(demo_to_sheet(fresh()), "C2")
+    before = dict(at.session_state["budget_plan"])
+    _edit_margin_in_month_two(at)
+    bp = at.session_state["budget_plan"]
+    assert bp["naver_cap_month"] == before["naver_cap_month"] and bp["notes"] == before["notes"]
+
+
+def test_month_two_budget_edit_replans_without_false_keyword_note():
+    at = _next_month_with(demo_to_sheet(fresh()), "C4")
+    at.button(key="sheet_redo").click().run()
+    at.button(key="edit_budget").click().run()
+    say(at, "40만원")
+    chip(at, "맞아요")
+    assert not at.exception, at.exception
+    bp = at.session_state["budget_plan"]
+    assert bp["budget"] == 400000
+    assert "아직 고르지 않아서" not in " ".join(bp["notes"])
+
+
+def test_setup_layout_puts_chat_first_on_narrow_screens_and_has_guide_toggle():
+    at = demo_to_budget(fresh())
+    assert at.toggle(key="w_guide").value is True
+    from v2.app import chat
+    assert "order:-1" in chat.GUIDE_CSS and "prefers-reduced-motion" in chat.GUIDE_CSS
+    cs = at.session_state["chat"]
+    assert chat.focus_id(cs) in ("budget", "market") or cs["phase"] == "ask"
+    html = " ".join(str(m.value) for m in at.markdown)
+    assert '<span class="coach-bubble">' in html
+    at.toggle(key="w_guide").set_value(False).run()
+    assert '<span class="coach-bubble">' not in " ".join(str(m.value) for m in at.markdown)
