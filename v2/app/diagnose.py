@@ -12,10 +12,11 @@ import pandas as pd  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from v2.app import data, state, ui  # noqa: E402
+from v2.app import board, data, guide, state, ui  # noqa: E402
 from v2.engine import datacheck, diagnose, effect, plan_io  # noqa: E402
 from v2.engine.metrics import fmt  # noqa: E402
 
+CHAT_KEY = "rd_diag"
 CASE_ORDER = ["C1", "C2", "C3", "C4", "C0", "C1b"]
 VIRTUAL_MODES = {"sim", "forecast"}
 METRIC_NAMES = {
@@ -145,14 +146,23 @@ def kpis(m: dict, virtual: bool, eff_grade: str) -> None:
             ui.josa(ui.won(last), "으로"), ui.josa(ui.won(est), "이에요")))
 
 
+def rule_id(f: diagnose.Finding) -> str:
+    """진단 카드를 가리키는 id ('t-rule-<규칙 id>' 컨테이너)."""
+    safe = str(f.id).replace(".", "-")        # 규칙 id는 'rule.placement_quality' → 't-rule-placement_quality'
+    return safe if safe.startswith("rule-") else "rule-" + safe
+
+
 def finding_card(f: diagnose.Finding, m: dict, virtual: bool, eff_grade: str) -> None:
-    with st.container(border=True):
-        st.markdown("**{}** · :gray[{} 단계]".format(f.title, f.funnel))
+    with st.container(border=True, key=guide.tid(rule_id(f))):
+        focused = guide.focus() == rule_id(f)
+        st.markdown("{}**{}** · :gray[{} 단계]".format(board.mark(focused), f.title, f.funnel))
         st.write(f.message)
         if f.advice:
             st.write("→ " + f.advice)
         if f.caveat:
             st.caption("주의: " + f.caveat)
+        if guide.here(rule_id(f)):
+            st.caption(board.mark(True) + "지금 설명하고 있는 카드예요")
         st.caption(rule_grade_text(f.grade) + (" · 가상 데이터라 연습용이에요" if virtual else ""))
         if f.changes:
             st.write("다음 달에 바꿀 칸: " + ", ".join(c.label for c in f.changes))
@@ -186,16 +196,31 @@ def lift_chart(eff: effect.Effect) -> go.Figure:
     return fig
 
 
+def effect_text(m: dict) -> str:
+    """오른쪽 대화가 읽어 줄 효과 확인 글 (왼쪽 카드와 같은 숫자)."""
+    eff = m.get("effect")
+    if eff is None or eff.naive_lift is None:
+        return "스마트스토어 일별 통계(브랜드 검색·카테고리 검색 열 포함)를 함께 올리면 광고 효과를 가려낼 수 있어요. 지금은 올린 자료로 효과를 가리지 못했어요."
+    return ("광고 전후만 비교하면 {} 보이지만, 연말 검색 증가를 빼면 {}. 광고를 보고 나중에 검색해서 산 주문은 약 {:.0f}건으로 추정해요. "
+            "(근거 {})".format(ui.josa(pct(eff.naive_lift), "으로"), ui.josa(pct(eff.corrected_lift), "이에요"),
+                              eff.extra_brand_orders, eff.grade))
+
+
 def effect_section(m: dict, virtual: bool) -> str:
     """효과 확인. 반환: 이 숫자들의 근거 등급."""
     eff = m.get("effect")
     st.markdown("#### 효과 확인")
     if eff is None or eff.naive_lift is None:
-        with st.container(border=True):
-            st.write("스마트스토어 일별 통계(브랜드 검색·카테고리 검색 열 포함)를 함께 올리면 광고 효과를 가려낼 수 있어요.")
+        with st.container(border=True, key=guide.tid("effect")):
+            st.markdown("{}스마트스토어 일별 통계(브랜드 검색·카테고리 검색 열 포함)를 함께 올리면 광고 효과를 가려낼 수 있어요."
+                        .format(board.mark(guide.focus() == "effect")))
+            if guide.here("effect"):
+                st.caption(board.mark(True) + "지금 설명하고 있는 곳이에요")
         return "D"
     g = eff.grade
-    with st.container(border=True):
+    with st.container(border=True, key=guide.tid("effect")):
+        if guide.focus() == "effect":
+            st.markdown(board.mark(True) + "**지금 설명하고 있는 곳이에요**")
         a, b = st.columns([1, 1])
         with a:
             st.metric("광고 전후 비교 (시즌 포함)", pct(eff.naive_lift))
@@ -212,28 +237,53 @@ def effect_section(m: dict, virtual: bool) -> str:
             lo, hi = eff.survey_ad_share
             st.write("설문에서 '광고 덕분에 알았다'는 답은 {:.0f}~{:.0f}%예요. ({})".format(lo * 100, hi * 100, ui.grade("A", virtual)))
         st.caption("{} · 시즌은 광고와 상관없는 카테고리 검색 추세로 뺐어요.".format(ui.grade(g, virtual)))
+        guide.here("effect")
     return g
 
 
-def next_month_section(plan: plan_io.Plan, findings: List[diagnose.Finding]) -> None:
-    st.markdown("#### 다음 달에 바뀌는 칸")
+def next_month_plan(plan: plan_io.Plan, findings: List[diagnose.Finding]):
+    """(다음 달 계획, 바뀐 칸 표) 또는 (None, None)."""
     try:
-        new_plan, diff = plan_io.next_month(plan, findings)
+        return plan_io.next_month(plan, findings)
     except Exception:  # noqa: BLE001
-        st.error("다음 달 세팅을 만들지 못했어요. 계획 파일을 내려받아 보관한 뒤, ① 세팅에서 다시 시작해 주세요.")
-        return
-    if len(diff):
-        st.dataframe(diff, hide_index=True, width="stretch", column_config={
-            "field_id": None, "label": st.column_config.TextColumn("칸 이름", width="medium"),
-            "before": st.column_config.TextColumn("지금", width="medium"),
-            "after": st.column_config.TextColumn("다음 달", width="medium"),
-            "note": st.column_config.TextColumn("왜 바꾸나요", width="large")})
-    else:
-        st.info("이번 달 진단으로 바꿀 칸은 없어요. 같은 세팅으로 한 달 더 이어갈 수 있어요.")
-    if st.button("다음 달 세팅 만들기", type="primary", key="next_month", icon=":material/arrow_forward:"):
-        state.start_next_month(new_plan)
-        st.toast("{}개월 차 세팅을 만들었어요. 바뀐 칸은 '이번 달에 바뀐 칸'에 모아 뒀어요.".format(new_plan.month_index), icon="✅")
-        st.switch_page(ui.PAGES["setup"])
+        return None, None
+
+
+def next_text(new_plan, diff) -> str:
+    """오른쪽 대화가 읽어 줄 '다음 달에 바뀌는 칸' 글."""
+    if new_plan is None:
+        return "다음 달 세팅을 만들지 못했어요. 계획 파일을 내려받아 보관한 뒤, ① 세팅에서 다시 시작해 주세요."
+    if not len(diff):
+        return ("이번 달 진단으로 바꿀 칸은 없어요. 같은 세팅으로 한 달 더 이어갈 수 있어요. "
+                "**왼쪽 '다음 달 세팅 만들기'** 를 누르면 {}개월 차로 넘어가요.".format(new_plan.month_index))
+    rows = "\n".join("- **{}**: {} → {} ({})".format(r["label"], r["before"], r["after"], r["note"])
+                     for _, r in diff.head(6).iterrows())
+    more = "\n- 그 밖에 {}칸".format(len(diff) - 6) if len(diff) > 6 else ""
+    return ("다음 달에는 {}칸을 바꿔요.\n{}{}\n\n**왼쪽 '다음 달 세팅 만들기'** 를 누르면 {}개월 차 세팅에 반영돼요."
+            .format(len(diff), rows, more, new_plan.month_index))
+
+
+def next_month_section(new_plan, diff) -> None:
+    st.markdown("#### 다음 달에 바뀌는 칸")
+    with st.container(border=True, key=guide.tid("next")):
+        if guide.focus() == "next":
+            st.markdown(board.mark(True) + "**지금 설명하고 있는 곳이에요**")
+        if new_plan is None:
+            st.error("다음 달 세팅을 만들지 못했어요. 계획 파일을 내려받아 보관한 뒤, ① 세팅에서 다시 시작해 주세요.")
+            return
+        if len(diff):
+            st.dataframe(diff, hide_index=True, width="stretch", column_config={
+                "field_id": None, "label": st.column_config.TextColumn("칸 이름", width="medium"),
+                "before": st.column_config.TextColumn("지금", width="medium"),
+                "after": st.column_config.TextColumn("다음 달", width="medium"),
+                "note": st.column_config.TextColumn("왜 바꾸나요", width="large")})
+        else:
+            st.info("이번 달 진단으로 바꿀 칸은 없어요. 같은 세팅으로 한 달 더 이어갈 수 있어요.")
+        if st.button("다음 달 세팅 만들기", type="primary", key="next_month", icon=":material/arrow_forward:"):
+            state.start_next_month(new_plan)
+            st.toast("{}개월 차 세팅을 만들었어요. 바뀐 칸은 '이번 달에 바뀐 칸'에 모아 뒀어요.".format(new_plan.month_index), icon="✅")
+            st.switch_page(ui.PAGES["setup"])
+        guide.here("next")
 
 
 def details(sel, m: dict, virtual: bool, eff_grade: str) -> None:
@@ -245,6 +295,76 @@ def details(sel, m: dict, virtual: bool, eff_grade: str) -> None:
     if virtual:
         with st.expander("가상 데이터가 가정 범위 안에 있는지 점검"):
             st.dataframe(datacheck.check(data.demo_bundle()), hide_index=True, width="stretch")
+
+
+def finding_text(f: diagnose.Finding, virtual: bool) -> str:
+    """오른쪽 대화가 읽어 줄 진단 카드 설명 (왼쪽 카드와 같은 글)."""
+    parts = ["{} · {} 단계".format(f.title, f.funnel), f.message]
+    if f.advice:
+        parts.append("→ " + f.advice)
+    if f.caveat:
+        parts.append("주의: " + f.caveat)
+    if f.changes:
+        parts.append("다음 달에 바꿀 칸: " + ", ".join(c.label for c in f.changes))
+    parts.append(rule_grade_text(f.grade) + (" · 가상 데이터라 연습용이에요" if virtual else ""))
+    return "\n\n".join(parts[1:])
+
+
+def guide_steps(findings: List[diagnose.Finding], m: dict, virtual: bool, new_plan, diff) -> list:
+    """오른쪽 대화가 하나씩 설명할 항목: 걸린 진단 카드 → 효과 확인 → 다음 달에 바뀌는 칸."""
+    steps = [{"id": rule_id(f), "say": "이 카드예요", "title": f.title, "body": finding_text(f, virtual),
+              "field": f.changes[0].field_id if f.changes else None,
+              "ctx": {"rule": f.id, "rule_title": f.title}} for f in diagnose.fired(findings)]
+    steps.append({"id": "effect", "say": "효과는 여기서 봐요", "title": "효과 확인", "body": effect_text(m),
+                  "field": None, "ctx": {"rule": "effect"}})
+    steps.append({"id": "next", "say": "다음 달은 여기예요", "title": "다음 달에 바뀌는 칸", "body": next_text(new_plan, diff),
+                  "field": diff.iloc[0]["field_id"] if diff is not None and len(diff) else None, "ctx": {"rule": "next"}})
+    return steps
+
+
+def analysis_board(plan: plan_io.Plan, s_ctx: dict) -> Optional[dict]:
+    """왼쪽 작업판: 자료 고르기 → 지표 → 진단 카드 → 효과 확인 → 다음 달 칸. 대화에 넘길 항목을 돌려준다(자료가 없으면 None)."""
+    st.caption("{}개월 차 계획 기준으로 봐요.".format(plan.month_index))
+    bundle, virtual = pick_bundle()
+    if bundle is None:
+        guide.set_focus(None)
+        return None
+    sel, case, mode = select_case(bundle)
+    start, end = pick_period(sel, virtual)
+    if virtual:
+        st.info("연습용 가상 데이터예요. 실제 광고 결과가 아니라서 숫자 옆에 '가상'을 붙였어요.")
+    s = plan.store
+    margin = s.get("margin_per_order")
+    with st.spinner("결과를 분석하는 중이에요…"):
+        try:
+            if virtual and case:
+                m, findings = data.demo_case(case, mode, start, end, float(s.get("budget") or 0), margin)
+            else:
+                m, findings = data.analyze(sel, start, end, float(s.get("budget") or 0), margin)
+        except Exception:  # noqa: BLE001
+            st.error("올린 자료로 지표를 계산하지 못했어요. 열 이름이 광고 관리자에서 내보낸 그대로인지 확인하고, 다시 올려 주세요.")
+            guide.set_focus(None)
+            return None
+    st.session_state["diag_done"] = True
+    eff = m.get("effect")
+    eff_grade = eff.grade if eff is not None else "D"
+    new_plan, diff = next_month_plan(plan, findings)
+    steps = guide_steps(findings, m, virtual, new_plan, diff)
+    sig = ("diag", plan.month_index, plan.created, str(s.get("name", "")), st.session_state.get("diag_src"), case, mode,
+           tuple(x["id"] for x in steps))
+    board.ensure(CHAT_KEY, sig, steps, s_ctx)
+    board.point(CHAT_KEY)
+    kpis(m, virtual, eff_grade)
+    findings_section(findings, m, virtual, eff_grade)
+    effect_section(m, virtual)
+    details(sel, m, virtual, eff_grade)
+    st.divider()
+    next_month_section(new_plan, diff)
+    guide.scroll()
+    n_fired = len(diagnose.fired(findings))
+    intro = ("결과를 봤어요. 고쳐 볼 곳이 {}개예요. 하나씩 설명할게요. 모르는 건 아래에 물어봐도 돼요.".format(n_fired) if n_fired
+             else "결과를 봤어요. 이번 달은 고칠 곳이 보이지 않아요. 효과 확인과 다음 달 칸을 같이 볼게요.")
+    return {"steps": steps, "intro": intro}
 
 
 def render() -> None:
@@ -261,34 +381,20 @@ def render() -> None:
             ui.plan_upload("diag_plan_upload")
             ui.next_link("setup", "① 세팅으로 가기")
         return
-    st.caption("{}개월 차 계획 기준으로 봐요.".format(plan.month_index))
-    bundle, virtual = pick_bundle()
-    if bundle is None:
-        return
-    sel, case, mode = select_case(bundle)
-    start, end = pick_period(sel, virtual)
-    if virtual:
-        st.info("연습용 가상 데이터예요. 실제 광고 결과가 아니라서 숫자 옆에 '가상'을 붙였어요.")
-    s = plan.store
-    margin = s.get("margin_per_order")
-    with st.spinner("결과를 분석하는 중이에요…"):
-        try:
-            if virtual and case:
-                m, findings = data.demo_case(case, mode, start, end, float(s.get("budget") or 0), margin)
+    s = st.session_state
+    guide.css()
+    guide.toggle()
+    with st.container(key="diag_cols"):     # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
+        left, right = st.columns([7, 5])
+        with left:
+            res = analysis_board(plan, {"store": dict(s["store"]), "budget_plan": dict(s["budget_plan"]), "media": list(s["media"])})
+        with right:
+            if res is None:
+                board.ensure(CHAT_KEY, ("diag-none", plan.month_index), [], {"store": dict(s["store"]), "budget_plan": dict(s["budget_plan"])})
+                board.render_chat(CHAT_KEY, [], "결과 파일을 올리거나 '예시 케이스'를 고르면 걸린 진단을 하나씩 설명해 드려요. "
+                                  "궁금한 건 지금 물어봐도 돼요.", "다음 카드")
             else:
-                m, findings = data.analyze(sel, start, end, float(s.get("budget") or 0), margin)
-        except Exception:  # noqa: BLE001
-            st.error("올린 자료로 지표를 계산하지 못했어요. 열 이름이 광고 관리자에서 내보낸 그대로인지 확인하고, 다시 올려 주세요.")
-            return
-    st.session_state["diag_done"] = True
-    eff = m.get("effect")
-    eff_grade = eff.grade if eff is not None else "D"
-    kpis(m, virtual, eff_grade)
-    findings_section(findings, m, virtual, eff_grade)
-    effect_section(m, virtual)
-    details(sel, m, virtual, eff_grade)
-    st.divider()
-    next_month_section(plan, findings)
+                board.render_chat(CHAT_KEY, res["steps"], res["intro"], "다음 카드")
 
 
 if __name__ == "__main__":

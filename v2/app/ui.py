@@ -63,6 +63,30 @@ def init_widget(key: str, value: object) -> None:
         st.session_state[key] = value
 
 
+KIND_BADGE = {"질문": "blue", "사전 점검": "orange", "챗봇 작성": "violet", "자동": "gray", "기본값": "gray",
+              "다음 사이클": "gray"}
+KIND_ICON = {"질문": ":material/chat:", "사전 점검": ":material/fact_check:", "챗봇 작성": ":material/edit_note:",
+             "자동": ":material/auto_fix_high:", "기본값": ":material/tune:", "다음 사이클": ":material/update:"}
+
+
+def kind_badge(kind_label: object) -> str:
+    """칸 종류 배지(아이콘 + 글자 라벨)를 마크다운으로."""
+    k = str(kind_label)
+    return ":{}-badge[{} {}]".format(KIND_BADGE.get(k, "gray"), KIND_ICON.get(k, ":material/label:"), k)
+
+
+def sources_md(sources: list) -> str:
+    """도움말 출처 줄: 확인 표시(✅ 공식 확인 · △ 다른 자료 · ❓ 확인 못 함)와 링크."""
+    names = {"✅": "공식 도움말", "△": "공식 아님", "❓": "확인 못 함"}
+    out = []
+    for x in sources or []:
+        chk = str(x.get("check") or "❓")
+        title, url = str(x.get("title") or "출처"), str(x.get("url") or "")
+        link = "[{}]({})".format(title, url) if url.startswith("http") else title
+        out.append("{} {} · {}".format(chk, names.get(chk, ""), link).replace("  ", " "))
+    return "  \n".join(out)
+
+
 def grade(g: str, virtual: bool = False) -> str:
     """근거 등급 글. 가상 데이터면 '가상'을 붙여 실제 측정으로 오해하지 않게."""
     return "근거 {}{}".format(g, " (가상)" if virtual else "")

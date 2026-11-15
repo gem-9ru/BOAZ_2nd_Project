@@ -19,3 +19,6 @@ data/interim/naver_cache/
 
 # v2 네이버 API 캐시 (시연용 고정 캐시는 v2/data/cache_examples/)
 v2/data/cache/
+
+# 로컬 Claude Code 설정·에이전트 작업 폴더 (개인 경로 포함)
+.claude/
