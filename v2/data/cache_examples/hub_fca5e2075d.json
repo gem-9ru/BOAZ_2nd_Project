@@ -1,0 +1,139 @@
+{
+ "key": "/shopping/v1/category/keyword/device|50000006|답례품쿠키|month",
+ "fetched_at": "2026-11-15 14:35:10",
+ "response": {
+  "startDate": "2025-11-01",
+  "endDate": "2026-10-31",
+  "timeUnit": "month",
+  "results": [
+   {
+    "title": "답례품쿠키",
+    "keyword": [
+     "답례품쿠키"
+    ],
+    "data": [
+     {
+      "period": "2025-11-01",
+      "ratio": 100,
+      "group": "mo"
+     },
+     {
+      "period": "2025-11-01",
+      "ratio": 23.88001,
+      "group": "pc"
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 86.9887,
+      "group": "mo"
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 22.94507,
+      "group": "pc"
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 59.36891,
+      "group": "mo"
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 15.58239,
+      "group": "pc"
+     },
+     {
+      "period": "2026-02-01",
+      "ratio": 40.59213,
+      "group": "mo"
+     },
+     {
+      "period": "2026-02-01",
+      "ratio": 12.50486,
+      "group": "pc"
+     },
+     {
+      "period": "2026-03-01",
+      "ratio": 43.63069,
+      "group": "mo"
+     },
+     {
+      "period": "2026-03-01",
+      "ratio": 15.73821,
+      "group": "pc"
+     },
+     {
+      "period": "2026-04-01",
+      "ratio": 37.35878,
+      "group": "mo"
+     },
+     {
+      "period": "2026-04-01",
+      "ratio": 12.58278,
+      "group": "pc"
+     },
+     {
+      "period": "2026-05-01",
+      "ratio": 28.98324,
+      "group": "mo"
+     },
+     {
+      "period": "2026-05-01",
+      "ratio": 8.57031,
+      "group": "pc"
+     },
+     {
+      "period": "2026-06-01",
+      "ratio": 19.01051,
+      "group": "mo"
+     },
+     {
+      "period": "2026-06-01",
+      "ratio": 6.85625,
+      "group": "pc"
+     },
+     {
+      "period": "2026-07-01",
+      "ratio": 21.65952,
+      "group": "mo"
+     },
+     {
+      "period": "2026-07-01",
+      "ratio": 5.99922,
+      "group": "pc"
+     },
+     {
+      "period": "2026-08-01",
+      "ratio": 20.76353,
+      "group": "mo"
+     },
+     {
+      "period": "2026-08-01",
+      "ratio": 13.86832,
+      "group": "pc"
+     },
+     {
+      "period": "2026-09-01",
+      "ratio": 12.7386,
+      "group": "mo"
+     },
+     {
+      "period": "2026-09-01",
+      "ratio": 8.843,
+      "group": "pc"
+     },
+     {
+      "period": "2026-10-01",
+      "ratio": 17.64705,
+      "group": "mo"
+     },
+     {
+      "period": "2026-10-01",
+      "ratio": 11.72574,
+      "group": "pc"
+     }
+    ]
+   }
+  ]
+ }
+}

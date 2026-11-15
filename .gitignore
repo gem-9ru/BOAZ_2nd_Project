@@ -16,3 +16,6 @@ data/interim/naver_hub_cache/
 
 # 사장님 검색어로 생기는 네이버 검색광고 API 캐시 (예시 1·2용 고정 캐시는 data/examples/naver_cache/, 검수 A5)
 data/interim/naver_cache/
+
+# v2 네이버 API 캐시 (시연용 고정 캐시는 v2/data/cache_examples/)
+v2/data/cache/

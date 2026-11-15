@@ -1,0 +1,134 @@
+# 네이버 검색광고 칸 사양 (초안, 개발 작성 11/15 → 팀 리뷰 필요)
+# 근거: data/rag/naver_searchad.md 세팅 카드 (네이버 공식 도움말 요약), 네이버_검색광고_API_종합.md
+# kind 뜻은 meta_fields.yaml 맨 위와 같음
+
+media: naver
+title: 네이버 검색광고
+fields:
+  # ── 사전 점검 ──
+  - id: naver.pre.bizmoney
+    stage: 사전 점검
+    label: 비즈머니 충전
+    kind: precheck
+    ask: 네이버 광고 계정에 비즈머니를 충전하셨어요?
+    options: [충전했어요, 아직이에요]
+    default: 아직이에요
+    why: 비즈머니가 0원이면 광고 검토 자체가 시작되지 않아요. 한 달 예산의 네이버 몫만큼만 충전하세요.
+
+  - id: naver.pre.bizchannel
+    stage: 사전 점검
+    label: 비즈채널 (쇼핑몰 등록)
+    kind: precheck
+    ask: 스마트스토어를 비즈채널로 등록하셨어요?
+    options: [등록했어요, 아직이에요]
+    default: 아직이에요
+    why: 광고가 나가려면 '노출 가능'인 비즈채널이 하나 있어야 해요. 검토는 보통 영업일 1~2일 걸려요.
+
+  # ── 캠페인 ──
+  - id: naver.campaign.type
+    stage: 캠페인
+    label: 캠페인 유형
+    kind: question
+    ask: 검색 결과에 무엇을 보여 줄까요?
+    options: [내 상품 사진과 가격 (쇼핑검색), 가게 이름과 설명 문구 (파워링크)]
+    map: {내 상품 사진과 가격 (쇼핑검색): 쇼핑검색, 가게 이름과 설명 문구 (파워링크): 파워링크}
+    default: 가게 이름과 설명 문구 (파워링크)
+    why: 쇼핑검색은 상품이 바로 보여 사러 온 사람에게 좋고, 파워링크는 키워드를 직접 골라 선물·답례품처럼 목적이 분명한 검색을 잡기 좋아요.
+
+  - id: naver.campaign.name
+    stage: 캠페인
+    label: 캠페인 이름
+    kind: auto
+    auto: naver_campaign_name
+    why: 나중에 헷갈리지 않게 규칙으로 만들어요.
+
+  - id: naver.campaign.daily_budget
+    stage: 캠페인
+    label: 하루 예산
+    kind: auto
+    auto: naver_daily_budget
+    next_cycle: [rule.search_demand_cap]
+    why: 코치가 계산한 네이버 몫(검색 수요 상한 안)을 30일로 나눈 값이에요.
+
+  - id: naver.campaign.period
+    stage: 캠페인
+    label: 기간
+    kind: default
+    default: 30일 (종료일 설정)
+    why: 검색광고는 찾는 사람이 있을 때만 돈이 나가서 길게 켜 둬도 낭비가 적어요. 그래도 종료일은 넣어 두세요.
+
+  # ── 광고그룹 ──
+  - id: naver.group.bid
+    stage: 광고그룹
+    label: 기본 입찰가
+    kind: auto
+    auto: naver_bid
+    next_cycle: [rule.search_demand_cap]
+    why: 코치가 가정한 클릭 비용이에요. 광고그룹의 [예상 실적 보기]에 넣어 월 예산을 넘지 않는지 확인하세요. 최소는 파워링크 70원, 쇼핑검색 50원이에요.
+
+  - id: naver.group.auto_bid
+    stage: 광고그룹
+    label: 자동입찰
+    kind: default
+    default: 끄기
+    why: 켜면 1~2주 학습 기간 동안 설정을 자주 바꾸면 안 돼요. 첫 달은 직접 정한 입찰가로 결과를 봐요.
+
+  - id: naver.group.device
+    stage: 광고그룹
+    label: 노출 매체 (PC·모바일)
+    kind: default
+    default: 모두
+    suggest_from: market_device
+    why: 디저트 선물 검색은 모바일이 70~90%예요. 그래도 처음엔 둘 다 켜 두고 결과를 봐요.
+
+  - id: naver.group.schedule
+    stage: 광고그룹
+    label: 요일·시간
+    kind: next_cycle
+    default: 모든 요일·시간
+    why: 어느 시간에 잘 팔리는지는 한 달 뒤에 알 수 있어요.
+
+  - id: naver.group.age_gender_bid
+    stage: 광고그룹
+    label: 성별·연령 입찰 가중치
+    kind: default
+    default: 쓰지 않음
+    why: 검색어가 곧 타겟이라 나이를 따로 정할 필요가 없어요. 가중치는 데이터가 쌓인 뒤에 써요.
+
+  # ── 키워드 ──
+  - id: naver.keywords.list
+    stage: 키워드
+    label: 키워드
+    kind: auto
+    auto: naver_keywords
+    next_cycle: [rule.search_demand_cap, rule.keyword_no_sales]
+    why: "'내 손님 찾기'에서 고른 선물·시즌·상품 검색어예요. 사러 온 사람이 많은 세부 검색어부터 넣어요."
+
+  - id: naver.keywords.negative
+    stage: 키워드
+    label: 제외 키워드
+    kind: auto
+    auto: naver_negative_keywords
+    why: 만들기·맛집·지역 카페처럼 사러 온 사람이 아닌 검색어에 돈이 나가지 않게 막아요.
+
+  # ── 소재 ──
+  - id: naver.ad.landing_url
+    stage: 소재
+    label: 연결 URL
+    kind: question
+    ask: 광고를 누르면 보여 줄 상품 페이지 주소를 알려 주세요. (메타와 같아도 돼요)
+    input: url
+    default: ""
+    shared_with: meta.ad.website_url
+    why: 네이버 검색광고는 스토어 통계에 '네이버 광고'로 따로 잡혀서 꼬리표를 붙이지 않아도 돼요.
+
+  - id: naver.ad.copy
+    stage: 소재
+    label: 제목 (15자) · 설명 (20~45자)
+    kind: llm
+    ask: 상품의 장점을 한두 마디로 알려 주세요. (메타와 같아도 돼요)
+    input: text
+    default: ""
+    shared_with: meta.creative.copy
+    next_cycle: [rule.keyword_low_ctr]
+    why: 키워드를 손님의 질문, 문구를 그 답으로 생각하고 혜택을 사실대로 써요. 특수문자를 많이 쓰면 '등록 불가'가 떠요.
