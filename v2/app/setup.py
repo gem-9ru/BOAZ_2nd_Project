@@ -33,16 +33,16 @@ GUIDE_SAY = {"store": "여기에 들어가요", "market": "찾은 검색 단어�
 def _focus(cs: dict) -> None:
     """지금 오른쪽 대화가 말하는 칸·카드를 캐릭터가 가리키도록 정한다."""
     ph = cs["phase"]
-    fid = None
+    fid, label = None, ""
     if ph == "store":
-        fid = "store-" + str(cs["step"])
+        fid, label = "store-" + str(cs["step"]), conversation.STORE_LABEL.get(cs["step"], "")
     elif ph == "market" and (cs.get("market") or {}).get("recommended"):
-        fid = "market"
+        fid, label = "market", "내 손님 판"
     elif ph == "budget" and cs.get("plan"):
-        fid = "budget"
+        fid, label = "budget", "예산 판"
     elif ph == "ask":
-        fid = str(cs["step"]).replace(".", "-")
-    guide.set_focus(fid, GUIDE_SAY["field" if ph == "ask" else ph] if fid else "")
+        fid = str(cs["step"]).replace(".", "-")     # 칸 이름은 세팅 보드 줄이 그릴 때 알려 준다 (guide.here의 label)
+    guide.set_focus(fid, GUIDE_SAY["field" if ph == "ask" else ph] if fid else "", label, chat.position(cs) if fid else "")
 
 
 # ───────────────────────── 왼쪽 작업판 ─────────────────────────
@@ -161,7 +161,7 @@ def _setting_board(cs: dict) -> None:
                         b.write(str(r["value"]) or "-")
                         c.markdown(ui.kind_badge(r["kind_label"]))
                         if here:
-                            guide.here(r["field_id"].replace(".", "-"))
+                            guide.here(r["field_id"].replace(".", "-"), str(r["label"]))
 
 
 def work_board(cs: dict) -> None:
@@ -317,12 +317,13 @@ def render() -> None:
         left, right = st.columns([7, 5])
         with right:
             chat.render()
-        with left:
+        with left, guide.board_container("setup"):
             if s["chat"]["phase"] == "done":
                 step_sheet()
             else:
                 work_board(s["chat"])
                 guide.scroll()
+    guide.live()
 
 
 if __name__ == "__main__":

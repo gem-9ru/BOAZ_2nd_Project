@@ -386,7 +386,7 @@ def render() -> None:
     guide.toggle()
     with st.container(key="diag_cols"):     # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
         left, right = st.columns([7, 5])
-        with left:
+        with left, guide.board_container("diag"):
             res = analysis_board(plan, {"store": dict(s["store"]), "budget_plan": dict(s["budget_plan"]), "media": list(s["media"])})
         with right:
             if res is None:
@@ -395,6 +395,7 @@ def render() -> None:
                                   "궁금한 건 지금 물어봐도 돼요.", "다음 카드")
             else:
                 board.render_chat(CHAT_KEY, res["steps"], res["intro"], "다음 카드")
+    guide.live()
 
 
 if __name__ == "__main__":

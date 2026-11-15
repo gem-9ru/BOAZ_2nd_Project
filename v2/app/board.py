@@ -42,6 +42,7 @@ def ensure(chat_key: str, sig: object, steps: List[dict], ctx: Optional[dict] = 
     cs["ctxs"] = [x.get("ctx") or {} for x in steps]
     cs["ids"] = [x["id"] for x in steps]
     cs["says"] = [x.get("say", "") for x in steps]
+    cs["titles"] = [x.get("title", "") for x in steps]
     cs["ctx"] = dict(ctx or {})
     cs["n"] = len(steps)
     s[chat_key] = cs
@@ -65,7 +66,9 @@ def point(chat_key: str) -> Optional[str]:
     cs = st.session_state.get(chat_key) or {}
     fid = focus_id(chat_key)
     p = int(cs.get("pos", 0))
-    guide.set_focus(fid, (cs.get("says") or [""] * (p + 1))[p] if fid else "")
+    titles = cs.get("titles") or []
+    guide.set_focus(fid, (cs.get("says") or [""] * (p + 1))[p] if fid else "",
+                    titles[p] if fid and p < len(titles) else "", "{}/{}".format(p + 1, cs.get("n", 0)) if fid else "")
     return fid
 
 
@@ -81,7 +84,7 @@ def _restart(chat_key: str) -> None:
     cs = st.session_state.get(chat_key)
     if cs:
         new = _fresh(cs["sig"], cs["n"])
-        new.update({k: cs[k] for k in ("fields", "ctxs", "ids", "says", "ctx")})
+        new.update({k: cs[k] for k in ("fields", "ctxs", "ids", "says", "titles", "ctx")})
         st.session_state[chat_key] = new
 
 

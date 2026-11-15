@@ -130,12 +130,13 @@ def render() -> None:
     board.point(CHAT_KEY)
     with st.container(key="run_cols"):     # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
         left, right = st.columns([7, 5])
-        with left:
+        with left, guide.board_container("run"):
             work_board(plan, bp, s)
             guide.scroll()
         with right:
             board.render_chat(CHAT_KEY, steps, "광고를 켜기 전에 확인할 게 {}가지 있어요. 하나씩 같이 볼게요. "
                               "모르는 건 아래에 물어봐도 돼요.".format(len(checklist_items(s["media"]))), "다음")
+    guide.live()
 
 
 if __name__ == "__main__":
