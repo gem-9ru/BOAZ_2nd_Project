@@ -3,6 +3,7 @@
 - {q: "잔고가 하나도 없으면 광고 못 켜나요", step: naver.pre.bizmoney, expect: naver.pre.bizmoney}
 - {q: "내 스마트스토어를 광고에 연결하려면 어디서 등록해요?", step: naver.pre.bizchannel, expect: naver.pre.bizchannel}
 - {q: "쇼핑파트너센터 아이디가 기억 안 나요", step: naver.pre.bizchannel, expect: naver.pre.bizchannel}
+- {q: "광고 올리고 검토받는 데 며칠 걸려요?", step: naver.pre.bizchannel, expect: naver.pre.bizchannel}
 - {q: "사진이랑 가격이 나오는 광고랑 글만 나오는 광고 뭐가 달라요?", step: naver.campaign.type, expect: naver.campaign.type}
 - {q: "쇼핑검색이랑 파워링크 둘 다 해도 되나요", step: naver.campaign.type, expect: naver.campaign.type}
 - {q: "캠페인 이름 아무거나 지어도 되나요? 손님한테 보여요?", step: naver.campaign.name, expect: naver.campaign.name}
@@ -11,6 +12,7 @@
 - {q: "광고 언제까지 나가게 해야 해요? 끝나는 날 꼭 넣어요?", step: naver.campaign.period, expect: naver.campaign.period}
 - {q: "클릭 한 번에 얼마까지 낼지 정하는 게 뭐예요", step: naver.group.bid, expect: naver.group.bid}
 - {q: "70원보다 낮게는 못 하나요", step: naver.group.bid, expect: naver.group.bid}
+- {q: "입찰가는 최대 얼마까지 올릴 수 있어요?", step: naver.group.bid, expect: naver.group.bid}
 - {q: "네이버가 알아서 가격 조절해 주는 거 켜도 돼요?", step: naver.group.auto_bid, expect: naver.group.auto_bid}
 - {q: "휴대폰에서만 보이게 하고 싶어요", step: naver.group.device, expect: naver.group.device}
 - {q: "블로그나 카페 같은 데서도 내 광고가 나가요?", step: naver.group.device, expect: naver.group.device}

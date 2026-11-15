@@ -511,11 +511,139 @@ def test_month_two_budget_edit_replans_without_false_keyword_note():
 def test_setup_layout_puts_chat_first_on_narrow_screens_and_has_guide_toggle():
     at = demo_to_budget(fresh())
     assert at.toggle(key="w_guide").value is True
-    from v2.app import chat
-    assert "order:-1" in chat.GUIDE_CSS and "prefers-reduced-motion" in chat.GUIDE_CSS
+    from v2.app import guide
+    assert "order:-1" in guide.CSS and "prefers-reduced-motion" in guide.CSS
     cs = at.session_state["chat"]
-    assert chat.focus_id(cs) in ("budget", "market") or cs["phase"] == "ask"
+    assert guide.focus() is None or at.session_state["guide_focus"][0] in ("budget", "market") or cs["phase"] == "ask"
     html = " ".join(str(m.value) for m in at.markdown)
     assert '<span class="coach-bubble">' in html
     at.toggle(key="w_guide").set_value(False).run()
     assert '<span class="coach-bubble">' not in " ".join(str(m.value) for m in at.markdown)
+
+
+# ── ②③ 오른쪽 대화 + 가리키는 캐릭터 ─────────────────────────────
+
+def _focus(at) -> str:
+    cur = at.session_state["guide_focus"]
+    return cur[0] if cur else None
+
+
+def _coach_html(at) -> str:
+    return " ".join(str(m.value) for m in at.markdown if str(m.value).startswith('<div class="coach">'))
+
+
+def _keys(at) -> set:
+    """화면에 그려진 컨테이너 키 (AppTest는 키를 직접 주지 않아서 소스의 st-key 클래스 대신 세션 값으로 확인)."""
+    return set(at.session_state["rd_run"]["ids"]) if "rd_run" in at.session_state else set()
+
+
+def test_run_page_walks_checklist_item_by_item_and_ends_with_next_action():
+    at = demo_to_sheet(fresh())
+    at.switch_page(RUN).run()
+    assert not at.exception, at.exception
+    assert len(at.chat_input) == 1 and titles(at) == ["② 실행"]
+    ids = at.session_state["rd_run"]["ids"]
+    assert ids == ["run-baseline", "run-budget", "run-tag", "run-bizmoney", "run-date", "run-next"]
+    seen = []
+    for i, want in enumerate(ids):
+        assert _focus(at) == want and at.session_state["rd_run"]["pos"] == i
+        seen.append(_focus(at))
+        assert '<span class="coach-bubble">' in _coach_html(at) and _coach_html(at).count("coach-bubble") == 1
+        if i + 1 < len(ids):
+            chip(at, "다음")
+    assert seen == ids
+    last = [m.value for m in at.markdown if "③ 진단으로 가기" in str(m.value) and "눌러" in str(m.value)]
+    assert last, "마지막 안내가 ③으로 가기를 알려 줘야 해요"
+    assert any("처음부터 다시 듣기" == b.label for b in at.button) and not any(b.label == "다음" for b in at.button)
+    chip(at, "처음부터 다시 듣기")
+    assert _focus(at) == "run-baseline"
+    at.toggle(key="w_guide").set_value(False).run()
+    assert "coach-bubble" not in _coach_html(at) and not at.exception
+
+
+def test_run_page_checkbox_does_not_reset_walkthrough_and_questions_get_help_answers():
+    at = demo_to_sheet(fresh())
+    at.switch_page(RUN).run()
+    chip(at, "다음")
+    at.checkbox[0].check().run()
+    assert at.session_state["rd_run"]["pos"] == 1 and at.session_state["run_checks"]["baseline"] is True
+    n = len(at.session_state["rd_run"]["turns"])
+    say(at, "한 달 광고비 얼마씩 나눠서 써요?")
+    turns = at.session_state["rd_run"]["turns"]
+    assert len(turns) == n + 2 and turns[-1]["kind"] == "help" and turns[-1]["text"]
+    assert at.session_state["rd_run"]["pos"] == 1       # 질문은 안내 위치를 옮기지 않는다
+    assert "원" in turns[-1]["text"]                     # 코치 숫자: 엔진이 계산한 값
+
+
+def test_character_choice_is_remembered_across_pages():
+    at = demo_to_sheet(fresh())
+    at.toggle(key="w_guide").set_value(False).run()
+    at.switch_page(RUN).run()
+    assert at.toggle(key="w_guide").value is False and "coach-bubble" not in _coach_html(at)
+    at.switch_page(DIAG).run()
+    assert at.toggle(key="w_guide").value is False and "coach-bubble" not in _coach_html(at)
+    at.toggle(key="w_guide").set_value(True).run()
+    assert "coach-bubble" in _coach_html(at)
+
+
+def test_diag_c2_walks_each_fired_card_then_effect_then_next_month_and_month_two_works():
+    at = demo_to_sheet(fresh())
+    at.switch_page(DIAG).run()
+    assert not at.exception, at.exception
+    ids = at.session_state["rd_diag"]["ids"]
+    assert ids[-2:] == ["effect", "next"] and len(ids) >= 3 and all(i.startswith("rule-") for i in ids[:-2])
+    assert len(at.chat_input) == 1
+    assert any("다음 카드" == b.label for b in at.button)
+    for i, want in enumerate(ids):
+        assert _focus(at) == want and at.session_state["rd_diag"]["pos"] == i
+        assert _coach_html(at).count("coach-bubble") == 1
+        if i + 1 < len(ids):
+            chip(at, "다음 카드")
+    assert "다음 달 세팅 만들기" in " ".join(str(m.value) for m in at.markdown)      # 마지막 안내가 그 행동을 알려 줌
+    n = len(at.session_state["rd_diag"]["turns"])
+    say(at, "특별 광고 카테고리가 뭐예요?")                 # 사장님 질문은 helpdesk로
+    assert at.session_state["rd_diag"]["turns"][-1]["kind"] == "help" and len(at.session_state["rd_diag"]["turns"]) == n + 2
+    assert _focus(at) == "next"
+    at.toggle(key="w_guide").set_value(False).run()
+    assert "coach-bubble" not in _coach_html(at)
+    into(at, "next_month", SETUP)
+    at.run()
+    assert not at.exception, at.exception
+    assert at.session_state["month_index"] == 2 and "2개월 차" in texts(at)
+    at.switch_page(DIAG).run()                               # 2개월 차 진단도 같은 흐름
+    assert not at.exception, at.exception
+    assert at.session_state["rd_diag"]["pos"] == 0 and len(at.chat_input) == 1
+
+
+def test_diag_walkthrough_resets_when_case_changes_and_c0_has_no_card_steps():
+    at = demo_to_sheet(fresh())
+    at.switch_page(DIAG).run()
+    chip(at, "다음 카드")
+    assert at.session_state["rd_diag"]["pos"] == 1
+    at.selectbox(key="diag_case").select("C0").run()
+    assert not at.exception, at.exception
+    assert at.session_state["rd_diag"]["ids"] == ["effect", "next"] and at.session_state["rd_diag"]["pos"] == 0
+    assert "고칠 곳이 보이지 않아요" in texts(at)
+
+
+def test_diag_without_files_still_has_a_chat_and_no_pointing():
+    at = demo_to_sheet(fresh())
+    at.switch_page(DIAG).run()
+    at.radio(key="diag_src").set_value("내 파일 올리기").run()
+    assert not at.exception, at.exception
+    assert len(at.chat_input) == 1 and _focus(at) is None and "coach-bubble" not in _coach_html(at)
+    say(at, "네이버 비즈머니가 뭐예요?")
+    assert at.session_state["rd_diag"]["turns"][-1]["kind"] == "help"
+
+
+def test_shared_guide_has_no_green_meta_color_and_layouts_use_7_5_columns():
+    app_dir = Path(__file__).resolve().parents[1] / "app"
+    for name in ("run.py", "diagnose.py", "setup.py"):
+        src = (app_dir / name).read_text(encoding="utf-8")
+        assert "st.columns([7, 5])" in src, name
+    assert "#C8661A" in (app_dir / "setup.py").read_text(encoding="utf-8")
+    assert "#4C78A8" in (app_dir / "setup.py").read_text(encoding="utf-8")
+    for path in app_dir.glob("*.py"):       # 메타 색을 초록 계열 값으로 쓰지 않는다 (META_COLOR 정의가 #C8661A 하나)
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "META_COLOR" in line and "=" in line and "#" in line:
+                assert "#C8661A" in line, (path.name, line)

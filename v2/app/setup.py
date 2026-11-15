@@ -13,7 +13,7 @@ if str(ROOT) not in sys.path:
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from v2.app import chat, state, ui  # noqa: E402
+from v2.app import chat, guide, state, ui  # noqa: E402
 from v2.engine import conversation, intake, plan_io  # noqa: E402
 
 MEDIA_NAMES = {"meta": "메타 (인스타그램·페이스북)", "naver": "네이버 검색광고"}
@@ -24,9 +24,25 @@ def _s() -> dict:
     return st.session_state
 
 
-def _tid(text: object) -> str:
-    """칸·카드를 가리킬 수 있는 컨테이너 키: 't-' + id ('.'는 '-')."""
-    return "t-" + str(text).replace(".", "-")
+_tid = guide.tid
+
+GUIDE_SAY = {"store": "여기에 들어가요", "market": "찾은 검색 단어예요", "budget": "예산을 이렇게 나눴어요",
+             "field": "이 칸에 들어가요"}
+
+
+def _focus(cs: dict) -> None:
+    """지금 오른쪽 대화가 말하는 칸·카드를 캐릭터가 가리키도록 정한다."""
+    ph = cs["phase"]
+    fid = None
+    if ph == "store":
+        fid = "store-" + str(cs["step"])
+    elif ph == "market" and (cs.get("market") or {}).get("recommended"):
+        fid = "market"
+    elif ph == "budget" and cs.get("plan"):
+        fid = "budget"
+    elif ph == "ask":
+        fid = str(cs["step"]).replace(".", "-")
+    guide.set_focus(fid, GUIDE_SAY["field" if ph == "ask" else ph] if fid else "")
 
 
 # ───────────────────────── 왼쪽 작업판 ─────────────────────────
@@ -49,7 +65,7 @@ def _store_card(cs: dict, open_: bool) -> None:
                 shown = str(v)
             with st.container(border=(key == focus), key=_tid("store-" + key)):
                 st.markdown("{}**{}** · {}".format(":material/arrow_right: " if key == focus else "", label, shown))
-                chat.guide_here(cs, "store-" + key)
+                guide.here("store-" + key)
         st.markdown("**광고 매체** · " + "·".join(MEDIA_NAMES[m] for m in cs["media"]))
 
 
@@ -80,7 +96,7 @@ def _market_board(cs: dict, open_: bool) -> None:
         return
     with st.expander("내 손님 판", expanded=open_, icon=":material/groups:"):
         with st.container(key=_tid("market"), border=(cs["phase"] == "market")):
-            chat.guide_here(cs, "market")
+            guide.here("market")
             if m.get("headline"):
                 st.markdown("**{}**".format(m["headline"]))
             report = _s().get("market")
@@ -100,7 +116,7 @@ def _budget_board(cs: dict, open_: bool) -> None:
         return
     with st.expander("예산 판", expanded=open_, icon=":material/payments:"):
         with st.container(key=_tid("budget"), border=(cs["phase"] == "budget")):
-            chat.guide_here(cs, "budget")
+            guide.here("budget")
             nf, mf = p.get("naver_forecast") or {}, p.get("meta_forecast") or {}
             lo, hi = state.expected_orders(p)
             cells = [("한 달 광고비", ui.won(p.get("budget"))), ("예상 주문", "{:.0f}~{:.0f}건".format(lo, hi)),
@@ -145,7 +161,7 @@ def _setting_board(cs: dict) -> None:
                         b.write(str(r["value"]) or "-")
                         c.markdown(ui.kind_badge(r["kind_label"]))
                         if here:
-                            chat.guide_here(cs, r["field_id"].replace(".", "-"))
+                            guide.here(r["field_id"].replace(".", "-"))
 
 
 def work_board(cs: dict) -> None:
@@ -294,10 +310,9 @@ def render() -> None:
     if cs is None:                      # 불러온 계획: 세팅값 시트만 (원하면 대화를 열어 고침)
         step_sheet()
         return
-    st.markdown(chat.GUIDE_CSS, unsafe_allow_html=True)
-    chat.guide_on()                        # 처음 값(켜짐)을 한 번만 넣는다
-    st.toggle("캐릭터 보이기", key="w_guide",
-              help="끄면 왼쪽 작업판에서 칸을 가리키는 캐릭터가 사라져요. 강조 테두리는 그대로예요.")
+    guide.css()
+    guide.toggle()
+    _focus(cs)
     with st.container(key="setup_cols"):   # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
         left, right = st.columns([7, 5])
         with right:
@@ -307,7 +322,7 @@ def render() -> None:
                 step_sheet()
             else:
                 work_board(s["chat"])
-                chat.scroll_to_focus(s["chat"])
+                guide.scroll()
 
 
 if __name__ == "__main__":
