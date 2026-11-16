@@ -26,7 +26,8 @@ APP_CSS = """<style>
 .block-container{padding-top:2.25rem}
 @media (max-width:640px){.block-container{padding-top:1rem}}
 /* 채팅 기록 높이를 화면 높이에 맞춰, 빠른 답 버튼과 입력칸이 스크롤 없이 보이게 (기본 480px 고정 대신) */
-div:has(> .stVerticalBlock[class*="_history"]){flex-basis:clamp(300px, calc(100vh - 560px), 600px) !important;height:auto !important}
+div:has(> .stVerticalBlock[class*="_history"]){--chat-h:clamp(300px, calc(100vh - 560px), 600px);flex:0 0 var(--chat-h) !important;height:var(--chat-h) !important;min-height:0 !important;max-height:var(--chat-h) !important}
+.stVerticalBlock[class*="_history"]{min-height:0 !important}
 [data-testid="stFileUploaderDropzoneInstructions"]>div>span{font-size:0;line-height:0}
 [data-testid="stFileUploaderDropzoneInstructions"]>div>span:first-child::after{content:"여기로 파일을 끌어다 놓으세요";
  font-size:.9rem;line-height:1.4;display:block}

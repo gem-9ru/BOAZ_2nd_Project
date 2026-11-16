@@ -22,8 +22,11 @@ def render() -> None:
     c = counts()
     st.title("광고 코치")
     st.subheader("처음 광고하는 사장님이 질문 {}개로 세팅을 끝내고, 한 달 뒤 다음 달에 바꿀 칸을 받아요.".format(c["asked"]))
-    st.caption("광고 관리자 칸은 모두 {}개예요. 사장님께 묻는 건 {}개뿐이고, 나머지는 기본값과 이유를 보여 드려요."
-               .format(c["fields"], c["asked"]))
+    m1, m2 = st.columns(2, border=True)
+    m1.metric("사장님께 묻는 질문", "{}개".format(c["asked"]),
+              help="나머지 칸은 기본값과 이유를 보여 드려요.")
+    m2.metric("광고 관리자 칸", "{}개".format(c["fields"]))
+    m2.caption("{}칸은 기본값·자동".format(c["fields"] - c["asked"]))
 
     with st.container(border=True):
         st.markdown("**예시로 먼저 보기: 소연베이크**")
