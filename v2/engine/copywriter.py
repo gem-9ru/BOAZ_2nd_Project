@@ -144,12 +144,12 @@ def _meta_templates(product: str, strengths: List[str]) -> List[Copy]:
 # ── Claude 호출 ─────────────────────────────────────────
 
 def _read_key() -> Optional[str]:
-    """Streamlit secrets → 환경 변수 → 루트 .env 순서 (다른 키와 같은 방식)."""
+    """Streamlit secrets → 환경 변수 → 루트 .env 순서 (v2 naver_api.read_keys와 같은 방식, v1 코드에 기대지 않음)."""
     try:
-        from src.engine.keys import read_keys
+        from .naver_api import read_keys
         found = read_keys([KEY_NAME])
         return found[KEY_NAME] if found else None
-    except Exception:  # noqa: BLE001 (src 없음·secrets 오류 → 환경 변수만)
+    except Exception:  # noqa: BLE001 (secrets 오류 등 → 환경 변수만)
         return os.environ.get(KEY_NAME) or None
 
 

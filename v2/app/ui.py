@@ -92,6 +92,13 @@ def grade(g: str, virtual: bool = False) -> str:
     return "근거 {}{}".format(g, " (가상)" if virtual else "")
 
 
+def market_source(fetched: object = "") -> str:
+    """내 손님 찾기 숫자의 출처 줄: 근거 등급 + 네이버 자료 이름 + 조회일 (데이터랩 출처 표기)."""
+    from v2.engine.market import SOURCE
+    day = str(fetched or "").strip()
+    return "{} · 자료: {}{}".format(grade("B"), SOURCE, " (조회일 {})".format(day) if day else "")
+
+
 def grade_legend() -> None:
     st.caption("근거 등급: " + state.GRADES)
 

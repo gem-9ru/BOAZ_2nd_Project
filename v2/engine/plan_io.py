@@ -18,7 +18,7 @@ FORMAT_TAG = "ad-coach-plan"   # 파일 안에 적어 두는 표시 (다른 JSON
 REQUIRED = ("store", "media", "answers", "budget_plan", "history")
 # 일 예산 칸 → budget_plan 키 (다음 달 예산 계획도 같이 맞춘다)
 BUDGET_KEYS = {"meta.adset.daily_budget": "meta_daily", "naver.campaign.daily_budget": "naver_daily",
-               "naver.campaign.bid": "naver_bid"}
+               "naver.group.bid": "naver_bid"}
 
 
 class PlanError(Exception):

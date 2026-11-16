@@ -349,7 +349,7 @@ def _market_card(st: dict) -> dict:
     lines.append("이 단어로 광고를 낼까요? 다른 단어를 직접 적어도 돼요.")
     chips = [MARKET_OK, MARKET_AGAIN] if rec else [MARKET_AGAIN, MARKET_SKIP]
     return _mk("\n\n".join(lines), kind="market_card",
-               data={k: m.get(k) for k in ("seeds", "headline", "recommended", "negatives", "audience_hint", "groups")},
+               data={k: m.get(k) for k in ("seeds", "headline", "recommended", "negatives", "audience_hint", "groups", "fetched")},
                chips=chips)
 
 
@@ -724,7 +724,8 @@ def _run_market(st: dict, seeds: List[str], sv: Services) -> None:
         groups = []
     st["market"] = {"seeds": list(seeds), "recommended": rec, "negatives": [str(x) for x in (getattr(rep, "negatives", None) or [])],
                     "headline": str(getattr(rep, "headline", "") or ""), "audience_hint": _audience_hint(rep),
-                    "groups": groups, "rows": _rows(rep, rec), "picked": None}
+                    "groups": groups, "rows": _rows(rep, rec), "picked": None,
+                    "fetched": str(getattr(rep, "fetched", "") or "")}
     st["step"] = "pick"
     _append_prompt(st)
 

@@ -84,7 +84,7 @@ def _market_card(t: conversation.Turn) -> None:
         st.markdown("광고에 쓸 단어: " + ", ".join("`{}`".format(w) for w in d["recommended"][:8]))
         if d.get("negatives"):
             st.markdown("뺄 단어: " + ", ".join("`{}`".format(w) for w in d["negatives"][:6]))
-        st.caption(ui.grade("B"))
+        st.caption(ui.market_source(d.get("fetched")))
     st.markdown(t.text.split("\n\n")[-1])
 
 

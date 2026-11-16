@@ -257,12 +257,8 @@ def compute_budget(store: dict, media: List[str], report, objective: str, days: 
 
 
 def expected_orders(bp: dict) -> Tuple[float, float]:
-    """예상 클릭 × 구매율 가정(근거 D) = 예상 주문 (낮게, 높게). 인지도 목표는 메타 클릭이 없다."""
-    cvr = specs.assumptions()["store"]["cvr"]
-    meta_clicks = float(bp.get("meta_forecast", {}).get("link_clicks", 0) or 0)
-    naver_clicks = float(bp.get("naver_forecast", {}).get("clicks", 0) or 0)
-    naver = naver_clicks * cvr["naver_ad"]["value"]
-    return (meta_clicks * cvr["meta_feed"]["low"] + naver, meta_clicks * cvr["meta_feed"]["high"] + naver)
+    """예상 클릭 × 구매율 가정(근거 D) = 예상 주문 (낮게, 높게). 계산은 planner.expected_orders 한 곳에서 (도움말 코치와 같은 값)."""
+    return planner.expected_orders(bp)
 
 
 def make_ctx(store: dict, media: List[str], bp: Optional[dict], report=None) -> intake.SetupContext:

@@ -6,7 +6,7 @@
 """
 import math
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -127,6 +127,22 @@ def _notes(plan: BudgetPlan, target_key: str, cpc: float, cpc_given: bool, ctr: 
     if plan.days < 7:
         notes.append("메타 기간이 7일보다 짧으면 광고가 자리를 잡기 어려워요. 7~14일을 권해요.")
     return notes
+
+
+def expected_orders(plan) -> Tuple[float, float]:
+    """예상 주문 (낮게, 높게) = 예상 클릭 × 구매율 가정 (근거 D, assumptions.yaml store.cvr).
+
+    plan은 BudgetPlan이나 그 dict. 예산 판과 도움말 코치가 같은 값을 쓰도록 계산은 여기 한 곳에만 둔다.
+    인지도 목표는 메타 링크 클릭 예측이 없어서 네이버 몫만 들어간다.
+    """
+    def get(key):
+        return plan.get(key) if isinstance(plan, dict) else getattr(plan, key, None)
+
+    cvr = specs.assumptions()["store"]["cvr"]
+    meta_clicks = float((get("meta_forecast") or {}).get("link_clicks", 0) or 0)
+    naver_clicks = float((get("naver_forecast") or {}).get("clicks", 0) or 0)
+    naver = naver_clicks * cvr["naver_ad"]["value"]
+    return (meta_clicks * cvr["meta_feed"]["low"] + naver, meta_clicks * cvr["meta_feed"]["high"] + naver)
 
 
 def plan_budget(budget: int, keywords: Optional[pd.DataFrame] = None, objective: str = "트래픽",
