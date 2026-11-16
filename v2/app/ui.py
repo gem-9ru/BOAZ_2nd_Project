@@ -100,10 +100,12 @@ def stepper(current: int) -> None:
     """맨 위 3단계 표시. 끝난 단계는 ✓, 지금 단계는 ●."""
     done = [state.setup_done(), bool(st.session_state.get("run_checks")) and all(st.session_state["run_checks"].values()),
             bool(st.session_state.get("diag_done"))]
-    cols = st.columns(3)
-    for i, (col, title) in enumerate(zip(cols, STEP_TITLES)):
+    parts = []
+    for i, title in enumerate(STEP_TITLES):
         mark = "✓" if done[i] and i != current else "●" if i == current else "○"
-        col.markdown("**{} {}**".format(mark, title) if i == current else "{} {}".format(mark, title))
+        parts.append("**{} {}**".format(mark, title) if i == current else ":gray[{} {}]".format(mark, title))
+    # 한 줄로: 좁은 화면에서도 세 줄로 쌓이지 않게
+    st.markdown("  →  ".join(parts))
     month = int(st.session_state.get("month_index", 1))
     if month > 1:
         st.caption("지금 {}개월 차예요.".format(month))
