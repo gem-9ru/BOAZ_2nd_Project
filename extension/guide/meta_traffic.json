@@ -335,6 +335,48 @@
     }
   },
   {
+    "id": "meta.creative.copy",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "기본 문구"
+      },
+      {
+        "labelText": "기본 문구"
+      }
+    ],
+    "say": "광고를 열어 기본 문구를 새 문구로 바꾸세요 ({value})",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "광고 수정 화면에서 '기본 문구' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.ad.creative_test",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "크리에이티브 테스트"
+      },
+      {
+        "labelText": "크리에이티브 테스트"
+      }
+    ],
+    "say": "크리에이티브 테스트를 켜고 사진을 2~3개 넣으세요 ({value})",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "광고 수정 화면에서 '크리에이티브 테스트' 칸을 찾아 주세요"
+    }
+  },
+  {
     "id": "export.open",
     "mode": "export",
     "page": {

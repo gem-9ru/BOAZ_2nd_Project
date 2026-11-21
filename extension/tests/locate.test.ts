@@ -49,11 +49,11 @@ describe("Guide runner", () => {
     expect(g.view().text).toContain("화면 언어를 한국어로 바꿔 주세요");
   });
 
-  it("shows the value bubble on the found element and advances on input", () => {
+  it("shows the value bubble on the found element and advances on change", () => {
     const seen: number[] = [];
     const g = new Guide(document, [step("age", [{ labelText: "연령" }], {}, "30–39세"), step("loc", [{ aria: "위치" }])], 0, (i) => seen.push(i));
     expect(g.view()).toMatchObject({ found: true, text: "여기에 30–39세을(를) 넣으세요", copy: "30–39세" });
-    document.getElementById("age-min")!.dispatchEvent(new Event("input", { bubbles: true }));
+    document.getElementById("age-min")!.dispatchEvent(new Event("change", { bubbles: true }));
     expect(seen).toEqual([1]);
     expect(g.view().found).toBe(true);
   });

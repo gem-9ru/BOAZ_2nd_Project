@@ -67,6 +67,13 @@ export class ServerDown extends Error {
   }
 }
 
+/** 서버는 켜져 있지만 처리하다 문제가 생김 (5xx 등). */
+export class ServerError extends Error {
+  constructor() {
+    super("서버에서 문제가 생겼어요. 잠시 뒤 다시 시도해 주세요.");
+  }
+}
+
 /** 서버가 입력을 거절함 (message는 사장님께 그대로 보여 줘도 되는 문장). */
 export class BadInput extends Error {}
 
@@ -79,7 +86,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   }
   const body = await res.json().catch(() => ({}));
   if (res.status === 400) throw new BadInput(body.error ?? "입력을 확인해 주세요.");
-  if (!res.ok) throw new ServerDown();
+  if (!res.ok) throw new ServerError();
   return body as T;
 }
 

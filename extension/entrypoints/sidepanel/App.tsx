@@ -36,6 +36,17 @@ export default function App() {
   useEffect(() => {
     if (loaded.current) void saveState(state);
   }, [state]);
+  // 패널이 닫혀 있던 동안 배경 스크립트가 쓴 진행(캐릭터 단계)을 따라간다.
+  const latest = useRef(state);
+  latest.current = state;
+  useEffect(() => {
+    const onChanged = (changes: Record<string, { newValue?: unknown }>) => {
+      const next = changes["coach.v3.state"]?.newValue as FlowState | undefined;
+      if (next && JSON.stringify(next) !== JSON.stringify(latest.current)) dispatch({ type: "__load", state: next });
+    };
+    browser.storage.onChanged.addListener(onChanged);
+    return () => browser.storage.onChanged.removeListener(onChanged);
+  }, []);
 
   const [spec, setSpec] = useState<{ fields: Field[]; defaults: PresetField[] } | null>(null);
   const [specError, setSpecError] = useState<string | null>(null);
@@ -70,7 +81,7 @@ export default function App() {
       {state.guide && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
-      {state.step === "upload" && <UploadStep state={state} dispatch={dispatch} />}
+      {!state.guide && state.step === "upload" && <UploadStep state={state} dispatch={dispatch} />}
       {state.step === "result" && <ResultStep state={state} dispatch={dispatch} />}
       {state.step === "copy" && <CopyStep state={state} dispatch={dispatch} />}
       {state.step === "questions" && spec && (

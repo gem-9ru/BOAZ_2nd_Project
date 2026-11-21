@@ -1,41 +1,50 @@
-import { useEffect } from "react";
+import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { stepsFor } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
-import { Coach, PrimaryButton } from "../ui/Coach";
+import { sendWithRetry } from "../../../lib/progress";
+import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 
 interface Props {
   state: FlowState;
   dispatch: (ev: FlowEvent) => void;
 }
 
-/** ② 안내 / ③ 바꾸기 / 결과 내보내기: 광고 관리자 탭을 열고 캐릭터에게 단계를 넘긴다. 진행은 캐릭터가 알려 준다. */
+const ADS_MANAGER_MATCH = ["https://adsmanager.facebook.com/*", "https://business.facebook.com/*"];
+
+/** ② 안내 / ③ 바꾸기 / 결과 내보내기: 광고 관리자 탭에 캐릭터를 부른다. 진행은 배경 스크립트가 저장소에 쓰고 패널이 따라간다. */
 export default function GuideStep({ state, dispatch }: Props) {
   const mode = state.guide?.mode ?? "create";
   const steps = stepsFor(mode, GUIDE, state.settings, state.result?.changes ?? []);
   const index = state.guide?.index ?? 0;
-
-  useEffect(() => {
-    const onMessage = (msg: { type?: string; index?: number }) => {
-      if (msg.type === "guide:progress" && typeof msg.index === "number") {
-        if (msg.index >= steps.length) dispatch(mode === "export" ? { type: "startUpload" } : { type: "guideDone" });
-        else dispatch({ type: "guideProgress", index: msg.index });
-      }
-    };
-    browser.runtime.onMessage.addListener(onMessage);
-    return () => browser.runtime.onMessage.removeListener(onMessage);
-  }, [steps.length, mode]);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function open() {
-    const tab = await browser.tabs.create({ url: ADS_MANAGER_URL });
-    const send = () => tab.id && browser.tabs.sendMessage(tab.id, { type: "guide:start", steps, startIndex: index }).catch(() => {});
-    const onUpdated = (id: number, info: { status?: string }) => {
-      if (id === tab.id && info.status === "complete") {
-        browser.tabs.onUpdated.removeListener(onUpdated);
-        setTimeout(send, 1500);   // 광고 관리자는 화면을 늦게 그린다
-      }
-    };
-    browser.tabs.onUpdated.addListener(onUpdated);
+    setBusy(true);
+    setError(null);
+    // 이미 열린 광고 관리자 탭이 있으면 그 탭으로 (반쯤 채운 초안을 떠나지 않게)
+    const [existing] = await browser.tabs.query({ url: ADS_MANAGER_MATCH });
+    const tab = existing ?? (await browser.tabs.create({ url: ADS_MANAGER_URL }));
+    if (existing?.id) await browser.tabs.update(existing.id, { active: true });
+    const ok = await sendWithRetry(() => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index }));
+    setBusy(false);
+    if (!ok) setError("캐릭터를 부르지 못했어요. 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
+  }
+
+  // 수정 안내 목록에 없는 칸만 바뀌었으면: 탭을 열지 않고 글로 알려 준다.
+  if (mode === "edit" && steps.length === 0) {
+    return (
+      <section className="flex flex-col gap-5">
+        <Coach>이 칸들은 광고 관리자에서 직접 바꿔 주세요.</Coach>
+        <ul className="flex flex-col gap-2">
+          {(state.result?.changes ?? []).map((c) => (
+            <li key={c.field_id} className="text-[15px]">{c.label} → {c.new}</li>
+          ))}
+        </ul>
+        <PrimaryButton onClick={() => dispatch({ type: "guideDone" })}>바꿨어요</PrimaryButton>
+      </section>
+    );
   }
 
   const intro = {
@@ -62,7 +71,8 @@ export default function GuideStep({ state, dispatch }: Props) {
           </li>
         ))}
       </ol>
-      <PrimaryButton onClick={open}>광고 관리자 열기</PrimaryButton>
+      {error && <ErrorLine message={error} onRetry={open} />}
+      <PrimaryButton onClick={open} busy={busy}>광고 관리자 열기</PrimaryButton>
     </section>
   );
 }

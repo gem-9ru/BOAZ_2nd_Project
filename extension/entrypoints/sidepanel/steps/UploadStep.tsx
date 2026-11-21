@@ -7,9 +7,11 @@ import { Coach, ErrorLine } from "../ui/Coach";
 export default function UploadStep({ dispatch }: { state: FlowState; dispatch: (ev: FlowEvent) => void }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [last, setLast] = useState<File | null>(null);
 
   async function onFile(file: File | undefined) {
     if (!file) return;
+    setLast(file);
     setBusy(true);
     setError(null);
     try {
@@ -30,11 +32,14 @@ export default function UploadStep({ dispatch }: { state: FlowState; dispatch: (
         type="file"
         accept=".csv,text/csv"
         disabled={busy}
-        onChange={(e) => void onFile(e.target.files?.[0])}
+        onChange={(e) => {
+          void onFile(e.target.files?.[0]);
+          e.target.value = "";   // 같은 파일을 다시 골라도 다시 올라가게
+        }}
         className="text-[15px] file:mr-3 file:rounded-xl file:border-0 file:bg-ink file:text-cream file:px-4 file:py-2.5"
       />
       {busy && <p className="text-[13px] text-soft" role="status">결과를 읽는 중이에요…</p>}
-      {error && <ErrorLine message={error} />}
+      {error && <ErrorLine message={error} onRetry={last ? () => void onFile(last) : undefined} />}
       <button type="button" onClick={() => dispatch({ type: "startExport" })} className="text-left text-[13px] underline text-soft">
         결과 파일을 아직 못 받았어요 (내보내는 법 보기)
       </button>

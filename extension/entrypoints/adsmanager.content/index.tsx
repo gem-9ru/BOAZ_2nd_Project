@@ -10,6 +10,15 @@ export default defineContentScript({
   async main(ctx) {
     let guide: Guide | null = null;
     let root: ReactDOM.Root | null = null;
+    let timer: number | null = null;
+
+    function stopGuide() {
+      guide?.stop();
+      guide = null;
+      if (timer !== null) window.clearInterval(timer);
+      timer = null;
+    }
+    ctx.onInvalidated(stopGuide);
 
     const ui = await createShadowRootUi(ctx, {
       name: "ad-coach-buddy",
@@ -29,23 +38,27 @@ export default defineContentScript({
         <Character
           view={guide.view()}
           onDone={() => { guide?.markDone(); render(); }}
-          onClose={() => { guide?.stop(); ui.remove(); }}
+          onClose={() => { stopGuide(); ui.remove(); }}
         />,
       );
     }
 
     browser.runtime.onMessage.addListener((msg: { type?: string; steps?: GuideStepItem[]; startIndex?: number }) => {
       if (msg.type !== "guide:start" || !msg.steps) return;
-      guide?.stop();
+      stopGuide();
       ui.mount();
+      const total = msg.steps.length;
       guide = new Guide(document, msg.steps, msg.startIndex ?? 0, (index) => {
-        void browser.runtime.sendMessage({ type: "guide:progress", index }).catch(() => {});
+        void browser.runtime.sendMessage({ type: "guide:progress", index, total }).catch(() => {});
         render();
       });
       render();
-      // 화면이 바뀌어 칸이 새로 생기면 다시 그린다 (찾는 중 → 찾음).
-      const id = window.setInterval(render, 1000);
-      ctx.onInvalidated(() => window.clearInterval(id));
+      // 광고 관리자는 화면을 다시 그리거나 다음 화면으로 넘어간다 → 1초마다 칸을 다시 찾고 다시 그린다.
+      timer = window.setInterval(() => {
+        guide?.tick();
+        render();
+      }, 1000);
+      return true;
     });
   },
 });

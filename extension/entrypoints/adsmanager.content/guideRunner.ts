@@ -66,6 +66,16 @@ export class Guide {
     this.seek();
   }
 
+  /** 화면이 바뀌었을 수 있으니 다시 본다: 아직 못 찾았거나, 찾았던 칸이 다시 그려져 사라졌으면 다시 찾는다. */
+  tick(): void {
+    if (!this.steps[this.index] || !this.languageOk) return;
+    if (!this.target || !this.target.isConnected) {
+      const tries = this.tries;
+      this.seek();
+      this.tries = tries;
+    }
+  }
+
   stop(): void {
     this.detach?.();
     if (this.timer) clearTimeout(this.timer);
@@ -87,12 +97,9 @@ export class Guide {
     if (this.target && item && item.entry.done === "value") {
       const el = this.target;
       const onChange = () => this.advance();
-      el.addEventListener("input", onChange, { once: true });
+      // 'change'는 입력을 마쳤을 때(칸을 떠나거나 고름) 한 번 온다. 글자 하나마다 오는 'input'으로 넘기지 않는다.
       el.addEventListener("change", onChange, { once: true });
-      this.detach = () => {
-        el.removeEventListener("input", onChange);
-        el.removeEventListener("change", onChange);
-      };
+      this.detach = () => el.removeEventListener("change", onChange);
     }
     if (!this.target && item && this.languageOk && this.retryMs > 0 && this.tries < MAX_TRIES) {
       this.timer = setTimeout(() => this.retryNow(), this.retryMs);
