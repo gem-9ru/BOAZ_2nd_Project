@@ -239,15 +239,21 @@ def audience(keyword: str, category: str = DEFAULT_CATEGORY, online: bool = True
             "index": audience_index(g["f"], a, category_baseline(category, online)), "grade": "B"}
 
 
+def top_age(aud: dict) -> str:
+    """대표 연령대: 비중이 MIN_AGE_SHARE 이상인 연령대 중 분야 평균 대비 배수가 가장 큰 것 (한 줄 요약과 같은 기준)."""
+    ages = {a: s for a, s in aud["ages"].items() if s >= MIN_AGE_SHARE}
+    idx = aud.get("index", {})
+    return max(ages, key=lambda a: (idx.get(a, 0), ages[a])) if ages else max(aud["ages"], key=aud["ages"].get)
+
+
 def headline(keyword: str, aud: Optional[dict], fallback_qc: Optional[float] = None) -> str:
     """한 줄 요약. 예: "답례품쿠키를 찾는 사람은 30대 여성이 분야 평균의 2.8배, 11월에 가장 많이 찾아요"."""
     if not aud:
         if fallback_qc:
             return f"'{keyword}'은(는) 한 달에 약 {int(fallback_qc):,}번 검색돼요"
         return f"'{keyword}'를 찾는 사람 정보는 아직 못 가져왔어요"
-    ages = {a: s for a, s in aud["ages"].items() if s >= MIN_AGE_SHARE}
     idx = aud.get("index", {})
-    best = max(ages, key=lambda a: (idx.get(a, 0), ages[a])) if ages else max(aud["ages"], key=aud["ages"].get)
+    best = top_age(aud)
     sex = "여성" if aud["female"] >= 0.6 else "남성" if aud["female"] <= 0.4 else ""
     who = f"{best}대 {sex}".strip() + ("이" if sex else "가")
     mult = idx.get(best)
