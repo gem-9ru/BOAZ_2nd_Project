@@ -1,0 +1,42 @@
+# 가정값과 근거 (집행 전 예측·진단 기준에 쓰임)
+# 원본: 다정 가상 데이터 '안내' 시트 '가정과 근거' (11/12). 등급: A 실측 · B 메타 추산 · C 공개 자료 · D 우리 가정
+# 실제 데이터(만원 실험)로 확인하면 grade를 바꾸고 source에 적는다.
+
+meta:
+  cpm:
+    traffic: {low: 2200, high: 3200, grade: D, source: 경매·트래픽 목적 가정 (만원 실험으로 확인 예정)}
+    awareness_broad: {low: 486, high: 961, grade: B, source: E1·E5 메타 예약 추산치}
+    awareness_narrow: {low: 1900, high: 2400, grade: D, source: 타겟 축소·인스타 전용 시 상승 가정}
+  link_ctr: {value: 0.012, grade: C, source: AMPM 이커머스 평균 1.0~2.0%}
+  # 메타가 실제로 노출을 몰아주는 사람 수. 화면의 '타겟 규모'보다 훨씬 작음
+  effective_target:
+    넓게: {value: 850000, grade: B, source: E1 역산 68만~106만}
+    20~39 여성: {value: 250000, grade: D, source: 가정}
+    서울 20~39 여성: {value: 60000, grade: D, source: 가정}
+  # 가상 데이터의 타겟 이름 → 위 크기
+  target_alias:
+    "어드밴티지+ 타겟(18~65+)": 넓게
+    "대한민국 20~39 여성": 20~39 여성
+    "서울 20~39 여성": 서울 20~39 여성
+  daily_overspend: {value: 1.75, grade: C, source: 메타 도움말 (하루 최대 1.75배 지출 가능)}
+
+naver:
+  cpc: {low: 580, high: 820, value: 700, grade: C, source: AMPM 평균 530원·상위 3위 850원}
+  ctr: {low: 0.016, high: 0.026, grade: C, source: AMPM 0.8~2.4%, 모바일 2.3%}
+
+store:
+  cvr:
+    meta_feed: {low: 0.010, high: 0.016, grade: D}
+    naver_ad: {value: 0.03, grade: D}
+    brand_search: {value: 0.07, grade: D}
+    organic: {value: 0.03, grade: D}
+
+key_unknowns:
+  - id: brand_search_rate
+    title: 광고 본 사람이 브랜드를 검색하는 비율
+    value: 인스타 0.4% · 그 외 0.12% (기억한 사람 기준)
+    why: 어느 경로가 1등인지가 이 값에 달려 있음. 0이면 네이버 몰빵(C4)이 가장 싸짐
+  - id: memory_decay
+    title: 광고를 본 뒤 며칠이면 잊나
+    value: 잊는 효과 없음 (가상 데이터 가정)
+    why: 기간을 줄이는 개선안(C1b)이 효과가 있는지가 이 값에 달려 있음
