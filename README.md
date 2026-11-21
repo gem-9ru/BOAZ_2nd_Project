@@ -9,6 +9,7 @@
 ## 버전별 주소
 | 버전 | 앱 | 코드 |
 |---|---|---|
+| **v3 (개발 중, 크롬 확장)**: 사이드 패널 챗봇 하나로 ① 찾기(네이버 연령·키워드) → ② 세팅(문구 3안, 질문 9개, 광고 관리자 위 캐릭터 안내) → ③ 분석(결과 파일 → 문제·바꿀 칸·예상 범위, 보고서 탭). 설계 [docs/superpowers/specs/2026-11-22-광고코치-크롬확장-design.md](docs/superpowers/specs/2026-11-22-광고코치-크롬확장-design.md), 시연 [docs/superpowers/demo-checklist.md](docs/superpowers/demo-checklist.md) | 로컬 (`server/` + `extension/`) | `feat/v3-extension` |
 | **v2.0.0 (프로토타입, 새로 개발)**: 세팅 → 실행 → 진단 → 다음 달 세팅 루프. ① 가게 정보 → 내 손님 찾기(네이버 검색어 묶음·연령·성별) → 예산·예측 → 질문 하나씩 → 세팅값 시트 ② 측정 체크리스트 ③ 결과 올리기 → 진단 카드 → 효과 확인(시즌 보정) → 다음 달 바뀐 칸. 칸·컬럼·규칙은 `v2/specs/*.yaml`, 설계는 [v2/DEV_CONTRACT.md](v2/DEV_CONTRACT.md)·[plans/개발_티켓.md](plans/개발_티켓.md) | https://ad-budget-simulator-v2.streamlit.app/ (`feat/v2-prototype` 브랜치, Main file `v2/app/main.py`, Python 3.12) | [feat/v2-prototype](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/feat/v2-prototype) |
 | v1.1 (현재, main): ① 세팅을 한 번에 한 질문으로(질문 5개 → 결과 → 예산 고르기 → 광고 관리자에 넣을 값), 지난 답 칩으로 고치기, 진행 표시 분리 (챗봇 시안 3개 중 C, 시안 기록은 `prototype/chat-ui-variants` 브랜치) | https://ad-budget-simulator.streamlit.app/ · 고정: https://ad-budget-simulator-v11.streamlit.app/ (`release/v1.1` 브랜치) | [v1.1](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v1.1) |
 | v1.0: 세팅 → 실행 → 최적화 스테퍼, 첫 화면 들어가는 길 두 개(처음부터 / 계획 파일·리포트만), 세팅값 복사 칸, 매체별 단계 비율 막대, 상태 배지, 다크 모드 ([기획안_개정본_세팅코치.md](기획안_개정본_세팅코치.md) 5장) | https://ad-budget-simulator-v10.streamlit.app/ (`release/v1.0` 브랜치) | [v1.0](https://github.com/gem-9ru/BOAZ_2nd_Project/tree/v1.0) |
@@ -45,6 +46,15 @@ python3 -m venv .venv
 ```
 네이버 API 키는 프로젝트 루트 `.env`에 둡니다 (`NAVER_AD_API_KEY`, `NAVER_AD_SECRET_KEY`, `NAVER_AD_CUSTOMER_ID`).
 키가 없으면 `data/interim/naver_cache/`의 저장된 응답으로 오프라인 실행합니다.
+
+### v3 (크롬 확장 + 파이썬 서버)
+```bash
+.venv/bin/pip install -r server/requirements.txt
+.venv/bin/uvicorn server.app:app --port 8000          # COACH_OFFLINE=1 이면 네이버 저장본만
+.venv/bin/python -m pytest server/tests -q
+cd extension && mise exec -- npm install && mise exec -- npx wxt build   # 크롬에서 .output/chrome-mv3 로드
+mise exec -- npx vitest run
+```
 
 ## 배포 (Streamlit Community Cloud)
 1. GitHub 저장소 연결 → Main file path `app/main.py`, Python 3.11 또는 3.12
