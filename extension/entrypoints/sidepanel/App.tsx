@@ -7,6 +7,8 @@ import FindStep from "./steps/FindStep";
 import GuideStep from "./steps/GuideStep";
 import WaitStep from "./steps/WaitStep";
 import QuestionStep from "./steps/QuestionStep";
+import ResultStep from "./steps/ResultStep";
+import UploadStep from "./steps/UploadStep";
 import { ErrorLine } from "./ui/Coach";
 
 const STAGES: { label: string; steps: Step[] }[] = [
@@ -59,10 +61,17 @@ export default function App() {
             </li>
           ))}
         </ol>
+        {state.step !== "find" && (
+          <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }} className="text-[12px] text-soft underline">
+            처음부터
+          </button>
+        )}
       </header>
       {state.guide && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
+      {state.step === "upload" && <UploadStep state={state} dispatch={dispatch} />}
+      {state.step === "result" && <ResultStep state={state} dispatch={dispatch} />}
       {state.step === "copy" && <CopyStep state={state} dispatch={dispatch} />}
       {state.step === "questions" && spec && (
         <QuestionStep state={state} dispatch={dispatch} fields={spec.fields} defaults={spec.defaults} />
