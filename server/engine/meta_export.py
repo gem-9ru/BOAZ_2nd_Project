@@ -17,6 +17,7 @@ from .ingest import Bundle, clean
 
 OBJECTIVE = "트래픽"
 LONG_COLUMNS = {"section", "ad_set", "metric", "value"}
+NEED_CLICKS = "링크 클릭 열이 없어요. 광고 관리자에서 열에 '링크 클릭'을 넣어 다시 내보내 주세요."
 METRIC_NAMES = {"지출(원)": "spend", "노출": "impressions", "링크 클릭": "link_clicks", "랜딩 페이지 조회": "landing_page_views"}
 PLATFORM_NAMES = {"facebook": "Facebook", "instagram": "Instagram", "audience_network": "Audience Network", "messenger": "Messenger"}
 SUMMABLE = ["spend", "impressions", "link_clicks", "landing_page_views"]
@@ -79,6 +80,8 @@ def _from_export(df: pd.DataFrame) -> Bundle:
         base["캠페인 목표"] = OBJECTIVE
     daily, daily_problems = clean(base, "meta_daily")
     b.problems += daily_problems
+    if daily is not None:   # 합계 행처럼 광고 세트가 빈 행은 뺀다 (날짜가 있어도)
+        daily.df = daily.df[daily.df["adset"].notna()].reset_index(drop=True)
     if daily is not None and len(daily.df):
         if has_placement:   # 일×노출 위치 → 날짜·광고 세트로 더함 (비율·도달은 다시 계산하거나 뺀다)
             keep = ["date", "adset", "campaign_objective"] + [c for c in SUMMABLE if c in daily.df.columns]
@@ -93,5 +96,13 @@ def read_export(src: Source) -> Bundle:
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         return Bundle(problems=["파일이 비어 있거나 CSV가 아니에요. 광고 관리자에서 CSV로 내보내 주세요."])
     if LONG_COLUMNS <= set(df.columns):
-        return _from_long(df)
-    return _from_export(df)
+        if "date" not in df.columns:
+            return Bundle(problems=["날짜(date) 열이 없어요. 일별 숫자가 든 파일을 올려 주세요."])
+        b = _from_long(df)
+    else:
+        b = _from_export(df)
+    daily = b.tables.get("meta_daily")
+    if daily is not None and "link_clicks" not in daily.df.columns:   # 모든 진단이 링크 클릭에 기댄다
+        del b.tables["meta_daily"]
+        b.problems.append(NEED_CLICKS)
+    return b

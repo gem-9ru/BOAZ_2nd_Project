@@ -32,7 +32,7 @@ describe("ResultStep", () => {
     render(<ResultStep state={{ ...initialState(), step: "result", result: hold }} dispatch={() => {}} />);
     expect(screen.getByRole("heading", { name: "아직 판단하기 일러요" })).toBeTruthy();
     expect(screen.getByText(/B_피드만노출\(AN제외\)이 나을 확률 약 61%/)).toBeTruthy();
-    expect(screen.getByText("실측 근거")).toBeTruthy();
+    expect(screen.getByText("가설")).toBeTruthy();
   });
 
   it("expectation is a range, never a single number", () => {

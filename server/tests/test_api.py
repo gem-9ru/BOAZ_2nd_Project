@@ -69,3 +69,11 @@ def test_defaults_lists_fields_not_asked():
     ids = [d["id"] for d in defaults]
     assert "meta.campaign.buying_type" in ids and "meta.adset.age_gender" not in ids
     assert all(d["default"] is not None and d["why"] for d in defaults)
+
+
+def test_research_failure_explains_naver_error(monkeypatch):
+    from server.engine import market, naver_api
+    monkeypatch.setattr(market, "build", lambda seeds, online=True: None)
+    monkeypatch.setattr(naver_api, "last_error", lambda: "네이버 키가 없어요.")
+    body = TestClient(app).post("/research", json={"product": "아무거나"}).json()
+    assert body["notice"].startswith("네이버 키가 없어요.")

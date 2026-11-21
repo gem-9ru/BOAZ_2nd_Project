@@ -33,7 +33,7 @@ def test_ovenlog_charts():
 
 def test_hold_expectation_shows_range_narrowing_with_more_days():
     e = _post(DEMO).json()["expect"]
-    assert e["metric"] == "link_ctr" and e["grade"] == "checked"
+    assert e["metric"] == "link_ctr" and e["grade"] == "hypothesis"
     assert e["current"][0] < 30 / 1822 < e["current"][1]
     assert (e["expected"][1] - e["expected"][0]) < (e["current"][1] - e["current"][0])
 
@@ -64,3 +64,21 @@ def test_empty_file_is_friendly(tmp_path):
     p.write_bytes(b"")
     r = _post(p)
     assert r.status_code == 400 and r.json()["error"]
+
+
+def test_two_adsets_without_link_clicks_is_400_not_500(tmp_path):
+    p = tmp_path / "noclicks.csv"
+    p.write_text("보고 시작,광고 세트 이름,지출 금액 (KRW),노출\n2026-11-18,A,100,50\n2026-11-18,B,100,60\n", encoding="utf-8")
+    r = _post(p)
+    assert r.status_code == 400 and "링크 클릭" in r.json()["error"]
+
+
+def test_straddling_rule_uses_hold_changes_and_hypothesis_grade():
+    out = A.analyze(read_export(DEMO), metrics_override={"link_ctr": 0.0075, "link_clicks": 30.0, "an_click_share": 0.0})
+    assert out["status"] == "hold"
+    assert [c["field_id"] for c in out["changes"]] == ["meta.adset.end_date"]
+    assert out["expect"]["metric"] == "link_ctr" and out["expect"]["grade"] == "hypothesis"
+
+
+def test_small_sample_hold_range_is_graded_hypothesis():
+    assert _post(DEMO).json()["expect"]["grade"] == "hypothesis"

@@ -76,12 +76,22 @@ def _charts(b: Bundle) -> dict:
 
 def _ab(daily: pd.DataFrame) -> Optional[dict]:
     sets = sorted(daily["adset"].dropna().unique())
-    if len(sets) != 2:
+    if len(sets) != 2 or not {"link_clicks", "impressions"} <= set(daily.columns):
         return None
     g = daily.groupby("adset")[["link_clicks", "impressions"]].sum()
     a, b = sets
     return {"a": a, "b": b, "prob_b_better": round(prob_better(g.loc[a, "link_clicks"], g.loc[a, "impressions"],
                                                                g.loc[b, "link_clicks"], g.loc[b, "impressions"]), 3)}
+
+
+def _hold_expect(m: dict, n: Dict[str, float], ab: Optional[dict]) -> Optional[dict]:
+    """판단 보류: 지금 범위 vs 같은 비율로 표본이 두 배일 때 범위. 표본이 는다는 가정이 들어가 '가설'."""
+    cur = _interval("link_ctr", m, n)
+    if not cur:
+        return None
+    return {"metric": "link_ctr", "label": LABELS["link_ctr"], "current": cur,
+            "expected": _interval("link_ctr", m, n, scale=MORE_DAYS_FACTOR), "grade": "hypothesis",
+            "prob_better": ab["prob_b_better"] if ab else None}
 
 
 def analyze(b: Bundle, metrics_override: Optional[dict] = None) -> dict:
@@ -101,7 +111,17 @@ def analyze(b: Bundle, metrics_override: Optional[dict] = None) -> dict:
         rule = _rule(f.id)
         cond = (rule.get("when") or [{}])[0]
         iv = _interval(cond.get("metric", ""), m, n)
-        status = "hold" if iv and straddles(iv[0], iv[1], float(cond["value"])) else "fired"
+        if iv and straddles(iv[0], iv[1], float(cond["value"])):
+            # 기준을 걸쳐 단정할 수 없음 → 그 규칙의 변경을 밀지 않고 '기간 늘리기'로 (설계서 14장)
+            hold_rule = next(x for x in findings if x.id == HOLD_RULE) if any(x.id == HOLD_RULE for x in findings) else None
+            changes = _changes(hold_rule) if hold_rule and hold_rule.status == "fired" else [
+                {"field_id": "meta.adset.end_date", "label": "종료 날짜", "new": "7일 더 연장",
+                 "note": "숫자가 더 모이면 판단할 수 있어요"}]
+            return {**base, "status": "hold",
+                    "finding": {"id": f.id, "title": f.title, "funnel": f.funnel,
+                                "message": f"{f.message} 다만 숫자가 적어 기준에 걸쳐 있어요. 아직 단정하기 일러요."},
+                    "changes": changes, "expect": _hold_expect(m, n, ab)}
+        status = "fired"
         expect = None
         spec = rule.get("expect")
         if spec:
@@ -115,11 +135,7 @@ def analyze(b: Bundle, metrics_override: Optional[dict] = None) -> dict:
 
     hold = next((f for f in findings if f.id == HOLD_RULE and f.status == "fired"), None)
     if hold:
-        cur = _interval("link_ctr", m, n)
-        expect = None if not cur else {
-            "metric": "link_ctr", "label": LABELS["link_ctr"], "current": cur,
-            "expected": _interval("link_ctr", m, n, scale=MORE_DAYS_FACTOR), "grade": "checked",
-            "prob_better": ab["prob_b_better"] if ab else None}
+        expect = _hold_expect(m, n, ab)
         return {**base, "status": "hold", "finding": {"id": hold.id, "title": hold.title, "funnel": hold.funnel,
                                                       "message": hold.message},
                 "changes": _changes(hold), "expect": expect}

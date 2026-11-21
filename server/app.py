@@ -12,7 +12,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from server.engine import analyze as analysis, copywriter, market, specs
+from server.engine import analyze as analysis, copywriter, market, naver_api, specs
 from server.engine.meta_export import read_export
 
 MAX_KEYWORDS = 10
@@ -41,8 +41,12 @@ def research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]
     report = market.build(seeds, online=_online())
     if report is None:
-        return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache",
-                "notice": "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."}
+        why = naver_api.last_error()   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
+        notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
+        return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice}
+    if not report.recommended:
+        return {"headline": report.headline, "keywords": [], "audience": None, "fetched": report.fetched,
+                "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요."}
     kw = report.keywords.set_index("keyword")["total_qc"]
     keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
     audience = None

@@ -59,3 +59,16 @@ def test_meta_day_by_placement_export():
     assert set(d["campaign_objective"]) == {"트래픽"}
     p = b.tables["meta_placement"].df
     assert len(p) == 3 and p["placement"].str.contains("Audience Network").sum() == 1
+
+
+def test_dated_summary_row_without_adset_is_dropped():
+    csv = ("보고 시작,광고 세트 이름,지출 금액 (KRW),노출,링크 클릭\n"
+           "2026-11-18,A,100,500,5\n2026-11-19,A,100,500,5\n2026-11-18,,200,1000,10\n")
+    d = read_export(io.BytesIO(csv.encode("utf-8"))).tables["meta_daily"].df
+    assert d["impressions"].sum() == 1000
+
+
+def test_long_format_without_date_is_a_problem_not_a_crash():
+    csv = "section,ad_set,metric,value\n5_부록_일자별,A,노출,10\n"
+    b = read_export(io.BytesIO(csv.encode("utf-8")))
+    assert "meta_daily" not in b.tables and b.problems
