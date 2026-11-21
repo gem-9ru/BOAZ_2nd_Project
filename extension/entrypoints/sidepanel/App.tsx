@@ -4,6 +4,8 @@ import { initialState, reduce, type FlowEvent, type FlowState, type Step } from 
 import { loadState, saveState } from "../../lib/storage";
 import CopyStep from "./steps/CopyStep";
 import FindStep from "./steps/FindStep";
+import GuideStep from "./steps/GuideStep";
+import WaitStep from "./steps/WaitStep";
 import QuestionStep from "./steps/QuestionStep";
 import { ErrorLine } from "./ui/Coach";
 
@@ -58,6 +60,8 @@ export default function App() {
           ))}
         </ol>
       </header>
+      {state.guide && <GuideStep state={state} dispatch={dispatch} />}
+      {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
       {state.step === "copy" && <CopyStep state={state} dispatch={dispatch} />}
       {state.step === "questions" && spec && (

@@ -14,5 +14,8 @@ export default defineConfig({
       "http://localhost:8000/*",
     ],
     action: { default_title: "광고 코치 열기" },
+    web_accessible_resources: [
+      { resources: ["guide/*"], matches: ["https://adsmanager.facebook.com/*", "https://business.facebook.com/*"] },
+    ],
   },
 });
