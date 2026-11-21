@@ -1,7 +1,11 @@
-import { useEffect, useReducer, useRef } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
+import { fields as fetchFields, type Field, type PresetField } from "../../lib/api";
 import { initialState, reduce, type FlowEvent, type FlowState, type Step } from "../../lib/flow";
 import { loadState, saveState } from "../../lib/storage";
+import CopyStep from "./steps/CopyStep";
 import FindStep from "./steps/FindStep";
+import QuestionStep from "./steps/QuestionStep";
+import { ErrorLine } from "./ui/Coach";
 
 const STAGES: { label: string; steps: Step[] }[] = [
   { label: "찾기", steps: ["find"] },
@@ -29,6 +33,13 @@ export default function App() {
     if (loaded.current) void saveState(state);
   }, [state]);
 
+  const [spec, setSpec] = useState<{ fields: Field[]; defaults: PresetField[] } | null>(null);
+  const [specError, setSpecError] = useState<string | null>(null);
+  const loadSpec = () => fetchFields().then(setSpec, (e: Error) => setSpecError(e.message));
+  useEffect(() => {
+    if (state.step === "questions" && !spec) void loadSpec();
+  }, [state.step]);
+
   const current = STAGES.findIndex((st) => st.steps.includes(state.step));
 
   return (
@@ -48,6 +59,11 @@ export default function App() {
         </ol>
       </header>
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
+      {state.step === "copy" && <CopyStep state={state} dispatch={dispatch} />}
+      {state.step === "questions" && spec && (
+        <QuestionStep state={state} dispatch={dispatch} fields={spec.fields} defaults={spec.defaults} />
+      )}
+      {state.step === "questions" && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
     </main>
   );
 }
