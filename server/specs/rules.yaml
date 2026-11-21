@@ -40,6 +40,7 @@ rules:
       - {field: meta.ad.creative_test, set: 켜기 (새 사진 2~3개 비교), note: 질린 소재를 바꿔요}
       - {field: meta.creative.copy, set: 새 문구 3개, note: 첫 문장을 바꿔요}
     grade: hypothesis
+    expect: {metric: link_ctr, low: 0.15, high: 0.50, grade: hypothesis}   # 임시 가설값
 
   - id: rule.placement_quality
     title: 노출 위치 품질
@@ -49,6 +50,7 @@ rules:
     changes:
       - {field: meta.adset.placements, set: "어드밴티지+ 노출 위치, Audience Network 제외", note: 싸지만 안 팔리는 자리를 빼요}
     grade: hypothesis
+    expect: {metric: visit_rate, low: 0.05, high: 0.30, grade: hypothesis}   # 임시 가설값: 다정 근거값 오면 교체
 
   - id: rule.ig_share_low
     title: 인스타그램 비중 낮음
@@ -101,6 +103,7 @@ rules:
       - {field: meta.creative.copy, set: 새 문구 3개, note: 첫 문장과 사진을 바꿔요}
       - {field: meta.ad.creative_test, set: 켜기 (사진 2~3개 비교), note: 무엇이 끌리는지 비교해요}
     grade: hypothesis
+    expect: {metric: link_ctr, low: 0.10, high: 0.40, grade: hypothesis}   # 임시 가설값
 
   - id: rule.click_without_visit
     title: 눌렀는데 페이지에 안 옴
@@ -169,3 +172,14 @@ rules:
       - {field: meta.adset.value_rules, set_from: segment_best, note: 이 그룹의 우선순위를 높여요}
     advice: 리포트를 연령·성별로 나눠 내보내면 이 규칙이 돌아요.
     grade: hypothesis
+
+  # ── v3: 판단 보류 (다른 규칙이 하나도 안 걸리고 클릭이 적을 때만 analyze.py가 고름) ──
+  - id: rule.hold_small_sample
+    title: 아직 판단하기 일러요
+    funnel: 측정
+    when: [{metric: link_clicks, op: "<", value: 100}]
+    says: 아직 링크 클릭이 {link_clicks}번이라 무엇이 문제인지 단정하기 일러요. 같은 설정으로 조금 더 돌려 보세요.
+    changes:
+      - {field: meta.adset.end_date, set: 7일 더 연장, note: 클릭이 100번쯤 모이면 판단할 수 있어요}
+    grade: calc
+

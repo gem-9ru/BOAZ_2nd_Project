@@ -7,11 +7,13 @@ import datetime
 import os
 from typing import List, Optional
 
-from fastapi import FastAPI
+from fastapi import FastAPI, File, UploadFile
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from server.engine import copywriter, market, specs
+from server.engine import analyze as analysis, copywriter, market, specs
+from server.engine.meta_export import read_export
 
 MAX_KEYWORDS = 10
 
@@ -81,3 +83,12 @@ def fields() -> dict:
     preset = [{"id": f["id"], "label": f["label"], "default": str(f["default"]), "why": f["why"]}
               for f in all_meta if f.get("kind") in SET_KINDS and f.get("default") is not None and f.get("why")]
     return {"fields": asked, "defaults": preset}
+
+
+@app.post("/analyze")
+async def analyze(file: UploadFile = File(...)):
+    bundle = read_export(await file.read())
+    if "meta_daily" not in bundle.tables:
+        msg = " ".join(bundle.problems) or "메타 결과를 읽지 못했어요. 광고 관리자에서 일·노출 위치 기준으로 내보내 주세요."
+        return JSONResponse(status_code=400, content={"error": msg})
+    return analysis.analyze(bundle)
