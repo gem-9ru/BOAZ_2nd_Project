@@ -1,0 +1,394 @@
+[
+  {
+    "id": "meta.campaign.objective",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "트래픽"
+      },
+      {
+        "labelText": "트래픽"
+      }
+    ],
+    "say": "{value}을(를) 고르세요",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '캠페인 목표' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.campaign.special_category",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "특별 광고 카테고리"
+      },
+      {
+        "labelText": "특별 광고 카테고리"
+      }
+    ],
+    "say": "해당 없으면 비워 두세요 ({value})",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '특별 광고 카테고리' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.conversion_location",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "전환 위치"
+      },
+      {
+        "labelText": "전환 위치"
+      }
+    ],
+    "say": "{value}(으)로 보내요. '웹사이트'를 고르세요",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '전환 위치' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.end_date",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "종료 날짜"
+      },
+      {
+        "labelText": "종료 날짜"
+      }
+    ],
+    "say": "종료 날짜를 켜고 {value}(으)로 넣으세요",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '종료 날짜' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.location",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "위치"
+      },
+      {
+        "labelText": "위치"
+      }
+    ],
+    "say": "{value}(으)로 두세요",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '위치' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.age_gender",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "연령"
+      },
+      {
+        "labelText": "연령"
+      }
+    ],
+    "say": "여기에 {value}을(를) 넣으세요",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '연령' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.pre.fb_page",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "Facebook 페이지"
+      },
+      {
+        "labelText": "Facebook 페이지"
+      }
+    ],
+    "say": "가게 페이스북 페이지를 고르세요",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 'Facebook 페이지' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.pre.ig_account",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "Instagram 계정"
+      },
+      {
+        "labelText": "Instagram 계정"
+      }
+    ],
+    "say": "인스타그램 계정을 고르세요 ({value})",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 'Instagram 계정' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.ad.format",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "형식"
+      },
+      {
+        "labelText": "형식"
+      }
+    ],
+    "say": "{value}을(를) 고르세요",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '형식' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.ad.media",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "미디어 추가"
+      },
+      {
+        "labelText": "미디어 추가"
+      }
+    ],
+    "say": "준비한 사진을 올리세요 ({value})",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '미디어 추가' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.creative.copy.text",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "기본 문구"
+      },
+      {
+        "labelText": "기본 문구"
+      }
+    ],
+    "say": "이 문구를 붙여 넣으세요: {value}",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '기본 문구' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.creative.copy.headline",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "제목"
+      },
+      {
+        "labelText": "제목"
+      }
+    ],
+    "say": "이 제목을 붙여 넣으세요: {value}",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '제목' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.ad.website_url",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "웹사이트 URL"
+      },
+      {
+        "labelText": "웹사이트 URL"
+      }
+    ],
+    "say": "스토어 주소를 넣으세요: {value}",
+    "done": "value",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.publish",
+    "mode": "create",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "text": "게시"
+      }
+    ],
+    "say": "여기서 게시를 누르면 광고가 시작돼요. 확인하고 직접 눌러 주세요",
+    "done": "manual",
+    "publish": true,
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "오른쪽 아래 '게시' 버튼을 확인하고 직접 눌러 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.placements",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "노출 위치"
+      },
+      {
+        "labelText": "노출 위치"
+      }
+    ],
+    "say": "'수동 노출 위치'를 고르고 {value}",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "광고 세트 수정 화면에서 '노출 위치' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.end_date",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "aria": "종료 날짜"
+      },
+      {
+        "labelText": "종료 날짜"
+      }
+    ],
+    "say": "종료 날짜를 {value}",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "광고 세트 수정 화면에서 '종료 날짜' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "export.open",
+    "mode": "export",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "text": "보고서"
+      }
+    ],
+    "say": "위쪽 '보고서'를 눌러 주세요",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "위쪽 '보고서'를 눌러 주세요"
+    }
+  },
+  {
+    "id": "export.breakdown",
+    "mode": "export",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "text": "분석 기준"
+      }
+    ],
+    "say": "분석 기준에서 '일'과 '노출 위치'를 고르세요",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "분석 기준에서 '일'과 '노출 위치'를 고르세요"
+    }
+  },
+  {
+    "id": "export.download",
+    "mode": "export",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "text": "내보내기"
+      }
+    ],
+    "say": "'내보내기'를 누르고 CSV로 받으세요",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/placeholder.png",
+      "text": "'내보내기'를 누르고 CSV로 받으세요"
+    }
+  }
+]
