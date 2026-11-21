@@ -1,6 +1,7 @@
 """광고 코치 v3 서버: 크롬 확장이 부르는 HTTP 창구. 계산은 server/engine에 있다.
 
 - COACH_OFFLINE=1 이면 네이버를 부르지 않고 저장본만 쓴다 (시연장 네트워크 대비).
+- COACH_NO_LLM=1 이면 Claude를 부르지 않고 문장 틀로 문구를 만든다.
 """
 import datetime
 import os
@@ -10,7 +11,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-from server.engine import market
+from server.engine import copywriter, market, specs
 
 MAX_KEYWORDS = 10
 
@@ -49,3 +50,34 @@ def research(body: ResearchIn) -> dict:
     live = report.fetched == datetime.date.today().isoformat()
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
             "source": "live" if live else "cache", "notice": None}
+
+
+ASKED_KINDS = ("question", "precheck")
+SET_KINDS = ("default", "auto", "next_cycle")
+
+
+class CopiesIn(BaseModel):
+    product: str
+    strengths: List[str] = []
+    keywords: List[str] = []
+
+
+@app.post("/copies")
+def copies(body: CopiesIn) -> dict:
+    client = None if os.environ.get("COACH_NO_LLM") == "1" else copywriter.make_client()
+    made = copywriter.meta_copies(body.product, list(body.strengths) + list(body.keywords), n=3,
+                                  client=client or False)
+    return {"copies": [{"primary_text": c["text"], "headline": c["headline"]} for c in made],
+            "source": "claude" if client else "template"}
+
+
+@app.get("/fields")
+def fields() -> dict:
+    """묻는 칸(질문·사전 점검)과, 묻지 않고 기본값으로 두는 칸(이유 한 줄)."""
+    all_meta = specs.fields("meta")["fields"]
+    asked = [{"id": f["id"], "kind": f["kind"], "label": f["label"], "ask": f["ask"],
+              "options": f.get("options"), "default": f.get("default"), "why": f.get("why", "")}
+             for f in all_meta if f.get("kind") in ASKED_KINDS]
+    preset = [{"id": f["id"], "label": f["label"], "default": str(f["default"]), "why": f["why"]}
+              for f in all_meta if f.get("kind") in SET_KINDS and f.get("default") is not None and f.get("why")]
+    return {"fields": asked, "defaults": preset}

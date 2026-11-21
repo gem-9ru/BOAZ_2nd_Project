@@ -36,3 +36,36 @@ def test_research_unknown_product_is_friendly(monkeypatch):
     r = TestClient(app).post("/research", json={"product": "zzqq없는상품"})
     assert r.status_code == 200
     assert r.json()["keywords"] == [] and r.json()["notice"]
+
+
+def test_copies_without_key_uses_template(monkeypatch):
+    monkeypatch.setenv("COACH_NO_LLM", "1")
+    body = TestClient(app).post("/copies", json={"product": "수제 쿠키", "strengths": ["버터 듬뿍"],
+                                                 "keywords": ["쿠키 선물"]}).json()
+    assert body["source"] == "template" and len(body["copies"]) == 3
+    assert all(c["primary_text"] and c["headline"] for c in body["copies"])
+    assert all(set(c) == {"primary_text", "headline"} for c in body["copies"])
+
+
+def test_copies_without_strengths_still_three(monkeypatch):
+    monkeypatch.setenv("COACH_NO_LLM", "1")
+    body = TestClient(app).post("/copies", json={"product": "수제 쿠키", "strengths": [], "keywords": []}).json()
+    assert len(body["copies"]) == 3
+
+
+def test_fields_are_the_eleven_questions():
+    fields = TestClient(app).get("/fields").json()["fields"]
+    assert [f["id"] for f in fields] == [
+        "meta.pre.fb_page", "meta.pre.ig_account", "meta.campaign.objective", "meta.campaign.special_category",
+        "meta.adset.conversion_location", "meta.adset.end_date", "meta.adset.location", "meta.adset.age_gender",
+        "meta.ad.format", "meta.ad.website_url", "meta.ad.media"]
+    end = next(f for f in fields if f["id"] == "meta.adset.end_date")
+    assert end["kind"] == "question" and end["options"] == ["7일", "14일", "30일"] and end["ask"]
+    assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why"}
+
+
+def test_defaults_lists_fields_not_asked():
+    defaults = TestClient(app).get("/fields").json()["defaults"]
+    ids = [d["id"] for d in defaults]
+    assert "meta.campaign.buying_type" in ids and "meta.adset.age_gender" not in ids
+    assert all(d["default"] is not None and d["why"] for d in defaults)
