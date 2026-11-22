@@ -67,7 +67,7 @@ def _charts(b: Bundle) -> dict:
     place = []
     if "meta_placement" in b.tables:
         p = b.tables["meta_placement"].df.groupby("placement")[["spend", "link_clicks"]].sum().reset_index()
-        place = [{"placement": r.placement, "spend": round(float(r.spend)), "link_clicks": round(float(r.link_clicks))}
+        place = [{"placement": placement_label(r.placement), "spend": round(float(r.spend)), "link_clicks": round(float(r.link_clicks))}
                  for r in p.sort_values("spend", ascending=False).itertuples()]
     return {"funnel": {"impressions": round(n["impressions"]), "link_clicks": round(n["link_clicks"]),
                        "landing_page_views": round(n["landing_page_views"])},
@@ -144,3 +144,22 @@ def analyze(b: Bundle, metrics_override: Optional[dict] = None) -> dict:
             "finding": {"id": "normal", "title": "큰 문제는 없어요", "funnel": "",
                         "message": "깔때기에서 걸린 문제가 없어요. 같은 설정으로 계속 돌리며 지켜보세요."},
             "changes": [], "expect": None}
+
+
+_PLATFORM_KO = {"Facebook": "페이스북", "Instagram": "인스타그램", "Messenger": "메신저"}
+_POSITION_KO = {
+    "feed": "피드", "instagram_reels": "릴스", "facebook_reels": "릴스", "instagram_stories": "스토리",
+    "facebook_stories": "스토리", "instream_video": "인스트림 동영상", "instagram_explore": "탐색 탭",
+    "instagram_explore_grid_home": "탐색 홈", "marketplace": "마켓플레이스", "right_hand_column": "오른쪽 칼럼",
+    "search": "검색 결과", "video_feeds": "동영상 피드", "facebook_profile_feed": "프로필 피드",
+    "instagram_profile_feed": "프로필 피드", "an_classic": "네이티브·배너·전면", "rewarded_video": "보상형 동영상",
+    "messenger_inbox": "받은 메시지함", "messenger_stories": "스토리",
+}
+
+
+def placement_label(name: str) -> str:
+    """'Instagram instagram_reels' → '인스타그램 릴스'. 모르는 이름은 그대로 둔다 (보고서 표시용)."""
+    head, _, pos = str(name).rpartition(" ")
+    if not head:
+        return str(name)
+    return f"{_PLATFORM_KO.get(head, head)} {_POSITION_KO.get(pos, pos)}"

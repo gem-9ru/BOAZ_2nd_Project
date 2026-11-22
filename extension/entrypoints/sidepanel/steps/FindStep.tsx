@@ -35,7 +35,13 @@ export default function FindStep({ state, dispatch }: Props) {
       <Coach>어떤 상품을 파세요? 네이버에서 누가, 어떤 말로 찾는지 알아볼게요.</Coach>
       <div className="flex flex-col gap-2">
         <label htmlFor="product" className="text-[13px] text-soft">파는 상품</label>
-        <div className="flex gap-2">
+        <form
+          className="flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (product.trim() && !busy) search();
+          }}
+        >
           <input
             id="product"
             value={product}
@@ -44,14 +50,13 @@ export default function FindStep({ state, dispatch }: Props) {
             className="flex-1 rounded-xl border border-line bg-paper px-3 py-2.5 text-[15px] focus-visible:outline-2 focus-visible:outline-accent"
           />
           <button
-            type="button"
-            onClick={search}
+            type="submit"
             disabled={!product.trim() || busy}
             className="rounded-xl border border-ink px-4 text-[15px] font-semibold disabled:opacity-40"
           >
             {busy ? "찾는 중…" : "찾아보기"}
           </button>
-        </div>
+        </form>
         {error && <ErrorLine message={error} onRetry={search} />}
       </div>
 

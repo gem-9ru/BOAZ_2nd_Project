@@ -24,6 +24,16 @@ describe("FindStep", () => {
     expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
   });
 
+  it("searches when Enter is pressed in the product box", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(research), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const dispatch = vi.fn();
+    render(<FindStep state={initialState()} dispatch={dispatch} />);
+    fireEvent.change(screen.getByLabelText("파는 상품"), { target: { value: "수제 쿠키" } });
+    fireEvent.submit(screen.getByLabelText("파는 상품"));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "researched" })));
+  });
+
   it("shows the top group from top_age, the cache source line, and confirms the target", () => {
     const dispatch = vi.fn();
     render(<FindStep state={{ ...initialState(), research, product: "수제 쿠키" }} dispatch={dispatch} />);

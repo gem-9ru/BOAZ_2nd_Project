@@ -80,4 +80,11 @@ describe("report", () => {
     expect(screen.getAllByText(/61%/).length).toBeGreaterThan(0);
     expect(screen.getByRole("table", { name: "일별 숫자" })).toBeTruthy();
   });
+
+  it("does not repeat the A/B letter when the ad set name already starts with it", () => {
+    render(<ReportApp result={hold} />);
+    expect(screen.queryByText(/A A_/)).toBeNull();
+    expect(screen.getByText("A 자동노출위치")).toBeTruthy();
+    expect(screen.getByText("B 피드만노출(AN제외)")).toBeTruthy();
+  });
 });

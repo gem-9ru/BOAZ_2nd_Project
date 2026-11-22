@@ -141,8 +141,8 @@ export default function ReportApp({ result: r }: { result: Analysis }) {
         {r.ab && (
           <Panel title="두 광고 비교 (같은 돈)" note="5천 원 규모라 승패를 단정하지 않고 확률로 말해요.">
             <div className="flex flex-col gap-2 text-[16px]">
-              <p><span className="inline-block size-3 rounded-full mr-2" style={{ background: SERIES }} />A {r.ab.a}</p>
-              <p><span className="inline-block size-3 rounded-full mr-2" style={{ background: B_COLOR }} />B {r.ab.b}</p>
+              <p><span className="inline-block size-3 rounded-full mr-2" style={{ background: SERIES }} />A {abName(r.ab.a, "A")}</p>
+              <p><span className="inline-block size-3 rounded-full mr-2" style={{ background: B_COLOR }} />B {abName(r.ab.b, "B")}</p>
               <p className="text-[32px] font-bold" style={{ color: INK }}>B가 나을 확률 약 {Math.round(r.ab.prob_b_better * 100)}%</p>
             </div>
           </Panel>
@@ -166,4 +166,9 @@ export default function ReportApp({ result: r }: { result: Analysis }) {
       </table>
     </main>
   );
+}
+
+/** 'A_자동노출위치' → '자동노출위치' (앞 글자 A/B가 범례와 겹치지 않게). */
+function abName(name: string, letter: string): string {
+  return name.replace(new RegExp(`^${letter}[_\\s.-]+`, "i"), "");
 }

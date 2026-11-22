@@ -28,7 +28,15 @@ def test_ovenlog_charts():
     assert [d["date"] for d in c["daily"]] == ["2026-11-17", "2026-11-18", "2026-11-19", "2026-11-20"]
     assert c["daily"][0]["ctr"] is None and c["daily"][1]["spend"] == 3340
     top = max(c["placement"], key=lambda p: p["spend"])
-    assert top["placement"] == "Instagram instagram_reels"
+    assert top["placement"] == "인스타그램 릴스"
+    names = {p["placement"] for p in c["placement"]}
+    assert {"인스타그램 피드", "페이스북 피드", "페이스북 인스트림 동영상"} <= names
+
+
+def test_placement_label_keeps_unknown_names():
+    assert A.placement_label("Audience Network an_classic") == "Audience Network 네이티브·배너·전면"
+    assert A.placement_label("Instagram brand_new_spot") == "인스타그램 brand_new_spot"
+    assert A.placement_label("Threads feed") == "Threads 피드"
 
 
 def test_hold_expectation_shows_range_narrowing_with_more_days():
