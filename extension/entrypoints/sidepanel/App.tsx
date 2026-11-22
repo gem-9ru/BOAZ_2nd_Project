@@ -87,6 +87,9 @@ export default function App() {
       {state.step === "questions" && spec && (
         <QuestionStep state={state} dispatch={dispatch} fields={spec.fields} defaults={spec.defaults} />
       )}
+      {state.step === "questions" && !spec && !specError && (
+        <p role="status" className="text-[13px] text-soft">질문을 불러오는 중이에요…</p>
+      )}
       {state.step === "questions" && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
     </main>
   );

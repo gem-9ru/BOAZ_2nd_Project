@@ -35,7 +35,7 @@ function Funnel({ f }: { f: Analysis["charts"]["funnel"] }) {
             <span className="text-[15px] text-soft">{s.label}</span>
             <strong className="text-[28px] tabular-nums">{s.value.toLocaleString()}</strong>
             <div className="h-2 rounded-r bg-line col-span-2">
-              <div className="h-2 rounded-r" style={{ background: SERIES, width: `${Math.max((s.value / steps[0]!.value) * 100, 1)}%` }} />
+              <div className="h-2 rounded-r" style={{ background: SERIES, width: `${steps[0]!.value > 0 ? Math.max((s.value / steps[0]!.value) * 100, 1) : 0}%` }} />
             </div>
             {prev !== null && prev > 0 && (
               <span className="text-[13px] text-soft col-span-2">앞 단계의 {pct(s.value / prev)}</span>

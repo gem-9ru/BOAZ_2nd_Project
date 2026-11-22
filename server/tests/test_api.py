@@ -77,3 +77,35 @@ def test_research_failure_explains_naver_error(monkeypatch):
     monkeypatch.setattr(naver_api, "last_error", lambda: "네이버 키가 없어요.")
     body = TestClient(app).post("/research", json={"product": "아무거나"}).json()
     assert body["notice"].startswith("네이버 키가 없어요.")
+
+
+def test_research_calls_do_not_overlap(monkeypatch):
+    """네이버 조회일·오류는 모듈 전역이라, 동시에 온 요청이 섞이지 않게 한 번에 하나씩."""
+    import threading
+    import time
+
+    from server.engine import market
+    active, overlaps = [0], [0]
+
+    def slow_build(seeds, online=True):
+        active[0] += 1
+        overlaps[0] = max(overlaps[0], active[0])
+        time.sleep(0.05)
+        active[0] -= 1
+        return None
+
+    monkeypatch.setattr(market, "build", slow_build)
+    client = TestClient(app)
+    threads = [threading.Thread(target=lambda: client.post("/research", json={"product": "x"})) for _ in range(4)]
+    [t.start() for t in threads]
+    [t.join() for t in threads]
+    assert overlaps[0] == 1
+
+
+def test_copies_source_is_template_when_claude_gives_nothing(monkeypatch):
+    from server.engine import copywriter
+    monkeypatch.delenv("COACH_NO_LLM", raising=False)
+    monkeypatch.setattr(copywriter, "make_client", lambda: object())          # 키는 있는 척
+    monkeypatch.setattr(copywriter, "_ask_claude", lambda *a, **k: [])        # Claude가 아무것도 못 줌
+    body = TestClient(app).post("/copies", json={"product": "수제 쿠키", "strengths": ["버터"], "keywords": []}).json()
+    assert body["source"] == "template" and len(body["copies"]) == 3

@@ -17,7 +17,6 @@ export default function FindStep({ state, dispatch }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const r = state.research;
-  const [dropped, setDropped] = useState<string[]>([]);
 
   async function search() {
     setBusy(true);
@@ -57,15 +56,14 @@ export default function FindStep({ state, dispatch }: Props) {
       </div>
 
       {r && r.notice && <Coach>{r.notice}</Coach>}
-      {r && !r.notice && <Result research={r} dropped={dropped} setDropped={setDropped} dispatch={dispatch} />}
+      {r && !r.notice && <Result research={r} dropped={state.dropped ?? []} dispatch={dispatch} />}
     </section>
   );
 }
 
-function Result({ research: r, dropped, setDropped, dispatch }: {
+function Result({ research: r, dropped, dispatch }: {
   research: Research;
   dropped: string[];
-  setDropped: (d: string[]) => void;
   dispatch: (ev: FlowEvent) => void;
 }) {
   const aud = r.audience;
@@ -113,7 +111,7 @@ function Result({ research: r, dropped, setDropped, dispatch }: {
                 key={k.keyword}
                 type="button"
                 aria-pressed={!off}
-                onClick={() => setDropped(off ? dropped.filter((d) => d !== k.keyword) : [...dropped, k.keyword])}
+                onClick={() => dispatch({ type: "toggleKeyword", keyword: k.keyword })}
                 className={`rounded-full border px-3 py-1 text-[13px] ${off ? "border-line text-soft line-through" : "border-ink bg-paper"}`}
               >
                 {k.keyword} · 월 {k.total_qc.toLocaleString()}회

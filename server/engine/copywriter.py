@@ -210,9 +210,14 @@ def _ask_claude(client, media: str, product: str, strengths: List[str], n: int) 
 # ── 공개 함수 ─────────────────────────────────────────────
 
 def _copies(media: str, product: str, strengths: Strengths, n: int, client) -> List[Copy]:
+    return _copies_with_source(media, product, strengths, n, client)[0]
+
+
+def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, client):
+    """→ (문구 목록, Claude가 쓴 문구가 하나라도 들어갔는지)."""
     n = max(int(n), 0)
     if n == 0:
-        return []
+        return [], False
     product = _clean_product(product)
     pieces = _strength_list(strengths)
     if client is None:
@@ -222,18 +227,25 @@ def _copies(media: str, product: str, strengths: Strengths, n: int, client) -> L
     candidates: List[Copy] = _ask_claude(client, media, product, pieces, n) if client else []
     templates = _naver_templates(product, pieces) if media == "naver" else _meta_templates(product, pieces)
     out: List[Copy] = []
-    for c in candidates + templates:
+    used_claude = False
+    for i, c in enumerate(candidates + templates):
         key = (c["headline"], c["text"])
         if not check_copy(media, c) and key not in {(o["headline"], o["text"]) for o in out}:
             out.append(c)
+            used_claude = used_claude or i < len(candidates)
         if len(out) >= n:
             break
-    return out
+    return out, used_claude
 
 
 def meta_copies(product: str, strengths: Strengths, n: int = 3, client=None) -> List[Copy]:
     """메타 문구 n개 [{headline, text}]. client: None이면 키로 자동, False면 항상 문장 틀 (테스트·미리보기)."""
     return _copies("meta", product, strengths, n, client)
+
+
+def meta_copies_with_source(product: str, strengths: Strengths, n: int = 3, client=None):
+    """meta_copies와 같고, Claude 문구가 쓰였는지도 돌려준다 (화면의 출처 표시용)."""
+    return _copies_with_source("meta", product, strengths, n, client)
 
 
 def naver_copies(product: str, strengths: Strengths, n: int = 3, client=None) -> List[Copy]:

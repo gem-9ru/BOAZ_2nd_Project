@@ -38,10 +38,10 @@ describe("FindStep", () => {
     });
   });
 
-  it("lets the user drop a keyword before confirming", () => {
+  it("confirms without the keywords the user dropped", () => {
     const dispatch = vi.fn();
-    render(<FindStep state={{ ...initialState(), research }} dispatch={dispatch} />);
-    fireEvent.click(screen.getByRole("button", { name: /르뱅쿠키/ }));
+    render(<FindStep state={{ ...initialState(), research, dropped: ["르뱅쿠키"] }} dispatch={dispatch} />);
+    expect(screen.getByRole("button", { name: /르뱅쿠키/ }).getAttribute("aria-pressed")).toBe("false");
     fireEvent.click(screen.getByRole("button", { name: "이 사람들로 할게요" }));
     expect(dispatch.mock.calls[0]![0].keywords).toEqual(["수제쿠키"]);
   });

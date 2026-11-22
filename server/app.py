@@ -5,6 +5,7 @@
 """
 import datetime
 import os
+import threading
 from typing import List, Optional
 
 from fastapi import FastAPI, File, UploadFile
@@ -16,6 +17,7 @@ from server.engine import analyze as analysis, copywriter, market, naver_api, sp
 from server.engine.meta_export import read_export
 
 MAX_KEYWORDS = 10
+_NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
 
 app = FastAPI(title="광고 코치 v3")
 app.add_middleware(CORSMiddleware, allow_origin_regex=r"chrome-extension://.*",
@@ -39,9 +41,10 @@ class ResearchIn(BaseModel):
 @app.post("/research")
 def research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]
-    report = market.build(seeds, online=_online())
-    if report is None:
-        why = naver_api.last_error()   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
+    with _NAVER_LOCK:
+        report = market.build(seeds, online=_online())
+        why = naver_api.last_error()
+    if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
         return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice}
     if not report.recommended:
@@ -71,10 +74,10 @@ class CopiesIn(BaseModel):
 @app.post("/copies")
 def copies(body: CopiesIn) -> dict:
     client = None if os.environ.get("COACH_NO_LLM") == "1" else copywriter.make_client()
-    made = copywriter.meta_copies(body.product, list(body.strengths) + list(body.keywords), n=3,
-                                  client=client or False)
+    made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths) + list(body.keywords),
+                                                          n=3, client=client or False)
     return {"copies": [{"primary_text": c["text"], "headline": c["headline"]} for c in made],
-            "source": "claude" if client else "template"}
+            "source": "claude" if used_claude else "template"}
 
 
 @app.get("/fields")

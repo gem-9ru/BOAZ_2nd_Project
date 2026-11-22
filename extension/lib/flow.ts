@@ -21,6 +21,7 @@ export interface FlowState {
   research?: Research;
   target?: Target;
   keywords: string[];
+  dropped: string[];          // ① 찾기에서 뺀 키워드 (패널을 다시 열어도 유지)
   copy?: Copy;
   answers: Record<string, string>;
   settings: Setting[];
@@ -31,6 +32,7 @@ export interface FlowState {
 
 export type FlowEvent =
   | { type: "researched"; research: Research; product?: string }
+  | { type: "toggleKeyword"; keyword: string }
   | { type: "confirmTarget"; target: Target; keywords: string[] }
   | { type: "pickCopy"; copy: Copy }
   | { type: "answer"; id: string; value: string }
@@ -44,13 +46,15 @@ export type FlowEvent =
   | { type: "reset" };
 
 export function initialState(): FlowState {
-  return { step: "find", keywords: [], answers: {}, settings: [], guide: null };
+  return { step: "find", keywords: [], dropped: [], answers: {}, settings: [], guide: null };
 }
 
 export function reduce(s: FlowState, ev: FlowEvent): FlowState {
   switch (ev.type) {
+    case "toggleKeyword":
+      return { ...s, dropped: s.dropped.includes(ev.keyword) ? s.dropped.filter((k) => k !== ev.keyword) : [...s.dropped, ev.keyword] };
     case "researched":
-      return { ...s, research: ev.research, product: ev.product ?? s.product };
+      return { ...s, research: ev.research, product: ev.product ?? s.product, dropped: [] };
     case "confirmTarget":
       return { ...s, target: ev.target, keywords: ev.keywords, step: "copy" };
     case "pickCopy":
