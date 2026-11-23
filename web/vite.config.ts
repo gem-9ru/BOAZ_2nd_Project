@@ -6,6 +6,12 @@ import { defineConfig } from "vite";
 export default defineConfig({
   base: "/analysis/",
   plugins: [react(), tailwindcss()],
-  server: { proxy: { "^/(analysis/example|simulate|plan)": "http://localhost:8000" } },
+  server: {
+    proxy: {
+      "^/(analysis/example|simulate|plan)": "http://localhost:8000",
+      // 파일 올리기(POST /analysis)만 서버로. 같은 주소의 GET은 이 개발 서버가 페이지를 띄운다.
+      "^/analysis$": { target: "http://localhost:8000", bypass: (req) => (req.method === "POST" ? undefined : req.url) },
+    },
+  },
   test: { environment: "jsdom", setupFiles: ["tests/setup.ts"] },
 });
