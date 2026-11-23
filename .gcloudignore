@@ -1,0 +1,13 @@
+# Cloud Build에 올리는 것은 Dockerfile·server·web 뿐 (키·개인 파일·큰 폴더 제외)
+/*
+!/Dockerfile
+!/server/
+!/web/
+.env
+**/.env
+**/__pycache__/
+**/.pytest_cache/
+server/tests/
+server/data/cache/
+web/node_modules/
+web/dist/

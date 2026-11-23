@@ -6,7 +6,7 @@
 - [ ] 확장 테스트·빌드: `cd extension && mise exec -- npx vitest run && mise exec -- npx wxt build`
 - [ ] 크롬 `chrome://extensions` → 개발자 모드 → **압축해제된 확장 프로그램 로드** → `extension/.output/chrome-mv3`
 - [ ] 확장 아이콘을 누르면 오른쪽에 사이드 패널이 열리는지
-- [ ] 팀 메타 계정 광고 관리자 화면 언어가 **한국어**인지 (영어면 캐릭터가 "한국어로 바꿔 주세요"만 말함)
+- [ ] 시연할 메타 계정(지금은 내 계정, Facebook 페이지 연결 없음 → 게시 직전까지만) 광고 관리자 화면 언어가 **한국어**인지 (영어면 캐릭터가 "한국어로 바꿔 주세요"만 말함)
 - [ ] **안내 목록 갱신**: 광고 관리자에서 트래픽 캠페인 만들기를 끝까지 따라가며 칸 이름이 `extension/guide/meta_traffic.json`의 `find`와 같은지 확인, 다르면 고치고 다시 빌드
 - [ ] 칸마다 대체 스크린샷이 `extension/public/guide/`에 있는지 (지금은 `placeholder.png` 하나)
 
@@ -28,3 +28,11 @@
 ## 막혔을 때
 - 사이드 패널에 "도우미 서버에 연결할 수 없어요" → 서버 터미널이 켜져 있는지, 포트 8000인지
 - 캐릭터가 칸을 못 찾음 → 말풍선의 "했어요"로 다음 단계, 끝나고 `meta_traffic.json` 고치기
+
+## 공개 주소로 띄우기 (Cloudflare Tunnel, 2026-11-23)
+
+- 시작: `scripts/serve_public.sh` → https://boaz-ad-assistant.gem-9ru.com (분석 페이지: `/analysis`)
+- 멈춤: `scripts/serve_public.sh stop` · 로그: `logs/server.log`, `logs/tunnel.log`
+- 이 맥과 스크립트가 켜져 있을 때만 접속된다. 분석 코드(4자리)는 서버 메모리에 있어서 서버를 다시 켜면 사라진다.
+- 확장을 공개 주소로 빌드: `cd extension && WXT_API_BASE=https://boaz-ad-assistant.gem-9ru.com npx wxt build` → 크롬 확장 새로고침
+- 항상 켜 둬야 하면: 결제 계정 연결 후 `scripts/deploy_cloudrun.sh` (Cloud Run)
