@@ -7,7 +7,6 @@ import FindStep from "./steps/FindStep";
 import GuideStep from "./steps/GuideStep";
 import WaitStep from "./steps/WaitStep";
 import QuestionStep from "./steps/QuestionStep";
-import ResultStep from "./steps/ResultStep";
 import CodeStep from "./steps/CodeStep";
 import PlanStep from "./steps/PlanStep";
 import { ErrorLine } from "./ui/Coach";
@@ -15,7 +14,7 @@ import { ErrorLine } from "./ui/Coach";
 const STAGES: { label: string; steps: Step[] }[] = [
   { label: "찾기", steps: ["find"] },
   { label: "세팅", steps: ["copy", "questions", "guide", "wait"] },
-  { label: "분석", steps: ["upload", "plan", "result", "fix"] },
+  { label: "분석", steps: ["upload", "plan", "fix"] },
 ];
 
 type Action = FlowEvent | { type: "__load"; state: FlowState };
@@ -84,7 +83,6 @@ export default function App() {
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "upload" && <CodeStep state={state} dispatch={dispatch} />}
       {state.step === "plan" && <PlanStep state={state} dispatch={dispatch} />}
-      {state.step === "result" && <ResultStep state={state} dispatch={dispatch} />}
       {state.step === "copy" && <CopyStep state={state} dispatch={dispatch} />}
       {state.step === "questions" && spec && (
         <QuestionStep state={state} dispatch={dispatch} fields={spec.fields} defaults={spec.defaults} />

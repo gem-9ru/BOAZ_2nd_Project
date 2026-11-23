@@ -15,8 +15,8 @@ const ADS_MANAGER_MATCH = ["https://adsmanager.facebook.com/*", "https://busines
 /** ② 안내 / ③ 바꾸기 / 결과 내보내기: 광고 관리자 탭에 캐릭터를 부른다. 진행은 배경 스크립트가 저장소에 쓰고 패널이 따라간다. */
 export default function GuideStep({ state, dispatch }: Props) {
   const mode = state.guide?.mode ?? "create";
-  // 바꿀 칸: 분석 페이지 코드로 받은 것(plan)이 있으면 그것 하나, 없으면 예전 패널 분석 결과
-  const changes = state.plan ? [state.plan.change] : state.result?.changes ?? [];
+  // 바꿀 칸: 분석 페이지에서 코드로 받은 것 하나
+  const changes = state.plan ? [state.plan.change] : [];
   const steps = stepsFor(mode, GUIDE, state.settings, changes);
   const index = state.guide?.index ?? 0;
   const [error, setError] = useState<string | null>(null);

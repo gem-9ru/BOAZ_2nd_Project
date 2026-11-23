@@ -42,25 +42,6 @@ export interface Change {
   note: string;
 }
 
-export interface Analysis {
-  status: "fired" | "hold" | "normal";
-  finding: { id: string; title: string; funnel: string; message: string };
-  changes: Change[];
-  expect: {
-    metric: string;
-    label: string;
-    current: [number, number];
-    expected: [number, number];
-    prob_better: number | null;
-    grade: "checked" | "hypothesis";
-  } | null;
-  charts: {
-    funnel: { impressions: number; link_clicks: number; landing_page_views: number };
-    daily: { date: string; ctr: number | null; cpm: number | null; spend: number }[];
-    placement: { placement: string; spend: number; link_clicks: number }[];
-  };
-  ab: { a: string; b: string; prob_b_better: number } | null;
-}
 
 /** 서버 주소: 빌드할 때 WXT_API_BASE로 정한다 (배포: https://boaz-ad-assistant.gem-9ru.com). 없으면 내 컴퓨터 서버. */
 export function apiBase(fromBuild: string | undefined): string {
@@ -116,11 +97,6 @@ export function fields(): Promise<{ fields: Field[]; defaults: PresetField[] }> 
   return call("/fields");
 }
 
-export function analyze(file: File): Promise<Analysis> {
-  const form = new FormData();
-  form.append("file", file);
-  return call("/analyze", { method: "POST", body: form });
-}
 
 export const ANALYSIS_PAGE = `${BASE}/analysis`;
 

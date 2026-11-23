@@ -10,8 +10,7 @@ import { loadState, saveState } from "../lib/storage";
 import { locate } from "../entrypoints/adsmanager.content/locate";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import GuideStep from "../entrypoints/sidepanel/steps/GuideStep";
-import UploadStep from "../entrypoints/sidepanel/steps/UploadStep";
-import type { Analysis, Change } from "../lib/api";
+import type { Change } from "../lib/api";
 import type { GuideStepItem } from "../lib/guide";
 
 afterEach(() => vi.unstubAllGlobals());
@@ -41,8 +40,8 @@ describe("edit guide coverage", () => {
   });
 
   it("with no edit steps the panel lists the changes as manual text and opens no tab", () => {
-    const result = { changes: [{ field_id: "meta.unknown", label: "어떤 칸", new: "새 값", note: "" }] } as unknown as Analysis;
-    const state: FlowState = { ...initialState(), step: "fix", result, guide: { mode: "edit", index: 0 } };
+    const plan = { code: "AB23", action: "바꿔 보기", summary: [], badge: null, change: { field_id: "meta.unknown", label: "어떤 칸", new: "새 값", note: "" } };
+    const state: FlowState = { ...initialState(), step: "fix", plan, guide: { mode: "edit", index: 0 } };
     render(<GuideStep state={state} dispatch={() => {}} />);
     expect(screen.getByText(/어떤 칸 → 새 값/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: "광고 관리자 열기" })).toBeNull();
@@ -121,16 +120,3 @@ describe("starting the guide", () => {
   });
 });
 
-describe("upload retry", () => {
-  it("shows 다시 시도 after a failure and re-sends the same file", async () => {
-    const f = vi.fn().mockRejectedValueOnce(new TypeError("Failed to fetch"))
-      .mockResolvedValueOnce(new Response(JSON.stringify({ status: "hold" }), { status: 200 }));
-    vi.stubGlobal("fetch", f);
-    const dispatch = vi.fn();
-    render(<UploadStep state={{ ...initialState(), step: "upload" }} dispatch={dispatch} />);
-    fireEvent.change(screen.getByLabelText("결과 파일 (CSV)"), { target: { files: [new File(["x"], "a.csv")] } });
-    await waitFor(() => expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy());
-    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
-    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "analyzed", result: { status: "hold" } }));
-  });
-});

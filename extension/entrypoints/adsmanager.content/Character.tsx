@@ -21,7 +21,9 @@ export function Character({ view, onDone, onClose }: Props) {
     const target = view.target;
     let shown = reveal(target);
     const update = () => {
-      if (!shown) shown = reveal(target);   // 아직 그려지지 않았으면 다시 그 구역으로
+      // 아직 그려지지 않았거나, 사용자가 스크롤해 메타가 다시 지웠으면 그 구역으로 다시 간다
+      if (target.getClientRects().length === 0) shown = false;
+      if (!shown) shown = reveal(target);
       const r = target.getBoundingClientRect();
       setRect(shown && r.width > 0 ? r : null);
     };

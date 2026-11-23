@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 import { initialState, reduce, type FlowState } from "../lib/flow";
 import { loadState, saveState } from "../lib/storage";
-import type { Analysis, Copy, Research } from "../lib/api";
+import type { Copy, Research } from "../lib/api";
 
 const research: Research = {
   headline: "쿠키선물세트를 찾는 사람은 30대 여성이 분야 평균의 1.82배",
@@ -46,11 +46,12 @@ describe("flow", () => {
     expect(s.guide).toBeNull();
   });
 
-  it("analyzed → result, startFix → fix with edit guide at 0, guideDone → wait", () => {
+  it("planLoaded → plan, startFix → fix with edit guide at 0, guideDone → wait", () => {
     let s = reduce(reduce(toGuide(), { type: "guideDone" }), { type: "startUpload" });
     expect(s.step).toBe("upload");
-    s = reduce(s, { type: "analyzed", result: { status: "hold" } as Analysis });
-    expect(s.step).toBe("result");
+    s = reduce(s, { type: "planLoaded", plan: { code: "AB23", action: "한 번 더", summary: [], badge: null,
+      change: { field_id: "meta.adset.end_date", label: "종료 날짜", new: "7일 더", note: "" } } });
+    expect(s.step).toBe("plan");
     s = reduce(s, { type: "startFix" });
     expect(s.step).toBe("fix");
     expect(s.guide).toEqual({ mode: "edit", index: 0 });

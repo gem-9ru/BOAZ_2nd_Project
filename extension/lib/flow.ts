@@ -1,7 +1,7 @@
 // 사이드 패널의 단계 상태 기계. 순수 함수만 둔다 (저장은 storage.ts).
-import type { Analysis, Change, Copy, Research } from "./api";
+import type { Change, Copy, Research } from "./api";
 
-export type Step = "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan" | "result" | "fix";
+export type Step = "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan" | "fix";
 
 /** 분석 페이지가 4자리 코드로 넘겨주는 '다음에 할 일' (서버 GET /plan/{code}). */
 export interface Plan {
@@ -36,7 +36,6 @@ export interface FlowState {
   settings: Setting[];
   guide: { mode: "create" | "edit" | "export"; index: number } | null;
   endDate?: string;
-  result?: Analysis;
   plan?: Plan;
 }
 
@@ -52,7 +51,6 @@ export type FlowEvent =
   | { type: "guideDone" }
   | { type: "startExport" }
   | { type: "startUpload" }
-  | { type: "analyzed"; result: Analysis }
   | { type: "planLoaded"; plan: Plan }
   | { type: "startFix" }
   | { type: "reset" };
@@ -89,8 +87,6 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, step: "upload", guide: null };
     case "planLoaded":
       return { ...s, plan: ev.plan, step: "plan" };
-    case "analyzed":
-      return { ...s, result: ev.result, step: "result" };
     case "startFix":
       return { ...s, step: "fix", guide: { mode: "edit", index: 0 } };
     case "reset":
