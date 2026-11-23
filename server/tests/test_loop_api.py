@@ -52,3 +52,19 @@ def test_the_analysis_page_is_served_with_its_assets():
     assert page.status_code == 200 and "Ad assistant" in page.text
     asset = next(pathlib.Path("web/dist/assets").glob("*.js")).name
     assert c.get(f"/analysis/assets/{asset}").status_code == 200
+
+
+def test_stored_results_are_capped_oldest_first(monkeypatch):
+    from server import app as appmod
+    monkeypatch.setattr(appmod, "MAX_PLANS", 3)
+    appmod._PLANS.clear()
+    codes = [appmod._store({"next": {}, "verdict": None})["code"] for _ in range(5)]
+    assert len(appmod._PLANS) == 3
+    assert codes[0] not in appmod._PLANS and codes[-1] in appmod._PLANS
+
+
+def test_too_big_upload_is_refused_with_a_fix(monkeypatch):
+    from server import app as appmod
+    monkeypatch.setattr(appmod, "MAX_UPLOAD_BYTES", 1000)
+    r = c.post("/analysis", files={"file": ("big.csv", b"a," * 2000, "text/csv")})
+    assert r.status_code == 400 and "MB" in r.json()["error"]

@@ -79,7 +79,9 @@ class CopiesIn(BaseModel):
 @app.post("/copies")
 def copies(body: CopiesIn) -> dict:
     client = None if os.environ.get("COACH_NO_LLM") == "1" else copywriter.make_client()
-    avoid = [w for w in body.avoid if w.strip()]
+    # 상품 이름에 들어 있는 말은 빼지 않는다 (예: '쿠키만들기 키트'를 파는데 '쿠키만들기'를 빼면 문구가 남지 않음)
+    product = body.product.replace(" ", "")
+    avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product]
     clean = lambda cs: [c for c in cs if not any(w in c["text"] + c["headline"] for w in avoid)]
     made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths) + list(body.keywords),
                                                           n=3, client=client or False)
@@ -121,7 +123,11 @@ import secrets  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 
 DEMO_CSV = os.path.join(os.path.dirname(__file__), "data", "demo", "오븐로그_메타AB_20261117-20261120.csv")
-_PLANS: dict = {}        # 코드 → 분석 결과 (시연용, 서버 메모리에만)
+from collections import OrderedDict  # noqa: E402
+
+MAX_PLANS = 200          # 서버 메모리에 남기는 분석 결과 수 (넘으면 가장 오래된 것부터 지움)
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024   # 메타 결과 CSV는 보통 수십 KB
+_PLANS: "OrderedDict[str, dict]" = OrderedDict()   # 코드 → 분석 결과 (시연용, 서버 메모리에만)
 _CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # 헷갈리는 O·0·I·1 제외
 
 
@@ -130,6 +136,8 @@ def _store(result: dict) -> dict:
     while code in _PLANS:
         code = "".join(secrets.choice(_CODE_CHARS) for _ in range(4))
     _PLANS[code] = result
+    while len(_PLANS) > MAX_PLANS:
+        _PLANS.popitem(last=False)
     return {**result, "code": code}
 
 
@@ -142,7 +150,10 @@ def _loop(bundle):
 
 @app.post("/analysis")
 async def analysis_upload(file: UploadFile = File(...)):
-    return _loop(read_export(await file.read()))
+    data = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        return JSONResponse(status_code=400, content={"error": f"파일이 {MAX_UPLOAD_BYTES // 1024 // 1024}MB보다 커요. 광고 관리자에서 비교할 광고 세트만 골라 다시 내보내 주세요."})
+    return _loop(read_export(data))
 
 
 @app.get("/analysis/example")
@@ -188,5 +199,5 @@ def analysis_page():
     return FileResponse(index)
 
 
-if os.path.isdir(os.path.join(WEB_DIST, "assets")):
-    app.mount("/analysis/assets", StaticFiles(directory=os.path.join(WEB_DIST, "assets")), name="analysis-assets")
+# 서버를 켠 뒤에 web을 빌드해도 자산이 보이게 항상 연결한다 (폴더가 없으면 요청 때 404)
+app.mount("/analysis/assets", StaticFiles(directory=os.path.join(WEB_DIST, "assets"), check_dir=False), name="analysis-assets")

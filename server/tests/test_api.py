@@ -164,3 +164,10 @@ def test_copies_never_use_a_left_out_word(monkeypatch):
     for c in body["copies"]:
         assert "쿠키만들기" not in c["primary_text"] + c["headline"]
         assert "광주맛집" not in c["primary_text"] + c["headline"]
+
+
+def test_avoid_words_inside_the_product_name_do_not_empty_the_copies(monkeypatch):
+    monkeypatch.setenv("COACH_NO_LLM", "1")
+    body = TestClient(app).post("/copies", json={"product": "쿠키만들기 키트", "strengths": ["재료 다 들어 있음"],
+                                                  "keywords": [], "avoid": ["쿠키만들기", "광주맛집"]}).json()
+    assert len(body["copies"]) == 3
