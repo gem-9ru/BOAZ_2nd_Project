@@ -1,0 +1,474 @@
+{
+ "check": {
+  "ok": true,
+  "read": {
+   "days": 4,
+   "adsets": 2,
+   "daily_rows": 8,
+   "placement_rows": 11
+  },
+  "totals": [
+   {
+    "metric": "spend",
+    "daily": 10616.0,
+    "placement": 10616.0,
+    "match": true
+   },
+   {
+    "metric": "impressions",
+    "daily": 1822.0,
+    "placement": 1822.0,
+    "match": true
+   },
+   {
+    "metric": "link_clicks",
+    "daily": 30.0,
+    "placement": 30.0,
+    "match": true
+   }
+  ],
+  "warnings": [
+   {
+    "kind": "no_delivery",
+    "date": "2026-11-17",
+    "text": "11/17은 두 세트 모두 광고가 안 나갔어요. 이 날은 비교에서 빼요."
+   }
+  ],
+  "safety": [
+   {
+    "ok": true,
+    "text": "모든 숫자는 메타 기여 기준(클릭 후 7일 또는 조회 후 1일)이에요."
+   },
+   {
+    "ok": true,
+    "text": "퍼널은 광고 관리자 숫자로 계산해요. 픽셀에 섞일 수 있는 팀·본인 방문은 넣지 않아요."
+   },
+   {
+    "ok": false,
+    "text": "두 세트를 동시에 돌렸다면 같은 사람을 두고 경쟁했을 수 있어요. 메타 'A/B 테스트'로 만들면 사람을 나눠서 보여 줘요."
+   }
+  ],
+  "missing": []
+ },
+ "summary": {
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "spend": 5308.0,
+    "impressions": 837.0,
+    "link_clicks": 13.0,
+    "landing_page_views": 10.0,
+    "cpm": 6341.6965352449215,
+    "ctr": 0.015531660692951015,
+    "cpc": 408.3076923076923,
+    "click_to_visit": 0.7692307692307693,
+    "visits_per_1000won": 1.8839487565938207,
+    "cost_per_visit": 530.8
+   },
+   {
+    "name": "B_피드만노출(AN제외)",
+    "spend": 5308.0,
+    "impressions": 985.0,
+    "link_clicks": 17.0,
+    "landing_page_views": 14.0,
+    "cpm": 5388.832487309645,
+    "ctr": 0.017258883248730966,
+    "cpc": 312.2352941176471,
+    "click_to_visit": 0.8235294117647058,
+    "visits_per_1000won": 2.637528259231349,
+    "cost_per_visit": 379.14285714285717
+   }
+  ],
+  "placements": [
+   {
+    "placement": "Instagram instagram_reels",
+    "label": "인스타그램 릴스",
+    "spend": 7596.0,
+    "share": 0.7155237377543331,
+    "impressions": 1179.0,
+    "link_clicks": 22.0,
+    "ctr": 0.018659881255301103
+   },
+   {
+    "placement": "Instagram feed",
+    "label": "인스타그램 피드",
+    "spend": 1238.0,
+    "share": 0.1166164280331575,
+    "impressions": 112.0,
+    "link_clicks": 4.0,
+    "ctr": 0.03571428571428571
+   },
+   {
+    "placement": "Facebook feed",
+    "label": "페이스북 피드",
+    "spend": 1153.0,
+    "share": 0.10860964581763376,
+    "impressions": 387.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   },
+   {
+    "placement": "Instagram instagram_stories",
+    "label": "인스타그램 스토리",
+    "spend": 317.0,
+    "share": 0.029860587792012058,
+    "impressions": 23.0,
+    "link_clicks": 2.0,
+    "ctr": 0.08695652173913043
+   },
+   {
+    "placement": "Facebook facebook_reels",
+    "label": "페이스북 릴스",
+    "spend": 304.0,
+    "share": 0.028636021100226075,
+    "impressions": 117.0,
+    "link_clicks": 2.0,
+    "ctr": 0.017094017094017096
+   },
+   {
+    "placement": "Facebook instream_video",
+    "label": "페이스북 인스트림 동영상",
+    "spend": 6.0,
+    "share": 0.0005651846269781462,
+    "impressions": 3.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   },
+   {
+    "placement": "Facebook facebook_stories",
+    "label": "페이스북 스토리",
+    "spend": 2.0,
+    "share": 0.00018839487565938207,
+    "impressions": 1.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   }
+  ]
+ },
+ "intervals": {
+  "A_자동노출위치": {
+   "cpm": [
+    5990.366529323775,
+    6712.617516674651
+   ],
+   "ctr": [
+    0.010145078899674177,
+    0.024553882132115817
+   ],
+   "cpc": [
+    256.6083503002181,
+    627.2184346859831
+   ],
+   "click_to_visit": [
+    0.5345470313779007,
+    0.8960311160822693
+   ],
+   "visits_per_1000won": [
+    1.1660052587633505,
+    3.1990817569856085
+   ]
+  },
+  "B_피드만노출(AN제외)": {
+   "cpm": [
+    5113.106569169398,
+    5678.843922521121
+   ],
+   "ctr": [
+    0.011856458213005688,
+    0.025753950075699507
+   ],
+   "cpc": [
+    207.98385806185752,
+    456.31356098374346
+   ],
+   "click_to_visit": [
+    0.6231681515102218,
+    0.9203747795254502
+   ],
+   "visits_per_1000won": [
+    1.7463975095565611,
+    4.127928144453592
+   ]
+  }
+ },
+ "placements": [
+  {
+   "placement": "Instagram instagram_reels",
+   "label": "인스타그램 릴스",
+   "spend": 7596.0,
+   "share": 0.7155237377543331,
+   "impressions": 1179.0,
+   "link_clicks": 22.0,
+   "ctr": 0.018659881255301103,
+   "ctr_adjusted": 0.018354755168953407,
+   "reference_only": false
+  },
+  {
+   "placement": "Instagram feed",
+   "label": "인스타그램 피드",
+   "spend": 1238.0,
+   "share": 0.1166164280331575,
+   "impressions": 112.0,
+   "link_clicks": 4.0,
+   "ctr": 0.03571428571428571,
+   "ctr_adjusted": 0.02359444728186016,
+   "reference_only": false
+  },
+  {
+   "placement": "Facebook feed",
+   "label": "페이스북 피드",
+   "spend": 1153.0,
+   "share": 0.10860964581763376,
+   "impressions": 387.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.00542968920277887,
+   "reference_only": false
+  },
+  {
+   "placement": "Instagram instagram_stories",
+   "label": "인스타그램 스토리",
+   "spend": 317.0,
+   "share": 0.029860587792012058,
+   "impressions": 23.0,
+   "link_clicks": 2.0,
+   "ctr": 0.08695652173913043,
+   "ctr_adjusted": 0.024062592345068582,
+   "reference_only": true
+  },
+  {
+   "placement": "Facebook facebook_reels",
+   "label": "페이스북 릴스",
+   "spend": 304.0,
+   "share": 0.028636021100226075,
+   "impressions": 117.0,
+   "link_clicks": 2.0,
+   "ctr": 0.017094017094017096,
+   "ctr_adjusted": 0.01670466688120983,
+   "reference_only": false
+  },
+  {
+   "placement": "Facebook instream_video",
+   "label": "페이스북 인스트림 동영상",
+   "spend": 6.0,
+   "share": 0.0005651846269781462,
+   "impressions": 3.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.016210023048474055,
+   "reference_only": true
+  },
+  {
+   "placement": "Facebook facebook_stories",
+   "label": "페이스북 스토리",
+   "spend": 2.0,
+   "share": 0.00018839487565938207,
+   "impressions": 1.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.01637939987676053,
+   "reference_only": true
+  }
+ ],
+ "funnel": {
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "stages": [
+     {
+      "key": "impressions",
+      "label": "본 사람 (노출)",
+      "count": 837.0
+     },
+     {
+      "key": "link_clicks",
+      "label": "누른 사람 (링크 클릭)",
+      "count": 13.0,
+      "rate": 0.015531660692951015,
+      "range": [
+       0.009171285655418143,
+       0.026393294171776792
+      ],
+      "per100": "100명이 보면 약 2명이 눌렀어요",
+      "unknown": false
+     },
+     {
+      "key": "landing_page_views",
+      "label": "들어온 사람 (랜딩 페이지 도착)",
+      "count": 10.0,
+      "rate": 0.7692307692307693,
+      "range": [
+       0.4920310041195931,
+       0.916206775853252
+      ],
+      "per100": "100명이 누르면 약 77명이 들어왔어요",
+      "unknown": false
+     }
+    ]
+   },
+   {
+    "name": "B_피드만노출(AN제외)",
+    "stages": [
+     {
+      "key": "impressions",
+      "label": "본 사람 (노출)",
+      "count": 985.0
+     },
+     {
+      "key": "link_clicks",
+      "label": "누른 사람 (링크 클릭)",
+      "count": 17.0,
+      "rate": 0.017258883248730966,
+      "range": [
+       0.010878990497039174,
+       0.02745422436940968
+      ],
+      "per100": "100명이 보면 약 2명이 눌렀어요",
+      "unknown": false
+     },
+     {
+      "key": "landing_page_views",
+      "label": "들어온 사람 (랜딩 페이지 도착)",
+      "count": 14.0,
+      "rate": 0.8235294117647058,
+      "range": [
+       0.5861827020288976,
+       0.9358128640610551
+      ],
+      "per100": "100명이 누르면 약 82명이 들어왔어요",
+      "unknown": false
+     }
+    ]
+   }
+  ],
+  "hint": null
+ },
+ "verdict": {
+  "a": "A_자동노출위치",
+  "b": "B_피드만노출(AN제외)",
+  "metrics": [
+   {
+    "key": "visits_per_1000won",
+    "label": "1,000원당 도착",
+    "higher_is_better": true,
+    "prob_b_better": 0.786715,
+    "a_interval": [
+     1.0365805012563232,
+     3.472178959950429
+    ],
+    "b_interval": [
+     1.5784465362975597,
+     4.428574458282978
+    ],
+    "overlap": true,
+    "better": "B",
+    "word": "B 쪽이에요"
+   },
+   {
+    "key": "cpm",
+    "label": "1,000회 노출당 비용",
+    "higher_is_better": false,
+    "prob_b_better": 0.999735,
+    "a_interval": [
+     5925.002105633146,
+     6787.9429742366365
+    ],
+    "b_interval": [
+     5063.547467030306,
+     5736.14894008142
+    ],
+    "overlap": false,
+    "better": "B",
+    "word": "확실해요"
+   },
+   {
+    "key": "cpc",
+    "label": "링크 클릭당 비용",
+    "higher_is_better": false,
+    "prob_b_better": 0.76227,
+    "a_interval": [
+     238.56418264233045,
+     692.994631733055
+    ],
+    "b_interval": [
+     195.2279958232788,
+     497.38667818843174
+    ],
+    "overlap": true,
+    "better": "B",
+    "word": "B 쪽이에요"
+   },
+   {
+    "key": "ctr",
+    "label": "링크 클릭률",
+    "higher_is_better": true,
+    "prob_b_better": 0.60462,
+    "a_interval": [
+     0.009186345730161598,
+     0.026388761505705238
+    ],
+    "b_interval": [
+     0.01086159824055581,
+     0.027442661088643242
+    ],
+    "overlap": true,
+    "better": "B",
+    "word": "아직 몰라요"
+   }
+  ],
+  "badge": {
+   "metric": "visits_per_1000won",
+   "label": "1,000원당 도착",
+   "better": "B",
+   "prob": 0.786715,
+   "level": "유력",
+   "word": "B 쪽이에요"
+  },
+  "min_budget": {
+   "per_group": 151000,
+   "total": 302000,
+   "lift": 0.2,
+   "confidence": 0.9,
+   "power": 0.815,
+   "metric": "visits_per_1000won"
+  }
+ },
+ "replay": [
+  {
+   "date": "2026-11-18",
+   "prob": 0.26128
+  },
+  {
+   "date": "2026-11-19",
+   "prob": 0.6487
+  },
+  {
+   "date": "2026-11-20",
+   "prob": 0.78972
+  }
+ ],
+ "diagnosis": {
+  "status": "hold",
+  "finding": {
+   "id": "rule.hold_small_sample",
+   "title": "아직 판단하기 일러요",
+   "funnel": "측정",
+   "message": "아직 링크 클릭이 30번이라 무엇이 문제인지 단정하기 일러요. 같은 설정으로 조금 더 돌려 보세요."
+  }
+ },
+ "next": {
+  "action": "한 번 더",
+  "change": {
+   "field_id": "meta.adset.end_date",
+   "label": "종료 날짜",
+   "new": "세트당 ₩151,000가 쓰일 때까지 연장",
+   "note": "확실히 고르려면 이만큼 더 필요해요"
+  },
+  "summary": [
+   "이번에 알게 된 것: B_피드만노출(AN제외)가 나을 확률 79% (유력)",
+   "아직 모르는 것: 단정하기엔 도착 수가 적어요",
+   "다음에 바꿀 것: 같은 세팅으로 세트당 ₩151,000까지 더 돌려 확실히 고르기"
+  ]
+ },
+ "code": "TP7L"
+}

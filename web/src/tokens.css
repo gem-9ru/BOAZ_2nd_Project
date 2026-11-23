@@ -1,0 +1,92 @@
+/* Design Tokens - Auto-generated */
+/* Do not edit directly - modify tokens.json instead */
+
+/* === PRIMITIVES === */
+:root {
+  --primitive-color-navy-700: #2B3A5C;
+  --primitive-color-navy-900: #16213A;
+  --primitive-color-slate-600: #4A5568;
+  --primitive-color-cream-100: #F7F5F0;
+  --primitive-color-paper-50: #FFFDF8;
+  --primitive-color-sand-100: #EFEAE0;
+  --primitive-color-sand-200: #E2DCD0;
+  --primitive-color-orange-50: #FFF3E6;
+  --primitive-color-orange-400: #F2994A;
+  --primitive-color-orange-600: #E07A2E;
+  --primitive-color-orange-800: #A8481A;
+  --primitive-color-blue-50: #EAF1FB;
+  --primitive-color-blue-600: #3D6FB8;
+  --primitive-color-green-50: #E8F4EC;
+  --primitive-color-green-700: #2F7D4F;
+  --primitive-color-amber-50: #FFF4DC;
+  --primitive-color-amber-700: #9A5B00;
+  --primitive-color-gray-50: #F1F1EF;
+  --primitive-color-gray-600: #5F6672;
+  --primitive-size-1: 4px;
+  --primitive-size-2: 8px;
+  --primitive-size-3: 12px;
+  --primitive-size-4: 16px;
+  --primitive-size-6: 24px;
+  --primitive-size-8: 32px;
+  --primitive-size-12: 48px;
+  --primitive-radius-md: 12px;
+  --primitive-radius-lg: 16px;
+  --primitive-radius-full: 9999px;
+  --primitive-font-size-caption: 13px;
+  --primitive-font-size-body: 15px;
+  --primitive-font-size-lead: 17px;
+  --primitive-font-size-title: 20px;
+  --primitive-font-size-number: 28px;
+  --primitive-font-size-hero: 40px;
+  --primitive-font-size-hero-sm: 32px;
+  --primitive-font-family-sans: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+}
+
+/* === SEMANTIC === */
+:root {
+  --tone-bg: #F7F5F0;
+  --tone-surface: #FFFDF8;
+  --tone-surface-sunk: #EFEAE0;
+  --tone-ink: #16213A;
+  --tone-ink-soft: #4A5568;
+  --tone-line: #E2DCD0;
+  --tone-accent: #F2994A;
+  --tone-accent-ink: #A8481A;
+  --tone-action: #16213A;
+  --tone-action-hover: #2B3A5C;
+  --tone-on-action: #FFFDF8;
+  --tone-series-a: #3D6FB8;
+  --tone-series-b: #E07A2E;
+  --tone-adopt: #2F7D4F;
+  --tone-adopt-bg: #E8F4EC;
+  --tone-likely: #9A5B00;
+  --tone-likely-bg: #FFF4DC;
+  --tone-hold: #5F6672;
+  --tone-hold-bg: #F1F1EF;
+  --tone-warn: #A8481A;
+  --tone-warn-bg: #FFF3E6;
+  --tone-info-bg: #EAF1FB;
+  --space-inline: 8px;
+  --space-stack: 16px;
+  --space-section: 48px;
+  --space-group: 32px;
+}
+
+/* === COMPONENTS === */
+:root {
+  --card-bg: #FFFDF8;
+  --card-border: #E2DCD0;
+  --card-radius: 16px;
+  --card-padding: 24px;
+  --button-bg: #16213A;
+  --button-fg: #FFFDF8;
+  --button-hover-bg: #2B3A5C;
+  --button-radius: 12px;
+  --button-height: 48px;
+  --badge-radius: 9999px;
+  --details-summary-fg: #A8481A;
+  --details-bg: #F7F5F0;
+  --banner-bg: #FFF3E6;
+  --banner-fg: #A8481A;
+  --focus-ring: #F2994A;
+}
