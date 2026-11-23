@@ -1,4 +1,5 @@
 import pathlib
+import re
 
 from fastapi.testclient import TestClient
 
@@ -26,9 +27,9 @@ def test_research_offline_uses_cache(monkeypatch):
     assert 1 <= len(body["keywords"]) <= 10
     assert body["keywords"][0] == {"keyword": "수제쿠키", "total_qc": body["keywords"][0]["total_qc"]}
     aud = body["audience"]
-    assert aud["keyword"] == "쿠키선물세트" and set(aud["ages"]) >= {"20", "30", "40", "50"}
-    assert aud["top_age"] == "30"                      # 한 줄 요약(분야 평균 대비)과 같은 연령대
-    assert "30대 여성" in body["headline"]
+    assert set(aud["ages"]) >= {"20", "30", "40", "50"}
+    assert body["headline"].startswith(aud["keyword"])            # 대표 키워드 = 한 줄 요약의 키워드
+    assert f"{aud['top_age']}대 여성" in body["headline"]          # 한 줄 요약(분야 평균 대비)과 같은 연령대
 
 
 def test_research_unknown_product_is_friendly(monkeypatch):
@@ -109,3 +110,57 @@ def test_copies_source_is_template_when_claude_gives_nothing(monkeypatch):
     monkeypatch.setattr(copywriter, "_ask_claude", lambda *a, **k: [])        # Claude가 아무것도 못 줌
     body = TestClient(app).post("/copies", json={"product": "수제 쿠키", "strengths": ["버터"], "keywords": []}).json()
     assert body["source"] == "template" and len(body["copies"]) == 3
+
+
+def test_research_reports_each_part_with_its_own_date(monkeypatch):
+    monkeypatch.setenv("COACH_OFFLINE", "1")
+    body = TestClient(app).post("/research", json={"product": "수제 쿠키", "seeds": CACHED_SEEDS}).json()
+    parts = {s["part"]: s for s in body["sources"]}
+    assert parts["product"] == {"part": "product", "label": "검색어·연령", "fetched": "2026-11-15", "today": False}
+    assert parts["baseline"]["label"] == "분야 평균"
+    assert re.fullmatch(r"\d{4}-\d{2}-\d{2}", parts["baseline"]["fetched"])   # 고정 저장본을 새로 받으면 날짜가 바뀐다
+
+
+def test_research_is_live_when_product_data_is_from_today_even_if_baseline_is_old(monkeypatch):
+    import datetime
+    from server.engine import market, naver_api
+    real_build = market.build
+    today = datetime.date.today().isoformat()
+
+    def build(seeds, online=True):
+        report = real_build(seeds, online=False)
+        naver_api.reset_fetched()
+        naver_api._note_fetched(f"{today} 12:00:00", "product")
+        naver_api._note_fetched("2026-11-15 14:35:09", "baseline")
+        report.fetched_parts = naver_api.fetched_parts()
+        return report
+
+    monkeypatch.setattr(market, "build", build)
+    body = TestClient(app).post("/research", json={"product": "수제 쿠키", "seeds": CACHED_SEEDS}).json()
+    assert body["source"] == "live"
+    parts = {s["part"]: s for s in body["sources"]}
+    assert parts["product"]["today"] is True and parts["baseline"]["today"] is False
+
+
+def test_research_returns_up_to_20_words_to_leave_out(monkeypatch):
+    """장표 6·12장: 추천 10개 + 뺄 키워드 20개 (만들기·매장·관련 낮음)."""
+    monkeypatch.setenv("COACH_OFFLINE", "1")
+    body = TestClient(app).post("/research", json={"product": "수제 쿠키"}).json()
+    neg = body["negatives"]
+    assert 1 <= len(neg) <= 20
+    assert not set(neg) & {k["keyword"] for k in body["keywords"]}
+
+
+def test_copies_never_use_a_left_out_word(monkeypatch):
+    from server.engine import copywriter
+    bad = [{"text": "쿠키만들기 재료처럼 정성껏 구웠어요. 오늘 만나 보세요.", "headline": "쿠키만들기"},
+           {"text": "버터 듬뿍 넣고 당일 구운 수제 쿠키예요.", "headline": "당일 구운 수제 쿠키"},
+           {"text": "광주맛집에서 만든 쿠키를 집에서 받아 보세요.", "headline": "집에서 받는 쿠키"}]
+    monkeypatch.setattr(copywriter, "meta_copies_with_source", lambda *a, **k: (bad, True))
+    monkeypatch.setenv("COACH_NO_LLM", "1")
+    body = TestClient(app).post("/copies", json={"product": "수제 쿠키", "strengths": ["버터 듬뿍"],
+                                                  "keywords": ["수제쿠키"], "avoid": ["쿠키만들기", "광주맛집"]}).json()
+    assert len(body["copies"]) == 3
+    for c in body["copies"]:
+        assert "쿠키만들기" not in c["primary_text"] + c["headline"]
+        assert "광주맛집" not in c["primary_text"] + c["headline"]

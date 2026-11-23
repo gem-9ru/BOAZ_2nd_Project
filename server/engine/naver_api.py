@@ -50,7 +50,7 @@ UNKNOWN_ERROR = "네이버에서 값을 가져오는 중 문제가 생겼어요.
 
 
 # ── 받은 날 (화면에 "조회일"을 보여 주기용) ───────────────────────────────
-_FETCHED: List[str] = []
+_FETCHED: List[tuple] = []     # (받은 날 'YYYY-MM-DD', 부분 "product"|"baseline")
 
 
 def reset_fetched() -> None:
@@ -60,12 +60,29 @@ def reset_fetched() -> None:
 
 def oldest_fetched() -> Optional[str]:
     """reset_fetched 뒤로 쓴 응답 중 가장 오래된 받은 날 'YYYY-MM-DD'. 없으면 None."""
-    return min(_FETCHED) if _FETCHED else None
+    return min(d for d, _ in _FETCHED) if _FETCHED else None
 
 
-def _note_fetched(stamp: Optional[str]) -> None:
+def fetched_parts() -> Dict[str, str]:
+    """부분별 가장 오래된 받은 날. product = 이 상품의 검색어·연령, baseline = 분야 평균 (상품과 상관없는 비교 기준)."""
+    out: Dict[str, str] = {}
+    for d, part in _FETCHED:
+        out[part] = min(out.get(part, d), d)
+    return out
+
+
+def part_of(kind: str, key: str) -> str:
+    """저장본 이름으로 부분 구분: 데이터랩 '분야만' 조회(키워드 칸이 빔)는 분야 평균, 나머지는 상품 자료."""
+    if kind == "hub":
+        fields = key.split("|")
+        if len(fields) > 2 and not fields[2]:
+            return "baseline"
+    return "product"
+
+
+def _note_fetched(stamp: Optional[str], part: str = "product") -> None:
     if stamp:
-        _FETCHED.append(str(stamp)[:10])
+        _FETCHED.append((str(stamp)[:10], part))
 
 
 def last_error() -> Optional[str]:
@@ -169,17 +186,18 @@ def fetch_cached(kind: str, key: str, online: bool, call: Callable[[], object]):
     """저장본 → 시연 저장본 → (online이면) call() → 오래된 저장본. → (응답, 출처) 또는 (None, "").
     call이 NaverError를 내면 오래된 저장본이 있으면 그것을, 없으면 NaverError를 그대로 올림."""
     name = cache_name(kind, key)
+    part = part_of(kind, key)
     mine = _load(CACHE_DIR / name)
     if mine is not None and (not online or not _stale(mine)):
-        _note_fetched(mine.get("fetched_at"))
+        _note_fetched(mine.get("fetched_at"), part)
         return mine["response"], "저장본"
     pinned = _load(EXAMPLES_DIR / name)
     if pinned is not None:
-        _note_fetched(pinned.get("fetched_at"))
+        _note_fetched(pinned.get("fetched_at"), part)
         return pinned["response"], "예시 저장본"
     if not online:
         if mine:
-            _note_fetched(mine.get("fetched_at"))
+            _note_fetched(mine.get("fetched_at"), part)
             return mine["response"], "저장본"
         return None, ""
     try:
@@ -187,16 +205,16 @@ def fetch_cached(kind: str, key: str, online: bool, call: Callable[[], object]):
     except NaverError as e:
         if mine is not None:
             _set_error(e.message)        # 오래된 저장본으로 대신 보여 주지만 실시간 조회는 실패했음
-            _note_fetched(mine.get("fetched_at"))
+            _note_fetched(mine.get("fetched_at"), part)
             return mine["response"], "지난 저장본"
         raise
     if data is None:
         if mine:
-            _note_fetched(mine.get("fetched_at"))
+            _note_fetched(mine.get("fetched_at"), part)
             return mine["response"], "지난 저장본"
         return None, ""
     save(kind, key, data)
-    _note_fetched(time.strftime("%Y-%m-%d %H:%M:%S"))
+    _note_fetched(time.strftime("%Y-%m-%d %H:%M:%S"), part)
     return data, "실시간"
 
 

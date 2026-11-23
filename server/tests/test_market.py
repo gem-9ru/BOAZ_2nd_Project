@@ -315,3 +315,27 @@ def test_stale_cache_fallback_still_records_error(monkeypatch):
     assert api.last_error()
 
 
+
+
+def test_fetch_parts_split_product_and_category_baseline():
+    from server.engine import naver_api as api
+    assert api.part_of("hub", "/shopping/v1/category/age|50000006||month") == "baseline"
+    assert api.part_of("hub", "/shopping/v1/category/keyword/age|50000006|수제쿠키|month") == "product"
+    assert api.part_of("keywordstool", "수제쿠키") == "product"
+    api.reset_fetched()
+    api._note_fetched("2026-11-22 12:00:00", "product")
+    api._note_fetched("2026-11-20 09:00:00", "product")
+    api._note_fetched("2026-11-15 14:35:09", "baseline")
+    assert api.fetched_parts() == {"product": "2026-11-20", "baseline": "2026-11-15"}
+    assert api.oldest_fetched() == "2026-11-15"
+
+
+def test_lead_audience_is_the_most_distinctive_one():
+    """장표 15장: 대표는 분야 평균 대비 배수가 가장 큰 키워드 (수제 쿠키 → 답례품쿠키, 30대 2.84배)."""
+    a = {"ages": {"30": 0.31, "40": 0.34}, "index": {"30": 1.82, "40": 1.1}, "female": 0.82}
+    b = {"ages": {"30": 0.48, "20": 0.17}, "index": {"30": 2.84, "20": 0.9}, "female": 0.82}
+    assert market.lead_audience({"쿠키선물세트": a, "답례품쿠키": b}) == "답례품쿠키"
+    assert market.lead_audience({}) is None
+    r = market.build(["수제 쿠키"], online=False)
+    assert next(iter(r.audiences)) == "답례품쿠키"
+    assert r.headline.startswith("답례품쿠키를 찾는 사람은 30대 여성이 분야 평균의 2.84배")

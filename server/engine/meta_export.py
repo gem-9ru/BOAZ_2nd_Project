@@ -67,8 +67,26 @@ def _from_long(df: pd.DataFrame) -> Bundle:
     return b
 
 
+def _with_platform(df: pd.DataFrame) -> pd.DataFrame:
+    """한국어 내보내기의 '노출 위치'는 '피드'처럼 플랫폼이 빠진 값이 있다 → '플랫폼 노출 위치'로 합친다.
+    ('Instagram 릴스'처럼 이미 플랫폼으로 시작하면 그대로.) 진단은 'Audience Network'·'Instagram' 글자로 노출 위치를 구분한다."""
+    plat = next((c for c in ("플랫폼", "Platform") if c in df.columns), None)
+    pos = next((c for c in ("노출 위치", "Placement") if c in df.columns), None)
+    if not plat or not pos:
+        return df
+    def join(p, q):
+        if pd.isna(q) or pd.isna(p):
+            return q
+        p, q = str(p).strip(), str(q).strip()
+        return q if q.lower().startswith(p.lower()) else f"{p} {q}"
+    out = df.copy()
+    out[pos] = [join(p, q) for p, q in zip(out[plat], out[pos])]
+    return out
+
+
 def _from_export(df: pd.DataFrame) -> Bundle:
     b = Bundle()
+    df = _with_platform(df)
     placed, problems = clean(df.assign(**{"캠페인 목표": OBJECTIVE}) if "캠페인 목표" not in df.columns else df, "meta_placement")
     if placed is not None:   # 맨 아래 '합계' 행처럼 광고 세트·노출 위치가 빈 행은 뺀다
         placed.df = placed.df[placed.df["adset"].notna() & placed.df["placement"].notna()].reset_index(drop=True)

@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from server.engine import analyze as analysis, copywriter, market, naver_api, specs
 from server.engine.meta_export import read_export
+from server.engine.loop import run as loop_run, simulate as loop_simulate
 
 MAX_KEYWORDS = 10
 _NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
@@ -56,9 +57,12 @@ def research(body: ResearchIn) -> dict:
     if report.audiences:
         name, aud = next(iter(report.audiences.items()))
         audience = {"keyword": name, "female": aud["female"], "ages": aud["ages"], "top_age": market.top_age(aud)}
-    live = report.fetched == datetime.date.today().isoformat()
+    today = datetime.date.today().isoformat()
+    sources = [{"part": part, "label": label, "fetched": report.fetched_parts[part], "today": report.fetched_parts[part] == today}
+               for part, label in (("product", "검색어·연령"), ("baseline", "분야 평균")) if part in report.fetched_parts]
+    live = report.fetched_parts.get("product", report.fetched) == today   # 이 상품 자료가 오늘 받은 것이면 실시간
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
-            "source": "live" if live else "cache", "notice": None}
+            "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None}
 
 
 ASKED_KINDS = ("question", "precheck")
@@ -69,13 +73,23 @@ class CopiesIn(BaseModel):
     product: str
     strengths: List[str] = []
     keywords: List[str] = []
+    avoid: List[str] = []      # ① 찾기의 뺄 말: 문구에 넣지 않는다
 
 
 @app.post("/copies")
 def copies(body: CopiesIn) -> dict:
     client = None if os.environ.get("COACH_NO_LLM") == "1" else copywriter.make_client()
+    avoid = [w for w in body.avoid if w.strip()]
+    clean = lambda cs: [c for c in cs if not any(w in c["text"] + c["headline"] for w in avoid)]
     made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths) + list(body.keywords),
                                                           n=3, client=client or False)
+    made = clean(made)
+    if len(made) < 3:   # 뺄 말이 들어간 문구를 버렸으면 문장 틀로 채운다
+        for c in clean(copywriter.meta_copies(body.product, list(body.strengths) + list(body.keywords), n=6, client=False)):
+            if len(made) >= 3:
+                break
+            if c not in made:
+                made.append(c)
     return {"copies": [{"primary_text": c["text"], "headline": c["headline"]} for c in made],
             "source": "claude" if used_claude else "template"}
 
@@ -99,3 +113,80 @@ async def analyze(file: UploadFile = File(...)):
         msg = " ".join(bundle.problems) or "메타 결과를 읽지 못했어요. 광고 관리자에서 일·노출 위치 기준으로 내보내 주세요."
         return JSONResponse(status_code=400, content={"error": msg})
     return analysis.analyze(bundle)
+
+
+# ── 분석 페이지: 0 검증 → 5 다음 세팅 (server/engine/loop) ────────────────────
+import secrets  # noqa: E402
+
+from fastapi import HTTPException  # noqa: E402
+
+DEMO_CSV = os.path.join(os.path.dirname(__file__), "data", "demo", "오븐로그_메타AB_20261117-20261120.csv")
+_PLANS: dict = {}        # 코드 → 분석 결과 (시연용, 서버 메모리에만)
+_CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # 헷갈리는 O·0·I·1 제외
+
+
+def _store(result: dict) -> dict:
+    code = "".join(secrets.choice(_CODE_CHARS) for _ in range(4))
+    while code in _PLANS:
+        code = "".join(secrets.choice(_CODE_CHARS) for _ in range(4))
+    _PLANS[code] = result
+    return {**result, "code": code}
+
+
+def _loop(bundle):
+    if "meta_daily" not in bundle.tables:
+        msg = " ".join(bundle.problems) or "메타 결과를 읽지 못했어요. 광고 관리자에서 일·노출 위치 기준으로 내보내 주세요."
+        return JSONResponse(status_code=400, content={"error": msg})
+    return _store(loop_run.run(bundle))
+
+
+@app.post("/analysis")
+async def analysis_upload(file: UploadFile = File(...)):
+    return _loop(read_export(await file.read()))
+
+
+@app.get("/analysis/example")
+def analysis_example():
+    return _loop(read_export(DEMO_CSV))
+
+
+class SimulateIn(BaseModel):
+    code: str
+    arm: str
+    budget: float
+
+
+@app.post("/simulate")
+def simulate(body: SimulateIn):
+    plan = _PLANS.get(body.code.upper())
+    arm = next((a for a in (plan or {}).get("summary", {}).get("arms", []) if a["name"] == body.arm), None)
+    if arm is None:
+        raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
+    return loop_simulate.run(arm, max(body.budget, 0.0))
+
+
+@app.get("/plan/{code}")
+def plan(code: str):
+    p = _PLANS.get(code.upper())
+    if p is None:
+        raise HTTPException(status_code=404, detail="코드를 찾지 못했어요. 분석 페이지의 코드를 다시 확인해 주세요.")
+    return {**p["next"], "badge": (p["verdict"] or {}).get("badge"), "code": code.upper()}
+
+
+# ── 분석 페이지 화면 (web/ 를 빌드한 web/dist) ────────────────────────────────
+from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
+
+WEB_DIST = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "dist")
+
+
+@app.get("/analysis")
+def analysis_page():
+    index = os.path.join(WEB_DIST, "index.html")
+    if not os.path.exists(index):
+        return JSONResponse(status_code=503, content={"error": "분석 페이지가 아직 빌드되지 않았어요. web 폴더에서 npm run build를 실행해 주세요."})
+    return FileResponse(index)
+
+
+if os.path.isdir(os.path.join(WEB_DIST, "assets")):
+    app.mount("/analysis/assets", StaticFiles(directory=os.path.join(WEB_DIST, "assets")), name="analysis-assets")

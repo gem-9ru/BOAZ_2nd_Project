@@ -90,3 +90,10 @@ def test_straddling_rule_uses_hold_changes_and_hypothesis_grade():
 
 def test_small_sample_hold_range_is_graded_hypothesis():
     assert _post(DEMO).json()["expect"]["grade"] == "hypothesis"
+
+
+def test_placement_label_for_real_export_names():
+    assert A.placement_label("Audience Network 네이티브, 배너 및 전면 광고") == "Audience Network 네이티브·배너·전면"
+    assert A.placement_label("Instagram 릴스") == "인스타그램 릴스"
+    assert A.placement_label("Facebook 피드") == "페이스북 피드"
+    assert A.placement_label("Instagram 둘러보기/탐색 탭") == "인스타그램 둘러보기/탐색 탭"

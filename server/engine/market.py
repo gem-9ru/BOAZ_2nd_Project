@@ -246,6 +246,16 @@ def top_age(aud: dict) -> str:
     return max(ages, key=lambda a: (idx.get(a, 0), ages[a])) if ages else max(aud["ages"], key=aud["ages"].get)
 
 
+def lead_audience(auds: Dict[str, dict]) -> Optional[str]:
+    """대표 키워드: 대표 연령대의 분야 평균 대비 배수가 가장 큰 것 (같으면 앞 순서). 손님이 가장 뚜렷한 말."""
+    if not auds:
+        return None
+    def score(k: str) -> float:
+        a = auds[k]
+        return float(a.get("index", {}).get(top_age(a), 0))
+    return max(auds, key=lambda k: (score(k), -list(auds).index(k)))
+
+
 def headline(keyword: str, aud: Optional[dict], fallback_qc: Optional[float] = None) -> str:
     """한 줄 요약. 예: "답례품쿠키를 찾는 사람은 30대 여성이 분야 평균의 2.8배, 11월에 가장 많이 찾아요"."""
     if not aud:
@@ -293,6 +303,7 @@ class MarketReport:
     audiences: Dict[str, dict] = field(default_factory=dict)
     headline: str = ""
     fetched: str = ""          # 쓴 응답 중 가장 오래된 받은 날 'YYYY-MM-DD' (화면의 조회일)
+    fetched_parts: Dict[str, str] = field(default_factory=dict)   # 부분별 받은 날 (product·baseline)
 
 
 def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
@@ -308,9 +319,12 @@ def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
         a = audience(k, online=online)
         if a:
             auds[k] = a
-    top = next(iter(auds), rec[0] if rec else None)
+    lead = lead_audience(auds)
+    if lead:   # 대표를 맨 앞에 (서버 응답과 화면은 첫 번째를 대표로 쓴다)
+        auds = {lead: auds[lead], **{k: v for k, v in auds.items() if k != lead}}
+    top = lead or (rec[0] if rec else None)
     qc = float(kw.loc[kw["keyword"] == top, "total_qc"].iloc[0]) if top else None
     return MarketReport(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
                         negatives=negative_list(kw), audiences=auds,
                         headline=headline(top, auds.get(top), qc) if top else "",
-                        fetched=api.oldest_fetched() or "")
+                        fetched=api.oldest_fetched() or "", fetched_parts=api.fetched_parts())

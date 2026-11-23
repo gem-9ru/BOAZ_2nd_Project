@@ -154,12 +154,21 @@ _POSITION_KO = {
     "search": "검색 결과", "video_feeds": "동영상 피드", "facebook_profile_feed": "프로필 피드",
     "instagram_profile_feed": "프로필 피드", "an_classic": "네이티브·배너·전면", "rewarded_video": "보상형 동영상",
     "messenger_inbox": "받은 메시지함", "messenger_stories": "스토리",
+    "네이티브, 배너 및 전면 광고": "네이티브·배너·전면",   # 한국어 내보내기의 Audience Network 자리
 }
+_PLATFORMS = ("Audience Network", "Facebook", "Instagram", "Messenger", "Threads")
 
 
 def placement_label(name: str) -> str:
     """'Instagram instagram_reels' → '인스타그램 릴스'. 모르는 이름은 그대로 둔다 (보고서 표시용)."""
-    head, _, pos = str(name).rpartition(" ")
+    name = str(name)
+    plat = next((p for p in _PLATFORMS if name.startswith(p + " ")), None)
+    if plat:
+        rest = name[len(plat) + 1:]
+        if rest.lower().startswith(plat.lower() + " "):   # 'Instagram Instagram 릴스' 같은 겹침
+            rest = rest[len(plat) + 1:]
+        return f"{_PLATFORM_KO.get(plat, plat)} {_POSITION_KO.get(rest, rest)}"
+    head, _, pos = name.rpartition(" ")
     if not head:
-        return str(name)
+        return name
     return f"{_PLATFORM_KO.get(head, head)} {_POSITION_KO.get(pos, pos)}"

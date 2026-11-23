@@ -72,3 +72,24 @@ def test_long_format_without_date_is_a_problem_not_a_crash():
     csv = "section,ad_set,metric,value\n5_부록_일자별,A,노출,10\n"
     b = read_export(io.BytesIO(csv.encode("utf-8")))
     assert "meta_daily" not in b.tables and b.problems
+
+
+KO_EXPORT = "server/tests/fixtures/meta_export_ko.csv"   # 실제 한국어 광고 관리자 내보내기와 같은 머리글 (이름만 바꿈)
+
+
+def test_real_korean_export_names_placements_with_their_platform():
+    p = read_export(KO_EXPORT).tables["meta_placement"].df
+    names = set(p["placement"])
+    assert "Instagram 릴스" in names                                  # 이미 플랫폼이 붙은 이름은 그대로
+    assert {"Instagram 피드", "Facebook 피드"} <= names               # 같은 '피드'라도 플랫폼별로 나뉜다
+    assert "Audience Network 네이티브, 배너 및 전면 광고" in names    # 노출 위치 쏠림 진단이 찾는 글자
+
+
+def test_real_korean_export_daily_and_audience_network_share():
+    from server.engine import metrics
+    b = read_export(KO_EXPORT)
+    d = b.tables["meta_daily"].df
+    assert sorted(d["date"].dt.strftime("%m-%d")) == ["11-17", "11-18"]
+    assert d["link_clicks"].sum() == 23                                # 합계 행은 빠진다
+    m = metrics.case_metrics(b)
+    assert m["an_click_share"] > 0.3                                   # 23번 중 8번이 Audience Network
