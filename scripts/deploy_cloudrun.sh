@@ -16,7 +16,8 @@ gcloud services enable run.googleapis.com cloudbuild.googleapis.com artifactregi
 
 SECRETS=()
 for k in "${KEYS[@]}"; do
-  v="$(grep -E "^${k}=" .env | head -1 | cut -d= -f2- | sed -e 's/^["'\'']//' -e 's/["'\'']$//')"
+  # 없는 키면 grep이 1을 돌려 set -e에 걸리므로 || true (없으면 아래에서 건너뜀)
+  v="$( { grep -E "^${k}=" .env || true; } | head -1 | cut -d= -f2- | sed -e 's/^["'\'']//' -e 's/["'\'']$//')"
   [ -z "$v" ] && { echo "$k 값이 .env에 없어 건너뜀"; continue; }
   name="ad-assistant-$(echo "$k" | tr 'A-Z_' 'a-z-')"
   if gcloud secrets describe "$name" >/dev/null 2>&1; then
@@ -32,6 +33,8 @@ PROJECT_NUMBER="$(gcloud projects describe "$PROJECT" --format='value(projectNum
 # Cloud Run 실행 계정이 비밀 값을 읽을 수 있게
 for s in "${SECRETS[@]}"; do n="${s#*=}"; n="${n%:latest}"; gcloud secrets add-iam-policy-binding "$n" \
   --member="serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com" --role=roles/secretmanager.secretAccessor >/dev/null; done
+
+[ "${#SECRETS[@]}" -eq 0 ] && { echo ".env에서 키를 하나도 찾지 못했어요. 프로젝트 폴더의 .env를 확인해 주세요." >&2; exit 1; }
 
 gcloud run deploy "$SERVICE" --source . --region "$REGION" --allow-unauthenticated \
   --min-instances 1 --max-instances 1 --memory 1Gi --cpu 1 --timeout 120 \

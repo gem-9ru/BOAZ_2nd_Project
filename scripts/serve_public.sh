@@ -5,21 +5,30 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 mkdir -p logs
+TUNNEL_CFG="$HOME/.cloudflared/ad-assistant.yml"
+# 이 프로젝트 서버 = 8000번 포트를 듣고 있는 'server.app:app' 프로세스 (다른 폴더·포트의 uvicorn은 건드리지 않음)
+server_pid() {
+  for pid in $(lsof -tiTCP:8000 -sTCP:LISTEN 2>/dev/null); do
+    ps -o command= -p "$pid" | grep -q "server.app:app" && echo "$pid"
+  done
+}
+tunnel_pid() { pgrep -f "cloudflared tunnel --config $TUNNEL_CFG" || true; }
+
 if [ "${1:-}" = "stop" ]; then
-  pkill -f "uvicorn server.app:app" && echo "서버를 껐어요" || echo "서버는 이미 꺼져 있어요"
-  pkill -f "cloudflared tunnel --config $HOME/.cloudflared/ad-assistant.yml" && echo "터널을 껐어요" || echo "터널은 이미 꺼져 있어요"
+  p="$(server_pid)"; [ -n "$p" ] && kill $p && echo "서버를 껐어요" || echo "서버는 이미 꺼져 있어요"
+  p="$(tunnel_pid)"; [ -n "$p" ] && kill $p && echo "터널을 껐어요" || echo "터널은 이미 꺼져 있어요"
   exit 0
 fi
 # 분석 페이지가 빌드돼 있어야 /analysis가 뜬다
 [ -f web/dist/index.html ] || (cd web && mise exec node@22 -- npx vite build)
-if ! pgrep -f "uvicorn server.app:app" >/dev/null; then
+if [ -z "$(server_pid)" ]; then
   nohup .venv/bin/uvicorn server.app:app --host 127.0.0.1 --port 8000 >> logs/server.log 2>&1 &
   echo "서버를 켰어요 (127.0.0.1:8000)"
 else
   echo "서버는 이미 켜져 있어요 (127.0.0.1:8000)"
 fi
-if ! pgrep -f "cloudflared tunnel --config $HOME/.cloudflared/ad-assistant.yml" >/dev/null; then
-  nohup cloudflared tunnel --config "$HOME/.cloudflared/ad-assistant.yml" run ad-assistant >> logs/tunnel.log 2>&1 &
+if [ -z "$(tunnel_pid)" ]; then
+  nohup cloudflared tunnel --config "$TUNNEL_CFG" run ad-assistant >> logs/tunnel.log 2>&1 &
   echo "터널을 켰어요 → https://boaz-ad-assistant.gem-9ru.com"
 else
   echo "터널은 이미 켜져 있어요 → https://boaz-ad-assistant.gem-9ru.com"
