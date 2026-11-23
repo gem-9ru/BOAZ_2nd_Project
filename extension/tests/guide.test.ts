@@ -50,3 +50,14 @@ describe("stepsFor", () => {
     expect(stepsFor("export", entries, [], []).map((s) => s.entry.mode)).toEqual(["export", "export", "export"]);
   });
 });
+
+describe("every field the analysis can ask to change has an edit guide", () => {
+  it("covers all field ids in server/specs/rules.yaml plus the ones next_step uses", async () => {
+    const { readFileSync } = await import("node:fs");
+    const rules = readFileSync(resolve(__dirname, "../../server/specs/rules.yaml"), "utf8");
+    const ids = new Set([...rules.matchAll(/meta\.(?:adset|ad|creative|campaign)\.[a-z_.]+/g)].map((m) => m[0]));
+    ids.add("meta.adset.end_date"); ids.add("meta.creative.copy");
+    const edit = new Set(entries.filter((e) => e.mode === "edit").map((e) => e.id));
+    expect([...ids].filter((id) => !edit.has(id))).toEqual([]);
+  });
+});

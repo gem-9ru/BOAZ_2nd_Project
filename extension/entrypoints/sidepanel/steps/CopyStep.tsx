@@ -20,7 +20,7 @@ export default function CopyStep({ state, dispatch }: Props) {
     setError(null);
     try {
       const pieces = strengths.split(/[,\n]/).map((s) => s.trim()).filter(Boolean);
-      const r = await fetchCopies({ product: state.product ?? "", strengths: pieces, keywords: state.keywords });
+      const r = await fetchCopies({ product: state.product ?? "", strengths: pieces, keywords: state.keywords, avoid: state.research?.negatives ?? [] });
       setList(r.copies);
     } catch (e) {
       setError((e as Error).message);
@@ -56,6 +56,11 @@ export default function CopyStep({ state, dispatch }: Props) {
             </li>
           ))}
         </ol>
+      )}
+      {list && (
+        <button type="button" onClick={write} disabled={busy} className="self-start text-[13px] text-soft underline disabled:opacity-40">
+          {busy ? "다시 쓰는 중…" : "다른 문구로 다시 써 주세요"}
+        </button>
       )}
       <p className="text-[13px] text-soft">사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.</p>
     </section>

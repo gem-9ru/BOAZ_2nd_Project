@@ -7,16 +7,18 @@
     },
     "find": [
       {
-        "aria": "트래픽"
+        "labelledBy": "트래픽"
       },
       {
-        "labelText": "트래픽"
+        "role": "button",
+        "text": "만들기",
+        "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요"
       }
     ],
-    "say": "{value}을(를) 고르세요",
+    "say": "'{value}'을(를) 고르고 '계속'을 누르세요",
     "done": "value",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.campaign.objective.png",
       "text": "화면에서 '캠페인 목표' 칸을 찾아 주세요"
     }
   },
@@ -28,16 +30,22 @@
     },
     "find": [
       {
-        "aria": "특별 광고 카테고리"
+        "labelledBy": "카테고리"
       },
       {
-        "labelText": "특별 광고 카테고리"
+        "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
+        "labelText": "수동 트래픽 캠페인"
+      },
+      {
+        "role": "button",
+        "text": "계속",
+        "say": "'계속'을 누르세요"
       }
     ],
-    "say": "해당 없으면 비워 두세요 ({value})",
+    "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 '했어요'를 누르세요 ({value})",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.campaign.special_category.png",
       "text": "화면에서 '특별 광고 카테고리' 칸을 찾아 주세요"
     }
   },
@@ -49,16 +57,18 @@
     },
     "find": [
       {
-        "aria": "전환 위치"
+        "labelledBy": "웹사이트"
       },
       {
-        "labelText": "전환 위치"
+        "role": "button",
+        "text": "다음",
+        "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
       }
     ],
-    "say": "{value}(으)로 보내요. '웹사이트'를 고르세요",
+    "say": "전환 위치는 '웹사이트'를 고르세요 ({value})",
     "done": "value",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.adset.conversion_location.png",
       "text": "화면에서 '전환 위치' 칸을 찾아 주세요"
     }
   },
@@ -70,16 +80,16 @@
     },
     "find": [
       {
-        "aria": "종료 날짜"
+        "labelledBy": "종료 날짜 설정"
       },
       {
-        "labelText": "종료 날짜"
+        "heading": "예산 및 일정"
       }
     ],
-    "say": "종료 날짜를 켜고 {value}(으)로 넣으세요",
-    "done": "value",
+    "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '했어요'를 누르세요",
+    "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.adset.end_date.png",
       "text": "화면에서 '종료 날짜' 칸을 찾아 주세요"
     }
   },
@@ -91,16 +101,17 @@
     },
     "find": [
       {
-        "aria": "위치"
+        "role": "button",
+        "textStarts": "위치"
       },
       {
-        "labelText": "위치"
+        "heading": "타겟"
       }
     ],
-    "say": "{value}(으)로 두세요",
+    "say": "위치는 {value}(으)로 두세요",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.adset.location.png",
       "text": "화면에서 '위치' 칸을 찾아 주세요"
     }
   },
@@ -112,16 +123,19 @@
     },
     "find": [
       {
-        "aria": "연령"
+        "role": "button",
+        "textStarts": "연령"
       },
       {
-        "labelText": "연령"
+        "role": "button",
+        "text": "설정 표시",
+        "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
       }
     ],
-    "say": "여기에 {value}을(를) 넣으세요",
-    "done": "value",
+    "say": "연령과 바로 아래 성별을 {value}(으)로 맞추고 '했어요'를 누르세요",
+    "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.adset.age_gender.png",
       "text": "화면에서 '연령' 칸을 찾아 주세요"
     }
   },
@@ -133,16 +147,18 @@
     },
     "find": [
       {
-        "aria": "Facebook 페이지"
+        "heading": "대표 계정"
       },
       {
-        "labelText": "Facebook 페이지"
+        "role": "button",
+        "text": "다음",
+        "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
       }
     ],
-    "say": "가게 페이스북 페이지를 고르세요",
-    "done": "value",
+    "say": "가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기') — 고른 뒤 '했어요'",
+    "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.pre.fb_page.png",
       "text": "화면에서 'Facebook 페이지' 칸을 찾아 주세요"
     }
   },
@@ -154,17 +170,17 @@
     },
     "find": [
       {
-        "aria": "Instagram 계정"
+        "labelledBy": "Instagram 프로필"
       },
       {
-        "labelText": "Instagram 계정"
+        "heading": "대표 계정"
       }
     ],
-    "say": "인스타그램 계정을 고르세요 ({value})",
-    "done": "value",
+    "say": "'Instagram 프로필'에서 가게 인스타그램 계정을 고르세요 ({value}). 페이스북 페이지를 먼저 고르면 나와요",
+    "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
-      "text": "화면에서 'Instagram 계정' 칸을 찾아 주세요"
+      "image": "guide/meta.pre.ig_account.png",
+      "text": "'대표 계정' 구역의 'Instagram 프로필'에서 계정을 골라 주세요"
     }
   },
   {
@@ -175,16 +191,16 @@
     },
     "find": [
       {
-        "aria": "형식"
+        "labelledBy": "단일 이미지 또는 동영상"
       },
       {
-        "labelText": "형식"
+        "heading": "광고 설정"
       }
     ],
-    "say": "{value}을(를) 고르세요",
+    "say": "'{value}'을(를) 고르세요",
     "done": "value",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.ad.format.png",
       "text": "화면에서 '형식' 칸을 찾아 주세요"
     }
   },
@@ -196,17 +212,21 @@
     },
     "find": [
       {
-        "aria": "미디어 추가"
+        "role": "button",
+        "text": "업로드",
+        "say": "계정 사진을 고르거나 '업로드'로 올린 뒤 '다음'을 누르세요"
       },
       {
-        "labelText": "미디어 추가"
+        "role": "button",
+        "textStarts": "크리에이티브 설정",
+        "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
       }
     ],
     "say": "준비한 사진을 올리세요 ({value})",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
-      "text": "화면에서 '미디어 추가' 칸을 찾아 주세요"
+      "image": "guide/meta.ad.media.png",
+      "text": "광고 화면의 '크리에이티브 설정' › '이미지 광고'에서 사진을 골라 주세요"
     }
   },
   {
@@ -217,16 +237,23 @@
     },
     "find": [
       {
-        "aria": "기본 문구"
+        "aria": "간단하게 광고를 소개하세요"
       },
       {
-        "labelText": "기본 문구"
+        "role": "button",
+        "text": "다음",
+        "say": "창 아래 '다음'을 눌러 '문구' 단계로 가세요"
+      },
+      {
+        "role": "button",
+        "textStarts": "크리에이티브 설정",
+        "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
       }
     ],
-    "say": "이 문구를 붙여 넣으세요: {value}",
-    "done": "value",
+    "say": "이 문구를 붙여 넣은 뒤 '했어요'를 누르세요: {value}",
+    "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.creative.copy.text.png",
       "text": "화면에서 '기본 문구' 칸을 찾아 주세요"
     }
   },
@@ -238,16 +265,26 @@
     },
     "find": [
       {
-        "aria": "제목"
+        "labelledBy": "제목"
       },
       {
-        "labelText": "제목"
+        "placeholder": "간단한 제목을 입력하세요"
+      },
+      {
+        "role": "button",
+        "text": "다음",
+        "say": "창 아래 '다음'을 눌러 '문구' 단계로 가세요"
+      },
+      {
+        "role": "button",
+        "textStarts": "크리에이티브 설정",
+        "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
       }
     ],
     "say": "이 제목을 붙여 넣으세요: {value}",
     "done": "value",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.creative.copy.headline.png",
       "text": "화면에서 '제목' 칸을 찾아 주세요"
     }
   },
@@ -259,16 +296,16 @@
     },
     "find": [
       {
-        "aria": "웹사이트 URL"
+        "labelledBy": "웹사이트 URL"
       },
       {
-        "labelText": "웹사이트 URL"
+        "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
       }
     ],
     "say": "스토어 주소를 넣으세요: {value}",
     "done": "value",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.ad.website_url.png",
       "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
     }
   },
@@ -281,15 +318,19 @@
     "find": [
       {
         "role": "button",
+        "text": "동의하고 게시"
+      },
+      {
+        "role": "button",
         "text": "게시"
       }
     ],
-    "say": "여기서 게시를 누르면 광고가 시작돼요. 확인하고 직접 눌러 주세요",
+    "say": "여기서 '동의하고 게시'를 누르면 광고가 시작돼요. 확인하고 직접 눌러 주세요",
     "done": "manual",
     "publish": true,
     "fallback": {
-      "image": "guide/placeholder.png",
-      "text": "오른쪽 아래 '게시' 버튼을 확인하고 직접 눌러 주세요"
+      "image": "guide/meta.publish.png",
+      "text": "오른쪽 아래 '동의하고 게시' 버튼을 확인하고 직접 눌러 주세요"
     }
   },
   {
@@ -300,16 +341,23 @@
     },
     "find": [
       {
-        "aria": "노출 위치"
+        "labelledBy": "앱 및 사이트"
       },
       {
-        "labelText": "노출 위치"
+        "role": "button",
+        "text": "설정 더 보기",
+        "say": "'노출 위치' 아래 '설정 더 보기'를 눌러 목록을 여세요"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
       }
     ],
-    "say": "'수동 노출 위치'를 고르고 {value}",
+    "say": "'앱 및 사이트'(Audience Network) 체크를 끄세요 — {value}",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.adset.placements.edit.png",
       "text": "광고 세트 수정 화면에서 '노출 위치' 칸을 찾아 주세요"
     }
   },
@@ -321,16 +369,21 @@
     },
     "find": [
       {
-        "aria": "종료 날짜"
+        "labelledBy": "종료 날짜 설정"
       },
       {
-        "labelText": "종료 날짜"
+        "heading": "예산 및 일정"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
       }
     ],
-    "say": "종료 날짜를 {value}",
+    "say": "종료 날짜를 {value} — 바꾼 뒤 '했어요'",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.adset.end_date.edit.png",
       "text": "광고 세트 수정 화면에서 '종료 날짜' 칸을 찾아 주세요"
     }
   },
@@ -342,16 +395,23 @@
     },
     "find": [
       {
-        "aria": "기본 문구"
+        "aria": "간단하게 광고를 소개하세요"
       },
       {
-        "labelText": "기본 문구"
+        "role": "button",
+        "textStarts": "크리에이티브 설정",
+        "say": "'크리에이티브 설정'에서 '문구'를 열어 새 문구로 바꾸세요"
+      },
+      {
+        "role": "tab",
+        "text": "광고",
+        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
       }
     ],
-    "say": "광고를 열어 기본 문구를 새 문구로 바꾸세요 ({value})",
+    "say": "기본 문구를 새 문구로 바꾸고 '했어요'를 누르세요 ({value})",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.creative.copy.edit.png",
       "text": "광고 수정 화면에서 '기본 문구' 칸을 찾아 주세요"
     }
   },
@@ -363,17 +423,229 @@
     },
     "find": [
       {
-        "aria": "크리에이티브 테스트"
+        "role": "button",
+        "text": "테스트 설정"
       },
       {
-        "labelText": "크리에이티브 테스트"
+        "heading": "크리에이티브 테스트"
+      },
+      {
+        "role": "tab",
+        "text": "광고",
+        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
       }
     ],
-    "say": "크리에이티브 테스트를 켜고 사진을 2~3개 넣으세요 ({value})",
+    "say": "'테스트 설정'을 눌러 사진을 2~3개 넣으세요 ({value})",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
+      "image": "guide/meta.ad.creative_test.edit.png",
       "text": "광고 수정 화면에서 '크리에이티브 테스트' 칸을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.age_gender",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "textStarts": "연령"
+      },
+      {
+        "role": "button",
+        "text": "설정 표시",
+        "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "연령·성별을 이렇게 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.adset.age_gender.png",
+      "text": "광고 세트 수정 화면의 '타겟' › '설정 표시'에서 연령을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.location",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "textStarts": "위치"
+      },
+      {
+        "heading": "타겟"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "위치를 이렇게 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.adset.location.png",
+      "text": "광고 세트 수정 화면의 '타겟' › '위치'를 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.daily_budget",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "heading": "예산 및 일정"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "'예산 및 일정'에서 하루 예산을 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.adset.end_date.edit.png",
+      "text": "광고 세트 수정 화면의 '예산 및 일정'을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.cost_goal",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "heading": "전환"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "'전환' 구역의 '성과 목표'를 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.adset.conversion_location.png",
+      "text": "광고 세트 수정 화면의 '전환' › '성과 목표'를 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.adset.value_rules",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "text": "규칙 세트 만들기"
+      },
+      {
+        "heading": "노출 위치"
+      },
+      {
+        "role": "tab",
+        "text": "광고 세트",
+        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "'노출 위치 가치 조정' › '규칙 세트 만들기'에서 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.adset.placements.edit.png",
+      "text": "광고 세트 수정 화면의 '노출 위치 가치 조정'을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.campaign.bid_strategy",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "heading": "예산"
+      },
+      {
+        "role": "tab",
+        "text": "캠페인",
+        "say": "'캠페인' 탭에서 지난번 캠페인 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "캠페인의 '예산' 구역에서 입찰 전략을 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.campaign.special_category.png",
+      "text": "캠페인 수정 화면의 '예산' › '캠페인 입찰 전략'을 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.ad.media",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "role": "button",
+        "textStarts": "크리에이티브 설정",
+        "say": "'크리에이티브 설정' › '이미지 광고'에서 사진을 바꾸세요"
+      },
+      {
+        "heading": "광고 크리에이티브"
+      },
+      {
+        "role": "tab",
+        "text": "광고",
+        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "사진을 이렇게 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.ad.media.png",
+      "text": "광고 수정 화면의 '광고 크리에이티브'에서 미디어를 찾아 주세요"
+    }
+  },
+  {
+    "id": "meta.creative.cta",
+    "mode": "edit",
+    "page": {
+      "urlIncludes": "adsmanager"
+    },
+    "find": [
+      {
+        "labelText": "행동 유도"
+      },
+      {
+        "heading": "광고 크리에이티브"
+      },
+      {
+        "role": "tab",
+        "text": "광고",
+        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
+      }
+    ],
+    "say": "'행동 유도' 버튼 문구를 바꾸세요: {value} — 바꾼 뒤 '했어요'",
+    "done": "manual",
+    "fallback": {
+      "image": "guide/meta.creative.copy.headline.png",
+      "text": "광고 수정 화면의 '행동 유도'를 찾아 주세요"
     }
   },
   {
@@ -384,15 +656,15 @@
     },
     "find": [
       {
-        "role": "button",
-        "text": "보고서"
+        "role": "tab",
+        "text": "광고 세트"
       }
     ],
-    "say": "위쪽 '보고서'를 눌러 주세요",
+    "say": "'광고 세트' 탭을 누르세요. 광고 세트별로 받아야 두 광고를 비교할 수 있어요",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
-      "text": "위쪽 '보고서'를 눌러 주세요"
+      "image": "guide/export.open.png",
+      "text": "광고 관리자 목록 위쪽의 '광고 세트' 탭을 눌러 주세요"
     }
   },
   {
@@ -404,14 +676,14 @@
     "find": [
       {
         "role": "button",
-        "text": "분석 기준"
+        "text": "분석 데이터"
       }
     ],
-    "say": "분석 기준에서 '일'과 '노출 위치'를 고르세요",
+    "say": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크하세요. 기간은 광고를 돌린 날이 들어가게 맞춰 주세요",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
-      "text": "분석 기준에서 '일'과 '노출 위치'를 고르세요"
+      "image": "guide/export.breakdown.png",
+      "text": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크해 주세요"
     }
   },
   {
@@ -426,11 +698,11 @@
         "text": "내보내기"
       }
     ],
-    "say": "'내보내기'를 누르고 CSV로 받으세요",
+    "say": "'내보내기'를 누르면 결과 파일이 바로 받아져요. 받은 파일을 패널에서 올려 주세요",
     "done": "manual",
     "fallback": {
-      "image": "guide/placeholder.png",
-      "text": "'내보내기'를 누르고 CSV로 받으세요"
+      "image": "guide/export.download.png",
+      "text": "표 위 오른쪽의 '내보내기'(아래 화살표)를 눌러 파일을 받아 주세요"
     }
   }
 ]

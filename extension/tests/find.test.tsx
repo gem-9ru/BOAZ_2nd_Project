@@ -55,4 +55,52 @@ describe("FindStep", () => {
     fireEvent.click(screen.getByRole("button", { name: "이 사람들로 할게요" }));
     expect(dispatch.mock.calls[0]![0].keywords).toEqual(["수제쿠키"]);
   });
+
+  it("does not dead-end when Naver has nothing: the owner picks age and gender and goes on", () => {
+    const empty: Research = { headline: "", keywords: [], audience: null, fetched: "", source: "cache",
+      notice: "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요." };
+    const dispatch = vi.fn();
+    render(<FindStep state={{ ...initialState(), research: empty, product: "수제 쿠키" }} dispatch={dispatch} />);
+    expect(screen.getByText(/검색 자료를 찾지 못했어요/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "직접 정하고 계속할게요" }));
+    fireEvent.click(screen.getByRole("radio", { name: "40대" }));
+    fireEvent.click(screen.getByRole("radio", { name: "여성" }));
+    fireEvent.click(screen.getByRole("button", { name: "이 사람들로 할게요" }));
+    expect(dispatch).toHaveBeenCalledWith({
+      type: "confirmTarget",
+      target: { ageMin: 40, ageMax: 49, gender: "female" },
+      keywords: ["수제 쿠키"],
+    });
+  });
+
+  it("manual pick starts at 30s, everyone", () => {
+    const empty: Research = { headline: "", keywords: [], audience: null, fetched: "", source: "cache", notice: "추천할 만한 검색어를 찾지 못했어요." };
+    const dispatch = vi.fn();
+    render(<FindStep state={{ ...initialState(), research: empty, product: "수제 쿠키" }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "직접 정하고 계속할게요" }));
+    expect((screen.getByRole("radio", { name: "30대" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "이 사람들로 할게요" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "confirmTarget", target: { ageMin: 30, ageMax: 39, gender: "all" }, keywords: ["수제 쿠키"] });
+  });
+
+  it("source line names each part with its own date: today's lookup vs a saved baseline", () => {
+    const withParts: Research = { ...research, source: "live", fetched: "2026-11-15", sources: [
+      { part: "product", label: "검색어·연령", fetched: "2026-11-22", today: true },
+      { part: "baseline", label: "분야 평균", fetched: "2026-11-15", today: false },
+    ] };
+    render(<FindStep state={{ ...initialState(), research: withParts }} dispatch={() => {}} />);
+    const line = screen.getByText(/출처:/).textContent ?? "";
+    expect(line).toContain("검색어·연령 오늘 조회");
+    expect(line).toContain("분야 평균 11월 15일 저장본");
+    expect(line).not.toContain("저장된 자료");
+  });
+
+  it("shows the words left out (만들기·매장·관련 낮은 말) under the keywords", () => {
+    const r: Research = { ...research, negatives: ["쿠키만들기", "광주맛집"] };
+    render(<FindStep state={{ ...initialState(), research: r }} dispatch={() => {}} />);
+    expect(screen.getByText(/광고에서 뺄 말 2개/)).toBeTruthy();
+    expect(screen.getByText("쿠키만들기")).toBeTruthy();
+    expect(screen.getByText("광주맛집")).toBeTruthy();
+  });
 });
+

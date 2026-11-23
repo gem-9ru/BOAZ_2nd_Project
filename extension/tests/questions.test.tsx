@@ -58,3 +58,44 @@ describe("questions", () => {
     expect(done.settings).toHaveLength(13);
   });
 });
+
+describe("going back and checking the web address", () => {
+  const asked = askedFields(FIELDS);
+  const base: FlowState = { ...initialState(), step: "questions", target, copy };
+
+  it("이전 질문 clears the previous answer", () => {
+    const dispatch = vi.fn();
+    const answers = { [asked[0]!.id]: asked[0]!.default ?? "있어요" };
+    render(<QuestionStep state={{ ...base, answers }} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
+    fireEvent.click(screen.getByRole("button", { name: "← 이전 질문" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "unanswer", id: asked[0]!.id });
+  });
+
+  it("no 이전 질문 on the first question", () => {
+    render(<QuestionStep state={base} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    expect(screen.queryByRole("button", { name: "← 이전 질문" })).toBeNull();
+  });
+
+  it("the store address must look like a web address", () => {
+    const urlIdx = asked.findIndex((f) => f.id === "meta.ad.website_url");
+    const answers = Object.fromEntries(asked.slice(0, urlIdx).map((f) => [f.id, f.default ?? "x"]));
+    const dispatch = vi.fn();
+    render(<QuestionStep state={{ ...base, answers }} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
+    const box = screen.getByLabelText(/웹사이트|URL|주소/);
+    fireEvent.change(box, { target: { value: "오븐로그" } });
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+    expect(screen.getByText(/https:\/\/ 로 시작하는 주소/)).toBeTruthy();
+    expect(dispatch).not.toHaveBeenCalled();
+    fireEvent.change(box, { target: { value: "smartstore.naver.com/ovenlog" } });
+    fireEvent.click(screen.getByRole("button", { name: "다음" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "answer", id: "meta.ad.website_url", value: "https://smartstore.naver.com/ovenlog" });
+  });
+});
+
+describe("unanswer", () => {
+  it("removes one answer", async () => {
+    const { reduce } = await import("../lib/flow");
+    const s = reduce({ ...initialState(), answers: { a: "1", b: "2" } }, { type: "unanswer", id: "b" });
+    expect(s.answers).toEqual({ a: "1" });
+  });
+});

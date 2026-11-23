@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { GuideView } from "./guideRunner";
+import { reveal } from "./locate";
 
 interface Props {
   view: GuideView;
@@ -17,8 +18,13 @@ export function Character({ view, onDone, onClose }: Props) {
   useEffect(() => {
     setCopied(false);
     if (!view.target) return setRect(null);
-    view.target.scrollIntoView({ block: "center", behavior: "smooth" });
-    const update = () => setRect(view.target!.getBoundingClientRect());
+    const target = view.target;
+    let shown = reveal(target);
+    const update = () => {
+      if (!shown) shown = reveal(target);   // 아직 그려지지 않았으면 다시 그 구역으로
+      const r = target.getBoundingClientRect();
+      setRect(shown && r.width > 0 ? r : null);
+    };
     update();
     const id = window.setInterval(update, 300);
     return () => window.clearInterval(id);

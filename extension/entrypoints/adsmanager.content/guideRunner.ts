@@ -1,6 +1,6 @@
 // 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
 import type { GuideStepItem } from "../../lib/guide";
-import { isKorean, locate } from "./locate";
+import { isKorean, locateWith } from "./locate";
 
 export const MAX_TRIES = 3;
 const LANGUAGE_TEXT = "화면 언어를 한국어로 바꿔 주세요. (메뉴 › 설정 › 언어) 바꾼 뒤 '했어요'를 눌러 주세요.";
@@ -19,6 +19,7 @@ export interface GuideView {
 export class Guide {
   private tries = 0;
   private target: HTMLElement | null = null;
+  private matched = 0;   // 찾은 방법의 순서 (0보다 크면 더 앞의 진짜 칸이 나타나는지 계속 본다)
   private languageOk: boolean;
   private detach: (() => void) | null = null;
   private timer: ReturnType<typeof setTimeout> | null = null;
@@ -40,8 +41,9 @@ export class Guide {
     if (!item) return { index: this.index, total, found: false, text: "안내를 모두 마쳤어요." };
     if (!this.languageOk) return { index: this.index, total, found: false, text: LANGUAGE_TEXT };
     if (this.target) {
+      const hint = item.entry.find[this.matched]?.say;
       return { index: this.index, total, found: true, target: this.target, publish: item.entry.publish,
-               text: item.entry.say.replace("{value}", item.value ?? ""), copy: item.value };
+               text: (hint ?? item.entry.say).replace("{value}", item.value ?? ""), copy: item.value };
     }
     if (this.tries >= MAX_TRIES) {
       return { index: this.index, total, found: false, text: item.entry.fallback.text, image: item.entry.fallback.image, copy: item.value };
@@ -69,7 +71,9 @@ export class Guide {
   /** 화면이 바뀌었을 수 있으니 다시 본다: 아직 못 찾았거나, 찾았던 칸이 다시 그려져 사라졌으면 다시 찾는다. */
   tick(): void {
     if (!this.steps[this.index] || !this.languageOk) return;
-    if (!this.target || !this.target.isConnected) {
+    const item = this.steps[this.index]!;
+    const better = this.matched > 0 && locateWith(this.doc, item.entry.find.slice(0, this.matched)) !== null;
+    if (!this.target || !this.target.isConnected || better) {
       const tries = this.tries;
       this.seek();
       this.tries = tries;
@@ -93,8 +97,11 @@ export class Guide {
     this.detach?.();
     this.detach = null;
     const item = this.steps[this.index];
-    this.target = item && this.languageOk ? locate(this.doc, item.entry.find) : null;
-    if (this.target && item && item.entry.done === "value") {
+    const hit = item && this.languageOk ? locateWith(this.doc, item.entry.find) : null;
+    this.target = hit?.el ?? null;
+    this.matched = hit?.index ?? 0;
+    const isHint = hit ? Boolean(item!.entry.find[hit.index]?.say) : false;
+    if (this.target && item && item.entry.done === "value" && !isHint) {
       const el = this.target;
       const onChange = () => this.advance();
       // 'change'는 입력을 마쳤을 때(칸을 떠나거나 고름) 한 번 온다. 글자 하나마다 오는 'input'으로 넘기지 않는다.

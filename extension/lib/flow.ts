@@ -1,7 +1,16 @@
 // 사이드 패널의 단계 상태 기계. 순수 함수만 둔다 (저장은 storage.ts).
-import type { Analysis, Copy, Research } from "./api";
+import type { Analysis, Change, Copy, Research } from "./api";
 
-export type Step = "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "result" | "fix";
+export type Step = "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan" | "result" | "fix";
+
+/** 분석 페이지가 4자리 코드로 넘겨주는 '다음에 할 일' (서버 GET /plan/{code}). */
+export interface Plan {
+  code: string;
+  action: string;
+  change: Change;
+  summary: string[];
+  badge: { word: string; prob: number } | null;
+}
 
 export interface Target {
   ageMin: number;
@@ -28,6 +37,7 @@ export interface FlowState {
   guide: { mode: "create" | "edit" | "export"; index: number } | null;
   endDate?: string;
   result?: Analysis;
+  plan?: Plan;
 }
 
 export type FlowEvent =
@@ -36,12 +46,14 @@ export type FlowEvent =
   | { type: "confirmTarget"; target: Target; keywords: string[] }
   | { type: "pickCopy"; copy: Copy }
   | { type: "answer"; id: string; value: string }
+  | { type: "unanswer"; id: string }
   | { type: "questionsDone"; settings: Setting[]; endDate?: string }
   | { type: "guideProgress"; index: number }
   | { type: "guideDone" }
   | { type: "startExport" }
   | { type: "startUpload" }
   | { type: "analyzed"; result: Analysis }
+  | { type: "planLoaded"; plan: Plan }
   | { type: "startFix" }
   | { type: "reset" };
 
@@ -61,6 +73,10 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, copy: ev.copy, step: "questions" };
     case "answer":
       return { ...s, answers: { ...s.answers, [ev.id]: ev.value } };
+    case "unanswer": {
+      const { [ev.id]: _drop, ...rest } = s.answers;
+      return { ...s, answers: rest };
+    }
     case "questionsDone":
       return { ...s, settings: ev.settings, endDate: ev.endDate ?? s.endDate, step: "guide", guide: { mode: "create", index: 0 } };
     case "guideProgress":
@@ -71,6 +87,8 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, guide: { mode: "export", index: 0 } };
     case "startUpload":
       return { ...s, step: "upload", guide: null };
+    case "planLoaded":
+      return { ...s, plan: ev.plan, step: "plan" };
     case "analyzed":
       return { ...s, result: ev.result, step: "result" };
     case "startFix":

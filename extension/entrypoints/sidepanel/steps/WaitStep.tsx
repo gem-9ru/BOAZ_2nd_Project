@@ -19,7 +19,7 @@ export default function WaitStep({ state, dispatch }: { state: FlowState; dispat
       <button type="button" onClick={() => dispatch({ type: "startExport" })} className="text-left text-[15px] underline">
         결과 내보내는 법 보기
       </button>
-      <PrimaryButton onClick={() => dispatch({ type: "startUpload" })}>결과 파일 올리기</PrimaryButton>
+      <PrimaryButton onClick={() => dispatch({ type: "startUpload" })}>결과 분석하기</PrimaryButton>
     </section>
   );
 }

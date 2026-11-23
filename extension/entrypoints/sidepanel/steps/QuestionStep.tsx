@@ -31,6 +31,12 @@ export default function QuestionStep({ state, dispatch, fields, defaults }: Prop
   return (
     <section className="flex flex-col gap-5">
       <p className="text-[13px] text-soft">질문 {Math.min(index + 1, asked.length)} / {asked.length}</p>
+      {index > 0 && next && (
+        <button type="button" onClick={() => dispatch({ type: "unanswer", id: asked[index - 1]!.id })}
+          className="self-start text-[13px] text-soft underline">
+          ← 이전 질문
+        </button>
+      )}
       {next && <Question key={next.id} field={next} onAnswer={(v) => answer(next.id, v)} />}
       {defaults.length > 0 && (
         <details className="text-[13px] text-soft">
@@ -48,8 +54,24 @@ export default function QuestionStep({ state, dispatch, fields, defaults }: Prop
   );
 }
 
+/** 가게 주소: 'smartstore.naver.com/…'처럼 적어도 받아 https://를 붙인다. 점이 없으면 주소가 아니다. */
+export function webAddress(raw: string): string | null {
+  const v = raw.trim();
+  if (!v || !v.includes(".") || /\s/.test(v)) return null;
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
 function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => void }) {
   const [text, setText] = useState(field.default ?? "");
+  const [bad, setBad] = useState(false);
+  const isUrl = field.id === "meta.ad.website_url";
+  function submit() {
+    if (!isUrl) return onAnswer(text.trim());
+    const url = webAddress(text);
+    if (!url) return setBad(true);
+    setBad(false);
+    onAnswer(url);
+  }
   return (
     <div className="flex flex-col gap-3">
       <Coach>
@@ -77,9 +99,11 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
             id={field.id}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            aria-invalid={bad || undefined}
             className="rounded-xl border border-line bg-paper px-3 py-2.5 text-[15px]"
           />
-          <PrimaryButton onClick={() => onAnswer(text.trim())} disabled={REQUIRED_TEXT.has(field.id) && !text.trim()}>
+          {bad && <p role="alert" className="text-[13px] text-accent-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
+          <PrimaryButton onClick={submit} disabled={REQUIRED_TEXT.has(field.id) && !text.trim()}>
             다음
           </PrimaryButton>
         </div>

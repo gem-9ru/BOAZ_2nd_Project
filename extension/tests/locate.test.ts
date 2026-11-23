@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isKorean, locate } from "../entrypoints/adsmanager.content/locate";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import type { GuideStepItem } from "../lib/guide";
@@ -72,5 +72,80 @@ describe("Guide runner", () => {
     expect(g.view()).toMatchObject({ found: true, publish: true });
     g.markDone();
     expect(clicks).toBe(0);
+  });
+});
+
+describe("locate on real Ads Manager markup (2026-11-22)", () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <span id="l1">트래픽</span><input type="radio" aria-labelledby="l1">
+      <span id="l2">웹사이트 URL</span><input id="url" type="text" aria-labelledby="l2 extra"><span id="extra">설명</span>
+      <div role="button">연령18 - 65+</div>
+      <div role="heading">크리에이티브 테스트​</div>
+      <div role="button">만들기​</div>`;
+  });
+  it("finds a field by its aria-labelledby text", () => {
+    expect(locate(document, [{ labelledBy: "트래픽" }])?.getAttribute("type")).toBe("radio");
+    expect(locate(document, [{ labelledBy: "웹사이트 URL" }])?.id).toBe("url");
+  });
+  it("finds a summary button by the start of its text", () => {
+    expect(locate(document, [{ role: "button", textStarts: "연령" }])?.textContent).toBe("연령18 - 65+");
+  });
+  it("finds a section heading and ignores zero-width spaces", () => {
+    expect(locate(document, [{ heading: "크리에이티브 테스트" }])?.getAttribute("role")).toBe("heading");
+    expect(locate(document, [{ role: "button", text: "만들기" }])).not.toBeNull();
+  });
+});
+
+describe("Guide runner with a hint step", () => {
+  it("points at the hint first, then moves to the real field when it appears", () => {
+    document.body.innerHTML = `<div role="button">만들기</div>`;
+    const item = step("meta.campaign.objective", [
+      { labelledBy: "트래픽" },
+      { role: "button", text: "만들기", say: "먼저 '+ 만들기'를 누르세요" },
+    ], {}, "트래픽");
+    const progress: number[] = [];
+    const g = new Guide(document, [item], 0, (i) => progress.push(i), 0);
+    expect(g.view().text).toBe("먼저 '+ 만들기'를 누르세요");
+    g.view().target!.dispatchEvent(new Event("change"));
+    expect(progress).toEqual([]);   // 힌트에서는 다음 단계로 넘어가지 않는다
+    document.body.insertAdjacentHTML("beforeend", `<span id="t">트래픽</span><input type="radio" aria-labelledby="t">`);
+    g.tick();
+    expect(g.view().text).toBe("여기에 트래픽을(를) 넣으세요");
+    g.view().target!.dispatchEvent(new Event("change"));
+    expect(progress).toEqual([1]);
+  });
+});
+
+describe("locate prefers what is on screen", () => {
+  it("skips a hidden copy with the same text", () => {
+    document.body.innerHTML = `<div role="heading" id="h1">대표 계정</div><div role="heading" id="h2">대표 계정</div>`;
+    const [a, b] = [document.getElementById("h1")!, document.getElementById("h2")!];
+    a.getClientRects = () => ([] as unknown as DOMRectList);
+    b.getClientRects = () => ([{ width: 100, height: 20 }] as unknown as DOMRectList);
+    expect(locate(document, [{ heading: "대표 계정" }])?.id).toBe("h2");
+  });
+});
+
+describe("reveal", () => {
+  it("scrolls the nearest drawn ancestor when the field itself is not drawn yet (Meta draws far sections lazily)", async () => {
+    const { reveal } = await import("../entrypoints/adsmanager.content/locate");
+    document.body.innerHTML = `<div id="sec"><div><input id="f"></div></div>`;
+    const sec = document.getElementById("sec")!, f = document.getElementById("f")!, mid = f.parentElement!;
+    const drawn = [{ width: 10, height: 10 }] as unknown as DOMRectList, none = [] as unknown as DOMRectList;
+    f.getClientRects = () => none; mid.getClientRects = () => none; sec.getClientRects = () => drawn;
+    sec.scrollIntoView = vi.fn(); f.scrollIntoView = vi.fn();
+    expect(reveal(f)).toBe(false);
+    expect(sec.scrollIntoView).toHaveBeenCalled();
+    f.getClientRects = () => drawn;
+    expect(reveal(f)).toBe(true);
+    expect(f.scrollIntoView).toHaveBeenCalled();
+  });
+});
+
+describe("button-like links", () => {
+  it("'설정 표시' is a plain <a> on Ads Manager but counts as a button", () => {
+    document.body.innerHTML = `<a><span>설정 표시</span></a>`;
+    expect(locate(document, [{ role: "button", text: "설정 표시" }])?.tagName).toBe("A");
   });
 });

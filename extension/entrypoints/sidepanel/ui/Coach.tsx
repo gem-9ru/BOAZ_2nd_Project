@@ -16,10 +16,10 @@ export function Coach({ children }: { children: ReactNode }) {
 }
 
 /** 화면 맨 아래 큰 버튼 하나. */
-export function PrimaryButton(props: { children: ReactNode; onClick: () => void; disabled?: boolean; busy?: boolean }) {
+export function PrimaryButton(props: { children: ReactNode; onClick?: () => void; disabled?: boolean; busy?: boolean; type?: "button" | "submit" }) {
   return (
     <button
-      type="button"
+      type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled || props.busy}
       className="w-full rounded-xl bg-ink text-cream py-3 text-[15px] font-semibold disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-accent"

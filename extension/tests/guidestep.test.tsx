@@ -22,6 +22,6 @@ describe("WaitStep", () => {
   it("after guideDone shows the come-back date from endDate", () => {
     render(<WaitStep state={{ ...initialState(), step: "wait", endDate: "2026-12-06" }} dispatch={() => {}} />);
     expect(screen.getByText(/2026-12-07에 결과를 보러 오세요/)).toBeTruthy();
-    expect(screen.getByRole("button", { name: "결과 파일 올리기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "결과 분석하기" })).toBeTruthy();
   });
 });

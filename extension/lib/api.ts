@@ -6,6 +6,10 @@ export interface Research {
   audience: { keyword: string; female: number; ages: Record<string, number>; top_age: string } | null;
   fetched: string;
   source: "live" | "cache";
+  /** 부분별 받은 날: product = 이 상품의 검색어·연령, baseline = 분야 평균 */
+  sources?: { part: "product" | "baseline"; label: string; fetched: string; today: boolean }[];
+  /** 광고에서 뺄 말 (만들기·매장·관련 낮음, 최대 20개) */
+  negatives?: string[];
   notice: string | null;
 }
 
@@ -58,7 +62,11 @@ export interface Analysis {
   ab: { a: string; b: string; prob_b_better: number } | null;
 }
 
-export const BASE = "http://localhost:8000";
+/** 서버 주소: 빌드할 때 WXT_API_BASE로 정한다 (배포: https://boaz-ad-assistant.gem-9ru.com). 없으면 내 컴퓨터 서버. */
+export function apiBase(fromBuild: string | undefined): string {
+  return (fromBuild || "http://localhost:8000").replace(/\/+$/, "");
+}
+export const BASE = apiBase(import.meta.env.WXT_API_BASE as string | undefined);
 
 /** 서버가 꺼져 있거나 닿지 않음. */
 export class ServerDown extends Error {
@@ -85,7 +93,7 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ServerDown();
   }
   const body = await res.json().catch(() => ({}));
-  if (res.status === 400) throw new BadInput(body.error ?? "입력을 확인해 주세요.");
+  if (res.status === 400 || res.status === 404) throw new BadInput(body.error ?? body.detail ?? "입력을 확인해 주세요.");
   if (!res.ok) throw new ServerError();
   return body as T;
 }
@@ -100,7 +108,7 @@ export function research(product: string, seeds?: string[]): Promise<Research> {
   return call("/research", json(seeds ? { product, seeds } : { product }));
 }
 
-export function copies(body: { product: string; strengths: string[]; keywords: string[] }): Promise<{ copies: Copy[]; source: string }> {
+export function copies(body: { product: string; strengths: string[]; keywords: string[]; avoid: string[] }): Promise<{ copies: Copy[]; source: string }> {
   return call("/copies", json(body));
 }
 
@@ -112,4 +120,11 @@ export function analyze(file: File): Promise<Analysis> {
   const form = new FormData();
   form.append("file", file);
   return call("/analyze", { method: "POST", body: form });
+}
+
+export const ANALYSIS_PAGE = `${BASE}/analysis`;
+
+/** 분석 페이지의 4자리 코드 → 다음에 할 일. */
+export function plan(code: string): Promise<import("./flow").Plan> {
+  return call(`/plan/${encodeURIComponent(code)}`);
 }

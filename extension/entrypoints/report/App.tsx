@@ -123,7 +123,7 @@ export default function ReportApp({ result: r }: { result: Analysis }) {
         <Panel title="노출 위치별 지출 (원)">
           <div className="h-64">
             <ResponsiveContainer>
-              <BarChart data={r.charts.placement} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 24 }}>
+              <BarChart data={topPlacements(r.charts.placement, 7)} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 24 }}>
                 <CartesianGrid stroke={GRID} horizontal={false} />
                 <XAxis type="number" stroke={SOFT} tickLine={false} />
                 <YAxis type="category" dataKey="placement" width={170} stroke={SOFT} tickLine={false} />
@@ -171,4 +171,18 @@ export default function ReportApp({ result: r }: { result: Analysis }) {
 /** 'A_자동노출위치' → '자동노출위치' (앞 글자 A/B가 범례와 겹치지 않게). */
 function abName(name: string, letter: string): string {
   return name.replace(new RegExp(`^${letter}[_\\s.-]+`, "i"), "");
+}
+
+type PlacementRow = { placement: string; spend: number; link_clicks: number };
+
+/** 노출 위치가 많으면 이름이 겹쳐 빠진다 → 지출 상위 n개 + 나머지는 '기타 N곳'으로 합친다. */
+export function topPlacements(rows: PlacementRow[], n: number): PlacementRow[] {
+  const sorted = [...rows].sort((a, b) => b.spend - a.spend);
+  if (sorted.length <= n) return sorted;
+  const rest = sorted.slice(n);
+  return [...sorted.slice(0, n), {
+    placement: `기타 ${rest.length}곳`,
+    spend: rest.reduce((s, x) => s + x.spend, 0),
+    link_clicks: rest.reduce((s, x) => s + x.link_clicks, 0),
+  }];
 }

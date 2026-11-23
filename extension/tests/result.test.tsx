@@ -88,3 +88,15 @@ describe("report", () => {
     expect(screen.getByText("B 피드만노출(AN제외)")).toBeTruthy();
   });
 });
+
+describe("topPlacements", () => {
+  it("keeps the 7 biggest spenders and folds the rest into 기타", async () => {
+    const { topPlacements } = await import("../entrypoints/report/App");
+    const rows = Array.from({ length: 10 }, (_, i) => ({ placement: `p${i}`, spend: 100 - i, link_clicks: 1 }));
+    const out = topPlacements(rows, 7);
+    expect(out).toHaveLength(8);
+    expect(out[0]!.placement).toBe("p0");
+    expect(out[7]).toEqual({ placement: "기타 3곳", spend: 93 + 92 + 91, link_clicks: 3 });
+    expect(topPlacements(rows.slice(0, 5), 7)).toHaveLength(5);
+  });
+});

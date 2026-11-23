@@ -60,7 +60,7 @@ export default function FindStep({ state, dispatch }: Props) {
         {error && <ErrorLine message={error} onRetry={search} />}
       </div>
 
-      {r && r.notice && <Coach>{r.notice}</Coach>}
+      {r && r.notice && <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch} />}
       {r && !r.notice && <Result research={r} dropped={state.dropped ?? []} dispatch={dispatch} />}
     </section>
   );
@@ -126,11 +126,80 @@ function Result({ research: r, dropped, dispatch }: {
         </div>
       </div>
 
+      {r.negatives && r.negatives.length > 0 && (
+        <details className="text-[13px] text-soft">
+          <summary className="cursor-pointer">광고에서 뺄 말 {r.negatives.length}개 (만들기·매장·관련 낮은 말)</summary>
+          <p className="mt-2">이런 말로 찾는 사람은 사지 않을 가능성이 커서 문구에 넣지 않아요.</p>
+          <ul className="mt-2 flex flex-wrap gap-1.5">
+            {r.negatives.map((w) => <li key={w} className="rounded-full border border-line px-2 py-0.5">{w}</li>)}
+          </ul>
+        </details>
+      )}
       <p className="text-[13px] text-soft">
-        출처: 네이버 검색광고 · 데이터랩 · 조회일 {r.fetched}
-        {r.source === "cache" ? " (저장된 자료)" : ""}
+        {r.sources?.length
+          ? `출처: 네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
+          : `출처: 네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`}
       </p>
       <PrimaryButton onClick={confirm} disabled={kept.length === 0}>이 사람들로 할게요</PrimaryButton>
     </div>
   );
+}
+
+const MANUAL_AGES = ["20", "30", "40", "50", "60"];
+const MANUAL_GENDERS: { id: "all" | "female" | "male"; label: string }[] = [
+  { id: "all", label: "모두" }, { id: "female", label: "여성" }, { id: "male", label: "남성" },
+];
+
+/** 네이버 자료가 없을 때: 다른 말로 다시 찾거나, 사장님이 직접 정하고 넘어간다 (막다른 길을 만들지 않는다). */
+function NoData({ notice, product, dispatch }: { notice: string; product: string; dispatch: (ev: FlowEvent) => void }) {
+  const [manual, setManual] = useState(false);
+  const [age, setAge] = useState("30");
+  const [gender, setGender] = useState<"all" | "female" | "male">("all");
+
+  return (
+    <div className="flex flex-col gap-4">
+      <Coach>{notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.</Coach>
+      {!manual ? (
+        <button type="button" onClick={() => setManual(true)} className="self-start text-[15px] font-semibold underline">
+          직접 정하고 계속할게요
+        </button>
+      ) : (
+        <>
+          <Choice legend="보여 줄 나이" name="manual-age"
+            options={MANUAL_AGES.map((a) => ({ id: a, label: `${a}대` }))} value={age} onChange={setAge} />
+          <Choice legend="성별" name="manual-gender"
+            options={MANUAL_GENDERS} value={gender} onChange={(v) => setGender(v as typeof gender)} />
+          <p className="text-[13px] text-soft">검색어 자료가 없어서 광고 문구에는 '{product}'를 넣을게요.</p>
+          <PrimaryButton onClick={() => dispatch({ type: "confirmTarget", target: { ...ageGroupToRange(age), gender }, keywords: [product] })}>
+            이 사람들로 할게요
+          </PrimaryButton>
+        </>
+      )}
+    </div>
+  );
+}
+
+function Choice({ legend, name, options, value, onChange }: {
+  legend: string; name: string; options: { id: string; label: string }[]; value: string; onChange: (v: string) => void;
+}) {
+  return (
+    <fieldset className="flex flex-col gap-2">
+      <legend className="text-[13px] text-soft mb-2">{legend}</legend>
+      <div className="flex flex-wrap gap-2">
+        {options.map((o) => (
+          <label key={o.id}
+            className={`rounded-full border px-3 py-1.5 text-[14px] cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-ink bg-ink text-paper font-semibold" : "border-line"}`}>
+            <input type="radio" name={name} value={o.id} checked={value === o.id} onChange={() => onChange(o.id)} className="sr-only" />
+            {o.label}
+          </label>
+        ))}
+      </div>
+    </fieldset>
+  );
+}
+
+/** '2026-11-15' → '11월 15일' */
+function dayLabel(iso: string): string {
+  const [, m, d] = iso.split("-").map(Number);
+  return m && d ? `${m}월 ${d}일` : iso;
 }

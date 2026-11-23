@@ -15,7 +15,9 @@ const ADS_MANAGER_MATCH = ["https://adsmanager.facebook.com/*", "https://busines
 /** ② 안내 / ③ 바꾸기 / 결과 내보내기: 광고 관리자 탭에 캐릭터를 부른다. 진행은 배경 스크립트가 저장소에 쓰고 패널이 따라간다. */
 export default function GuideStep({ state, dispatch }: Props) {
   const mode = state.guide?.mode ?? "create";
-  const steps = stepsFor(mode, GUIDE, state.settings, state.result?.changes ?? []);
+  // 바꿀 칸: 분석 페이지 코드로 받은 것(plan)이 있으면 그것 하나, 없으면 예전 패널 분석 결과
+  const changes = state.plan ? [state.plan.change] : state.result?.changes ?? [];
+  const steps = stepsFor(mode, GUIDE, state.settings, changes);
   const index = state.guide?.index ?? 0;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -38,7 +40,7 @@ export default function GuideStep({ state, dispatch }: Props) {
       <section className="flex flex-col gap-5">
         <Coach>이 칸들은 광고 관리자에서 직접 바꿔 주세요.</Coach>
         <ul className="flex flex-col gap-2">
-          {(state.result?.changes ?? []).map((c) => (
+          {changes.map((c) => (
             <li key={c.field_id} className="text-[15px]">{c.label} → {c.new}</li>
           ))}
         </ul>
@@ -48,8 +50,8 @@ export default function GuideStep({ state, dispatch }: Props) {
   }
 
   const intro = {
-    create: "광고 관리자를 열면 캐릭터가 칸마다 무엇을 넣을지 알려 드려요. 게시 버튼은 마지막에 직접 눌러 주세요.",
-    edit: "바꿀 칸만 캐릭터가 짚어 드려요. 광고 세트를 열어 수정하세요.",
+    create: "광고 관리자를 열면 캐릭터가 칸마다 무엇을 넣을지 알려 드려요. '동의하고 게시' 버튼은 마지막에 직접 눌러 주세요.",
+    edit: "바꿀 칸만 캐릭터가 짚어 드려요. 광고 관리자에서 지난번 광고 세트나 광고를 열어 수정하세요.",
     export: "광고 관리자에서 결과를 내보내는 곳을 캐릭터가 짚어 드려요.",
   }[mode];
 

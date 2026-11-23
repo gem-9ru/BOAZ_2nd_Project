@@ -8,13 +8,14 @@ import GuideStep from "./steps/GuideStep";
 import WaitStep from "./steps/WaitStep";
 import QuestionStep from "./steps/QuestionStep";
 import ResultStep from "./steps/ResultStep";
-import UploadStep from "./steps/UploadStep";
+import CodeStep from "./steps/CodeStep";
+import PlanStep from "./steps/PlanStep";
 import { ErrorLine } from "./ui/Coach";
 
 const STAGES: { label: string; steps: Step[] }[] = [
   { label: "찾기", steps: ["find"] },
   { label: "세팅", steps: ["copy", "questions", "guide", "wait"] },
-  { label: "분석", steps: ["upload", "result", "fix"] },
+  { label: "분석", steps: ["upload", "plan", "result", "fix"] },
 ];
 
 type Action = FlowEvent | { type: "__load"; state: FlowState };
@@ -60,7 +61,7 @@ export default function App() {
   return (
     <main className="min-h-screen p-4 flex flex-col gap-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-[17px] font-bold">광고 코치</h1>
+        <h1 className="text-[17px] font-bold">Ad assistant</h1>
         <ol className="flex gap-3 text-[13px]" aria-label="진행 단계">
           {STAGES.map((st, i) => (
             <li
@@ -81,7 +82,8 @@ export default function App() {
       {state.guide && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
-      {!state.guide && state.step === "upload" && <UploadStep state={state} dispatch={dispatch} />}
+      {!state.guide && state.step === "upload" && <CodeStep state={state} dispatch={dispatch} />}
+      {state.step === "plan" && <PlanStep state={state} dispatch={dispatch} />}
       {state.step === "result" && <ResultStep state={state} dispatch={dispatch} />}
       {state.step === "copy" && <CopyStep state={state} dispatch={dispatch} />}
       {state.step === "questions" && spec && (

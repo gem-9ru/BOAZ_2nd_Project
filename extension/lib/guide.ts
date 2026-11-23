@@ -3,11 +3,16 @@
 import type { Change } from "./api";
 import type { Setting } from "./flow";
 
-export type FindStrategy =
+/** 찾는 방법. say가 있으면 '힌트': 진짜 칸이 아직 없을 때 그 전 단계(버튼·구역)를 짚고 이 말을 한다. */
+export type FindStrategy = (
   | { aria: string }
+  | { labelledBy: string }
   | { labelText: string }
   | { placeholder: string }
-  | { role: string; text: string };
+  | { heading: string }
+  | { role: string; text: string }
+  | { role: string; textStarts: string }
+) & { say?: string };
 
 export interface GuideEntry {
   id: string;
