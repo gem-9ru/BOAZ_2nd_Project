@@ -50,6 +50,8 @@ component (부품, 예: button.bg, coach.ring)
 | `semantic.motion.hover / expand / move / walk` | 150 / 250 / 350 / 500ms | 색 바뀜 / 펼치기 / 테두리 이동 / 캐릭터 걸음. 모두 `prefers-reduced-motion`이면 끔 |
 | `semantic.state.disabled-opacity` | 0.4 | 못 누르는 버튼: `disabled:opacity-(--state-disabled-opacity)` + `disabled` 속성 |
 | `component.focus.width / offset` | 2px / 2px | 초점 링 (`outline-2 outline-offset-2 outline-accent`) |
+| `component.button/card/badge/alert-mark.radius` | 12 / 16 / 9999 / 2px | 모서리. 두 앱 모두 `rounded-button` · `rounded-card` · `rounded-badge` · `rounded-mark`(■ 차단 모양)로 써요. `rounded-xl`처럼 Tailwind 기본 이름을 쓰지 않아요 |
+| `semantic.state.disabled-opacity` (잠긴 단계) | 0.4 | 아직 못 가는 단계 표시도 `text-soft opacity-(--state-disabled-opacity)`로 (`text-soft/50` 금지) |
 
 ## 색 표
 

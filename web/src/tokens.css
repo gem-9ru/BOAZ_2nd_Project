@@ -41,6 +41,7 @@
   --primitive-radius-md: 12px;
   --primitive-radius-lg: 16px;
   --primitive-radius-full: 9999px;
+  --primitive-radius-xs: 2px;
   --primitive-font-size-caption: 13px;
   --primitive-font-size-body: 16px;
   --primitive-font-size-lead: 17px;
@@ -169,4 +170,5 @@
   --character-belly: #F7B77A;
   --character-eye: #FFFFFF;
   --character-beak: #A8481A;
+  --alert-mark-radius: 2px;
 }

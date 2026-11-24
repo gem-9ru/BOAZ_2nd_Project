@@ -41,6 +41,11 @@
   --text-lead: 17px;
   --text-title: 20px;
   --text-number: 28px;
+  /* 모서리: 분석 페이지와 같은 이름 (rounded-button · rounded-card · rounded-badge · rounded-mark) */
+  --radius-button: 12px;
+  --radius-card: 16px;
+  --radius-badge: 9999px;
+  --radius-mark: 2px;
   /* 움직임: transition 기본 시간 (hover 등 색 바뀜) */
   --default-transition-duration: 150ms;
 }

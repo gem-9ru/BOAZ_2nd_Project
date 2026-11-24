@@ -94,6 +94,11 @@ const EXTENSION_THEME = [
   ["--text-lead", "primitive.font.size.lead"],
   ["--text-title", "primitive.font.size.title"],
   ["--text-number", "primitive.font.size.number"],
+  ["/* 모서리: 분석 페이지와 같은 이름 (rounded-button · rounded-card · rounded-badge · rounded-mark) */"],
+  ["--radius-button", "component.button.radius"],
+  ["--radius-card", "component.card.radius"],
+  ["--radius-badge", "component.badge.radius"],
+  ["--radius-mark", "component.alert-mark.radius"],
   ["/* 움직임: transition 기본 시간 (hover 등 색 바뀜) */"],
   ["--default-transition-duration", "semantic.motion.hover"],
 ];

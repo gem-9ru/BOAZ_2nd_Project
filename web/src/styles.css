@@ -60,6 +60,7 @@
   --radius-card: var(--card-radius);
   --radius-button: var(--button-radius);
   --radius-badge: var(--badge-radius);
+  --radius-mark: var(--alert-mark-radius);
   --spacing-stack: var(--space-stack);
   --spacing-group: var(--space-group);  /* 'block'은 inline-block과 겹쳐서 쓰지 않음 */
   --spacing-section: var(--space-section);
