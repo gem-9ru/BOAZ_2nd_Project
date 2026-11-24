@@ -11,7 +11,16 @@ def _won(x: Optional[int]) -> str:
     return f"{x:,}" if x else "?"
 
 
-def run(verdict: Optional[Dict], diag: Dict) -> Dict:
+def run(verdict: Optional[Dict], diag: Dict, matrix_change: Optional[Dict] = None) -> Dict:
+    out = _by_verdict(verdict, diag)
+    if matrix_change:   # v4: 결론은 진단 매트릭스의 칸 1개 (판정은 그 칸의 확실도·'지켜보기'로)
+        c = matrix_change
+        out["change"] = dict(c, note=c["reason"])
+        out["summary"][2] = f"다음에 바꿀 것: {c['path']} → {c['new']}"
+    return out
+
+
+def _by_verdict(verdict: Optional[Dict], diag: Dict) -> Dict:
     rule_change = (diag.get("changes") or [None])[0]
     if verdict is None:   # 세트가 하나뿐이면 비교 대신 진단 규칙으로
         change = rule_change or {"field_id": "meta.adset.end_date", "label": "종료 날짜", "new": "7일 더 연장", "note": "숫자가 더 모이면 판단해요"}

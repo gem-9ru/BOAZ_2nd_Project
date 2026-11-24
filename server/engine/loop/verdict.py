@@ -105,3 +105,24 @@ def min_budget(a: Dict, lift: float = 0.2, confidence: float = ADOPT, power: flo
             lo = mid + 1
     x = lo * 1000
     return {"per_group": x, "total": 2 * x, "lift": lift, "confidence": confidence, "power": achieved(x), "metric": BADGE}
+
+
+_ORDER = ["보류", "유력", "채택"]
+
+
+def _word_for(level_: str, better: str) -> str:
+    return {"채택": "확실해요", "유력": f"{better} 쪽이에요", "보류": "아직 몰라요"}[level_]
+
+
+def apply_caps(v: Dict, small_sample: bool, spend_gap: bool) -> Dict:
+    """알림에 따라 확실도를 낮춘다: 표본 부족 → 최대 '유력', 지출 쏠림 → 한 단계 낮춤 (v4 6장)."""
+    badge = dict(v["badge"])
+    i = _ORDER.index(badge["level"])
+    reasons = []
+    if small_sample and i > 1:
+        i, _ = 1, reasons.append("클릭이 적어 최대 '유력'까지만")
+    if spend_gap and i > 0:
+        i, _ = i - 1, reasons.append("두 세트 지출이 쏠려 한 단계 낮춤")
+    if reasons:
+        badge.update(level=_ORDER[i], word=_word_for(_ORDER[i], badge["better"]), capped=reasons)
+    return dict(v, badge=badge)

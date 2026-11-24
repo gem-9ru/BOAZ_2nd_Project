@@ -8,7 +8,9 @@ from typing import Dict, List, Tuple
 
 import numpy as np
 
-DRAWS = 200_000
+from ..specs import loop as _loop
+
+DRAWS = int(_loop()["simulation"]["runs"])   # rules.yaml loop.simulation.runs
 MIN_IMPRESSIONS = 100     # 이보다 노출이 적은 노출 위치는 '참고만'
 
 

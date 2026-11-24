@@ -46,6 +46,12 @@ def rules() -> List[dict]:
 
 
 @lru_cache(maxsize=None)
+def loop() -> Dict:
+    """v4 분석 루프 기준값 (알림·매트릭스·시뮬레이션 횟수·Test & Roll)."""
+    return _load("rules.yaml")["loop"]
+
+
+@lru_cache(maxsize=None)
 def assumptions() -> Dict:
     return _load("assumptions.yaml")
 

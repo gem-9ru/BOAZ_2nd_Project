@@ -5,13 +5,15 @@ from server.engine.meta_export import read_export
 OVEN = "server/data/demo/오븐로그_메타AB_20261117-20261120.csv"
 
 
-def test_ovenlog_likely_b_means_run_once_more_with_a_budget():
+def test_ovenlog_change_comes_from_the_matrix_and_budget_goes_to_watch():
+    # v4 회의(2026-11-25): 결론은 '바꿀 칸 1개'(매트릭스). 유력 판정의 추가 예산은 '지켜보기'로.
     r = loop.run(read_export(OVEN))
     n = r["next"]
     assert n["action"] == "한 번 더"
-    assert n["change"]["field_id"] == "meta.adset.end_date"
-    assert len(n["summary"]) == 3
-    assert f"{r['verdict']['min_budget']['per_group']:,}" in n["summary"][2]
+    assert n["change"]["field_id"] == "meta.ad.media"
+    assert len(n["summary"]) == 3 and "형식·미디어" in n["summary"][2]
+    per = f"{r['verdict']['min_budget']['per_group']:,}"
+    assert any(per in w["text"] for w in r["matrix"]["watch"])
 
 
 def test_run_has_all_blocks_and_one_change():

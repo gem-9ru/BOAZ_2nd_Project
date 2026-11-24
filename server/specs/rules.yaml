@@ -9,6 +9,31 @@
 # grade: hypothesis(기준값을 실제 데이터로 아직 확인 못 함) | checked(실제 데이터로 확인) | calc(사장님 숫자로 바로 계산, 기준값 없음)
 # funnel: 어느 단계 문제인가 (노출 · 클릭 · 도착 · 구매 · 측정 · 예산)
 
+# ── v4 분석 루프 기준값 (회의 2026-11-25: 코드에 박지 않고 여기서 바꾼다) ──
+loop:
+  simulation:
+    runs: 200000            # 몬테카를로 횟수 (수만 번 이상이면 됨, 설정값)
+  alerts:
+    sum_mismatch: 0.01      # ■ 일자별 합 ≠ 노출 위치 합, 1% 초과
+    spend_used_min: 0.5     # ▲ 지출 ÷ 설정 예산
+    spend_gap_pp: 0.30      # ▲ 두 세트 지출 비중 차이 (희수 28 : 72) → 확실도 한 단계 낮춤
+    min_clicks: 30          # ▲ 링크 클릭이 이보다 적으면 판정 최대 '유력'
+    min_actions: 5
+    visit_rate_min: 0.60    # ▲ 랜딩 조회 ÷ 링크 클릭
+    frequency_max: 2.5      # ▲ 노출 ÷ 도달
+    an_share_max: 0.5       # ▲ Audience Network에 쓴 지출 비중
+    placement_min_impressions: 100   # ● 노출 위치 표 '참고만'
+  matrix:
+    cpm_high: 12000         # 세트가 하나일 때 CPM 기준 (D 가정)
+    ctr_low: 0.01           # 클릭률 기준 (실측 1.6~3.7% 정상)
+    visit_rate_min: 0.60
+    placement_share: 0.60   # 한 노출 위치에 지출 집중
+    fatigue_days: 7         # 소재 피로는 이 기간 이상일 때만
+    learning_events: 50     # 학습 단계: 7일에 최적화 이벤트 약 50회
+  test_and_roll:            # Feit & Berman 2019, 오븐로그 실측 기준
+    share_lo: 0.076
+    share_hi: 0.20
+
 rules:
   # ── 다정 규칙 8개 ──
   - id: rule.weekly_freq_high
