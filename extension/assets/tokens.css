@@ -1,0 +1,54 @@
+/* 자동 생성 파일: 직접 고치지 마세요. 확장 프로그램 Tailwind 테마 (색·글자·움직임).
+ * 원천: design-system/tokens.json → 저장소 최상위에서 `node design-system/build.cjs` */
+@theme {
+  /* 바탕·글자 */
+  --color-ink: #16213a;
+  --color-soft: #4a5568;
+  --color-paper: #fffdf8;
+  --color-cream: #f7f5f0;
+  --color-line: #e2dcd0;
+  --color-sunk: #efeae0;
+  /* 메인 바이올렛: 현재 단계·주 버튼·초점 링 */
+  --color-accent: #5b3fd9;
+  --color-accent-ink: #4528b0;
+  --color-accent-soft: #efebff;
+  /* 알림 4색 고정: 메인과 섞지 않고, 모양(■ ▲ ● ✓)과 함께만 쓴다 */
+  --color-block: #d93025;
+  --color-block-ink: #b3261e;
+  --color-warn: #b35300;
+  --color-warn-mark: #e8710a;
+  --color-info: #1a73e8;
+  --color-ok: #1e8e3e;
+  --color-block-bg: #fce8e6;
+  --color-warn-bg: #fef3e6;
+  --color-info-bg: #e8f0fe;
+  --color-ok-bg: #e6f4ea;
+  --color-on-accent: #ffffff;
+  /* 확실도: 확실 = 메인 진하게, 유력 = 메인 테두리, 보류 = 회색 */
+  --color-adopt: #4528b0;
+  --color-adopt-bg: #efebff;
+  --color-likely: #5b3fd9;
+  --color-likely-bg: #fffdf8;
+  --color-hold: #5f6672;
+  --color-hold-bg: #f1f1ef;
+  /* 글꼴·글자 크기: text-mark 10 · small 12 · caption 13 · label 14 · body 16 · lead 17 · title 20 · number 28 */
+  --font-sans: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  --text-mark: 10px;
+  --text-small: 12px;
+  --text-caption: 13px;
+  --text-label: 14px;
+  --text-body: 16px;
+  --text-lead: 17px;
+  --text-title: 20px;
+  --text-number: 28px;
+  /* 움직임: transition 기본 시간 (hover 등 색 바뀜) */
+  --default-transition-duration: 150ms;
+}
+
+:root {
+  --state-disabled-opacity: 0.4;
+  --focus-width: 2px;
+  --focus-offset: 2px;
+  --motion-expand: 250ms;
+  --motion-easing: ease;
+}

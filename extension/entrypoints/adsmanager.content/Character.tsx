@@ -10,7 +10,8 @@ interface Props {
 
 const SIZE = 64;
 
-/** 광고 관리자 위의 캐릭터 + 말풍선. 대상 칸 둘레에 주황 테두리를 그리고 그 옆으로 걸어간다. */
+/** 광고 관리자 위의 캐릭터 + 말풍선. 대상 칸 둘레에 메인 바이올렛 테두리를 그리고 그 옆으로 걸어간다.
+ *  색은 overlay.css 가 불러오는 --character-* / --coach-* 변수 (design-system/tokens.json). */
 export function Character({ view, onDone, onClose }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [copied, setCopied] = useState(false);
@@ -46,11 +47,11 @@ export function Character({ view, onDone, onClose }: Props) {
       )}
       <div className="coach-buddy" style={{ left, top }}>
         <svg width={SIZE} height={SIZE} viewBox="0 0 420 420" aria-hidden="true">
-          <ellipse cx="210" cy="250" rx="160" ry="150" fill="#F2994A" />
-          <ellipse cx="210" cy="290" rx="100" ry="80" fill="#F7B77A" />
-          <circle cx="160" cy="210" r="18" fill="#16213A" />
-          <circle cx="260" cy="210" r="18" fill="#16213A" />
-          <path d="M190 245 L230 245 L210 272 Z" fill="#A8481A" />
+          <ellipse cx="210" cy="250" rx="160" ry="150" style={{ fill: "var(--character-body)" }} />
+          <ellipse cx="210" cy="290" rx="100" ry="80" style={{ fill: "var(--character-belly)" }} />
+          <circle cx="160" cy="210" r="18" style={{ fill: "var(--character-eye)" }} />
+          <circle cx="260" cy="210" r="18" style={{ fill: "var(--character-eye)" }} />
+          <path d="M190 245 L230 245 L210 272 Z" style={{ fill: "var(--character-beak)" }} />
         </svg>
         <div className="coach-bubble" role="status">
           <p className="coach-count">{Math.min(view.index + 1, view.total)} / {view.total}</p>

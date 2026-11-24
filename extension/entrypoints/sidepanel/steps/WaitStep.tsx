@@ -16,7 +16,7 @@ export default function WaitStep({ state, dispatch }: { state: FlowState; dispat
       <Coach>
         {day ? `${day}에 결과를 보러 오세요.` : "광고가 끝나면 결과를 보러 오세요."} 그날 결과 내보내는 법도 알려 드릴게요.
       </Coach>
-      <button type="button" onClick={() => dispatch({ type: "startExport" })} className="text-left text-[15px] underline">
+      <button type="button" onClick={() => dispatch({ type: "startExport" })} className="text-left text-body underline">
         결과 내보내는 법 보기
       </button>
       <PrimaryButton onClick={() => dispatch({ type: "startUpload" })}>결과 분석하기</PrimaryButton>

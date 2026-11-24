@@ -1,14 +1,9 @@
 @import "tailwindcss";
 
-@theme {
-  --color-ink: #16213a;
-  --color-soft: #4a5568;
-  --color-paper: #fffdf8;
-  --color-cream: #f7f5f0;
-  --color-line: #e2dcd0;
-  --color-accent: #f2994a;
-  --color-accent-ink: #a8481a;
-  --font-sans: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
-}
+/* 색·글꼴·글자 크기는 design-system/tokens.json 에서 만든 tokens.css 에 있다 (node design-system/build.cjs) */
+@import "./tokens.css";
 
-body { background: var(--color-cream); color: var(--color-ink); }
+body { background: var(--color-cream); color: var(--color-ink); word-break: keep-all; }
+@keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.skeleton { animation: shimmer 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

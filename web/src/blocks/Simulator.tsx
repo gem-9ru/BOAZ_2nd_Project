@@ -24,7 +24,7 @@ export function Simulator({ r }: { r: Result }) {
     <Card id="simulator" step={9} title="예산 시뮬레이터">
       <div role="radiogroup" aria-label="세팅" className="flex gap-2">
         {arms.map((a, i) => (
-          <label key={a.name} className={`cursor-pointer rounded-badge border px-3 py-1.5 text-body focus-within:outline-3 focus-within:outline-focus focus-within:outline-offset-2 ${arm === a.name ? "border-ink bg-ink text-on-action font-semibold" : "border-line"}`}>
+          <label key={a.name} className={`cursor-pointer rounded-badge border px-3 py-1.5 text-body focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-2 ${arm === a.name ? "border-ink bg-ink text-on-action font-semibold" : "border-line"}`}>
             <input type="radio" name="arm" className="sr-only" checked={arm === a.name} onChange={() => setArm(a.name)} />
             {"AB"[i]} · {a.name}
           </label>

@@ -60,8 +60,8 @@ export default function App() {
   return (
     <main className="min-h-screen p-4 flex flex-col gap-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-[17px] font-bold">Ad assistant</h1>
-        <ol className="flex gap-3 text-[13px]" aria-label="진행 단계">
+        <h1 className="text-lead font-bold">Ad assistant</h1>
+        <ol className="flex gap-3 text-caption" aria-label="진행 단계">
           {STAGES.map((st, i) => (
             <li
               key={st.label}
@@ -73,7 +73,7 @@ export default function App() {
           ))}
         </ol>
         {state.step !== "find" && (
-          <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }} className="text-[12px] text-soft underline">
+          <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }} className="text-small text-soft underline">
             처음부터
           </button>
         )}
@@ -88,7 +88,7 @@ export default function App() {
         <QuestionStep state={state} dispatch={dispatch} fields={spec.fields} defaults={spec.defaults} />
       )}
       {state.step === "questions" && !spec && !specError && (
-        <p role="status" className="text-[13px] text-soft">질문을 불러오는 중이에요…</p>
+        <p role="status" className="text-caption text-soft">질문을 불러오는 중이에요…</p>
       )}
       {state.step === "questions" && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
     </main>

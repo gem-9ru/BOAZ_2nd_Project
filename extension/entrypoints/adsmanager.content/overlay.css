@@ -1,16 +1,20 @@
+/* 색·크기는 design-system/tokens.json 의 component.coach / component.character 에서 만든 변수를 쓴다 */
+@import "../../assets/overlay-tokens.css";
+
 :host { all: initial; }
-.coach-ring { position: fixed; z-index: 2147483646; border: 4px solid #F2994A; border-radius: 12px; pointer-events: none;
-  box-shadow: 0 0 0 9999px rgba(22, 33, 58, 0.18); transition: left .35s ease, top .35s ease, width .35s ease, height .35s ease; }
-.coach-buddy { position: fixed; z-index: 2147483647; display: flex; gap: 8px; align-items: flex-start; width: 340px;
-  font-family: "Apple SD Gothic Neo", "Noto Sans KR", system-ui, sans-serif; transition: left .5s ease, top .5s ease; }
-.coach-bubble { background: #16213A; color: #F7F5F0; border-radius: 16px; padding: 12px 14px; font-size: 14px; line-height: 1.5; flex: 1; }
-.coach-count { margin: 0 0 4px; font-size: 12px; color: #BFC8D9; }
-.coach-text { margin: 0 0 10px; }
-.coach-shot { width: 100%; border-radius: 8px; margin-bottom: 10px; }
+.coach-ring { position: fixed; z-index: 2147483646; border: var(--coach-ring-width) solid var(--coach-ring); border-radius: var(--coach-ring-radius); pointer-events: none;
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--coach-scrim) 22%, transparent); transition: left var(--coach-move-duration) var(--coach-easing), top var(--coach-move-duration) var(--coach-easing), width var(--coach-move-duration) var(--coach-easing), height var(--coach-move-duration) var(--coach-easing); }
+.coach-buddy { position: fixed; z-index: 2147483647; display: flex; gap: 8px; align-items: flex-start; width: var(--coach-width);
+  font-family: var(--coach-font-family); transition: left var(--coach-walk-duration) var(--coach-easing), top var(--coach-walk-duration) var(--coach-easing); }
+.coach-bubble { background: var(--coach-bubble-bg); color: var(--coach-bubble-fg); border: 1.5px solid var(--coach-bubble-border); box-shadow: 0 6px 20px color-mix(in srgb, var(--coach-bubble-shadow) 18%, transparent); border-radius: var(--coach-radius); padding: var(--coach-padding-y) var(--coach-padding-x); font-size: var(--coach-font-size); line-height: var(--coach-line-height); flex: 1; }
+.coach-count { margin: 0 0 4px; font-size: var(--coach-small-font-size); color: var(--coach-count-fg); font-weight: 700; }
+.coach-text { margin: 0 0 var(--coach-gap); }
+.coach-shot { width: 100%; border-radius: 8px; margin-bottom: var(--coach-gap); }
 .coach-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.coach-actions button { font: inherit; font-size: 13px; border-radius: 999px; padding: 6px 12px; cursor: pointer;
-  background: transparent; color: #F7F5F0; border: 1px solid #BFC8D9; }
-.coach-actions .coach-primary { background: #F2994A; color: #16213A; border-color: #F2994A; font-weight: 700; }
-.coach-actions button:focus-visible { outline: 3px solid #F2994A; outline-offset: 2px; }
-.coach-note { margin: 8px 0 0; font-size: 12px; color: #BFC8D9; }
+.coach-actions button { font: inherit; font-size: var(--coach-button-font-size); border-radius: var(--coach-button-radius); padding: 6px 12px; cursor: pointer;
+  background: var(--coach-button-bg); color: var(--coach-button-fg); border: 1px solid var(--coach-button-border); }
+.coach-actions .coach-primary { background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-color: var(--coach-primary-bg); font-weight: 700; }
+.coach-actions .coach-primary:hover { background: var(--coach-primary-hover-bg); }
+.coach-actions button:focus-visible { outline: var(--coach-focus-width) solid var(--coach-focus); outline-offset: var(--coach-focus-offset); }
+.coach-note { margin: 8px 0 0; font-size: var(--coach-small-font-size); color: var(--coach-note-fg); }
 @media (prefers-reduced-motion: reduce) { .coach-ring, .coach-buddy { transition: none; } }

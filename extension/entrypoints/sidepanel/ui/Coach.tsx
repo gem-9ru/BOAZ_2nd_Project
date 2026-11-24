@@ -10,7 +10,7 @@ export function Coach({ children }: { children: ReactNode }) {
           <i className="block size-1.5 rounded-full bg-ink" />
         </span>
       </span>
-      <div className="text-[15px] leading-relaxed">{children}</div>
+      <div className="text-body leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -22,7 +22,7 @@ export function PrimaryButton(props: { children: ReactNode; onClick?: () => void
       type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled || props.busy}
-      className="w-full rounded-xl bg-ink text-cream py-3 text-[15px] font-semibold disabled:opacity-40 focus-visible:outline-3 focus-visible:outline-accent"
+      className="w-full rounded-xl bg-ink text-cream py-3 text-body font-semibold disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-accent"
     >
       {props.busy ? "잠시만요…" : props.children}
     </button>
@@ -32,7 +32,7 @@ export function PrimaryButton(props: { children: ReactNode; onClick?: () => void
 /** 오류 한 줄 + 다시 시도 (칸 바로 아래에 둔다). */
 export function ErrorLine({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="alert" className="text-[13px] text-accent-ink flex items-center gap-2 flex-wrap">
+    <div role="alert" className="text-caption text-accent-ink flex items-center gap-2 flex-wrap">
       <span>{message}</span>
       {onRetry && (
         <button type="button" onClick={onRetry} className="underline font-semibold">

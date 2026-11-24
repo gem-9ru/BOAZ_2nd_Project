@@ -28,7 +28,7 @@ export function Start({ onFile, onExample, busy, error }: {
           onDragOver={(e) => { e.preventDefault(); setOver(true); }}
           onDragLeave={() => setOver(false)}
           onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f && !busy) onFile(f); }}
-          className={`flex flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed px-6 py-8 text-center cursor-pointer focus-within:outline-3 focus-within:outline-focus focus-within:outline-offset-2 ${over ? "border-ink bg-sunk" : "border-line bg-bg"}`}>
+          className={`flex flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed px-6 py-8 text-center cursor-pointer focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-2 ${over ? "border-ink bg-sunk" : "border-line bg-bg"}`}>
           <span className="text-body text-soft">메타 결과 CSV를 여기에 끌어다 놓거나</span>
           <span className="inline-flex items-center h-button px-5 rounded-button bg-button text-button-fg text-body font-semibold">파일 고르기</span>
           <input id="csv" type="file" accept=".csv,text/csv" disabled={busy} aria-label="메타 결과 CSV"

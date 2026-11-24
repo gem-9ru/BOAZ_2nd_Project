@@ -24,7 +24,7 @@ export function Button({ children, onClick, kind = "primary", busy, disabled, ty
     : "border border-ink text-ink hover:bg-sunk";
   return (
     <button type={type} onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined}
-      className={`h-button px-5 rounded-button text-body font-semibold disabled:opacity-50 ${look}`}>
+      className={`h-button px-5 rounded-button text-body font-semibold disabled:opacity-(--state-disabled-opacity) ${look}`}>
       {busy ? "계산하는 중…" : children}
     </button>
   );

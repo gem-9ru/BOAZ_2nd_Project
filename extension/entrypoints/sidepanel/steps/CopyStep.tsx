@@ -33,13 +33,13 @@ export default function CopyStep({ state, dispatch }: Props) {
     <section className="flex flex-col gap-5">
       <Coach>상품의 좋은 점을 한두 마디로 알려 주세요. 찾은 키워드와 섞어 광고 문구 3개를 써 드릴게요.</Coach>
       <div className="flex flex-col gap-2">
-        <label htmlFor="strengths" className="text-[13px] text-soft">상품의 좋은 점</label>
+        <label htmlFor="strengths" className="text-caption text-soft">상품의 좋은 점</label>
         <input
           id="strengths"
           value={strengths}
           onChange={(e) => setStrengths(e.target.value)}
           placeholder="예: 버터 듬뿍, 당일 구움"
-          className="rounded-xl border border-line bg-paper px-3 py-2.5 text-[15px]"
+          className="rounded-xl border border-line bg-paper px-3 py-2.5 text-body"
         />
         {error && <ErrorLine message={error} onRetry={write} />}
       </div>
@@ -48,9 +48,9 @@ export default function CopyStep({ state, dispatch }: Props) {
         <ol className="flex flex-col gap-3">
           {list.map((c, i) => (
             <li key={i} className="border-l-4 border-accent pl-3 flex flex-col gap-1">
-              <strong className="text-[15px]">{c.headline}</strong>
-              <p className="text-[15px] text-soft">{c.primary_text}</p>
-              <button type="button" onClick={() => dispatch({ type: "pickCopy", copy: c })} className="self-start text-[13px] font-semibold underline">
+              <strong className="text-body">{c.headline}</strong>
+              <p className="text-body text-soft">{c.primary_text}</p>
+              <button type="button" onClick={() => dispatch({ type: "pickCopy", copy: c })} className="self-start text-caption font-semibold underline">
                 이 문구로 할게요 ({i + 1}안)
               </button>
             </li>
@@ -58,11 +58,11 @@ export default function CopyStep({ state, dispatch }: Props) {
         </ol>
       )}
       {list && (
-        <button type="button" onClick={write} disabled={busy} className="self-start text-[13px] text-soft underline disabled:opacity-40">
+        <button type="button" onClick={write} disabled={busy} className="self-start text-caption text-soft underline disabled:opacity-(--state-disabled-opacity)">
           {busy ? "다시 쓰는 중…" : "다른 문구로 다시 써 주세요"}
         </button>
       )}
-      <p className="text-[13px] text-soft">사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.</p>
+      <p className="text-caption text-soft">사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.</p>
     </section>
   );
 }

@@ -41,7 +41,7 @@ export default function GuideStep({ state, dispatch }: Props) {
         <Coach>이 칸들은 광고 관리자에서 직접 바꿔 주세요.</Coach>
         <ul className="flex flex-col gap-2">
           {changes.map((c) => (
-            <li key={c.field_id} className="text-[15px]">{c.label} → {c.new}</li>
+            <li key={c.field_id} className="text-body">{c.label} → {c.new}</li>
           ))}
         </ul>
         <PrimaryButton onClick={() => dispatch({ type: "guideDone" })}>바꿨어요</PrimaryButton>
@@ -63,7 +63,7 @@ export default function GuideStep({ state, dispatch }: Props) {
           <li
             key={s.entry.id}
             aria-current={i === index ? "step" : undefined}
-            className={`text-[13px] flex gap-2 ${i === index ? "font-semibold text-ink" : i < index ? "text-soft line-through" : "text-soft"}`}
+            className={`text-caption flex gap-2 ${i === index ? "font-semibold text-ink" : i < index ? "text-soft line-through" : "text-soft"}`}
           >
             <span className="w-5 text-right">{i < index ? "✓" : i + 1}</span>
             <span>

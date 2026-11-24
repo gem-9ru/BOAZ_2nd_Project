@@ -1,4 +1,4 @@
-/* 토큰 → Tailwind. 색·간격·모서리는 모두 tokens.css(=tokens.json에서 생성)의 의미·부품 토큰을 거친다. */
+/* 토큰 → Tailwind. 색·간격·모서리는 모두 tokens.css(=design-system/tokens.json에서 생성)의 의미·부품 토큰을 거친다. */
 @import "tailwindcss";
 @import "./tokens.css";
 
@@ -11,9 +11,11 @@
   --color-line: var(--tone-line);
   --color-accent: var(--tone-accent);
   --color-accent-ink: var(--tone-accent-ink);
+  --color-accent-soft: var(--tone-accent-soft);
   --color-action: var(--tone-action);
   --color-action-hover: var(--tone-action-hover);
   --color-on-action: var(--tone-on-action);
+  --color-on-accent: var(--tone-on-accent);
   --color-series-a: var(--tone-series-a);
   --color-series-b: var(--tone-series-b);
   --color-adopt: var(--tone-adopt);
@@ -25,8 +27,18 @@
   --color-warn: var(--tone-warn);
   --color-warn-bg: var(--tone-warn-bg);
   --color-info-bg: var(--tone-info-bg);
+  --color-info: var(--tone-info);
+  --color-warn-mark: var(--tone-warn-mark);
+  --color-block: var(--tone-block);
+  --color-block-ink: var(--tone-block-ink);
+  --color-block-bg: var(--tone-block-bg);
+  --color-ok: var(--tone-ok);
+  --color-ok-bg: var(--tone-ok-bg);
   --font-sans: var(--primitive-font-family-sans);
+  --text-mark: var(--primitive-font-size-mark);
+  --text-small: var(--primitive-font-size-small);
   --text-caption: var(--primitive-font-size-caption);
+  --text-label: var(--primitive-font-size-label);
   --text-body: var(--primitive-font-size-body);
   --text-lead: var(--primitive-font-size-lead);
   --text-title: var(--primitive-font-size-title);

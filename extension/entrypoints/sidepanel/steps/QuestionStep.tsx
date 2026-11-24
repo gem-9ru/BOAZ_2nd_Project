@@ -30,16 +30,16 @@ export default function QuestionStep({ state, dispatch, fields, defaults }: Prop
 
   return (
     <section className="flex flex-col gap-5">
-      <p className="text-[13px] text-soft">질문 {Math.min(index + 1, asked.length)} / {asked.length}</p>
+      <p className="text-caption text-soft">질문 {Math.min(index + 1, asked.length)} / {asked.length}</p>
       {index > 0 && next && (
         <button type="button" onClick={() => dispatch({ type: "unanswer", id: asked[index - 1]!.id })}
-          className="self-start text-[13px] text-soft underline">
+          className="self-start text-caption text-soft underline">
           ← 이전 질문
         </button>
       )}
       {next && <Question key={next.id} field={next} onAnswer={(v) => answer(next.id, v)} />}
       {defaults.length > 0 && (
-        <details className="text-[13px] text-soft">
+        <details className="text-caption text-soft">
           <summary className="cursor-pointer">묻지 않고 이렇게 두었어요 ({defaults.length}칸)</summary>
           <ul className="mt-2 flex flex-col gap-2">
             {defaults.map((d) => (
@@ -75,8 +75,8 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
   return (
     <div className="flex flex-col gap-3">
       <Coach>
-        <h2 className="text-[17px] font-semibold">{field.ask}</h2>
-        {field.why && <p className="text-[13px] text-soft mt-1">{field.why}</p>}
+        <h2 className="text-lead font-semibold">{field.ask}</h2>
+        {field.why && <p className="text-caption text-soft mt-1">{field.why}</p>}
       </Coach>
       {field.options ? (
         <div className="flex flex-col gap-2">
@@ -85,24 +85,24 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
               key={o}
               type="button"
               onClick={() => onAnswer(o)}
-              className={`rounded-xl border px-4 py-3 text-left text-[15px] ${o === field.default ? "border-ink bg-paper font-semibold" : "border-line"}`}
+              className={`rounded-xl border px-4 py-3 text-left text-body ${o === field.default ? "border-ink bg-paper font-semibold" : "border-line"}`}
             >
               {o}
-              {o === field.default && <span className="block text-[13px] font-normal text-soft">권장</span>}
+              {o === field.default && <span className="block text-caption font-normal text-soft">권장</span>}
             </button>
           ))}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <label htmlFor={field.id} className="text-[13px] text-soft">{field.label}</label>
+          <label htmlFor={field.id} className="text-caption text-soft">{field.label}</label>
           <input
             id={field.id}
             value={text}
             onChange={(e) => setText(e.target.value)}
             aria-invalid={bad || undefined}
-            className="rounded-xl border border-line bg-paper px-3 py-2.5 text-[15px]"
+            className="rounded-xl border border-line bg-paper px-3 py-2.5 text-body"
           />
-          {bad && <p role="alert" className="text-[13px] text-accent-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
+          {bad && <p role="alert" className="text-caption text-accent-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
           <PrimaryButton onClick={submit} disabled={REQUIRED_TEXT.has(field.id) && !text.trim()}>
             다음
           </PrimaryButton>
