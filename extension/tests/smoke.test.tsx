@@ -3,8 +3,8 @@ import { describe, expect, it } from "vitest";
 import App from "../entrypoints/sidepanel/App";
 
 describe("side panel", () => {
-  it("shows the Ad assistant title", () => {
+  it("shows the 광고 어시스턴트 title", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: "Ad assistant" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "광고 어시스턴트" })).toBeTruthy();
   });
 });

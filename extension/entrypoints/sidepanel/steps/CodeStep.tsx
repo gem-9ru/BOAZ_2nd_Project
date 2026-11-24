@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ANALYSIS_PAGE, plan as fetchPlan } from "../../../lib/api";
+import { analysisPageUrl, plan as fetchPlan } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 
@@ -9,7 +9,9 @@ export function tidyCode(raw: string): string {
 }
 
 /** ③ 분석: 결과 파일은 분석 페이지에서 올리고, 거기서 받은 코드 4자리를 여기에 넣는다. */
-export default function CodeStep({ dispatch }: { state: FlowState; dispatch: (ev: FlowEvent) => void }) {
+export default function CodeStep({ state, dispatch }: { state: FlowState; dispatch: (ev: FlowEvent) => void }) {
+  // 이번 광고의 세팅값 (비어 있는 칸은 빼고) → 분석 페이지 '내 세팅 카드'
+  const settings = Object.fromEntries(state.settings.filter((x) => x.value).map((x) => [x.fieldId, x.value]));
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,17 +35,25 @@ export default function CodeStep({ dispatch }: { state: FlowState; dispatch: (ev
 
   return (
     <section className="flex flex-col gap-4">
-      <Coach>광고가 끝났으면 분석 페이지에 결과 파일을 올려 주세요. 다 계산하면 코드 4자리가 나와요.</Coach>
-      <button type="button" onClick={() => void browser.tabs.create({ url: ANALYSIS_PAGE })}
-        className="self-start rounded-xl border border-ink px-4 py-2.5 text-body font-semibold">
-        분석 페이지 열기
-      </button>
+      <Coach>광고가 끝났으면 광고 관리자에서 결과를 내보내 주세요. 분석 기준은 꼭 <b>일 · 노출 위치</b>로 골라 주세요.</Coach>
+      <ol className="flex flex-col gap-2 text-body">
+        <li className="flex gap-2"><span className="font-bold text-accent-ink">1</span>
+          <span>광고 관리자 보고서에서 [내보내기] → 분석 기준 '일 · 노출 위치'
+            <button type="button" onClick={() => dispatch({ type: "startExport" })} className="ml-1 text-caption font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
+          </span></li>
+        <li className="flex gap-2"><span className="font-bold text-accent-ink">2</span>
+          <span>분석 페이지에 받은 파일을 올리기
+            <button type="button" onClick={async () => { await browser.tabs.create({ url: await analysisPageUrl(settings) }); }}
+              className="mt-2 block rounded-button border border-accent bg-paper px-4 py-2 font-semibold text-accent-ink">분석 페이지 열기 (새 창)</button>
+          </span></li>
+        <li className="flex gap-2"><span className="font-bold text-accent-ink">3</span><span>다 계산하면 나오는 코드 4자리를 아래에 넣기</span></li>
+      </ol>
       <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void load(); }}>
         <label htmlFor="plan-code" className="text-caption text-soft">분석 페이지의 코드 4자리</label>
         <input id="plan-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={8}
           autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="예: 75R7"
           aria-invalid={error ? true : undefined} aria-describedby={error ? "plan-code-error" : undefined}
-          className="rounded-xl border border-line bg-paper px-3 py-2.5 text-title font-bold tracking-[0.3em] uppercase" />
+          className="rounded-button border border-line bg-paper px-3 py-2.5 text-title font-bold tracking-[0.3em] uppercase" />
         {error && <div id="plan-code-error"><ErrorLine message={error} /></div>}
         <PrimaryButton type="submit" busy={busy}>가져오기</PrimaryButton>
       </form>

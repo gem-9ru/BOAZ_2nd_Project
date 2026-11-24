@@ -5,6 +5,7 @@ import { reveal } from "./locate";
 interface Props {
   view: GuideView;
   onDone: () => void;
+  onBack: () => void;
   onClose: () => void;
 }
 
@@ -12,7 +13,7 @@ const SIZE = 64;
 
 /** 광고 관리자 위의 캐릭터 + 말풍선. 대상 칸 둘레에 메인 바이올렛 테두리를 그리고 그 옆으로 걸어간다.
  *  색은 overlay.css 가 불러오는 --character-* / --coach-* 변수 (design-system/tokens.json). */
-export function Character({ view, onDone, onClose }: Props) {
+export function Character({ view, onDone, onBack, onClose }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -66,7 +67,8 @@ export function Character({ view, onDone, onClose }: Props) {
                 {copied ? "복사했어요" : "값 복사"}
               </button>
             )}
-            <button type="button" className="coach-primary" onClick={onDone}>했어요</button>
+            <button type="button" onClick={onBack} disabled={view.index === 0}>이전 칸</button>
+            <button type="button" className="coach-primary" onClick={onDone}>다음 칸</button>
             <button type="button" onClick={onClose} aria-label="안내 닫기">닫기</button>
           </div>
           {view.publish && <p className="coach-note">캐릭터는 게시 버튼을 누르지 않아요.</p>}

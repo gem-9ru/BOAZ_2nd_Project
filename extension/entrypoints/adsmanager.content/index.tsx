@@ -38,12 +38,19 @@ export default defineContentScript({
         <Character
           view={guide.view()}
           onDone={() => { guide?.markDone(); render(); }}
+          onBack={() => { guide?.back(); render(); }}
           onClose={() => { stopGuide(); ui.remove(); }}
         />,
       );
     }
 
-    browser.runtime.onMessage.addListener((msg: { type?: string; steps?: GuideStepItem[]; startIndex?: number }) => {
+    browser.runtime.onMessage.addListener((msg: { type?: string; steps?: GuideStepItem[]; startIndex?: number; delta?: number }) => {
+      // 패널의 [이전 칸] [다음 칸]
+      if (msg.type === "guide:move" && guide) {
+        if ((msg.delta ?? 0) < 0) guide.back(); else guide.markDone();
+        render();
+        return;
+      }
       if (msg.type !== "guide:start" || !msg.steps) return;
       stopGuide();
       ui.mount();

@@ -85,6 +85,16 @@ export class Guide {
     if (this.timer) clearTimeout(this.timer);
   }
 
+  /** [이전 칸]: 한 칸 뒤로 (첫 칸이면 그대로). */
+  back(): void {
+    if (this.index === 0) return;
+    this.stop();
+    this.index -= 1;
+    this.tries = 0;
+    this.onProgress(this.index);
+    this.seek();
+  }
+
   private advance(): void {
     this.stop();
     this.index += 1;

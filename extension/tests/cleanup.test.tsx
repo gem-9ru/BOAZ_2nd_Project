@@ -26,7 +26,7 @@ describe("Character", () => {
     sec.getClientRects = () => drawn;
     f.getBoundingClientRect = () => ({ left: 0, top: 0, right: 10, bottom: 10, width: fieldDrawn ? 10 : 0, height: 10 }) as DOMRect;
     f.scrollIntoView = vi.fn(); sec.scrollIntoView = vi.fn();
-    render(<Character view={{ index: 0, total: 1, found: true, text: "여기", target: f }} onDone={() => {}} onClose={() => {}} />);
+    render(<Character view={{ index: 0, total: 1, found: true, text: "여기", target: f }} onDone={() => {}} onBack={() => {}} onClose={() => {}} />);
     expect(f.scrollIntoView).toHaveBeenCalledTimes(1);
     fieldDrawn = false;
     vi.advanceTimersByTime(700);

@@ -60,13 +60,13 @@ export default function App() {
   return (
     <main className="min-h-screen p-4 flex flex-col gap-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-lead font-bold">Ad assistant</h1>
+        <h1 className="text-lead font-bold"><span aria-hidden className="text-accent">✦</span> 광고 어시스턴트</h1>
         <ol className="flex gap-3 text-caption" aria-label="진행 단계">
           {STAGES.map((st, i) => (
             <li
               key={st.label}
               aria-current={i === current ? "step" : undefined}
-              className={i === current ? "font-semibold text-ink" : i < current ? "text-soft" : "text-line"}
+              className={i === current ? "font-semibold text-accent-ink" : i < current ? "text-soft" : "text-soft opacity-(--state-disabled-opacity)"}
             >
               {"①②③"[i]} {st.label}
             </li>

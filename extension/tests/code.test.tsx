@@ -22,7 +22,7 @@ describe("③ 코드 넣기", () => {
   it("opens the analysis page in a new tab", async () => {
     const create = vi.spyOn(fakeBrowser.tabs, "create");
     render(<CodeStep state={{ ...initialState(), step: "upload" }} dispatch={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "분석 페이지 열기" }));
+    fireEvent.click(screen.getByRole("button", { name: "분석 페이지 열기 (새 창)" }));
     await waitFor(() => expect(create).toHaveBeenCalledWith({ url: "http://localhost:8000/analysis" }));
   });
 
@@ -51,12 +51,12 @@ describe("③ 코드 넣기", () => {
 });
 
 describe("③ 다음에 할 일 (코드로 받은 것)", () => {
-  it("shows three lines and one change, and 바꾸러 가기 starts the edit guide on that field", () => {
+  it("shows the one change (v4: 3줄 요약 대신 변경안 카드 + 챗봇), and 바꾸러 가기 starts the edit guide on that field", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
-    expect(screen.getByText(/이번에 알게 된 것/)).toBeTruthy();
-    expect(screen.getByText("B 쪽이에요")).toBeTruthy();
     expect(screen.getByText(/종료 날짜/)).toBeTruthy();
+    expect(screen.getByText(/세트당 ₩151,000가 쓰일 때까지 연장/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "바꾸러 가기" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
   });

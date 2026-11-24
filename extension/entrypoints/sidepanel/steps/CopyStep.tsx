@@ -39,7 +39,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           value={strengths}
           onChange={(e) => setStrengths(e.target.value)}
           placeholder="예: 버터 듬뿍, 당일 구움"
-          className="rounded-xl border border-line bg-paper px-3 py-2.5 text-body"
+          className="rounded-button border border-line bg-paper px-3 py-2.5 text-body"
         />
         {error && <ErrorLine message={error} onRetry={write} />}
       </div>

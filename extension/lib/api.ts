@@ -40,6 +40,11 @@ export interface Change {
   label: string;
   new: string;
   note: string;
+  /** v4: 광고 관리자 위치 ("광고 › 형식·미디어"), 지금 값, 확실도, 다음 테스트 체크리스트 */
+  path?: string;
+  now?: string | null;
+  certainty?: { level: "채택" | "유력" | "보류"; label: string; why: string };
+  checklist?: string[];
 }
 
 
@@ -103,4 +108,25 @@ export const ANALYSIS_PAGE = `${BASE}/analysis`;
 /** 분석 페이지의 4자리 코드 → 다음에 할 일. */
 export function plan(code: string): Promise<import("./flow").Plan> {
   return call(`/plan/${encodeURIComponent(code)}`);
+}
+
+/** 광고 어시스턴트: 질문이 없으면 첫 말 + 추천 질문, 있으면 분석 결과로 설명 (EX-03). */
+export function askAssistant(code: string, step: string, question?: string): Promise<{ message: string; suggestions?: string[] }> {
+  return call("/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, step, question }) });
+}
+
+/** 세팅값(칸 id → 값)을 서버에 맡기고 키만 받는다. 분석 페이지 주소에는 이 키만 붙인다 (값은 URL에 넣지 않음). */
+export function keepSettings(settings: Record<string, string>): Promise<{ key: string; count: number }> {
+  return call("/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings }) });
+}
+
+/** 분석 페이지 주소: 세팅값을 맡겼으면 #s=키 (# 뒤는 서버 기록에 남지 않음). 실패하면 그냥 연다 → 분석 페이지가 5문항으로 묻는다. */
+export async function analysisPageUrl(settings: Record<string, string>): Promise<string> {
+  if (!Object.keys(settings).length) return ANALYSIS_PAGE;
+  try {
+    const { key } = await keepSettings(settings);
+    return `${ANALYSIS_PAGE}#s=${encodeURIComponent(key)}`;
+  } catch {
+    return ANALYSIS_PAGE;
+  }
 }

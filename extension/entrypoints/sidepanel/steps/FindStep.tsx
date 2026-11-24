@@ -11,18 +11,23 @@ interface Props {
   dispatch: (ev: FlowEvent) => void;
 }
 
+const EXAMPLE = "수제 쿠키";
+
 /** ① 찾기: 상품 → 네이버로 누가·어떤 말로 찾는지 → 타겟 확인. */
 export default function FindStep({ state, dispatch }: Props) {
   const [product, setProduct] = useState(state.product ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const r = state.research;
+  const stale = !!r && !!state.product && product.trim() !== "" && product.trim() !== state.product;
 
-  async function search() {
+  async function search(word = product) {
+    const q = word.trim();
+    if (!q) return;
     setBusy(true);
     setError(null);
     try {
-      dispatch({ type: "researched", research: await fetchResearch(product.trim()), product: product.trim() });
+      dispatch({ type: "researched", research: await fetchResearch(q), product: q });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -34,12 +39,12 @@ export default function FindStep({ state, dispatch }: Props) {
     <section className="flex flex-col gap-5">
       <Coach>어떤 상품을 파세요? 네이버에서 누가, 어떤 말로 찾는지 알아볼게요.</Coach>
       <div className="flex flex-col gap-2">
-        <label htmlFor="product" className="text-caption text-soft">파는 상품</label>
+        <label htmlFor="product" className="text-caption font-semibold text-soft">파는 상품</label>
         <form
-          className="flex gap-2"
+          className="flex items-center gap-1 rounded-card border border-line bg-paper p-1.5 transition-colors focus-within:border-ink has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent"
           onSubmit={(e) => {
             e.preventDefault();
-            if (product.trim() && !busy) search();
+            if (!busy) void search();
           }}
         >
           <input
@@ -47,23 +52,69 @@ export default function FindStep({ state, dispatch }: Props) {
             value={product}
             onChange={(e) => setProduct(e.target.value)}
             placeholder="예: 수제 쿠키"
-            className="flex-1 rounded-xl border border-line bg-paper px-3 py-2.5 text-body focus-visible:outline-2 focus-visible:outline-accent"
+            autoComplete="off"
+            className="min-w-0 flex-1 bg-transparent px-2.5 py-2 text-body placeholder:text-soft focus:outline-none"
           />
           <button
             type="submit"
             disabled={!product.trim() || busy}
-            className="rounded-xl border border-ink px-4 text-body font-semibold disabled:opacity-(--state-disabled-opacity)"
+            className="shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {busy ? "찾는 중…" : "찾아보기"}
           </button>
         </form>
-        {error && <ErrorLine message={error} onRetry={search} />}
+        {error && <ErrorLine message={error} onRetry={() => void search()} />}
+        {!r && !busy && !error && (
+          <button
+            type="button"
+            onClick={() => { setProduct(EXAMPLE); void search(EXAMPLE); }}
+            className="self-start rounded-badge bg-accent-soft px-3 py-1.5 text-caption font-semibold text-accent-ink hover:ring-1 hover:ring-accent focus-visible:outline-2 focus-visible:outline-accent"
+          >
+            {EXAMPLE}로 먼저 보기
+          </button>
+        )}
       </div>
 
-      {r && r.notice && <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch} />}
-      {r && !r.notice && <Result research={r} dropped={state.dropped ?? []} dispatch={dispatch} />}
+      {busy && <ResultSkeleton />}
+      {!busy && stale && (
+        <p className="rounded-button bg-sunk px-3 py-2 text-caption text-soft">
+          아래는 '{state.product}' 결과예요. 찾아보기를 누르면 새 상품으로 바뀌어요.
+        </p>
+      )}
+      {!busy && r && (
+        <div className={stale ? "opacity-50 transition-opacity" : "transition-opacity"}>
+          {r.notice
+            ? <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch} />
+            : <Result research={r} dropped={state.dropped ?? []} dispatch={dispatch} />}
+        </div>
+      )}
     </section>
   );
+}
+
+/** 결과 자리 스켈레톤: 결과 카드와 같은 모양. */
+function ResultSkeleton() {
+  return (
+    <div className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
+      <p role="status" className="text-caption text-soft">네이버에서 찾는 중이에요…</p>
+      <div aria-hidden className="skeleton flex flex-col gap-4">
+        <div className="h-7 w-32 rounded-button bg-sunk" />
+        <div className="flex h-24 items-end gap-2">
+          {[30, 70, 90, 55, 35, 20].map((h, i) => (
+            <div key={i} className="flex-1 rounded-t-md bg-sunk" style={{ height: `${h}%` }} />
+          ))}
+        </div>
+        <div className="flex gap-2">
+          {[72, 56, 88].map((w) => <div key={w} className="h-7 rounded-badge bg-sunk" style={{ width: w }} />)}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** 12000 → '1.2만', 950 → '950' */
+function compact(n: number): string {
+  return n >= 10000 ? `${(n / 10000).toFixed(n >= 100000 ? 0 : 1).replace(/\.0$/, "")}만` : n.toLocaleString();
 }
 
 function Result({ research: r, dropped, dispatch }: {
@@ -86,28 +137,52 @@ function Result({ research: r, dropped, dispatch }: {
   return (
     <div className="flex flex-col gap-5">
       {aud && (
-        <figure className="flex flex-col gap-3">
-          <figcaption className="flex flex-col">
-            <span className="text-caption text-soft">가장 눈에 띄게 찾는 사람</span>
-            <strong className="text-[22px] font-bold">{who}</strong>
+        <figure className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
+          <figcaption className="flex items-end justify-between gap-3">
+            <span className="flex flex-col gap-0.5">
+              <span className="text-caption text-soft">가장 눈에 띄게 찾는 사람</span>
+              <strong className="text-number font-bold leading-tight tracking-tight">{who}</strong>
+            </span>
+            <span className="mb-1 shrink-0 rounded-badge bg-sunk px-2.5 py-1 text-small text-soft">
+              여성 {Math.round(aud.female * 100)}% · 남성 {100 - Math.round(aud.female * 100)}%
+            </span>
           </figcaption>
-          <div className="flex items-end gap-2 h-24" aria-label="연령대별 검색 비중">
-            {ages.map((a) => (
-              <div key={a} className="flex-1 flex flex-col items-center gap-1">
-                <div
-                  className={a === top ? "w-full rounded-t-md bg-accent" : "w-full rounded-t-md bg-line"}
-                  style={{ height: `${Math.round(((aud.ages[a] ?? 0) / max) * 80)}px` }}
-                />
-                <span className={a === top ? "text-caption font-semibold" : "text-caption text-soft"}>{a}대</span>
-              </div>
-            ))}
+          <div className="flex flex-col gap-1.5">
+            <div className="flex h-28 items-end gap-2 border-b border-line" role="img"
+              aria-label={`연령대별 검색 비중: ${ages.map((a) => `${a}대 ${Math.round((aud.ages[a] ?? 0) * 100)}%`).join(", ")}`}>
+              {ages.map((a) => {
+                const share = aud.ages[a] ?? 0;
+                const isTop = a === top;
+                return (
+                  <div key={a} className="flex h-full flex-1 flex-col items-center justify-end gap-1">
+                    <span aria-hidden className={`text-small tabular-nums ${isTop ? "font-bold text-accent-ink" : "text-soft"}`}>
+                      {Math.round(share * 100)}%
+                    </span>
+                    <div aria-hidden
+                      className={`w-full max-w-10 rounded-t-md ${isTop ? "bg-accent" : "bg-line"}`}
+                      style={{ height: `${Math.max(4, Math.round((share / max) * 76))}px` }} />
+                  </div>
+                );
+              })}
+            </div>
+            <div aria-hidden className="flex gap-2">
+              {ages.map((a) => (
+                <span key={a} className={`flex-1 text-center text-small ${a === top ? "font-semibold" : "text-soft"}`}>{a}대</span>
+              ))}
+            </div>
           </div>
-          <p className="text-caption text-soft">{r.headline}</p>
+          {r.headline && (
+            <p className="rounded-button bg-accent-soft px-3 py-2.5 text-caption leading-relaxed text-ink">{r.headline}</p>
+          )}
         </figure>
       )}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-caption text-soft">이 사람들이 쓰는 말 (빼고 싶은 건 누르세요)</span>
+      <div className="flex flex-col gap-2.5">
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-caption font-semibold text-soft">이 사람들이 쓰는 말</span>
+          <span className="text-small text-soft">{r.keywords.length}개 중 {kept.length}개 넣음</span>
+        </div>
+        <p className="-mt-1 text-small text-soft">빼고 싶은 말은 누르세요. 다시 누르면 돌아와요.</p>
         <div className="flex flex-wrap gap-2">
           {r.keywords.map((k) => {
             const off = dropped.includes(k.keyword);
@@ -117,9 +192,14 @@ function Result({ research: r, dropped, dispatch }: {
                 type="button"
                 aria-pressed={!off}
                 onClick={() => dispatch({ type: "toggleKeyword", keyword: k.keyword })}
-                className={`rounded-full border px-3 py-1 text-caption ${off ? "border-line text-soft line-through" : "border-ink bg-paper"}`}
+                className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+                  off ? "border-dashed border-line text-soft" : "border-accent bg-accent-soft text-ink"}`}
               >
-                {k.keyword} · 월 {k.total_qc.toLocaleString()}회
+                <span aria-hidden className={`grid size-4 place-items-center rounded-badge text-mark ${off ? "border border-line" : "bg-accent text-on-accent"}`}>
+                  {off ? "" : "✓"}
+                </span>
+                <span className={off ? "line-through" : "font-medium"}>{k.keyword}</span>
+                <span className="text-small text-soft tabular-nums">월 {compact(k.total_qc)}회</span>
               </button>
             );
           })}
@@ -127,20 +207,27 @@ function Result({ research: r, dropped, dispatch }: {
       </div>
 
       {r.negatives && r.negatives.length > 0 && (
-        <details className="text-caption text-soft">
-          <summary className="cursor-pointer">광고에서 뺄 말 {r.negatives.length}개 (만들기·매장·관련 낮은 말)</summary>
+        <details className="group rounded-button border border-line px-3 py-2.5 text-caption text-soft open:bg-paper">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 font-semibold [&::-webkit-details-marker]:hidden">
+            <span>광고에서 뺄 말 {r.negatives.length}개 <span className="font-normal">(만들기·매장·관련 낮은 말)</span></span>
+            <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
+          </summary>
           <p className="mt-2">이런 말로 찾는 사람은 사지 않을 가능성이 커서 문구에 넣지 않아요.</p>
           <ul className="mt-2 flex flex-wrap gap-1.5">
-            {r.negatives.map((w) => <li key={w} className="rounded-full border border-line px-2 py-0.5">{w}</li>)}
+            {r.negatives.map((w) => <li key={w} className="rounded-badge bg-sunk px-2 py-0.5 line-through decoration-soft">{w}</li>)}
           </ul>
         </details>
       )}
-      <p className="text-caption text-soft">
-        {r.sources?.length
-          ? `출처: 네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
-          : `출처: 네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`}
-      </p>
-      <PrimaryButton onClick={confirm} disabled={kept.length === 0}>이 사람들로 할게요</PrimaryButton>
+
+      <div className="flex flex-col gap-2">
+        {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
+        <PrimaryButton onClick={confirm} disabled={kept.length === 0}>이 사람들로 할게요</PrimaryButton>
+        <p className="text-small leading-relaxed text-soft">
+          {r.sources?.length
+            ? `출처: 네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
+            : `출처: 네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`}
+        </p>
+      </div>
     </div>
   );
 }
@@ -160,11 +247,11 @@ function NoData({ notice, product, dispatch }: { notice: string; product: string
     <div className="flex flex-col gap-4">
       <Coach>{notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.</Coach>
       {!manual ? (
-        <button type="button" onClick={() => setManual(true)} className="self-start text-body font-semibold underline">
+        <button type="button" onClick={() => setManual(true)} className="self-start rounded-button border border-accent bg-paper text-accent-ink px-4 py-2 text-label font-semibold focus-visible:outline-2 focus-visible:outline-accent">
           직접 정하고 계속할게요
         </button>
       ) : (
-        <>
+        <div className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
           <Choice legend="보여 줄 나이" name="manual-age"
             options={MANUAL_AGES.map((a) => ({ id: a, label: `${a}대` }))} value={age} onChange={setAge} />
           <Choice legend="성별" name="manual-gender"
@@ -173,7 +260,7 @@ function NoData({ notice, product, dispatch }: { notice: string; product: string
           <PrimaryButton onClick={() => dispatch({ type: "confirmTarget", target: { ...ageGroupToRange(age), gender }, keywords: [product] })}>
             이 사람들로 할게요
           </PrimaryButton>
-        </>
+        </div>
       )}
     </div>
   );
@@ -184,11 +271,11 @@ function Choice({ legend, name, options, value, onChange }: {
 }) {
   return (
     <fieldset className="flex flex-col gap-2">
-      <legend className="text-caption text-soft mb-2">{legend}</legend>
+      <legend className="text-caption font-semibold text-soft mb-2">{legend}</legend>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => (
           <label key={o.id}
-            className={`rounded-full border px-3 py-1.5 text-label cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-ink bg-ink text-paper font-semibold" : "border-line"}`}>
+            className={`rounded-badge border px-3 py-1.5 text-label cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-accent bg-accent text-on-accent font-semibold" : "border-line"}`}>
             <input type="radio" name={name} value={o.id} checked={value === o.id} onChange={() => onChange(o.id)} className="sr-only" />
             {o.label}
           </label>

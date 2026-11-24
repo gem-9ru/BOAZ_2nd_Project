@@ -18,3 +18,4 @@
 .coach-actions button:focus-visible { outline: var(--coach-focus-width) solid var(--coach-focus); outline-offset: var(--coach-focus-offset); }
 .coach-note { margin: 8px 0 0; font-size: var(--coach-small-font-size); color: var(--coach-note-fg); }
 @media (prefers-reduced-motion: reduce) { .coach-ring, .coach-buddy { transition: none; } }
+.coach-actions button:disabled { opacity: .4; cursor: default; }

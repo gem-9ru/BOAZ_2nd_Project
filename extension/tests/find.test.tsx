@@ -102,5 +102,38 @@ describe("FindStep", () => {
     expect(screen.getByText("쿠키만들기")).toBeTruthy();
     expect(screen.getByText("광주맛집")).toBeTruthy();
   });
-});
+  it("first visit: '수제 쿠키로 먼저 보기' fills the box and searches", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(research), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const dispatch = vi.fn();
+    render(<FindStep state={initialState()} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "수제 쿠키로 먼저 보기" }));
+    expect((screen.getByLabelText("파는 상품") as HTMLInputElement).value).toBe("수제 쿠키");
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "researched", product: "수제 쿠키" })));
+  });
 
+  it("shows a skeleton status while searching", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    render(<FindStep state={initialState()} dispatch={() => {}} />);
+    fireEvent.change(screen.getByLabelText("파는 상품"), { target: { value: "수제 쿠키" } });
+    fireEvent.click(screen.getByRole("button", { name: "찾아보기" }));
+    expect(screen.getByRole("status").textContent).toContain("네이버에서 찾는 중");
+  });
+
+  it("says the result is for the old product when the box was changed", () => {
+    render(<FindStep state={{ ...initialState(), research, product: "수제 쿠키" }} dispatch={() => {}} />);
+    fireEvent.change(screen.getByLabelText("파는 상품"), { target: { value: "강아지 간식" } });
+    expect(screen.getByText(/'수제 쿠키' 결과예요/)).toBeTruthy();
+  });
+
+  it("explains why the confirm button is off when every keyword is dropped", () => {
+    render(<FindStep state={{ ...initialState(), research, dropped: ["수제쿠키", "르뱅쿠키"] }} dispatch={() => {}} />);
+    expect(screen.getByText(/검색어를 하나 이상 남겨 주세요/)).toBeTruthy();
+  });
+
+  it("labels each age bar with its share", () => {
+    render(<FindStep state={{ ...initialState(), research }} dispatch={() => {}} />);
+    expect(screen.getByText("34%")).toBeTruthy();
+    expect(screen.getByText(/여성 82%/)).toBeTruthy();
+  });
+});

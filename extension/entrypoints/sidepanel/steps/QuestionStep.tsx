@@ -85,7 +85,7 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
               key={o}
               type="button"
               onClick={() => onAnswer(o)}
-              className={`rounded-xl border px-4 py-3 text-left text-body ${o === field.default ? "border-ink bg-paper font-semibold" : "border-line"}`}
+              className={`rounded-button border px-4 py-3 text-left text-body ${o === field.default ? "border-ink bg-paper font-semibold" : "border-line"}`}
             >
               {o}
               {o === field.default && <span className="block text-caption font-normal text-soft">권장</span>}
@@ -100,9 +100,9 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
             value={text}
             onChange={(e) => setText(e.target.value)}
             aria-invalid={bad || undefined}
-            className="rounded-xl border border-line bg-paper px-3 py-2.5 text-body"
+            className="rounded-button border border-line bg-paper px-3 py-2.5 text-body"
           />
-          {bad && <p role="alert" className="text-caption text-accent-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
+          {bad && <p role="alert" className="text-caption text-block-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
           <PrimaryButton onClick={submit} disabled={REQUIRED_TEXT.has(field.id) && !text.trim()}>
             다음
           </PrimaryButton>

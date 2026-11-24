@@ -10,6 +10,10 @@ export interface Plan {
   change: Change;
   summary: string[];
   badge: { word: string; prob: number } | null;
+  /** v4: 그대로 둘 칸 · 하지 말 것 (분석 페이지 매트릭스) */
+  keep?: { field_id: string; path: string; value: string; reason: string }[];
+  watch?: { field_id: string; path: string; text: string }[];
+  dont?: string[];
 }
 
 export interface Target {
