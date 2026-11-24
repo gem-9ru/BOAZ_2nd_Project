@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button, Card, Grade } from "../ui";
+import { MySettings, type Settings } from "./MySettings";
 
 const PREP = [
   "광고 세트 2개, 하나만 다르게 (예: 노출 위치만)",
@@ -9,8 +10,9 @@ const PREP = [
 ];
 
 /** 화면 0: 무엇을 해 주는지 한 줄 + 할 수 있는 일 셋 (올리기 · 예시 · 아직 안 돌림). */
-export function Start({ onFile, onExample, busy, error }: {
+export function Start({ onFile, onExample, busy, error, received, settings, onSettings }: {
   onFile: (f: File) => void; onExample: () => void; busy: boolean; error: string | null;
+  received: number | null; settings: Settings; onSettings: (s: Settings) => void;
 }) {
   const [prep, setPrep] = useState(false);
   const [over, setOver] = useState(false);
@@ -18,7 +20,7 @@ export function Start({ onFile, onExample, busy, error }: {
   return (
     <div className="flex flex-col gap-group">
       <header className="flex flex-col gap-3">
-        <p className="text-caption font-semibold text-accent-ink">Ad assistant · 결과 분석</p>
+        <p className="text-caption font-semibold text-accent-ink">✦ 광고 어시스턴트 · 결과 분석</p>
         <h1 className="text-hero-sm sm:text-hero font-bold leading-tight">5,000원으로 먼저 돌려 보세요</h1>
         <p className="text-lead text-soft max-w-[60ch]">그 결과 파일을 올리면 20만 번 계산해 다음에 바꿀 칸 하나와 예상 범위를 알려 드려요.</p>
       </header>
@@ -50,6 +52,8 @@ export function Start({ onFile, onExample, busy, error }: {
         {busy && <p role="status" className="text-body text-soft">파일을 읽고 20만 번 계산하는 중이에요…</p>}
         {error && <p id="csv-error" role="alert" className="text-body text-warn">{error}</p>}
       </Card>
+
+      <MySettings received={received} value={settings} onChange={onSettings} />
 
       <div className="grid gap-stack sm:grid-cols-2">
         <Card title="파일이 아직 없다면">

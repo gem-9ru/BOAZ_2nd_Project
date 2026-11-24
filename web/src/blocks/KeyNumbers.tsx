@@ -39,7 +39,7 @@ export function KeyNumbers({ r }: { r: Result }) {
     </tr>
   ));
   return (
-    <Card id="numbers" step={4} title="핵심 숫자">
+    <Card id="numbers" title="핵심 숫자">
       <div className="overflow-x-auto">
         <table className="w-full text-body">
           <thead>
@@ -47,7 +47,7 @@ export function KeyNumbers({ r }: { r: Result }) {
               <th className="text-left font-normal pb-2" />
               {arms.map((a, i) => (
                 <th key={a.name} className="text-right font-semibold pb-2 px-3">
-                  <span className="inline-block size-2.5 rounded-full mr-1.5 align-middle" style={{ background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
+                  <span className="inline-block size-2.5 rounded-badge mr-1.5 align-middle" style={{ background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
                   {"AB"[i]} · {a.name}
                 </th>
               ))}

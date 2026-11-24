@@ -1,6 +1,6 @@
 import type { Metric, Result } from "../api";
 import { Card, HowCalculated, pct, VerdictBadge } from "../ui";
-import { sentence } from "./Conclusion";
+import { sentence } from "./sentence";
 
 /** 6 얼마나 믿을 수 있나: 지표별 확률 막대(70·90% 기준선) + 범위 점·선 + 말할 수 있는 것 3칸. */
 export function Trust({ r }: { r: Result }) {
@@ -11,7 +11,7 @@ export function Trust({ r }: { r: Result }) {
   const unknown = v.metrics.filter((m) => m.word === "아직 몰라요");
   const clicks = r.summary.arms.map((a) => a.link_clicks);
   return (
-    <Card id="trust" step={6} title="얼마나 믿을 수 있나">
+    <Card id="trust" title="지표별로 B가 나을 확률">
       <p className="text-lead">우연일 수 있는 만큼을 빼고 보면, 지금 말할 수 있는 건 이 정도예요.</p>
       <ul className="flex flex-col gap-4">
         {v.metrics.map((m) => <MetricRow key={m.key} m={m} />)}
@@ -50,7 +50,7 @@ function MetricRow({ m }: { m: Metric }) {
             <span key={`${k}l`}>{k}</span>,
             <div key={`${k}b`} className="relative h-4" title={`${fmt(iv[0])} ~ ${fmt(iv[1])}`}>
               <div className="absolute top-1/2 h-0.5 -translate-y-1/2" style={{ left: at(iv[0]), width: `calc(${at(iv[1])} - ${at(iv[0])})`, background: k === "A" ? "var(--tone-series-a)" : "var(--tone-series-b)" }} />
-              <span className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-full" style={{ left: at((iv[0] + iv[1]) / 2), background: k === "A" ? "var(--tone-series-a)" : "var(--tone-series-b)" }} />
+              <span className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 size-2.5 rounded-badge" style={{ left: at((iv[0] + iv[1]) / 2), background: k === "A" ? "var(--tone-series-a)" : "var(--tone-series-b)" }} />
             </div>,
           ];
         })}

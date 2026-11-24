@@ -8,7 +8,7 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     proxy: {
-      "^/(analysis/example|simulate|plan)": "http://localhost:8000",
+      "^/(analysis/example|simulate|plan|assistant|settings)": "http://localhost:8000",
       // 파일 올리기(POST /analysis)만 서버로. 같은 주소의 GET은 이 개발 서버가 페이지를 띄운다.
       "^/analysis$": { target: "http://localhost:8000", bypass: (req) => (req.method === "POST" ? undefined : req.url) },
     },

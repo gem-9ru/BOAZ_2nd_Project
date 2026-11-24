@@ -34,8 +34,9 @@ export type Word = "확실해요" | "A 쪽이에요" | "B 쪽이에요" | "아�
 
 /** 판정 배지: 사이트 전체에서 문구 3개만. 색만으로 말하지 않게 모양(●◐○)도 같이. */
 export function VerdictBadge({ word }: { word: Word }) {
-  const look = word === "확실해요" ? { cls: "bg-adopt-bg text-adopt", mark: "●" }
-    : word === "아직 몰라요" ? { cls: "bg-hold-bg text-hold", mark: "○" } : { cls: "bg-likely-bg text-likely", mark: "◐" };
+  // 확실 = 메인 진하게 · 유력 = 메인 연하게 · 보류 = 회색 (v4 7장)
+  const look = word === "확실해요" ? { cls: "bg-adopt text-on-action", mark: "●" }
+    : word === "아직 몰라요" ? { cls: "bg-hold-bg text-hold", mark: "○" } : { cls: "bg-adopt-bg text-adopt ring-1 ring-inset ring-likely", mark: "◐" };
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-badge px-3 py-1 text-body font-bold whitespace-nowrap ${look.cls}`}>
       <span aria-hidden="true">{look.mark}</span>{word}
@@ -62,15 +63,40 @@ export function HowCalculated({ easy, children }: { easy: string; children: Reac
   );
 }
 
-/** 배너: 계속 알고 있어야 하는 경고 (게재 이상). 사용자가 닫을 수 있다. */
-export function Banner({ children }: { children: ReactNode }) {
+export type Level = "block" | "warn" | "info" | "ok";
+
+const LEVEL = {
+  block: { shape: "■", sign: "✕", name: "차단", mark: "bg-block", box: "bg-block-bg text-block-ink" },
+  warn: { shape: "▲", sign: "!", name: "주의", mark: "bg-warn-mark", box: "bg-warn-bg text-warn" },
+  info: { shape: "●", sign: "i", name: "참고", mark: "bg-info", box: "bg-info-bg text-ink" },
+  ok: { shape: "✓", sign: "", name: "정상", mark: "bg-ok", box: "bg-ok-bg text-ink" },
+} as const;
+
+/** 알림 모양: 색만으로 말하지 않게 모양 + 기호 + 이름 (■✕ 차단 · ▲! 주의 · ●i 참고 · ✓ 정상, WCAG 1.4.1). */
+export function AlertMark({ level }: { level: Level }) {
+  const l = LEVEL[level];
+  const shape = level === "block" ? "rounded-mark" : level === "warn" ? "[clip-path:polygon(50%_0,100%_100%,0_100%)] pt-1" : "rounded-badge";
+  return (
+    <span className="inline-flex items-center gap-1 shrink-0" title={l.name}>
+      <span aria-hidden="true" className={`inline-grid size-4 place-items-center text-mark font-bold text-on-accent ${l.mark} ${shape}`}>
+        {level === "ok" ? "✓" : l.sign}
+      </span>
+      <span className="sr-only">{l.name}</span>
+    </span>
+  );
+}
+
+/** 배너: 계속 알고 있어야 하는 알림. 사용자가 닫을 수 있다 (차단은 닫을 수 없음). */
+export function Banner({ children, level = "warn" }: { children: ReactNode; level?: Level }) {
   const [open, setOpen] = useState(true);
   if (!open) return null;
   return (
-    <div role="status" className="flex items-start gap-3 rounded-button bg-banner text-banner-fg px-4 py-3 text-body">
-      <span aria-hidden="true">⚠</span>
-      <div className="flex-1">{children}</div>
-      <button type="button" onClick={() => setOpen(false)} aria-label="경고 닫기" className="text-caption underline">닫기</button>
+    <div role="status" className={`flex items-start gap-3 rounded-button px-4 py-3 text-body ${LEVEL[level].box}`}>
+      <span className="mt-0.5"><AlertMark level={level} /></span>
+      <div className="flex-1"><b className="mr-1">{LEVEL[level].name}</b>{children}</div>
+      {level !== "block" && (
+        <button type="button" onClick={() => setOpen(false)} aria-label="알림 닫기" className="text-caption underline">닫기</button>
+      )}
     </div>
   );
 }

@@ -11,7 +11,16 @@ const sim = { budget: 30000, runs: 200000, arm: "B", impressions: { median: 5000
 afterEach(() => vi.unstubAllGlobals());
 
 function showExample() {
-  const f = vi.fn((url: string, _init?: RequestInit) => (String(url).includes("/simulate") ? ok(sim) : ok(oven)));
+  const f = vi.fn((url: string, init?: RequestInit) => {
+    const u = String(url);
+    if (u.includes("/simulate")) return ok({ ...sim, tried: JSON.parse(init!.body as string).budget <= 5308, next_test: { total: 20000, per_set_lo: 1000, per_set_hi: 2000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
+    if (u.includes("/assistant")) {
+      const b = JSON.parse(init!.body as string);
+      return ok(b.question ? { message: `답: ${b.question}`, source: "llm" }
+        : { message: `${b.step} 첫 말`, suggestions: ["질문 하나", "질문 둘"], alerts: b.step === "AN-01" ? [oven.alerts[0]] : [] });
+    }
+    return ok(oven);
+  });
   vi.stubGlobal("fetch", f);
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "예시로 보기 (오븐로그 실측)" }));
@@ -60,86 +69,116 @@ describe("화면 0 시작", () => {
   });
 });
 
-describe("결과 (1차: 0~6, 9, 11)", () => {
-  it("1 데이터 점검: what was read and the safety notes", async () => {
+async function next(name: RegExp | string) {
+  fireEvent.click(await screen.findByRole("button", { name }));
+}
+
+describe("7단계 결과 (v4)", () => {
+  it("AN-01 shows the one field to change first, with certainty and keep/watch/dont", async () => {
     showExample();
-    const sec = await screen.findByRole("region", { name: /데이터 점검/ });
-    expect(within(sec).getByText(/4일/)).toBeTruthy();
-    expect(within(sec).getByText(/클릭 후 7일/)).toBeTruthy();
-    expect(within(sec).getByText(/같은 사람/)).toBeTruthy();
+    expect(await screen.findByRole("heading", { level: 1, name: "그래서 뭘 바꾸면 돼요?" })).toBeTruthy();
+    expect(screen.getByText("광고 › 형식·미디어")).toBeTruthy();
+    expect(screen.getByText(/세로\(9:16\) 소재 추가/)).toBeTruthy();
+    expect(screen.getByText("유력")).toBeTruthy();
+    for (const h of ["그대로 두기", "지켜보기", "하지 말기"]) expect(screen.getByText(h)).toBeTruthy();
+    expect(screen.getByText(/수동 · 피드만노출/)).toBeTruthy();
+    expect(screen.getByText(/파일 확인: 4일/)).toBeTruthy();
   });
 
-  it("2 게재 이상 알림 comes before the conclusion", async () => {
+  it("alert bar shows the worst alert, counts by shape, and opens all", async () => {
     showExample();
-    const alert = await screen.findByRole("region", { name: /게재 이상 알림/ });
-    const verdict = screen.getByRole("region", { name: /한 줄 결론/ });
-    expect(within(alert).getByText(/11\/17은 두 세트 모두/)).toBeTruthy();
-    expect(alert.compareDocumentPosition(verdict) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const bar = await screen.findByRole("region", { name: "알림" });
+    expect(within(bar).getByText(/11\/17/)).toBeTruthy();
+    expect(within(bar).getByText("■ 0 · ▲ 2 · ● 1")).toBeTruthy();
+    fireEvent.click(within(bar).getByRole("button", { name: "모두 보기" }));
+    expect(within(bar).getByText(/메타는 자동 노출 위치를 권하지만/)).toBeTruthy();
   });
 
-  it("3 한 줄 결론: one of the three words, 79%, and the sure thing", async () => {
+  it("[다음] walks the steps with labels naming the next screen; past steps can be revisited", async () => {
     showExample();
-    const sec = await screen.findByRole("region", { name: /한 줄 결론/ });
-    expect(within(sec).getByText("B 쪽이에요")).toBeTruthy();
-    expect(within(sec).getAllByText(/79%/).length).toBeGreaterThan(0);
-    expect(within(sec).getByText(/약 18% 더 많이 보여줬어요/)).toBeTruthy();
-    expect(within(sec).getByText("확실해요")).toBeTruthy();
+    await next("왜 그 칸인지 보기");
+    expect(await screen.findByRole("heading", { level: 1, name: "어디서 막혔나요?" })).toBeTruthy();
+    expect(screen.getByText("1. 노출 단가 (CPM)")).toBeTruthy();
+    expect(screen.getByText(/CPM이 15% 비쌈/)).toBeTruthy();
+    await next("내 세팅 카드 보기");
+    expect(screen.getByText("광고 관리자 순서로 본 내 세팅")).toBeTruthy();
+    expect(screen.getByText("변경")).toBeTruthy();
+    await next("값 비교 보기");
+    expect(screen.getByRole("heading", { level: 1, name: "어떤 값이 더 나았어요?" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: /① 결론/ }));
+    expect(screen.getByRole("heading", { level: 1, name: "그래서 뭘 바꾸면 돼요?" })).toBeTruthy();
   });
 
-  it("4 핵심 숫자: owner words first, A and B side by side with ▲", async () => {
+  it("future steps are locked except ⑥, and [바로 적용하기] jumps to ⑥", async () => {
     showExample();
-    const sec = await screen.findByRole("region", { name: /핵심 숫자/ });
-    expect(within(sec).getByText(/1,000원으로 데려온 방문자/)).toBeTruthy();
-    expect(within(sec).getByText("(CPC)")).toBeTruthy();
-    expect(within(sec).getAllByText(/▲/).length).toBeGreaterThan(0);
+    await screen.findByText("광고 › 형식·미디어");
+    expect((screen.getByRole("button", { name: /③ 내 세팅/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /⑥ 보내기/ }) as HTMLButtonElement).disabled).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "바로 적용하기" }));
+    expect(screen.getByRole("heading", { level: 1, name: "이제 어떻게 적용해요?" })).toBeTruthy();
   });
 
-  it("5 퍼널: rates in owner words", async () => {
+  it("AN-04 ★ tabs: metrics, by day (26→65→79%), placements with adjusted CTR and '참고만'", async () => {
     showExample();
-    const sec = await screen.findByRole("region", { name: /퍼널/ });
-    expect(within(sec).getAllByText(/100명이 보면 약 2명이 눌렀어요/).length).toBeGreaterThan(0);
+    for (const n of ["왜 그 칸인지 보기", "내 세팅 카드 보기", "값 비교 보기"]) await next(n);
+    expect(screen.getByText("확실히 말할 수 있어요")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "날짜별" }));
+    expect(screen.getByText("79%")).toBeTruthy();
+    fireEvent.click(screen.getByRole("tab", { name: "노출 위치별" }));
+    expect(screen.getAllByText("참고만").length).toBeGreaterThan(0);
+    expect(screen.getByText(/Breakdown effect/)).toBeTruthy();
   });
 
-  it("6 얼마나 믿을 수 있나: what can and cannot be said", async () => {
-    showExample();
-    const sec = await screen.findByRole("region", { name: /얼마나 믿을 수 있나/ });
-    for (const h of ["확실히 말할 수 있어요", "방향만 말할 수 있어요", "아직 말할 수 없어요"]) expect(within(sec).getByText(h)).toBeTruthy();
-    expect(within(sec).getByText(/매출에 더 좋은지/)).toBeTruthy();
-  });
-
-  it("9 예산 시뮬레이터: moving the budget asks the server again", async () => {
+  it("AN-05 simulator moves in 5,000 steps, marks untried budgets as 가설, shows Test & Roll and backtest", async () => {
     const f = showExample();
-    const sec = await screen.findByRole("region", { name: /예산 시뮬레이터/ });
-    await waitFor(() => expect(within(sec).getByText(/73~133/)).toBeTruthy());
-    fireEvent.change(within(sec).getByLabelText("예산"), { target: { value: "100000" } });
-    await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).includes("/simulate") && JSON.parse((o as RequestInit).body as string).budget === 100000)).toBe(true));
+    for (const n of ["왜 그 칸인지 보기", "내 세팅 카드 보기", "값 비교 보기", "바꾸면 얼마나 좋아지나 보기"]) await next(n);
+    const slider = screen.getByLabelText("예산") as HTMLInputElement;
+    expect(slider.step).toBe("5000");
+    fireEvent.change(slider, { target: { value: "20000" } });
+    await waitFor(() => expect(screen.getByText("가설")).toBeTruthy());
+    expect(f.mock.calls.some(([u, o]) => String(u).includes("/simulate") && JSON.parse((o as RequestInit).body as string).budget === 20000)).toBe(true);
+    expect(screen.getByText(/Test & Roll/)).toBeTruthy();
+    expect(screen.getByText("이 계산, 맞은 적 있어요?")).toBeTruthy();
   });
 
-  it("11 다음에 할 일: three lines, one change, a code copied with a toast", async () => {
+  it("AN-06 sends the code to the extension with a toast, and lists the checklist", async () => {
     showExample();
     const writeText = vi.fn(() => Promise.resolve());
     Object.assign(navigator, { clipboard: { writeText } });
-    const sec = await screen.findByRole("region", { name: /다음에 할 일/ });
-    expect(within(sec).getByText(/이번에 알게 된 것/)).toBeTruthy();
-    expect(within(sec).getByText(oven.code)).toBeTruthy();
-    fireEvent.click(within(sec).getByRole("button", { name: "코드 복사" }));
-    await waitFor(() => expect(screen.getByText("코드를 복사했어요")).toBeTruthy());
+    fireEvent.click(await screen.findByRole("button", { name: "바로 적용하기" }));
+    expect(screen.getByText(oven.code)).toBeTruthy();
+    expect(screen.getAllByRole("checkbox").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기" }));
+    await waitFor(() => expect(screen.getByText(/코드를 복사했어요/)).toBeTruthy());
     expect(writeText).toHaveBeenCalledWith(oven.code);
   });
 });
 
-describe("접근성 (ui-styling 점검표)", () => {
-  it("moves focus to the result title and announces it", async () => {
+describe("광고 어시스턴트 (오른쪽 고정)", () => {
+  it("greets each step once with two suggestions and the alert bubble for that screen", async () => {
     showExample();
-    const title = await screen.findByRole("heading", { level: 1, name: "이번 광고에서 알게 된 것" });
-    await waitFor(() => expect(document.activeElement).toBe(title));
-    expect(screen.getByText("결과를 다 계산했어요")).toBeTruthy();
+    const panel = await screen.findByRole("complementary", { name: "광고 어시스턴트" });
+    await waitFor(() => expect(within(panel).getByText("AN-01 첫 말")).toBeTruthy());
+    expect(within(panel).getByRole("button", { name: "질문 하나" })).toBeTruthy();
+    expect(within(panel).getByText(/11\/17/)).toBeTruthy();
+    await next("왜 그 칸인지 보기");
+    await waitFor(() => expect(within(panel).getByText("AN-02 첫 말")).toBeTruthy());
   });
 
-  it("has a skip link to the conclusion", async () => {
+  it("a suggested question gets an answer", async () => {
     showExample();
-    const link = await screen.findByRole("link", { name: "결론으로 바로 가기" });
-    expect(link.getAttribute("href")).toBe("#conclusion");
+    const panel = await screen.findByRole("complementary", { name: "광고 어시스턴트" });
+    fireEvent.click(await within(panel).findByRole("button", { name: "질문 하나" }));
+    await waitFor(() => expect(within(panel).getByText("답: 질문 하나")).toBeTruthy());
+  });
+});
+
+describe("접근성", () => {
+  it("moves focus to the step title and announces the result", async () => {
+    showExample();
+    const title = await screen.findByRole("heading", { level: 1, name: "그래서 뭘 바꾸면 돼요?" });
+    await waitFor(() => expect(document.activeElement).toBe(title));
+    expect(screen.getByText("결과를 다 계산했어요")).toBeTruthy();
   });
 
   it("links the upload error to the file input", async () => {
@@ -151,10 +190,54 @@ describe("접근성 (ui-styling 점검표)", () => {
     expect(alert.id).toBeTruthy();
     expect(input.getAttribute("aria-describedby")!.split(" ")).toContain(alert.id);
   });
+});
 
-  it("announces simulator updates politely", async () => {
-    showExample();
-    const sec = await screen.findByRole("region", { name: /예산 시뮬레이터/ });
-    expect(sec.querySelector('[aria-live="polite"]')).not.toBeNull();
+describe("세팅값 받기 (v4 8장 입력 ②)", () => {
+  afterEach(() => { window.location.hash = ""; });
+
+  it("from the extension: reads the session key from #s=, shows how many, and uploads with the key", async () => {
+    window.location.hash = "#s=K3yK3yK3yK3yK3y";
+    const f = vi.fn((url: string, init?: RequestInit) => {
+      if (String(url).includes("/settings/")) return ok({ count: 13, settings: {} });
+      if (init?.method === "POST" && String(url).endsWith("/analysis")) return ok(oven);
+      return ok({ message: "m", suggestions: [] });
+    });
+    vi.stubGlobal("fetch", f);
+    render(<App />);
+    expect(await screen.findByText(/세팅값 13개를 받았어요/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /내 세팅 알려 주기/ })).toBeNull();
+    fireEvent.change(screen.getByLabelText("메타 결과 CSV"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
+    await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).endsWith("/analysis") && (o?.body as FormData).get("settings_key") === "K3yK3yK3yK3yK3y")).toBe(true));
+  });
+
+  it("without the extension: 5 questions (목표·예산·연령·노출 위치·소재 형식) go with the upload", async () => {
+    const f = vi.fn((_url: string, _init?: RequestInit) => ok(oven));
+    vi.stubGlobal("fetch", f);
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: /내 세팅 알려 주기/ }));
+    for (const g of ["캠페인 목표", "세트당 하루 예산", "연령", "노출 위치", "소재 형식"]) expect(screen.getByRole("group", { name: g })).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "수동" }));
+    fireEvent.change(screen.getByLabelText("세트당 하루 예산 (원)"), { target: { value: "1350" } });
+    fireEvent.change(screen.getByLabelText("메타 결과 CSV"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    const body = f.mock.calls[0]![1]!.body as FormData;
+    expect(JSON.parse(body.get("settings") as string)).toMatchObject({ "meta.adset.placements": "수동", "meta.adset.daily_budget": "1350" });
+  });
+
+  it("AN-03 shows every received setting in Ads Manager order with 변경·유지·그대로", async () => {
+    const withSettings = { ...oven, matrix: { ...oven.matrix, settings: [
+      { field_id: "meta.campaign.objective", path: "캠페인 › 캠페인 목표", value: "트래픽", kind: "그대로", note: "이번 결과로는 바꿀 이유가 없어요." },
+      { field_id: "meta.adset.placements", path: "광고 세트 › 노출 위치", value: "수동", kind: "유지", note: "CPM 15% 저렴" },
+      { field_id: "meta.ad.media", path: "광고 › 형식·미디어", value: "정사각 이미지", kind: "변경", note: "릴스용 세로 추가" },
+    ] } };
+    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/assistant") ? { message: "m", suggestions: [] } : withSettings)));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "예시로 보기 (오븐로그 실측)" }));
+    await next("왜 그 칸인지 보기");
+    await next("내 세팅 카드 보기");
+    expect(screen.getByText("캠페인 목표")).toBeTruthy();
+    expect(screen.getByText(/지금 값: 트래픽/)).toBeTruthy();
+    expect(screen.getByText("그대로")).toBeTruthy();
+    expect(screen.queryByText(/결과 파일로 알 수 있는 칸만/)).toBeNull();
   });
 });

@@ -5,7 +5,7 @@ import { Card, HowCalculated, pct } from "../ui";
 export function Funnel({ r }: { r: Result }) {
   const f = r.funnel;
   return (
-    <Card id="funnel" step={5} title="퍼널: 어디서 빠져나가나">
+    <Card id="funnel" title="퍼널: 어디서 빠져나가나">
       {f.hint && <p className="text-lead font-semibold">{f.hint}</p>}
       <div className="grid gap-group sm:grid-cols-2">
         {f.arms.map((arm, i) => {
@@ -13,7 +13,7 @@ export function Funnel({ r }: { r: Result }) {
           return (
             <div key={arm.name} className="flex flex-col gap-3">
               <p className="text-body font-semibold">
-                <span className="inline-block size-2.5 rounded-full mr-1.5" style={{ background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
+                <span className="inline-block size-2.5 rounded-badge mr-1.5" style={{ background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
                 {"AB"[i]} · {arm.name}
               </p>
               {arm.stages.map((s) => (
