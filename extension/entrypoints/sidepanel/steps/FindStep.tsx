@@ -77,7 +77,7 @@ export default function FindStep({ state, dispatch }: Props) {
       <div className="flex flex-col gap-2">
         <label htmlFor="product" className="text-caption font-semibold text-soft">파는 상품</label>
         <form
-          className="flex items-center gap-1 rounded-card border border-line bg-paper p-1.5 transition-colors focus-within:border-ink has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent"
+          className="flex items-center gap-1 rounded-card border border-field-line bg-paper p-1.5 transition-colors focus-within:border-ink has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent"
           onSubmit={(e) => {
             e.preventDefault();
             if (!busy) search();

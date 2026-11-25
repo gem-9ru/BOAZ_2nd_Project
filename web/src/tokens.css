@@ -12,6 +12,7 @@
   --primitive-color-sand-200: #E2DCD0;
   --primitive-color-gray-50: #F1F1EF;
   --primitive-color-gray-400: #8A92A0;
+  --primitive-color-gray-500: #767E8C;
   --primitive-color-gray-600: #5F6672;
   --primitive-color-violet-50: #EFEBFF;
   --primitive-color-violet-300: #B3A5F0;
@@ -38,6 +39,9 @@
   --primitive-size-8: 32px;
   --primitive-size-12: 48px;
   --primitive-size-coach-width: 340px;
+  --primitive-size-page: 960px;
+  --primitive-size-page-wide: 1040px;
+  --primitive-size-measure: 60ch;
   --primitive-radius-md: 12px;
   --primitive-radius-lg: 16px;
   --primitive-radius-full: 9999px;
@@ -63,6 +67,8 @@
   --primitive-opacity-disabled: 0.4;
   --primitive-border-focus: 2px;
   --primitive-border-ring: 4px;
+  --primitive-shadow-sm: 0 1px 3px rgb(22 33 58 / 0.10);
+  --primitive-shadow-lg: 0 6px 20px rgb(69 40 176 / 0.18);
 }
 
 /* === SEMANTIC === */
@@ -101,6 +107,7 @@
   --tone-accent-line: #B3A5F0;
   --tone-on-meta: #FFFFFF;
   --tone-on-accent: #FFFFFF;
+  --tone-field-line: #767E8C;
   --space-inline: 8px;
   --space-stack: 16px;
   --space-section: 48px;
@@ -113,6 +120,11 @@
   --motion-easing: ease;
   --text-line-height: 1.5;
   --text-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  --layout-page: 960px;
+  --layout-page-wide: 1040px;
+  --layout-measure: 60ch;
+  --elevation-raised: 0 1px 3px rgb(22 33 58 / 0.10);
+  --elevation-float: 0 6px 20px rgb(69 40 176 / 0.18);
 }
 
 /* === COMPONENTS === */
@@ -139,7 +151,7 @@
   --coach-bubble-bg: #EFEBFF;
   --coach-bubble-fg: #16213A;
   --coach-bubble-border: #5B3FD9;
-  --coach-bubble-shadow: #4528B0;
+  --coach-shadow: 0 6px 20px rgb(69 40 176 / 0.18);
   --coach-count-fg: #4528B0;
   --coach-note-fg: #4A5568;
   --coach-button-bg: #FFFFFF;
@@ -182,4 +194,7 @@
   --character-light-ground: #EFEBFF;
   --character-light-key: #FFFFFF;
   --alert-mark-radius: 2px;
+  --field-border: #767E8C;
+  --field-bg: #FFFDF8;
+  --field-radius: 12px;
 }

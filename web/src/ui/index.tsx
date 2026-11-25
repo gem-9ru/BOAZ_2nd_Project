@@ -132,7 +132,7 @@ export function Banner({ children, level = "warn" }: { children: ReactNode; leve
 export function Toast({ text }: { text: string | null }) {
   return (
     <div aria-live="polite" className="fixed bottom-6 left-1/2 -translate-x-1/2">
-      {text && <p className="rounded-button bg-action text-on-action px-4 py-2 text-body shadow-lg">{text}</p>}
+      {text && <p className="rounded-button bg-action text-on-action px-4 py-2 text-body shadow-float">{text}</p>}
     </div>
   );
 }

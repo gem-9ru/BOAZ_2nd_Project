@@ -55,7 +55,7 @@ export default function App() {
 
   if (!result) {
     return (
-      <main className="mx-auto max-w-[960px] px-4 py-section flex flex-col gap-group">
+      <main className="mx-auto max-w-page px-4 py-section flex flex-col gap-group">
         <Start onFile={(f) => load(() => analyzeFile(f, received !== null ? { settingsKey } : { settings }))} onExample={() => load(() => example(received !== null ? settingsKey : null))}
           busy={busy} error={error} received={received} settings={settings} onSettings={setSettings} />
         <Toast text={toast} />
@@ -66,7 +66,7 @@ export default function App() {
   const s = STEPS[step] ?? STEPS[0];
   const last = step === STEPS.length - 1;
   return (
-    <div className="mx-auto max-w-[1040px] px-4 py-6 flex flex-col gap-4">
+    <div className="mx-auto max-w-page-wide px-4 py-6 flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft">분석</span></p>

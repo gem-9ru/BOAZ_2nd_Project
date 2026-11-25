@@ -57,6 +57,7 @@ const EXTENSION_COLORS = [
   ["cream", "semantic.tone.bg"],
   ["line", "semantic.tone.line"],
   ["sunk", "semantic.tone.surface-sunk"],
+  ["field-line", "semantic.tone.field-line"],
   ["/* 메인 바이올렛: 현재 단계·주 버튼·초점 링 */"],
   ["accent", "semantic.tone.accent"],
   ["accent-ink", "semantic.tone.accent-ink"],
@@ -100,6 +101,13 @@ const EXTENSION_THEME = [
   ["--radius-card", "component.card.radius"],
   ["--radius-badge", "component.badge.radius"],
   ["--radius-mark", "component.alert-mark.radius"],
+  ["/* 너비: max-w-page 960 · max-w-page-wide 1040 · max-w-measure 60ch */"],
+  ["--container-page", "semantic.layout.page"],
+  ["--container-page-wide", "semantic.layout.page-wide"],
+  ["--container-measure", "semantic.layout.measure"],
+  ["/* 그림자 두 단계: shadow-raised (sticky 칸) · shadow-float (토스트·말풍선) */"],
+  ["--shadow-raised", "semantic.elevation.raised"],
+  ["--shadow-float", "semantic.elevation.float"],
   ["/* 움직임: transition 기본 시간 (hover 등 색 바뀜) */"],
   ["--default-transition-duration", "semantic.motion.hover"],
 ];
@@ -188,6 +196,9 @@ const PAIRS = [
   ["component.coach.ring", "semantic.tone.on-meta", "ui", "메타 화면 위 칸 테두리"],
   ["semantic.tone.warn-mark", "semantic.tone.surface", "ui", "▲ 주의 모양"],
   ["semantic.tone.series-a", "semantic.tone.surface", "ui", "차트 비교 막대"],
+  ["semantic.tone.field-line", "semantic.tone.surface", "ui", "입력칸 테두리 (카드)"],
+  ["semantic.tone.field-line", "semantic.tone.bg", "ui", "입력칸 테두리 (페이지 바탕)"],
+  ["semantic.tone.field-line", "semantic.tone.surface-sunk", "ui", "입력칸 테두리 (눌린 칸)"],
 ];
 
 function contrast() {

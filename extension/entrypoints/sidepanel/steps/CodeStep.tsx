@@ -54,7 +54,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
         <input id="plan-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={8}
           autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="예: 75R7"
           aria-invalid={error ? true : undefined} aria-describedby={error ? "plan-code-error" : undefined}
-          className="rounded-button border border-line bg-paper px-3 py-2.5 text-title font-bold tracking-[0.3em] uppercase" />
+          className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-title font-bold tracking-[0.3em] uppercase" />
         {error && <div id="plan-code-error"><ErrorLine message={error} /></div>}
         <PrimaryButton type="submit" busy={busy}>가져오기</PrimaryButton>
       </form>

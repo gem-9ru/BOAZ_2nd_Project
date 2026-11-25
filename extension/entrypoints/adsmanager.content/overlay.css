@@ -8,7 +8,7 @@
 .coach-mungchi { position: fixed; z-index: 2147483647; pointer-events: none; }
 .coach-bubble-wrap { position: fixed; z-index: 2147483647; width: var(--coach-width); font-family: var(--coach-font-family);
   transition: left var(--coach-walk-duration) var(--coach-easing), top var(--coach-walk-duration) var(--coach-easing), opacity var(--coach-move-duration) var(--coach-easing); }
-.coach-bubble { background: var(--coach-bubble-bg); color: var(--coach-bubble-fg); border: 1.5px solid var(--coach-bubble-border); box-shadow: 0 6px 20px color-mix(in srgb, var(--coach-bubble-shadow) 18%, transparent); border-radius: var(--coach-radius); padding: var(--coach-padding-y) var(--coach-padding-x); font-size: var(--coach-font-size); line-height: var(--coach-line-height); flex: 1; }
+.coach-bubble { background: var(--coach-bubble-bg); color: var(--coach-bubble-fg); border: 1.5px solid var(--coach-bubble-border); box-shadow: var(--coach-shadow); border-radius: var(--coach-radius); padding: var(--coach-padding-y) var(--coach-padding-x); font-size: var(--coach-font-size); line-height: var(--coach-line-height); flex: 1; }
 .coach-count { margin: 0 0 4px; font-size: var(--coach-small-font-size); color: var(--coach-count-fg); font-weight: 700; }
 .coach-text { margin: 0 0 var(--coach-gap); }
 .coach-shot { width: 100%; border-radius: 8px; margin-bottom: var(--coach-gap); }

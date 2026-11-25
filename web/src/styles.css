@@ -9,6 +9,7 @@
   --color-ink: var(--tone-ink);
   --color-soft: var(--tone-ink-soft);
   --color-line: var(--tone-line);
+  --color-field-line: var(--tone-field-line);
   --color-accent: var(--tone-accent);
   --color-accent-ink: var(--tone-accent-ink);
   --color-accent-soft: var(--tone-accent-soft);
@@ -65,9 +66,14 @@
   --spacing-stack: var(--space-stack);
   --spacing-group: var(--space-group);  /* 'block'은 inline-block과 겹쳐서 쓰지 않음 */
   --spacing-section: var(--space-section);
+  --container-page: var(--layout-page);
+  --container-page-wide: var(--layout-page-wide);
+  --container-measure: var(--layout-measure);
+  --shadow-raised: var(--elevation-raised);
+  --shadow-float: var(--elevation-float);
 }
 
 /* 한국어는 단어 중간에서 끊지 않는다 (휴대폰에서 '돌/려'처럼 끊기던 문제) */
 body { background: var(--tone-bg); color: var(--tone-ink); font-family: var(--primitive-font-family-sans); word-break: keep-all; overflow-wrap: anywhere; }
-:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+:focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

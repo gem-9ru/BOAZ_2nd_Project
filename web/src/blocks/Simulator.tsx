@@ -98,7 +98,7 @@ export function Simulator({ r }: { r: Result }) {
         <Card title="다음 테스트에 쓸 돈 (Test & Roll)" summary={`이번처럼 세트당 총 ${won(start)}이면 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
-              className="w-32 rounded-button border border-line bg-surface px-2 py-1 tabular-nums" />원
+              className="w-32 rounded-button border border-field-line bg-surface px-2 py-1 tabular-nums" />원
           </label>
           <p className="text-body">전체 예산의 약 {Math.round(nt.share_lo * 100)}~{Math.round(nt.share_hi * 100)}% · {won(nt.total)}이면 세트당 {won(nt.per_set_lo)}~{won(nt.per_set_hi)}. 나머지는 이긴 쪽에 써요.</p>
         </Card>

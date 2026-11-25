@@ -54,7 +54,7 @@ export function Chat({ code, step }: { code: string; step: string }) {
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void ask(text); }}>
         <label htmlFor="ex-ask" className="sr-only">어시스턴트에게 묻기</label>
         <input id="ex-ask" value={text} onChange={(e) => setText(e.target.value)} placeholder="궁금한 걸 물어보세요 (예: CPM이 뭐예요?)"
-          className="min-w-0 flex-1 rounded-button border border-line bg-paper px-3 py-2 text-caption" />
+          className="min-w-0 flex-1 rounded-button border border-field-line bg-paper px-3 py-2 text-caption" />
         <button type="submit" disabled={!text.trim() || busy} className="rounded-button bg-accent px-3 text-caption font-semibold text-on-accent disabled:opacity-(--state-disabled-opacity)">묻기</button>
       </form>
     </section>

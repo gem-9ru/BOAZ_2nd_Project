@@ -8,6 +8,7 @@
   --color-cream: #f7f5f0;
   --color-line: #e2dcd0;
   --color-sunk: #efeae0;
+  --color-field-line: #767e8c;
   /* 메인 바이올렛: 현재 단계·주 버튼·초점 링 */
   --color-accent: #5b3fd9;
   --color-accent-ink: #4528b0;
@@ -47,6 +48,13 @@
   --radius-card: 16px;
   --radius-badge: 9999px;
   --radius-mark: 2px;
+  /* 너비: max-w-page 960 · max-w-page-wide 1040 · max-w-measure 60ch */
+  --container-page: 960px;
+  --container-page-wide: 1040px;
+  --container-measure: 60ch;
+  /* 그림자 두 단계: shadow-raised (sticky 칸) · shadow-float (토스트·말풍선) */
+  --shadow-raised: 0 1px 3px rgb(22 33 58 / 0.10);
+  --shadow-float: 0 6px 20px rgb(69 40 176 / 0.18);
   /* 움직임: transition 기본 시간 (hover 등 색 바뀜) */
   --default-transition-duration: 150ms;
 }

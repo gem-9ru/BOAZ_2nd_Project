@@ -35,7 +35,7 @@ export function MySettings({ received, value, onChange }: { received: number | n
                 <label className="flex items-center gap-2 text-body">
                   <span className="sr-only">세트당 하루 예산 (원)</span>
                   <input type="number" min={0} step={100} inputMode="numeric" value={value[q.id] ?? ""} onChange={(e) => set(q.id, e.target.value)}
-                    aria-label="세트당 하루 예산 (원)" className="w-36 rounded-button border border-line bg-surface px-3 py-2 tabular-nums" />원
+                    aria-label="세트당 하루 예산 (원)" className="w-36 rounded-button border border-field-line bg-surface px-3 py-2 tabular-nums" />원
                 </label>
               ) : (
                 <div className="flex flex-wrap gap-2">

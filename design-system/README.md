@@ -52,6 +52,9 @@ component (부품, 예: button.bg, coach.ring)
 | `component.focus.width / offset` | 2px / 2px | 초점 링 (`outline-2 outline-offset-2 outline-accent`) |
 | `component.button/card/badge/alert-mark.radius` | 12 / 16 / 9999 / 2px | 모서리. 두 앱 모두 `rounded-button` · `rounded-card` · `rounded-badge` · `rounded-mark`(■ 차단 모양)로 써요. `rounded-xl`처럼 Tailwind 기본 이름을 쓰지 않아요 |
 | `semantic.state.disabled-opacity` (잠긴 단계) | 0.4 | 아직 못 가는 단계 표시도 `text-soft opacity-(--state-disabled-opacity)`로 (`text-soft/50` 금지) |
+| `semantic.layout.page / page-wide / measure` | 960px / 1040px / 60ch | 화면 너비. 두 앱 모두 `max-w-page` · `max-w-page-wide` · `max-w-measure`로 써요. `max-w-[960px]`처럼 숫자를 직접 쓰지 않아요. 말풍선 `max-w-[85%]`처럼 부모 대비 비율은 그대로 둬요 |
+| `semantic.elevation.raised / float` | 작은 그림자 / 큰 그림자 | 떠 있는 높이는 두 단계뿐이에요. `shadow-raised`는 스크롤 중 위에 붙는 칸(sticky), `shadow-float`는 토스트·말풍선. `shadow-sm`·`shadow-lg` 같은 Tailwind 기본 이름은 쓰지 않아요. 그림자 색은 회색 대신 `ink`·`accent-ink`를 투명하게 써요 |
+| `component.field.border / bg / radius` | `field-line` / `surface` / 12px | 입력칸·선택칸: `rounded-button border border-field-line bg-surface`(확장은 `bg-paper`) |
 
 ## 색 표
 
@@ -73,8 +76,9 @@ component (부품, 예: button.bg, coach.ring)
 | `tone.bg` · 확장 `cream` | `#F7F5F0` | 페이지 바탕 | — |
 | `tone.surface` · 확장 `paper` | `#FFFDF8` | 카드 바탕, 주 버튼 글자 | — |
 | `tone.surface-sunk` · 확장 `sunk` | `#EFEAE0` | 막대 빈 부분, 눌린 칸 | — |
-| `tone.line` · 확장 `line` | `#E2DCD0` | 선 | — |
-| `tone.hold` / `hold-bg` | `#5F6672` / `#F1F1EF` | '아직 몰라요' 배지. **회색은 이것에만** 써요 | 5.1:1 |
+| `tone.line` · 확장 `line` | `#E2DCD0` | 구분선·카드 테두리 (장식). **입력칸 테두리에는 쓰지 않아요** | 1.3:1 (장식이라 기준 없음) |
+| `tone.field-line` · 확장 `field-line` | `#767E8C` | 입력칸·선택칸 테두리. 칸이 어디 있는지 보여야 해서 3:1 이상이 필요해요 (WCAG 1.4.11) | 카드 4.0:1 · 바탕 3.8:1 · 눌린 칸 3.4:1 |
+| `tone.hold` / `hold-bg` | `#5F6672` / `#F1F1EF` | '아직 몰라요' 배지. **글자·배지의 회색은 이것에만** 써요 (`field-line`은 테두리 전용) | 5.1:1 |
 | `tone.series-a` | `#8A92A0` | 차트의 나머지 쪽 (회색) | 3.1:1 (모양) |
 | `tone.series-b` | `#5B3FD9` | 차트의 추천 쪽 (메인) | 6.5:1 (모양) |
 | `tone.on-meta` | `#FFFFFF` | 메타 흰 화면 위 버튼 바탕, 알림 모양 안 기호 | — |
@@ -225,15 +229,20 @@ component (부품, 예: button.bg, coach.ring)
 | 메타 화면 위 칸 테두리 | #5B3FD9 | #FFFFFF | 6.65:1 | 3:1 | 통과 |
 | ▲ 주의 모양 | #E8710A | #FFFDF8 | 3.04:1 | 3:1 | 통과 |
 | 차트 비교 막대 | #8A92A0 | #FFFDF8 | 3.08:1 | 3:1 | 통과 |
+| 입력칸 테두리 (카드) | #767E8C | #FFFDF8 | 4.02:1 | 3:1 | 통과 |
+| 입력칸 테두리 (페이지 바탕) | #767E8C | #F7F5F0 | 3.75:1 | 3:1 | 통과 |
+| 입력칸 테두리 (눌린 칸) | #767E8C | #EFEAE0 | 3.41:1 | 3:1 | 통과 |
 
 ## 검토 기록 (2026-11-25, ui-ux-pro-max 기준)
 
 | 항목 | 기준 | 상태 |
 |---|---|---|
-| 글자 대비 | 4.5:1 (`color-accessible-pairs`) | 36쌍 모두 통과 (v4.2 참고만 배지, 판정 배지를 실제 모양대로 다시 짝지음. '○ 쪽이에요' 배지는 두 앱 모두 연한 보라 바탕으로 통일). 차단 글자용 `block-ink` 추가, 분석 페이지 차단 배너에 적용 |
+| 글자 대비 | 4.5:1 (`color-accessible-pairs`) | 39쌍 모두 통과 (입력칸 테두리 3쌍 추가. v4.2 참고만 배지, 판정 배지를 실제 모양대로 다시 짝지음. '○ 쪽이에요' 배지는 두 앱 모두 연한 보라 바탕으로 통일). 차단 글자용 `block-ink` 추가, 분석 페이지 차단 배너에 적용 |
 | 색만으로 말하지 않기 | WCAG 1.4.1 | 알림 모양·판정 글자 규칙으로 지킴 |
 | 화면 코드 hex 금지 | `color-semantic` | `web/src`·`extension/entrypoints`·`extension/assets` 위반 0. `text-white`/`bg-white` → `text-on-accent`/`bg-on-accent`, 입력칸 그림자의 rgba → `--color-ink` |
-| 초점 링 | 2–4px, 늘 보이게 (`focus-states`) | 화면마다 2px·3px 섞여 있었음 → `focus.width` 2px, offset 2px로 통일 (`outline-3`·`outline-offset-1` 정리) |
+| 초점 링 | 2–4px, 늘 보이게 (`focus-states`) | 화면마다 2px·3px 섞여 있었음 → `focus.width` 2px, offset 2px로 통일 (`outline-3`·`outline-offset-1` 정리). 분석 페이지 기본 초점 링(`styles.css`)도 3px 고정값이었던 것을 `--focus-width`·`--focus-offset`으로 바꿈 |
+| 입력칸 테두리 | 3:1 (WCAG 1.4.11, `input-labels`) | 입력칸이 구분선 색 `line`(1.3:1)을 써서 칸이 잘 안 보였음 → `field-line` #767E8C(3.4–4.0:1) 추가. 화면 코드 적용은 아래 '보완' 참고 |
+| 화면 너비·그림자 | 단계 이름으로 (`spacing-scale`, `elevation-consistent`) | `max-w-[960px]`·`[1040px]`·`[60ch]`, `shadow-sm`·`shadow-lg`, 오버레이 그림자 숫자를 직접 씀 → `layout.*`, `elevation.*` 토큰 추가 |
 | 못 누르는 상태 | 투명도 0.38–0.5 (`disabled-states`) | 화면마다 0.3·0.4·0.5 섞여 있었음 → 모든 버튼이 `state.disabled-opacity` 0.4 사용 |
 | 움직임 | 같은 리듬 (`motion-consistency`) | 오버레이 0.35s·0.5s를 `motion.move/walk` 토큰으로 |
 | 글꼴 | 한 서비스 한 글꼴 | 오버레이만 다른 글꼴 목록을 쓰던 것을 공통 글꼴로 |
@@ -247,3 +256,26 @@ component (부품, 예: button.bg, coach.ring)
 
 화면설계서 v4.2의 '화면 표현 원칙'에 맞췄어요. 색 값은 그대로이고, 판정 화면 글자, ● 참고만 배지(`tone.reference`), ▲·↑↓ 기호 규칙, 테스트 제안 태그, 테스트 행 표시, 차트 보통 값 점을 더했어요.
 숫자 표기(원 단위·범위·사람 수)와 용어 표기는 색·모양이 아니라 문구 규칙이라 화면설계서 AN-TXT에 있어요.
+
+## 보완 (2026-11-25, 2차 검토)
+
+ui-ux-pro-max 기준으로 다시 보고 빈 곳을 채웠어요. 색 값은 하나도 안 바꿨고, 토큰만 더했어요.
+
+| 더한 것 | 왜 |
+|---|---|
+| `tone.field-line` #767E8C, `component.field.*` | 입력칸 테두리가 `line`(1.3:1)이라 흰 카드 위에서 칸이 거의 안 보였어요. 대비 검사 3쌍도 더했어요 |
+| `layout.page / page-wide / measure` | 분석 페이지 너비가 숫자로만 있었어요 |
+| `elevation.raised / float` | 그림자가 Tailwind 기본값과 오버레이 숫자로 따로 있었어요 |
+| 분석 페이지 초점 링 2px | 토큰은 2px인데 `styles.css`만 3px였어요 |
+
+**화면 코드 적용 (같은 날)**
+
+- 입력칸 8곳 `border-line` → `border-field-line`:
+  - 분석 페이지: `MySettings`, `Simulator`
+  - 확장: `Chat`, `CodeStep`, `CopyStep`, `AnalysisAssistant`, `QuestionStep`, `FindStep` 상품 검색칸
+  - 보조 버튼·카드·근거 태그의 `border-line`은 장식 테두리라 그대로 둬요. 버튼은 글자로 알아볼 수 있어요
+- 너비: `App.tsx` → `max-w-page` · `max-w-page-wide`, `Start.tsx` → `max-w-measure`
+- 그림자:
+  - 토스트 → `shadow-float`
+  - `PlanStep` sticky 칸 → `shadow-raised`
+  - 오버레이 말풍선 → `--coach-shadow`. `coach.bubble-shadow` 색 토큰 대신 `coach.shadow`가 `elevation.float`를 써요

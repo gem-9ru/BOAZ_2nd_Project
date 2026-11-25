@@ -22,7 +22,7 @@ export function Start({ onFile, onExample, busy, error, received, settings, onSe
       <header className="flex flex-col gap-3">
         <p className="text-caption font-semibold text-accent-ink">✦ 광고 어시스턴트 · 결과 분석</p>
         <h1 className="text-hero-sm sm:text-hero font-bold leading-tight">돌려 본 광고 결과를 올려 주세요</h1>
-        <p className="text-lead text-soft max-w-[60ch]">결과 파일과 광고 설정을 올리면 20만 번 계산해 다음에 바꿔 볼 칸 1개와 예상 범위를 알려 드려요.</p>
+        <p className="text-lead text-soft max-w-measure">결과 파일과 광고 설정을 올리면 20만 번 계산해 다음에 바꿔 볼 칸 1개와 예상 범위를 알려 드려요.</p>
       </header>
 
       <Card title="광고 결과 파일 (CSV)" summary="광고 관리자에서 받은 결과 파일을 올려 주세요">

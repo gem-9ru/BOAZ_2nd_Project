@@ -6,7 +6,7 @@
   --coach-bubble-bg: #EFEBFF;
   --coach-bubble-fg: #16213A;
   --coach-bubble-border: #5B3FD9;
-  --coach-bubble-shadow: #4528B0;
+  --coach-shadow: 0 6px 20px rgb(69 40 176 / 0.18);
   --coach-count-fg: #4528B0;
   --coach-note-fg: #4A5568;
   --coach-button-bg: #FFFFFF;

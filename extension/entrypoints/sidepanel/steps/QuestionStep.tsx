@@ -100,7 +100,7 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
             value={text}
             onChange={(e) => setText(e.target.value)}
             aria-invalid={bad || undefined}
-            className="rounded-button border border-line bg-paper px-3 py-2.5 text-body"
+            className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
           />
           {bad && <p role="alert" className="text-caption text-block-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
           <PrimaryButton onClick={submit} disabled={REQUIRED_TEXT.has(field.id) && !text.trim()}>
