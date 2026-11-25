@@ -213,6 +213,32 @@ describe("FindStep — 분야·손님 무리", () => {
     expect(screen.getByText("손님은 이렇게도 불러요")).toBeTruthy();
   });
 
+  it("unknown category with candidates shows them first; picking one sends category", async () => {
+    const f = okFetch();
+    const dispatch = vi.fn();
+    const r: Research = { ...withSegs, category: null, segments: [],
+      category_candidates: [{ code: "50000007", name: "스포츠/레저" }, { code: "50000004", name: "가구/인테리어" }] };
+    render(<FindStep state={{ ...initialState(), research: r, product: "캠핑의자" }} dispatch={dispatch} />);
+    expect(screen.getByText("이 중 어디에 가까워요?")).toBeTruthy();
+    expect(screen.getAllByRole("radio")).toHaveLength(2);
+    expect(screen.queryByRole("radio", { name: "도서" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "다른 분야" }));
+    expect(screen.getAllByRole("radio").length).toBeGreaterThanOrEqual(12);
+    fireEvent.click(screen.getByRole("radio", { name: "도서" }));
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    expect(sentBody(f).category).toBe("50005542");
+  });
+
+  it("candidate pick sends its category", async () => {
+    const f = okFetch();
+    const r: Research = { ...withSegs, category: null, segments: [],
+      category_candidates: [{ code: "50000007", name: "스포츠/레저" }, { code: "50000004", name: "가구/인테리어" }] };
+    render(<FindStep state={{ ...initialState(), research: r, product: "캠핑의자" }} dispatch={vi.fn()} />);
+    fireEvent.click(screen.getByRole("radio", { name: "스포츠/레저" }));
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    expect(sentBody(f).category).toBe("50000007");
+  });
+
   it("segment cards: pick one, confirm sends segment", () => {
     const dispatch = vi.fn();
     const { rerender } = render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={dispatch} />);

@@ -54,9 +54,11 @@ def research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
         code = body.category or market.guess_category(body.product, _online())
+        cands = [] if code else market.category_candidates(body.product, _online())
         report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
         why = naver_api.last_error()
-    wide = {"category": _category_out(code, not body.category), "categories": [dict(c) for c in market.CATEGORIES]}
+    wide = {"category": _category_out(code, not body.category), "categories": [dict(c) for c in market.CATEGORIES],
+            "category_candidates": [{"code": c, "name": _category_out(c, True)["name"]} for c in cands]}
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
         return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice,

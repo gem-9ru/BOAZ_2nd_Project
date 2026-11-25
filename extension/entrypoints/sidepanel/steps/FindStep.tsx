@@ -5,7 +5,7 @@ import { compact } from "../../../lib/format";
 import { ageGroupToRange, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import AgeFigure from "./find/AgeFigure";
-import CategoryPick, { CategoryRadios } from "./find/CategoryPick";
+import CategoryPick, { CategoryAsk } from "./find/CategoryPick";
 import SegmentCards from "./find/SegmentCards";
 
 interface Props {
@@ -305,7 +305,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         <div className="flex flex-col gap-2.5">
           <span className="text-caption font-semibold text-soft">손님 무리</span>
           <p className="text-caption">분야를 골라 주시면 손님을 찾아볼게요</p>
-          <CategoryRadios categories={r.categories} onPick={onPickCategory} />
+          <CategoryAsk categories={r.categories} candidates={r.category_candidates} onPick={onPickCategory} />
         </div>
       ) : segments.length === 0 ? (
         <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch} />

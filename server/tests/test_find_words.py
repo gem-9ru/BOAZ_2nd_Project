@@ -52,3 +52,12 @@ def test_no_product_words_constant_and_common_words_from_specs():
     assert not hasattr(market, "PRODUCT_WORDS")
     assert "선물" in market.GIFT_WORDS and "만들기" in market.MAKING_WORDS
     assert set(market.MODIFIER_GROUPS) == {"포장", "맛·재료", "배송", "양"}
+
+
+def test_category_candidates_tie_returns_both_in_order(monkeypatch):
+    pts = {"50000006": 12, "50000008": 12, "50000002": 7, "50000000": 5}
+    monkeypatch.setattr(api, "category_keyword_points", lambda c, k, online=True: pts.get(c, 0))
+    got = market.category_candidates("캠핑의자")
+    assert got == ["50000006", "50000008", "50000002"] and market.guess_category("캠핑의자") is None
+    monkeypatch.setattr(api, "category_keyword_points", lambda c, k, online=True: 2)
+    assert market.category_candidates("zz") == []

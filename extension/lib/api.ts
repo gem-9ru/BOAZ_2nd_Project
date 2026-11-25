@@ -14,6 +14,8 @@ export interface Research {
   /** 아래 넷은 모두 선택: 예전 저장 상태도 그대로 열린다 */
   category?: (Category & { guessed: boolean }) | null;
   categories?: Category[];
+  /** 분야를 못 정했을 때 가까운 분야 후보 (많은 순) */
+  category_candidates?: Category[];
   segments?: Segment[];
   modifiers?: Modifier[];
 }

@@ -58,3 +58,17 @@ def test_custom_order_modifier_kept_in_delivery_group_but_bare_order_skipped():
     kw = market.classify(_table(["주문제작쿠키", "쿠키주문"], [800, 600]), ["쿠키"])
     out = market.modifiers(kw, ["쿠키"])
     assert [(m["word"], m["group"]) for m in out] == [("주문제작", "배송")]
+
+
+def test_word_with_big_standalone_row_is_brand_not_merit():
+    kw = market.classify(_table(["립밤", "바세린", "바세린립밤", "촉촉립밤", "남자립밤", "개별포장립밤"],
+                                [9000, 8000, 700, 600, 500, 400]), ["립밤"])
+    words = {m["word"] for m in market.modifiers(kw, ["립밤"])}
+    assert "바세린" not in words                     # 혼자서도 크게 검색됨 -> 브랜드
+    assert {"촉촉", "개별포장"} <= words             # 단독 행이 없거나 작은 말은 좋은 점
+    assert "남자" not in words                       # 성별어는 제외 낱말
+
+
+def test_merit_with_small_standalone_row_stays():
+    kw = market.classify(_table(["립밤", "경량", "경량립밤"], [9000, 300, 700]), ["립밤"])
+    assert "경량" in {m["word"] for m in market.modifiers(kw, ["립밤"])}

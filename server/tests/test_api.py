@@ -221,3 +221,14 @@ def test_research_passes_category_and_keywords(monkeypatch):
     assert seen["category"] == "50000002" and seen["keep"] == ["립밤"] and seen["product"] == "수제 립밤"
     assert seen["seeds"] == ["립밤"]      # 검색 요청 seeds는 그대로, 사장님 낱말은 product로 만든다
     assert b["category"]["code"] == "50000002" and b["category"]["guessed"] is False
+
+
+def test_research_returns_category_candidates_when_unknown(monkeypatch):
+    from server.engine import market
+    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)
+    monkeypatch.setattr(market, "category_candidates", lambda product, online=True: ["50000006", "50000008"])
+    monkeypatch.setattr(market, "build", lambda *a, **k: _fake_report())
+    b = TestClient(app).post("/research", json={"product": "캠핑의자"}).json()
+    assert [c["code"] for c in b["category_candidates"]] == ["50000006", "50000008"] and all(c["name"] for c in b["category_candidates"])
+    monkeypatch.setattr(market, "guess_category", lambda product, online=True: "50000006")
+    assert TestClient(app).post("/research", json={"product": "캠핑의자"}).json()["category_candidates"] == []

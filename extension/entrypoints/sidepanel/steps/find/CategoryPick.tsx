@@ -31,6 +31,24 @@ export function CategoryRadios({ categories, value, onPick }: {
   );
 }
 
+/** 분야를 못 정했을 때: 후보가 있으면 "이 중 어디에 가까워요?"로 먼저 보이고, [다른 분야]로 12개를 펼친다. */
+export function CategoryAsk({ categories, candidates, onPick }: {
+  categories?: Category[]; candidates?: Category[]; onPick: (code: string) => void;
+}) {
+  const [all, setAll] = useState(false);
+  if (!candidates?.length || all) return <CategoryRadios categories={categories} onPick={onPick} />;
+  return (
+    <div className="flex flex-col gap-2.5">
+      <p className="text-caption">이 중 어디에 가까워요?</p>
+      <CategoryRadios categories={candidates} onPick={onPick} />
+      <button type="button" onClick={() => setAll(true)}
+        className="self-start rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        다른 분야
+      </button>
+    </div>
+  );
+}
+
 /** 1) 분야 줄: "'수제 쿠키'는 '식품'(으)로 볼게요. 맞나요?" + [바꾸기] → 12개 라디오. */
 export default function CategoryPick({ product, category, categories, onPick }: {
   product: string;
