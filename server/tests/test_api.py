@@ -177,7 +177,6 @@ def test_avoid_words_inside_the_product_name_do_not_empty_the_copies(monkeypatch
     assert len(body["copies"]) == 3
 
 
-@pytest.mark.xfail(reason="Task 10 저장본", strict=False)
 def test_research_offline_has_segments_trend_and_modifiers(monkeypatch):
     monkeypatch.setenv("COACH_OFFLINE", "1")
     b = TestClient(app).post("/research", json={"product": "수제 쿠키", "seeds": CACHED_SEEDS}).json()
