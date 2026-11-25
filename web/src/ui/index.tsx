@@ -57,9 +57,9 @@ export function wordOf(probB: number): Word {
   return p >= 0.9 ? "확실해요" : p >= 0.7 ? `${better} 쪽이에요` : "아직 몰라요";
 }
 
-/** 테스트 제안 태그: 돌려 본 적 없는 선택지 (판정 배지 대신, v4.2 AN-01). */
+/** 테스트 제안 태그: 돌려 본 적 없는 선택지 (판정 배지 대신, v4.2 AN-01). 점선 테두리라 실선 판정 배지와 구분돼요. */
 export function TestTag({ text = "테스트 제안" }: { text?: string }) {
-  return <span className="inline-flex items-center rounded-badge border border-accent bg-surface px-2.5 py-0.5 text-caption font-bold text-accent-ink whitespace-nowrap">{text}</span>;
+  return <span className="inline-flex items-center rounded-badge border border-dashed border-accent bg-surface px-2.5 py-0.5 text-caption font-bold text-accent-ink whitespace-nowrap">{text}</span>;
 }
 
 /** ● 참고만 배지 (ALT-22): 노출이 적은 칸. 파랑 바탕 + 흰 글자, 그 칸 숫자는 연하게(text-soft). 회색은 '아직 몰라요'에만. */

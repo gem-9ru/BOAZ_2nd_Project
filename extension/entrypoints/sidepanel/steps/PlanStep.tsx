@@ -34,7 +34,7 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
         <p className="text-caption text-soft">분석 페이지에서 도착</p>
         <p className="text-caption font-semibold text-accent-ink">{c.path ?? c.label}</p>
         <p className="text-body font-bold">{c.now ? `${c.now} → ` : ""}{c.new_short ?? c.new}</p>
-        {c.tag && <span className="self-start rounded-badge border border-accent bg-paper px-2.5 py-0.5 text-caption font-bold text-accent-ink">{c.tag}</span>}
+        {c.tag && <span className="self-start rounded-badge border border-dashed border-accent bg-paper px-2.5 py-0.5 text-caption font-bold text-accent-ink">{c.tag}</span>}
         {look && word && (
           <span className={`self-start inline-flex items-center gap-1 rounded-badge px-2.5 py-0.5 text-caption font-bold ${look.cls}`}>
             <span aria-hidden="true">{look.mark}</span>{word}
