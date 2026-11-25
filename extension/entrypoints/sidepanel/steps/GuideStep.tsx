@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { stepsFor } from "../../../lib/guide";
+import { nextTestSteps, stepsFor } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
 import { sendWithRetry } from "../../../lib/progress";
 import { Coach, PrimaryButton, WarnLine } from "../ui/Coach";
@@ -32,7 +32,10 @@ export default function GuideStep({ state, dispatch }: Props) {
   const mode = state.guide?.mode ?? "create";
   // 바꿀 칸: 분석 페이지에서 코드로 받은 것 하나
   const changes = state.plan ? [state.plan.change] : [];
-  const steps = stepsFor(mode, GUIDE, state.settings, changes);
+  // EX-03 [다음 테스트 세팅]: 목록은 ② 세팅 전체, 캐릭터는 바꿀 칸 + 게시 직전 확인만 짚는다 (index는 그 안에서)
+  const next = mode === "create" && state.guide?.next ? nextTestSteps(GUIDE, state.settings, state.guide.next) : null;
+  const shown = next ? next.all : stepsFor(mode, GUIDE, state.settings, changes);
+  const steps = next ? next.send : shown;
   const index = state.guide?.index ?? 0;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,8 +79,12 @@ export default function GuideStep({ state, dispatch }: Props) {
     );
   }
 
+  const target = next?.send.find((s) => !s.entry.publish);
+  const targetLabel = target ? state.settings.find((x) => x.fieldId === target.entry.id)?.label ?? target.entry.fallback.text : "";
   const intro = {
-    create: "광고 관리자를 열면 캐릭터가 칸마다 무엇을 넣을지 알려 드려요. '동의하고 게시' 버튼은 마지막에 직접 눌러 주세요.",
+    create: next
+      ? `다음 테스트 세팅이에요. 원래 세트는 그대로 두고, 복제한 세트에서 '${targetLabel}' 칸만 바꾸면 돼요. 나머지 칸은 지난번 값 그대로예요. 두 세트는 같은 날 같이 시작하고, '동의하고 게시'는 마지막에 직접 눌러 주세요.`
+      : "광고 관리자를 열면 캐릭터가 칸마다 무엇을 넣을지 알려 드려요. '동의하고 게시' 버튼은 마지막에 직접 눌러 주세요.",
     edit: "바꿀 칸만 캐릭터가 짚어 드려요. 광고 관리자에서 지난번 광고 세트나 광고를 열어 수정하세요.",
     export: "광고 관리자에서 결과를 내보내는 곳을 캐릭터가 짚어 드려요.",
   }[mode];
@@ -99,19 +106,26 @@ export default function GuideStep({ state, dispatch }: Props) {
         </div>
       )}
       <ol className="flex flex-col gap-1.5">
-        {steps.map((s, i) => (
-          <li
-            key={s.entry.id}
-            aria-current={i === index ? "step" : undefined}
-            className={`text-caption flex gap-2 rounded-button px-2 py-1 ${i === index ? "bg-accent-soft font-semibold text-ink" : i < index ? "text-soft line-through" : "text-soft"}`}
-          >
-            <span className="w-5 text-right">{i < index ? "✓" : i + 1}</span>
-            <span>
-              {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
-              {s.value ? ` · ${s.value}` : ""}
-            </span>
-          </li>
-        ))}
+        {shown.map((s, n) => {
+          // 다음 테스트 세팅: 보내는 칸(바꿀 칸·게시 확인)만 순서대로, 나머지는 지난번 값으로 끝난 칸
+          const i = next ? steps.indexOf(s) : n;
+          const done = next ? i < 0 || i < index : i < index;
+          const now = i >= 0 && i === index;
+          return (
+            <li
+              key={s.entry.id + s.entry.mode}
+              aria-current={now ? "step" : undefined}
+              className={`text-caption flex gap-2 rounded-button px-2 py-1 ${now ? "bg-accent-soft font-semibold text-ink" : done ? "text-soft line-through" : "text-soft"}`}
+            >
+              <span className="w-5 text-right">{done ? "✓" : n + 1}</span>
+              <span>
+                {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
+                {s.value ? ` · ${s.value}` : ""}
+                {next && now && !s.entry.publish && <span className="ml-1 rounded-badge bg-accent px-1.5 text-small text-on-accent no-underline">지금</span>}
+              </span>
+            </li>
+          );
+        })}
       </ol>
       {error && <WarnLine message={error} onRetry={open} />}
       <PrimaryButton onClick={open} busy={busy}>광고 관리자 열기</PrimaryButton>

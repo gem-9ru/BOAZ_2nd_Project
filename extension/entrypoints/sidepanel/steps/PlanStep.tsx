@@ -9,7 +9,7 @@ type TestPlan = Change & { tag?: string; new_short?: string; reason?: string; te
 // 판정 배지 토큰 (design-system): 확실해요 adopt · ○ 쪽이에요 likely · 아직 몰라요 hold. 사장님 화면 문구는 3개만 (v4.2)
 const LOOK = {
   확실해요: { mark: "●", cls: "bg-adopt text-on-accent" },
-  쪽이에요: { mark: "◐", cls: "bg-likely-bg text-likely ring-1 ring-inset ring-likely" },
+  쪽이에요: { mark: "◐", cls: "bg-adopt-bg text-adopt ring-1 ring-inset ring-likely" },
   "아직 몰라요": { mark: "○", cls: "bg-hold-bg text-hold" },
 } as const;
 
@@ -61,6 +61,12 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
       )}
       <Chat code={p.code} step="EX-03" />
       <PrimaryButton onClick={() => dispatch({ type: "startFix" })}>그 칸으로 이동</PrimaryButton>
+      <button type="button"
+        onClick={() => dispatch({ type: "startNextTest", fieldId: c.field_id, label: c.label, value: c.new_short ?? c.new })}
+        className="rounded-button border border-accent bg-paper py-2.5 text-body font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        다음 테스트 세팅 ▶
+      </button>
+      <p className="-mt-2 text-caption text-soft">② 세팅 목록으로 가요. 바꿀 칸 1개만 '지금', 나머지는 지난번 값 그대로예요. 게시는 직접 해 주세요.</p>
       <button type="button" onClick={() => dispatch({ type: "startUpload" })} className="self-start text-caption text-soft underline">
         다른 코드 넣기
       </button>

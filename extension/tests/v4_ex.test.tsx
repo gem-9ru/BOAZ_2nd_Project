@@ -6,8 +6,9 @@ import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import CodeStep from "../entrypoints/sidepanel/steps/CodeStep";
 import GuideStep from "../entrypoints/sidepanel/steps/GuideStep";
 import PlanStep from "../entrypoints/sidepanel/steps/PlanStep";
-import { initialState, type FlowState, type Plan } from "../lib/flow";
-import type { GuideStepItem } from "../lib/guide";
+import { initialState, reduce, type FlowState, type Plan } from "../lib/flow";
+import { nextTestSteps, type GuideStepItem } from "../lib/guide";
+import { GUIDE } from "../lib/guideList";
 import { SETTING_ORDER } from "../lib/settings";
 
 // 첫 메시지 재시도(1.5초 × 6번)를 기다리지 않게 한 번만 보낸다
@@ -197,5 +198,48 @@ describe("EX-03 바꿀 칸 받기", () => {
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
     fireEvent.click(screen.getByRole("button", { name: "그 칸으로 이동" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
+  });
+});
+
+describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
+  const settings = SETTING_ORDER.map((id) => ({ fieldId: id, label: `칸 ${id}`, value: "지난 값" }));
+
+  it("the button sends the owner back to ② 세팅 with only the changed field as the new value", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
+    const s = reduce({ ...initialState(), step: "plan", plan, settings }, dispatch.mock.calls[0]![0]);
+    expect(s.step).toBe("guide");
+    expect(s.guide).toEqual({ mode: "create", index: 0, next: "meta.ad.media" });
+    expect(s.settings.find((x) => x.fieldId === "meta.ad.media")!.value).toBe("+ 세로(9:16) 1개");
+    expect(s.settings.filter((x) => x.value === "지난 값")).toHaveLength(settings.length - 1);
+  });
+
+  it("② 세팅 list: only the changed field is '지금', the rest are done with last values; the character gets just that field + publish check", async () => {
+    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings },
+      { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
+    render(<GuideStep state={state} dispatch={() => {}} />);
+    const items = screen.getAllByRole("listitem");
+    expect(items).toHaveLength(14);
+    const now = items.filter((li) => li.getAttribute("aria-current") === "step");
+    expect(now).toHaveLength(1);
+    expect(now[0]!.textContent).toContain("+ 세로(9:16) 1개");
+    expect(now[0]!.textContent).toContain("지금");
+    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(12);   // 나머지 12칸은 끝난 칸, 게시 확인만 남음
+    expect(screen.getByText(/복제한 세트에서 '칸 meta.ad.media' 칸만 바꾸면 돼요/)).toBeTruthy();
+    const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
+    vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    const msg = send.mock.calls[0]![1] as { steps: { entry: { id: string } }[] };
+    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.publish"]);
+  });
+
+  it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
+    const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
+    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.publish"]);
+    expect(steps.all.at(-2)!.entry.id).toBe("meta.adset.placements");
   });
 });

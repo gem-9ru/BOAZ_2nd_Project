@@ -69,3 +69,21 @@ export function stepsFor(mode: GuideEntry["mode"], entries: GuideEntry[], settin
   }
   return entries.filter((e) => e.mode === "export").map((entry) => ({ entry }));
 }
+
+/** EX-03 [다음 테스트 세팅] (v4.2): ② 세팅 목록 전체(all)는 보여 주되, 캐릭터에게는 바꿀 칸 1개 + 게시 직전 확인만(send) 보낸다.
+ *  바꿀 칸이 만들기 목록에 없으면(예: 노출 위치) 수정 안내의 같은 칸을 게시 앞에 넣는다. 나머지 칸은 지난번 값으로 끝난 칸. */
+export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldId: string): { all: GuideStepItem[]; send: GuideStepItem[] } {
+  const all = stepsFor("create", entries, settings, []);
+  let target = all.find((s) => s.entry.id === fieldId);
+  if (!target) {
+    const edit = entries.find((e) => e.mode === "edit" && e.id === fieldId);
+    if (edit) {
+      target = { entry: edit, value: settings.find((s) => s.fieldId === fieldId)?.value };
+      const at = all.findIndex((s) => s.entry.publish);
+      all.splice(at < 0 ? all.length : at, 0, target);
+    }
+  }
+  const publish = all.find((s) => s.entry.publish);
+  const send = [target, publish].filter((x): x is GuideStepItem => Boolean(x));
+  return { all, send };
+}

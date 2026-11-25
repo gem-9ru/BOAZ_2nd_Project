@@ -42,7 +42,8 @@ export interface FlowState {
   answers: Record<string, string>;
   settings: Setting[];
   /** away: 뭉치가 광고 관리자에 나가 있음 (패널 제목 왼쪽 집이 빔). 닫으면 false → 집으로 돌아옴 */
-  guide: { mode: "create" | "edit" | "export"; index: number; away?: boolean } | null;
+  /** next: EX-03 [다음 테스트 세팅] — 이 칸만 '지금', 나머지는 이전 값으로 끝난 칸 (v4.2) */
+  guide: { mode: "create" | "edit" | "export"; index: number; away?: boolean; next?: string } | null;
   endDate?: string;
   plan?: Plan;
 }
@@ -67,6 +68,7 @@ export type FlowEvent =
   | { type: "startUpload" }
   | { type: "planLoaded"; plan: Plan }
   | { type: "startFix" }
+  | { type: "startNextTest"; fieldId: string; label: string; value: string }
   | { type: "reset" };
 
 export function initialState(): FlowState {
@@ -114,6 +116,14 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, plan: ev.plan, step: "plan" };
     case "startFix":
       return { ...s, step: "fix", guide: { mode: "edit", index: 0 } };
+    case "startNextTest": {
+      // ↺ 루프: EX-01 ② 세팅 목록으로 돌아가되, 바꿀 칸 1개만 새 값으로 (게시는 사장님이 직접)
+      const has = s.settings.some((x) => x.fieldId === ev.fieldId);
+      const settings = has
+        ? s.settings.map((x) => (x.fieldId === ev.fieldId ? { ...x, value: ev.value } : x))
+        : [...s.settings, { fieldId: ev.fieldId, label: ev.label, value: ev.value }];
+      return { ...s, settings, step: "guide", guide: { mode: "create", index: 0, next: ev.fieldId } };
+    }
     case "reset":
       return initialState();
     default:
