@@ -1,6 +1,8 @@
 import pathlib
 import re
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from server.app import app
@@ -74,7 +76,8 @@ def test_defaults_lists_fields_not_asked():
 
 def test_research_failure_explains_naver_error(monkeypatch):
     from server.engine import market, naver_api
-    monkeypatch.setattr(market, "build", lambda seeds, online=True: None)
+    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)   # 네트워크 금지
+    monkeypatch.setattr(market, "build", lambda seeds, online=True, **kw: None)
     monkeypatch.setattr(naver_api, "last_error", lambda: "네이버 키가 없어요.")
     body = TestClient(app).post("/research", json={"product": "아무거나"}).json()
     assert body["notice"].startswith("네이버 키가 없어요.")
@@ -88,13 +91,14 @@ def test_research_calls_do_not_overlap(monkeypatch):
     from server.engine import market
     active, overlaps = [0], [0]
 
-    def slow_build(seeds, online=True):
+    def slow_build(seeds, online=True, **kw):
         active[0] += 1
         overlaps[0] = max(overlaps[0], active[0])
         time.sleep(0.05)
         active[0] -= 1
         return None
 
+    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)   # 네트워크 금지
     monkeypatch.setattr(market, "build", slow_build)
     client = TestClient(app)
     threads = [threading.Thread(target=lambda: client.post("/research", json={"product": "x"})) for _ in range(4)]
@@ -127,7 +131,7 @@ def test_research_is_live_when_product_data_is_from_today_even_if_baseline_is_ol
     real_build = market.build
     today = datetime.date.today().isoformat()
 
-    def build(seeds, online=True):
+    def build(seeds, online=True, **kw):
         report = real_build(seeds, online=False)
         naver_api.reset_fetched()
         naver_api._note_fetched(f"{today} 12:00:00", "product")
@@ -171,3 +175,50 @@ def test_avoid_words_inside_the_product_name_do_not_empty_the_copies(monkeypatch
     body = TestClient(app).post("/copies", json={"product": "쿠키만들기 키트", "strengths": ["재료 다 들어 있음"],
                                                   "keywords": [], "avoid": ["쿠키만들기", "광주맛집"]}).json()
     assert len(body["copies"]) == 3
+
+
+@pytest.mark.xfail(reason="Task 10 저장본", strict=False)
+def test_research_offline_has_segments_trend_and_modifiers(monkeypatch):
+    monkeypatch.setenv("COACH_OFFLINE", "1")
+    b = TestClient(app).post("/research", json={"product": "수제 쿠키", "seeds": CACHED_SEEDS}).json()
+    assert b["category"] == {"code": "50000006", "name": "식품", "guessed": True}
+    assert len(b["categories"]) == 12
+    assert 1 <= len(b["segments"]) <= 3 and b["segments"][0]["label"].endswith("손님")
+    assert b["modifiers"] and b["headline"] and b["audience"]          # 하위 호환
+
+
+def _fake_report():
+    import pandas as pd
+    from server.engine import market
+    kw = pd.DataFrame([{"keyword": "립밤", "total_qc": 900, "intent": "상품"}])
+    return market.MarketReport(seeds=["립밤"], groups=pd.DataFrame(), keywords=kw, recommended=["립밤"],
+                               headline="h", fetched="2026-11-15")
+
+
+def test_research_unknown_category_returns_no_segments(monkeypatch):
+    from server.engine import market
+    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)
+    monkeypatch.setattr(market, "build", lambda seeds, online=True, **kw: _fake_report())
+    b = TestClient(app).post("/research", json={"product": "zz상품"}).json()
+    assert b["category"] is None and b["segments"] == [] and len(b["categories"]) == 12
+    assert b["keywords"] == [{"keyword": "립밤", "total_qc": 900}] and b["audience"] is None
+
+
+def test_research_passes_category_and_keywords(monkeypatch):
+    from server.engine import market
+    seen = {}
+
+    def guess(*a, **k):
+        raise AssertionError("분야를 줬으면 추정하지 않는다")
+
+    def build(seeds, online=True, category=None, keep=None, **kw):
+        seen.update(seeds=seeds, category=category, keep=keep, product=kw.get("product"))
+        return _fake_report()
+
+    monkeypatch.setattr(market, "guess_category", guess)
+    monkeypatch.setattr(market, "build", build)
+    b = TestClient(app).post("/research", json={"product": "수제 립밤", "seeds": ["립밤"],
+                                                "category": "50000002", "keywords": ["립밤"]}).json()
+    assert seen["category"] == "50000002" and seen["keep"] == ["립밤"] and seen["product"] == "수제 립밤"
+    assert seen["seeds"] == ["립밤"]      # 검색 요청 seeds는 그대로, 사장님 낱말은 product로 만든다
+    assert b["category"]["code"] == "50000002" and b["category"]["guessed"] is False

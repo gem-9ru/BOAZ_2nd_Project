@@ -413,17 +413,36 @@ class MarketReport:
     headline: str = ""
     fetched: str = ""          # 쓴 응답 중 가장 오래된 받은 날 'YYYY-MM-DD' (화면의 조회일)
     fetched_parts: Dict[str, str] = field(default_factory=dict)   # 부분별 받은 날 (product·baseline)
+    category: Optional[str] = None                                # 쇼핑인사이트 분야 code (없으면 None)
+    segments: List[dict] = field(default_factory=list)            # 손님 무리 (분야가 없으면 비어 있음)
+    modifiers: List[dict] = field(default_factory=list)           # 꾸밈말
 
 
-def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
-    """한 번에: 키워드 표 → 분류 → 추천·제외 → 추천 상위 3개의 손님 → 한 줄 요약. 키워드를 못 받으면 None."""
+def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
+          keep: Optional[List[str]] = None, *, product: Optional[str] = None) -> Optional[MarketReport]:
+    """한 번에: 키워드 표 → 분류 → 추천·제외·꾸밈말 → (분야가 있으면) 손님 무리 → 한 줄 요약. 키워드를 못 받으면 None.
+    product가 있으면 그 이름으로 사장님 낱말을 만들고, 없으면 첫 seed를 상품 이름으로 본다."""
     api.reset_fetched()
     table = keyword_table(seeds, online)
     if table is None:
         return None
-    words = product_words(seeds[0] if seeds else "", seeds)   # 사장님이 입력한 낱말(첫 seed가 상품 이름)
+    words = product_words(product, seeds) if product else product_words(seeds[0] if seeds else "", seeds)
     kw = classify(table, words)
     rec = recommend(kw, seeds=words)
+    segs = segments(kw, rec, category, online, keep) if category else []
+    mods = modifiers(kw, words)
+    common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
+                  negatives=negative_list(kw), category=category, segments=segs, modifiers=mods)
+    stamp = lambda: dict(fetched=api.oldest_fetched() or "", fetched_parts=api.fetched_parts())
+    if segs:   # 무리의 대표 검색어가 손님 조회의 대표 (첫 무리가 대표)
+        auds = {s["lead"]: {**s["audience"]} for s in segs if s["audience"]}
+        first = next((s for s in segs if s["audience"]), segs[0])   # 손님을 아는 첫 무리 (응답의 audience와 같은 키워드)
+        if first["audience"]:
+            head = f"{first['lead']}{_obj(first['lead'])} 찾는 사람은 {first['line']}"
+        else:
+            qc = float(kw.loc[kw["keyword"] == first["lead"], "total_qc"].iloc[0])
+            head = headline(first["lead"], None, qc)
+        return MarketReport(audiences=auds, headline=head, **common, **stamp())
     auds = {}
     for k in audience_targets(kw, rec):
         a = audience(k, online=online)
@@ -434,7 +453,4 @@ def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
         auds = {lead: auds[lead], **{k: v for k, v in auds.items() if k != lead}}
     top = lead or (rec[0] if rec else None)
     qc = float(kw.loc[kw["keyword"] == top, "total_qc"].iloc[0]) if top else None
-    return MarketReport(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
-                        negatives=negative_list(kw), audiences=auds,
-                        headline=headline(top, auds.get(top), qc) if top else "",
-                        fetched=api.oldest_fetched() or "", fetched_parts=api.fetched_parts())
+    return MarketReport(audiences=auds, headline=headline(top, auds.get(top), qc) if top else "", **common, **stamp())

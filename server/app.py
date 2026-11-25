@@ -38,20 +38,33 @@ def health() -> dict:
 class ResearchIn(BaseModel):
     product: str
     seeds: Optional[List[str]] = None   # 비우면 상품 이름 하나로 찾음
+    category: Optional[str] = None      # 쇼핑인사이트 분야 code. 비우면 서버가 추정
+    keywords: Optional[List[str]] = None   # 사장님이 고른 검색어 (손님 무리를 이 안에서만 묶음)
+
+
+def _category_out(code: Optional[str], guessed: bool) -> Optional[dict]:
+    if not code:
+        return None
+    name = next((c["name"] for c in market.CATEGORIES if c["code"] == code), code)
+    return {"code": code, "name": name, "guessed": guessed}
 
 
 @app.post("/research")
 def research(body: ResearchIn) -> dict:
-    seeds = [s for s in (body.seeds or [body.product]) if s.strip()]
+    seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
-        report = market.build(seeds, online=_online())
+        code = body.category or market.guess_category(body.product, _online())
+        report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
         why = naver_api.last_error()
+    wide = {"category": _category_out(code, not body.category), "categories": [dict(c) for c in market.CATEGORIES]}
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
-        return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice}
+        return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice,
+                **wide, "segments": [], "modifiers": []}
     if not report.recommended:
         return {"headline": report.headline, "keywords": [], "audience": None, "fetched": report.fetched,
-                "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요."}
+                "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요.",
+                **wide, "segments": [], "modifiers": report.modifiers}
     kw = report.keywords.set_index("keyword")["total_qc"]
     keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
     audience = None
@@ -63,7 +76,8 @@ def research(body: ResearchIn) -> dict:
                for part, label in (("product", "검색어·연령"), ("baseline", "분야 평균")) if part in report.fetched_parts]
     live = report.fetched_parts.get("product", report.fetched) == today   # 이 상품 자료가 오늘 받은 것이면 실시간
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
-            "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None}
+            "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None,
+            **wide, "segments": report.segments, "modifiers": report.modifiers}
 
 
 ASKED_KINDS = ("question", "precheck")
