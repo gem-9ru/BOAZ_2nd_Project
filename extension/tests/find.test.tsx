@@ -194,8 +194,8 @@ describe("FindStep — 분야·손님 무리", () => {
     fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
     expect(screen.getAllByRole("radio", { name: /./ }).length).toBeGreaterThanOrEqual(12);
     fireEvent.click(screen.getByRole("radio", { name: "화장품/미용" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "pickCategory", category: "50000002" });
     await waitFor(() => expect(f).toHaveBeenCalled());
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "pickCategory", category: "50000002" }));
     const body = sentBody(f);
     expect(body.category).toBe("50000002");
     expect(body.product).toBe("수제 쿠키");
@@ -284,5 +284,43 @@ describe("FindStep — 분야·손님 무리", () => {
     render(<FindStep state={{ ...initialState(), research: { ...withSegs, segments: [] }, product: "수제 쿠키" }} dispatch={() => {}} />);
     expect(screen.getByText(/이 말로 찾는 손님 자료를 찾지 못했어요/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "직접 정하고 계속할게요" })).toBeTruthy();
+  });
+
+  it("retry after a failed re-search sends the chips toggled since, and keeps them dropped", async () => {
+    const f = vi.fn()
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"))
+      .mockResolvedValue(new Response(JSON.stringify(withSegs), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const dispatch = vi.fn();
+    const base = { ...initialState(), research: withSegs, product: "수제 쿠키", category: "50000006" };
+    const { rerender } = render(<FindStep state={{ ...base, dropped: ["답례품쿠키"] }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "이 말로 손님 다시 찾기" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy());
+    // 오류 뒤 남은 결과에서 칩 하나를 더 끈다
+    fireEvent.click(screen.getByRole("button", { name: /르뱅쿠키/ }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "toggleKeyword", keyword: "르뱅쿠키" });
+    rerender(<FindStep state={{ ...base, dropped: ["답례품쿠키", "르뱅쿠키"] }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "다시 시도" }));
+    await waitFor(() => expect(f).toHaveBeenCalledTimes(2));
+    const body = JSON.parse((f.mock.calls[1]![1] as RequestInit).body as string);
+    expect(body.keywords).not.toContain("르뱅쿠키");
+    expect(body.keywords).not.toContain("답례품쿠키");
+    expect(body.keywords).toContain("수제쿠키");
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith(
+      expect.objectContaining({ type: "researched", dropped: ["답례품쿠키", "르뱅쿠키"] })));
+  });
+
+  it("a failing category pick keeps the current category and picked segment, and offers retry", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new TypeError("Failed to fetch")));
+    const dispatch = vi.fn();
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", category: "50000006", segment: segs[1] }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "바꾸기" }));
+    fireEvent.click(screen.getByRole("radio", { name: "화장품/미용" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy());
+    expect(screen.getByText(/도우미 서버에 연결할 수 없어요/)).toBeTruthy();
+    expect(dispatch.mock.calls.some(([e]) => e.type === "pickCategory" || e.type === "researched")).toBe(false);
+    expect(screen.getByText(/'수제 쿠키'는 '식품'\(으\)로 볼게요/)).toBeTruthy();
+    const picked = within(screen.getByRole("radiogroup", { name: "광고를 보여 줄 손님" })).getAllByRole("radio")[1] as HTMLInputElement;
+    expect(picked.checked).toBe(true);
   });
 });

@@ -46,21 +46,28 @@ export default function FindStep({ state, dispatch }: Props) {
     }, () => search(q));
   }
 
-  /** 같은 상품을 다시 찾기(분야 바꾸기·이 말로 다시 찾기): 켜 둔 말만 보내고, 사장님이 뺀 말은 그대로 둔다. */
-  function rerun(category = state.category) {
-    const p = state.product;
-    if (!p || !r) return;
-    const dropped = state.dropped ?? [];
-    const kept = r.keywords.map((k) => k.keyword).filter((k) => !dropped.includes(k));
+  // 다시 시도는 누른 그때의 상태(사장님이 그 사이 켜고 끈 말)를 읽어야 해서 ref로 둔다.
+  const latest = useRef(state);
+  latest.current = state;
+
+  /** 같은 상품을 다시 찾기(분야 바꾸기·이 말로 다시 찾기): 켜 둔 말만 보내고, 사장님이 뺀 말은 그대로 둔다.
+   *  category를 주면(분야 바꾸기) 성공한 뒤에만 pickCategory를 보낸다: 실패하면 지금 분야·고른 무리를 그대로 둔다. */
+  function rerun(pick?: string) {
+    const s = latest.current;
+    const p = s.product;
+    const cur = s.research;
+    if (!p || !cur) return;
+    const dropped = s.dropped ?? [];
+    const kept = cur.keywords.map((k) => k.keyword).filter((k) => !dropped.includes(k));
     void run(async () => {
-      const next = await fetchResearch(p, { category, keywords: kept });
+      const next = await fetchResearch(p, { category: pick ?? s.category, keywords: kept });
+      if (pick) dispatch({ type: "pickCategory", category: pick });
       dispatch({ type: "researched", research: next, product: p, dropped });
-    }, () => rerun(category));
+    }, () => rerun(pick));
   }
 
   function pickCategory(code: string) {
     if (code === r?.category?.code) return;
-    dispatch({ type: "pickCategory", category: code });
     rerun(code);
   }
 
