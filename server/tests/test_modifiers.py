@@ -37,3 +37,14 @@ def test_modifiers_edge_cases():
 def test_modifiers_on_cached_real_data_are_15_or_less(classified):  # noqa: F811
     out = market.modifiers(classified, market.product_words("쿠키", SEEDS))
     assert 0 < len(out) <= 15 and all(2 <= len(m["word"]) <= 6 and len(m["examples"]) <= 3 for m in out)
+
+
+def test_cached_real_data_has_no_noise_chips(classified):  # noqa: F811
+    out = market.modifiers(classified, market.product_words("쿠키", SEEDS))
+    words = {m["word"] for m in out}
+    assert out and not words & {"전문점", "종류", "쇼핑몰", "생지", "세트", "포장"}
+
+
+def test_bare_packaging_skipped_but_compound_kept():
+    kw = market.classify(_table(["쿠키포장", "개별포장쿠키", "선물포장쿠키"], [900, 500, 400]), ["쿠키"])
+    assert {m["word"] for m in market.modifiers(kw, ["쿠키"])} == {"개별포장"}

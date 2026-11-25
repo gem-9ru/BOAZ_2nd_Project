@@ -28,6 +28,7 @@ GIFT_WORDS = tuple(_FIND["common"]["gift"])
 SEASON_WORDS = tuple(_FIND["common"]["season"])
 MODIFIER_GROUPS = {g: tuple(w) for g, w in _FIND["modifier_groups"].items()}
 MODIFIER_SKIP = tuple(_FIND["modifier_skip"])
+MODIFIER_SKIP_EXACT = tuple(_FIND.get("modifier_skip_exact", []))
 GUESS_MIN_POINTS = 6           # 분야 추정: 지난 12개월 중 이 달 수 이상 자료가 있어야 함
 BUYABLE = ("선물·답례", "시즌", "상품")
 EXCLUDED = ("제외: 만들기", "제외: 매장·지역")
@@ -166,7 +167,7 @@ def _modifier_of(keyword: str, seeds: List[str]) -> Optional[str]:
         k = k.replace(w, "")
     for w in sorted(GIFT_WORDS + SEASON_WORDS + PLACE_WORDS + MODIFIER_SKIP, key=len, reverse=True):
         k = k.replace(w, "")
-    return k if 2 <= len(k) <= 6 and not k.isdigit() else None
+    return k if 2 <= len(k) <= 6 and not k.isdigit() and k not in MODIFIER_SKIP_EXACT else None
 
 
 def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15) -> List[dict]:
