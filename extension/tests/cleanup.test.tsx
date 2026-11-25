@@ -115,10 +115,14 @@ describe("자동 진행 버튼", () => {
     expect(getByRole("button", { name: "다 했어요" })).toBeTruthy();
     expect(getByRole("button", { name: "멈추기" })).toBeTruthy();
   });
-  it("at publish there is no button that moves on", () => {
+  it("at publish the only way on is [게시했어요] (the owner publishes first)", () => {
     document.body.innerHTML = "";
-    const { queryByRole } = render(<Character view={{ ...base, waiting: "publish" }} onDone={() => {}} onBack={() => {}} onClose={() => {}} onToggleAuto={() => {}} />);
+    const onDone = vi.fn();
+    const { queryByRole, getByRole } = render(<Character view={{ ...base, waiting: "publish" }} onDone={onDone} onBack={() => {}} onClose={() => {}} onToggleAuto={() => {}} />);
     expect(queryByRole("button", { name: "다음 칸" })).toBeNull();
     expect(queryByRole("button", { name: "다 했어요" })).toBeNull();
+    expect(queryByRole("button", { name: "자동 진행" })).toBeNull();
+    getByRole("button", { name: "게시했어요" }).click();
+    expect(onDone).toHaveBeenCalled();
   });
 });

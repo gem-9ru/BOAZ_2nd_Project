@@ -84,7 +84,7 @@ export class Guide {
     if (this.pasteAsk && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
       text: "문구를 칸에 넣지 못했어요. 복사해 두었으니 칸을 누르고 붙여 넣어(⌘V) 주세요. 다 했으면 '다 했어요'." };
     if (this.behindDialog) return { ...v, auto: this.auto, waiting: this.waiting,
-      text: "열린 창 안의 일을 먼저 마쳐 주세요 (창 오른쪽 아래 '다음'·'완료'). 창이 닫히면 이 칸을 짚을게요." };
+      text: "열린 창 안의 남은 단계는 그대로 두고 오른쪽 아래 '다음'으로 끝까지 넘긴 뒤 '완료'를 눌러 창을 닫아 주세요. 창이 닫히면 이 칸을 짚을게요." };
     if (this.surveying) return { ...v, found: false, target: undefined, auto: this.auto, text: `화면을 먼저 둘러보고 칸 위치를 적어 둘게요 (${this.surveying})` };
     return { ...v, auto: this.auto, waiting: this.waiting,
       text: this.waiting === "owner" ? `${v.text} 다 맞췄으면 '다 했어요'를 누르세요.`
@@ -266,6 +266,7 @@ export class Guide {
     if (this.behindDialog) { this.seek(); return; }   // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않고 창이 닫혔는지만 다시 본다
     const ownerDone = this.waiting === "owner";   // [다 했어요]: 사장님이 직접 맞췄다 → 다시 하지 않고 다음 칸
     this.waiting = undefined;
+    if (this.languageOk && item?.entry.publish) return this.advance();   // [게시했어요]: 사장님이 직접 게시했다 → 다음 (게시 버튼은 누르지 않음)
     if (this.languageOk && item?.entry.stages) {
       if (!el && this.ensureLevel()) return;
       const st = item.entry.stages[this.stage];
@@ -410,7 +411,8 @@ export class Guide {
     // 창 안에 없고 창 밖(가려진 곳)에 진짜 칸이 있으면: 창을 먼저 마쳐야 한다
     // (창 안의 '다음' 같은 준비 버튼이 보여도, 진짜 칸이 창 뒤에 있으면 그 버튼을 누르지 않는다)
     const realInside = Boolean(hit && !item?.entry.find[hit.index]?.say);
-    this.behindDialog = Boolean(item && dialog && !realInside && locateWith(this.doc, item.entry.find.filter((f) => !f.say)));
+    this.behindDialog = Boolean(item && dialog && !realInside
+      && (item.entry.outsideDialog || locateWith(this.doc, item.entry.find.filter((f) => !f.say))));
     if (!this.behindDialog && this.dialogWait) {   // 창이 닫혔다 → 기다림을 풀고 자동 진행이 이 칸을 다시 짚는다
       this.dialogWait = false;
       if (this.waiting === "owner") this.waiting = undefined;

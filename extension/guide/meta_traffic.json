@@ -376,7 +376,8 @@
    "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
   },
   "auto": "type",
-  "level": "ad"
+  "level": "ad",
+  "outsideDialog": true
  },
  {
   "id": "meta.publish",

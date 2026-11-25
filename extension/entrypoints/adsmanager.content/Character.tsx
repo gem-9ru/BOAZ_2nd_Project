@@ -147,10 +147,11 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
             {view.image && !view.found && <img src={browser.runtime.getURL(`/${view.image}` as never)} alt="이 칸이 있는 화면" className="coach-shot" />}
             <div className="coach-actions">
               <button type="button" onClick={onBack} disabled={view.index === 0}>이전 칸</button>
-              {/* [다음 칸]: 페이지에서 대신 고르기·넣기·누르기 (게시는 안 함). 직접 맞출 칸에선 [다 했어요] */}
-              {view.waiting !== "publish" && (
-                <button type="button" className="coach-primary" onClick={onDone}>{view.waiting === "owner" ? "다 했어요" : "다음 칸"}</button>
-              )}
+              {/* [다음 칸]: 페이지에서 대신 고르기·넣기·누르기 (게시는 안 함). 직접 맞출 칸에선 [다 했어요].
+                  게시 칸에선 [게시했어요]: 사장님이 직접 게시한 뒤 누르면 다음으로 (뭉치는 게시 버튼을 누르지 않음) */}
+              <button type="button" className="coach-primary" onClick={onDone}>
+                {view.waiting === "publish" || view.publish ? "게시했어요" : view.waiting === "owner" ? "다 했어요" : "다음 칸"}
+              </button>
               {onToggleAuto && view.waiting !== "publish" && (
                 <button type="button" onClick={onToggleAuto} aria-pressed={Boolean(view.auto)}>{view.auto ? "멈추기" : "자동 진행"}</button>
               )}

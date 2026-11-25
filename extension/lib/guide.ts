@@ -49,6 +49,9 @@ export interface GuideEntry {
   stages?: GuideStage[];
   /** 이게 화면에 나타나면 이 칸은 끝 → 바로 다음 칸 (예: 사진을 넣어야 생기는 '기본 문구' 칸) */
   doneWhen?: FindStrategy[];
+  /** 이 칸은 열린 창 밖(광고 화면)에 있다. 창이 열려 있으면 칸이 아직 안 그려졌어도 창을 마칠 때까지 기다린다
+   *  (메타 '크리에이티브 설정' 창 뒤의 '웹사이트 URL': 창이 열린 동안에는 칸이 그려지지 않는다) */
+  outsideDialog?: true;
 }
 
 export interface GuideStepItem {

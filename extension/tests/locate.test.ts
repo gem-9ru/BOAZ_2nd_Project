@@ -199,6 +199,21 @@ describe("[다음 칸] = 페이지에서 대신 고르기·넣기·누르기 (�
     expect(seen).toEqual([1]);
   });
 
+  it("[게시했어요] after the owner published moves on, without clicking publish", () => {
+    document.body.innerHTML = `<div role="button" id="p">동의하고 게시</div>`;
+    let clicks = 0;
+    document.getElementById("p")!.addEventListener("click", () => clicks++);
+    const seen: number[] = [];
+    const g = new Guide(document, [step("meta.publish", [{ role: "button", text: "동의하고 게시" }], { publish: true, auto: "stop", done: "manual" }),
+                                   step("next", [{ aria: "없음" }])], 0, (i) => seen.push(i), 0);
+    g.setAuto(true);
+    g.autoStep(5000);
+    expect(g.view().waiting).toBe("publish");
+    g.apply();
+    expect(clicks).toBe(0);
+    expect(seen).toEqual([1]);
+  });
+
   it("never clicks a publish button, even through [다음 칸]", () => {
     document.body.innerHTML = `<div role="button" id="p">동의하고 게시</div>`;
     let clicks = 0;
@@ -526,6 +541,25 @@ describe("열린 창(크리에이티브 설정 등)이 있을 때", () => {
     g.autoStep(5000);
     g.apply();
     expect(g.view().index).toBe(0);
+  });
+
+  it("waits for the dialog to close even when Meta hasn't drawn the field behind it yet (13번 웹사이트 URL)", () => {
+    document.body.innerHTML = `<div role="dialog" id="dlg"><div role="button" id="d-next">다음</div></div>`;
+    let presses = 0;
+    document.getElementById("d-next")!.addEventListener("click", () => presses++);
+    const g = new Guide(document, [step("meta.ad.website_url", [{ aria: "웹사이트 URL" }], { auto: "type", level: "ad", outsideDialog: true }, "https://x"),
+                                   step("meta.publish", [{ role: "button", text: "게시" }], {})], 0, () => {}, 0);
+    g.setAuto(true);
+    for (let i = 1; i <= 5; i++) { g.autoStep(i * 5000); g.tick(); }
+    expect(g.view().text).toMatch(/'완료'를 눌러 창을 닫아/);
+    g.apply();   // [다 했어요]를 눌러도 건너뛰지 않는다
+    expect(g.view().index).toBe(0);
+    expect(presses).toBe(0);
+    document.getElementById("dlg")!.remove();
+    document.body.insertAdjacentHTML("beforeend", `<input id="url" aria-label="웹사이트 URL">`);
+    g.tick();
+    expect(g.view().target?.id).toBe("url");
+    expect(g.view().waiting).toBeUndefined();
   });
 
   it("a field inside the dialog is found normally", () => {
