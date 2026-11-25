@@ -1,6 +1,7 @@
 """광고 문구 쓰기 (T07): 사장님이 알려 준 장점으로 메타·네이버 문구를 만든다.
 
-- ANTHROPIC_API_KEY가 있으면 Claude(claude-haiku-5-5)가 쓰고, 없거나 실패하면 문장 틀을 쓴다.
+- ANTHROPIC_API_KEY가 있으면 Claude(claude-opus-5-5)가 쓰고, 없거나 실패하면 문장 틀을 쓴다.
+- 사장님이 고른 장점과 손님이 찾는 검색어는 따로 보낸다: 검색어는 손님 말투로만 쓰고 상품의 사실로 쓰지 않는다.
 - 어느 쪽이든 같은 검사를 거친다: 글자 수(네이버 제목 15자·설명 20~45자), 근거 없는 말 금지, 특수문자 정리.
 - 키 값은 출력·로그·예외 문구 어디에도 넣지 않는다.
 """
@@ -11,7 +12,8 @@ import re
 from typing import Dict, List, Optional, Sequence, Union
 
 log = logging.getLogger("coach.copy")
-MODEL = "claude-haiku-5-5"
+MODEL = os.environ.get("COACH_COPY_MODEL", "claude-opus-5-5")
+MAX_TOKENS = 16000   # 생각(thinking)이 먼저 토큰을 쓰므로 넉넉히: 1024에서는 답이 중간에 잘려 문장 틀로 떨어졌다
 KEY_NAME = "ANTHROPIC_API_KEY"
 
 NAVER_HEADLINE_MAX = 15
@@ -189,7 +191,7 @@ def make_client():
         return None
     try:
         import anthropic
-        return anthropic.Anthropic(api_key=key, max_retries=1, timeout=30.0)
+        return anthropic.Anthropic(api_key=key, max_retries=1, timeout=60.0)
     except Exception:  # noqa: BLE001
         return None
 
@@ -199,23 +201,43 @@ def _system_prompt(media: str, n: int) -> str:
         spec = (f"제목은 {NAVER_HEADLINE_MAX}자 이하, 설명은 {NAVER_TEXT_MIN}~{NAVER_TEXT_MAX}자. "
                 "네이버 검색 결과에 보이는 광고라 검색한 사람의 질문에 답하는 말투로.")
     else:
-        spec = (f"제목은 {META_HEADLINE_MAX}자 이하, 본문은 {META_TEXT_MAX}자 이하. "
-                "인스타그램·페이스북에서 스치는 사람의 눈길을 끄는 짧은 말투로.")
-    return ("너는 광고를 처음 하는 1인 가게 사장님을 돕는 카피라이터야. 쉬운 한국어로 쓴다.\n"
+        spec = (f"제목(headline)은 {META_HEADLINE_MAX}자 이하, 본문(text)은 60~{META_TEXT_MAX}자. "
+                "인스타그램·페이스북 피드에서 스크롤하다 멈추게 하는 광고다. 본문은 "
+                "① 손님이 공감할 상황이나 질문 한 문장 → ② 이 상품의 장점을 구체적으로 → ③ 부담 없는 행동 권유(예: 프로필 링크에서 보기) 순서로 쓴다. "
+                "제목은 본문을 반복하지 말고 장점 하나를 짧고 또렷하게.")
+    return ("너는 광고를 처음 하는 1인 가게 사장님을 돕는 한국어 광고 카피라이터야. 쉬운 말, 존댓말(해요체)로 쓴다.\n"
             f"{spec}\n"
-            "사장님이 알려 준 장점만 쓰고, 사실이 아닌 말은 지어내지 마. "
-            "'최저가·1위·최고·국내 유일·100%·무조건' 같은 근거 없는 표현, 이모지, 특수문자 남발은 금지.\n"
-            f"서로 다른 문구 {n}개를 JSON 배열로만 답해: "
-            '[{"headline": "...", "text": "..."}]. 다른 설명은 붙이지 마.')
+            "'장점'은 사장님이 직접 고르거나 적은 사실이다. 문구의 내용은 이 장점에서만 가져온다.\n"
+            "'검색어'는 손님이 네이버에서 찾는 말이다. 손님 말투를 맞추는 데만 쓰고, 상품의 사실로 쓰지 않는다 "
+            "(예: 검색어에 '대여'·'할인'·'리퍼'가 있어도 장점에 없으면 '대여 가능'·'할인 중'이라고 쓰지 않는다). "
+            "검색어는 자연스러울 때만 한두 개 넣고, 붙여 쓴 말은 띄어 쓴다(가성비노트북 → 가성비 노트북).\n"
+            "'손님'·'시기'가 있으면 그 손님의 상황에 맞춘다.\n"
+            "가게·브랜드 이름, 가격, 숫자, 후기, 수상처럼 주어지지 않은 사실은 지어내지 마. "
+            "'최저가·1위·최고·국내 유일·100%·무조건' 같은 근거 없는 표현, 이모지, 해시태그, 특수문자 남발은 금지.\n"
+            f"서로 다른 각도의 문구 {n}개를 쓴다 (예: 상황 공감 / 장점 강조 / 선물·시기).")
+
+
+COPY_SCHEMA = {
+    "type": "object",
+    "properties": {"copies": {"type": "array", "items": {
+        "type": "object",
+        "properties": {"headline": {"type": "string"}, "text": {"type": "string"}},
+        "required": ["headline", "text"], "additionalProperties": False}}},
+    "required": ["copies"], "additionalProperties": False,
+}
 
 
 def _parse(text: str) -> List[Copy]:
     """응답 글 → [{headline, text}] (앞뒤 군더더기·코드 블록 허용)."""
-    m = re.search(r"\[.*\]", text or "", flags=re.S)
     try:
-        data = json.loads(m.group(0)) if m else []
+        data = json.loads(text or "")
+        data = data.get("copies", []) if isinstance(data, dict) else data
     except ValueError:
-        return []
+        m = re.search(r"\[.*\]", text or "", flags=re.S)
+        try:
+            data = json.loads(m.group(0)) if m else []
+        except ValueError:
+            return []
     out = []
     for d in data if isinstance(data, list) else []:
         if isinstance(d, dict) and isinstance(d.get("headline"), str) and isinstance(d.get("text"), str):
@@ -224,19 +246,25 @@ def _parse(text: str) -> List[Copy]:
 
 
 def _ask_claude(client, media: str, product: str, strengths: List[str], n: int,
-                segment: Optional[dict] = None) -> List[Copy]:
+                segment: Optional[dict] = None, keywords: Optional[List[str]] = None) -> List[Copy]:
     """Claude에게 문구를 받음. 어떤 실패든 빈 목록 (오류 문구에 키가 섞이지 않게 내용은 버림)."""
     try:
         payload: Dict[str, object] = {"상품": product, "장점": strengths, "개수": n}
+        if keywords:
+            payload["검색어"] = keywords
         if segment and segment.get("label"):   # 낱말만: 손님 무리 이름과 시기. 네이버 숫자는 넣지 않는다
             payload["손님"] = segment["label"]
             if segment.get("peak_month"):
                 payload["시기"] = f"{segment['peak_month']}월"
         resp = client.messages.create(
-            model=MODEL, max_tokens=1024, system=_system_prompt(media, n),
+            model=MODEL, max_tokens=MAX_TOKENS, system=_system_prompt(media, n),
+            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": COPY_SCHEMA}},
             messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
         text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "")
-        return _parse(text)
+        out = _parse(text)
+        if not out:
+            log.warning("claude degraded err=empty stop=%s", getattr(resp, "stop_reason", None))
+        return out
     except Exception as e:  # noqa: BLE001
         log.warning("claude degraded err=%s", type(e).__name__)   # 메시지는 요청 내용이 섞일 수 있어 남기지 않음
         return []
@@ -249,18 +277,21 @@ def _copies(media: str, product: str, strengths: Strengths, n: int, client) -> L
 
 
 def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, client,
-                        segment: Optional[dict] = None):
+                        segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None):
     """→ (문구 목록, Claude가 쓴 문구가 하나라도 들어갔는지)."""
     n = max(int(n), 0)
     if n == 0:
         return [], False
     product = _clean_product(product)
-    pieces = _strength_list(strengths)
+    raw = [strengths] if isinstance(strengths, str) else list(strengths or [])
+    own = _strength_list(raw) if any(str(r or "").strip() for r in raw) else []   # Claude에게: 사장님 장점만
+    kws = [k for k in dict.fromkeys(tidy(k, 0) for k in keywords or []) if k and not has_banned(k)]
+    pieces = _strength_list(raw + kws)                          # 문장 틀: 예전처럼 장점+검색어 (비면 기본 한 마디)
     if client is None:
         client = make_client()
     elif client is False:
         client = None
-    candidates: List[Copy] = _ask_claude(client, media, product, pieces, n, segment) if client else []
+    candidates: List[Copy] = _ask_claude(client, media, product, own, n, segment, kws) if client else []
     templates = _naver_templates(product, pieces) if media == "naver" else _meta_templates(product, pieces)
     seg_tpl = _segment_template(product, pieces[0], segment) if media == "meta" else None
     if seg_tpl:
@@ -284,9 +315,10 @@ def meta_copies(product: str, strengths: Strengths, n: int = 3, client=None,
 
 
 def meta_copies_with_source(product: str, strengths: Strengths, n: int = 3, client=None,
-                            segment: Optional[dict] = None):
-    """meta_copies와 같고, Claude 문구가 쓰였는지도 돌려준다 (화면의 출처 표시용)."""
-    return _copies_with_source("meta", product, strengths, n, client, segment)
+                            segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None):
+    """meta_copies와 같고, Claude 문구가 쓰였는지도 돌려준다 (화면의 출처 표시용).
+    keywords: 손님 검색어 (Claude에게는 장점과 따로 보냄)."""
+    return _copies_with_source("meta", product, strengths, n, client, segment, keywords)
 
 
 def naver_copies(product: str, strengths: Strengths, n: int = 3, client=None) -> List[Copy]:
