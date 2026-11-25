@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-/** 코치가 하는 말 한 덩어리: 작은 캐릭터 + 글. 말풍선 상자 없이 글만 둔다. */
+/** 광고 어시스턴트가 하는 말 한 덩어리: 작은 캐릭터 + 글. 말풍선 상자 없이 글만 둔다. */
 export function Coach({ children }: { children: ReactNode }) {
   return (
     <div className="flex gap-3 items-start">
@@ -44,7 +44,8 @@ export function ErrorLine({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
-/** ▲ 주의 한 줄: 막지는 않지만 알고 넘어가야 하는 것 (v4 알림 모양: ▲ = 주의). */
+/** ▲ 주의 한 줄: 막지는 않지만 알고 넘어가야 하는 것 (v4 알림 모양: ▲ = 주의 전용).
+ *  v4.2: 이유 → 할 일 → [다시 시도] 순서. */
 export function WarnLine({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
     <div role="status" className="flex flex-wrap items-center gap-2 rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">

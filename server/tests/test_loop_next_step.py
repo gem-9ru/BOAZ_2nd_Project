@@ -12,8 +12,9 @@ def test_ovenlog_change_comes_from_the_matrix_and_budget_goes_to_watch():
     assert n["action"] == "한 번 더"
     assert n["change"]["field_id"] == "meta.ad.media"
     assert len(n["summary"]) == 3 and "형식·미디어" in n["summary"][2]
-    per = f"{r['verdict']['min_budget']['per_group']:,}"
-    assert any(per in w["text"] for w in r["matrix"]["watch"])
+    # v4.2: 추가 예산 숫자는 화면 글이 아니라 값으로만 (🔎 안에서 보여 줌)
+    per = r["verdict"]["min_budget"]["per_group"]
+    assert any(w.get("need_per_set") == per for w in r["matrix"]["watch"])
 
 
 def test_run_has_all_blocks_and_one_change():

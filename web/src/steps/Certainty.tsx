@@ -1,11 +1,11 @@
-/** 제안의 확실도: 확실 = 메인 진하게 · 유력 = 메인 연하게 · 보류 = 회색. 색만으로 말하지 않게 모양(●◐○)도. */
-export function CertaintyBadge({ level }: { level: "채택" | "유력" | "보류" }) {
-  const look = level === "채택" ? { cls: "bg-adopt text-on-accent", mark: "●", label: "확실" }
-    : level === "유력" ? { cls: "bg-likely-bg text-likely ring-1 ring-inset ring-likely", mark: "◐", label: "유력" }
-    : { cls: "bg-hold-bg text-hold", mark: "○", label: "보류" };
-  return (
-    <span className={`inline-flex items-center gap-1.5 rounded-badge px-3 py-1 text-body font-bold ${look.cls}`}>
-      <span aria-hidden="true">{look.mark}</span>{look.label}
-    </span>
-  );
+import type { Level } from "../api";
+import { VerdictBadge } from "../ui";
+
+/** 개발 판정(채택·유력·보류) → 사장님 화면 배지 3단어 (v4.2). 근거 탭·개발 문서만 확실/유력/보류를 쓴다. */
+export function CertaintyBadge({ level, better = "B" }: { level: Level; better?: string }) {
+  const word = level === "채택" ? "확실해요" : level === "유력" ? `${better} 쪽이에요` : "아직 몰라요";
+  return <VerdictBadge word={word} />;
 }
+
+/** 근거 탭용 이름 (확실 / 유력 / 보류 그대로). */
+export const DEV_LABEL: Record<Level, string> = { 채택: "확실", 유력: "유력", 보류: "보류" };

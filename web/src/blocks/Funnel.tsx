@@ -5,7 +5,7 @@ import { Card, HowCalculated, pct } from "../ui";
 export function Funnel({ r }: { r: Result }) {
   const f = r.funnel;
   return (
-    <Card id="funnel" title="퍼널: 어디서 빠져나가나">
+    <Card id="funnel" title="단계별로 몇 명이 남았나" summary="보여진 횟수 → 클릭 → 손님(페이지 방문)">
       {f.hint && <p className="text-lead font-semibold">{f.hint}</p>}
       <div className="grid gap-group sm:grid-cols-2">
         {f.arms.map((arm, i) => {
@@ -24,7 +24,7 @@ export function Funnel({ r }: { r: Result }) {
                   </div>
                   {s.per100 && (
                     <p className="text-caption text-soft">
-                      {s.per100} · {pct(s.rate, 1)} ({pct(s.range?.[0])}~{pct(s.range?.[1])})
+                      {s.per100} · {pct(s.rate, 1)} (적게 {pct(s.range?.[0])} ~ 많이 {pct(s.range?.[1])})
                       {s.unknown && <span className="ml-1 rounded-badge bg-hold-bg text-hold px-2">아직 몰라요</span>}
                     </p>
                   )}

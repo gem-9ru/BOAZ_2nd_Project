@@ -99,7 +99,7 @@ export default function CopyStep({ state, dispatch }: Props) {
               <strong className="text-body">{c.headline}</strong>
               <p className="text-body text-soft">{c.primary_text}</p>
               {c.basis && c.basis.length > 0 && <p className="text-small text-soft">근거: {c.basis.join(" · ")}</p>}
-              <button type="button" onClick={() => dispatch({ type: "pickCopy", copy: c, strengths: all })} className="self-start text-caption font-semibold underline">
+              <button type="button" onClick={() => dispatch({ type: "pickCopy", copy: c, ...(hasMods ? { strengths: all } : {}) })} className="self-start text-caption font-semibold underline">
                 이 문구로 할게요 ({i + 1}안)
               </button>
             </li>

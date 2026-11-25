@@ -4,8 +4,8 @@ import { MySettings, type Settings } from "./MySettings";
 
 const PREP = [
   "광고 세트 2개, 하나만 다르게 (예: 노출 위치만)",
-  "세트마다 하루 약 ₩1,350 × 4일 (세트당 약 ₩5,400)",
-  "총예산·연령·지역은 두 세트가 같게",
+  "세트마다 하루 약 1,350원 × 4일 (세트당 총 약 5,400원)",
+  "총예산·연령·지역은 두 세트가 같게, 같은 날 같이 시작",
   "끝나면 '분석 데이터'에서 '일'과 '노출 위치'를 골라 CSV로 내보내기",
 ];
 
@@ -21,26 +21,26 @@ export function Start({ onFile, onExample, busy, error, received, settings, onSe
     <div className="flex flex-col gap-group">
       <header className="flex flex-col gap-3">
         <p className="text-caption font-semibold text-accent-ink">✦ 광고 어시스턴트 · 결과 분석</p>
-        <h1 className="text-hero-sm sm:text-hero font-bold leading-tight">5,000원으로 먼저 돌려 보세요</h1>
-        <p className="text-lead text-soft max-w-[60ch]">그 결과 파일을 올리면 20만 번 계산해 다음에 바꿀 칸 하나와 예상 범위를 알려 드려요.</p>
+        <h1 className="text-hero-sm sm:text-hero font-bold leading-tight">돌려 본 광고 결과를 올려 주세요</h1>
+        <p className="text-lead text-soft max-w-[60ch]">결과 파일과 광고 설정을 올리면 20만 번 계산해 다음에 바꿔 볼 칸 1개와 예상 범위를 알려 드려요.</p>
       </header>
 
-      <Card title="메타 결과 파일 올리기">
+      <Card title="광고 결과 파일 (CSV)" summary="광고 관리자에서 받은 결과 파일을 올려 주세요">
         <label htmlFor="csv"
           onDragOver={(e) => { e.preventDefault(); setOver(true); }}
           onDragLeave={() => setOver(false)}
           onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f && !busy) onFile(f); }}
           className={`flex flex-col items-center justify-center gap-3 rounded-card border-2 border-dashed px-6 py-8 text-center cursor-pointer focus-within:outline-2 focus-within:outline-focus focus-within:outline-offset-2 ${over ? "border-ink bg-sunk" : "border-line bg-bg"}`}>
-          <span className="text-body text-soft">메타 결과 CSV를 여기에 끌어다 놓거나</span>
+          <span className="text-body text-soft">광고 결과 파일(CSV)을 여기에 끌어다 놓거나</span>
           <span className="inline-flex items-center h-button px-5 rounded-button bg-button text-button-fg text-body font-semibold">파일 고르기</span>
-          <input id="csv" type="file" accept=".csv,text/csv" disabled={busy} aria-label="메타 결과 CSV"
+          <input id="csv" type="file" accept=".csv,text/csv" disabled={busy} aria-label="광고 결과 파일 (CSV)"
             aria-describedby={error ? "csv-help csv-error" : "csv-help"} aria-invalid={error ? true : undefined} className="sr-only"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
         </label>
         <ol id="csv-help" className="text-caption text-soft list-decimal pl-5 flex flex-col gap-0.5">
           <li>광고 관리자 → <b>광고 세트</b> 탭에서 비교할 세트 체크</li>
           <li>날짜를 광고를 돌린 기간으로</li>
-          <li><b>분석 데이터</b>에서 <b>일</b>과 <b>노출 위치</b>를 고른 뒤 내보내기(.csv)</li>
+          <li><b>보고서 › 분석 기준</b>에서 <b>일</b>과 <b>노출 위치</b>를 고른 뒤 내보내기(.csv)</li>
         </ol>
         <div className="text-caption text-soft">
           <p className="font-semibold text-ink">꼭 있어야 하는 열</p>
@@ -56,12 +56,11 @@ export function Start({ onFile, onExample, busy, error, received, settings, onSe
       <MySettings received={received} value={settings} onChange={onSettings} />
 
       <div className="grid gap-stack sm:grid-cols-2">
-        <Card title="파일이 아직 없다면">
+        <Card title="파일이 없나요?" summary="예시로 결과 화면을 먼저 볼 수 있어요">
           <p className="text-body text-soft">팀이 직접 돌린 오븐로그 A/B 실측(11/17~20)으로 결과 화면을 먼저 볼 수 있어요. <Grade g="A" /></p>
-          <Button kind="secondary" onClick={onExample} busy={busy}>예시로 보기 (오븐로그 실측)</Button>
+          <Button kind="secondary" onClick={onExample} busy={busy}>오븐로그 예시로 보기</Button>
         </Card>
-        <Card title="아직 광고를 안 돌려 봤다면">
-          <p className="text-body text-soft">비교할 수 있게 작게 한 번 돌리는 법을 알려 드려요.</p>
+        <Card title="아직 광고를 안 돌려 봤다면" summary="5,000원씩 두 세트로 작게 돌리는 법을 알려 드려요">
           <Button kind="secondary" onClick={() => setPrep((v) => !v)}>아직 안 돌려 봤어요</Button>
           {prep && (
             <fieldset className="flex flex-col gap-2">

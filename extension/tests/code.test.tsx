@@ -9,8 +9,8 @@ import { GUIDE } from "../lib/guideList";
 
 const plan: Plan = {
   code: "75R7", action: "한 번 더",
-  change: { field_id: "meta.adset.end_date", label: "종료 날짜", new: "세트당 ₩151,000가 쓰일 때까지 연장", note: "확실히 고르려면 이만큼 더 필요해요" },
-  summary: ["이번에 알게 된 것: B가 나을 확률 79% (유력)", "아직 모르는 것: 도착 수가 적어요", "다음에 바꿀 것: 세트당 ₩151,000까지 더 돌리기"],
+  change: { field_id: "meta.adset.end_date", label: "종료 날짜", new: "세트당 총 151,000원이 쓰일 때까지 더 돌리기", note: "확실히 고르려면 이만큼 더 필요해요" },
+  summary: ["이번에 알게 된 것: B가 나을 확률 79% (B 쪽이에요)", "아직 모르는 것: 도착 수가 적어요", "다음에 바꿀 것: 세트당 총 151,000원까지 더 돌리기"],
   badge: { word: "B 쪽이에요", prob: 0.79 },
 };
 const ok = (b: unknown, status = 200) => Promise.resolve(new Response(JSON.stringify(b), { status }));
@@ -51,13 +51,13 @@ describe("③ 코드 넣기", () => {
 });
 
 describe("③ 다음에 할 일 (코드로 받은 것)", () => {
-  it("shows the one change (v4: 3줄 요약 대신 변경안 카드 + 챗봇), and 바꾸러 가기 starts the edit guide on that field", () => {
+  it("shows the one change (v4: 3줄 요약 대신 변경안 카드 + 챗봇), and 그 칸으로 이동 starts the edit guide on that field", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
     expect(screen.getByText(/종료 날짜/)).toBeTruthy();
-    expect(screen.getByText(/세트당 ₩151,000가 쓰일 때까지 연장/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "바꾸러 가기" }));
+    expect(screen.getByText(/세트당 총 151,000원이 쓰일 때까지 더 돌리기/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "그 칸으로 이동" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
   });
 

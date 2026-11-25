@@ -1,29 +1,42 @@
 {
+ "settings": {},
  "alerts": [
   {
    "level": "warn",
    "mark": "▲",
    "kind": "no_delivery",
-   "text": "11/17은 두 세트 모두 광고가 안 나갔어요. 이 날은 비교에서 빼요.",
-   "todo": "첫날은 심사·학습으로 늦게 나갈 수 있어요. 다음엔 시작 시간에 여유를 두세요.",
+   "text": "11/17 두 세트 모두 하루 종일 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산",
+   "todo": "첫날은 심사로 늦게 나갈 수 있어요. 다음엔 시작 시간을 하루 여유 있게 잡아 주세요. 이 날은 비교에서 뺐어요.",
    "screen": "AN-01",
-   "date": "2026-11-17"
+   "date": "2026-11-17",
+   "later": "11/17은 광고가 안 나가서 비교에서 뺐어요"
   },
   {
    "level": "warn",
    "mark": "▲",
    "kind": "small_sample",
-   "text": "링크 클릭이 적어요 (A_자동노출위치 13번, B_피드만노출(AN제외) 17번). 판정은 최대 '유력'까지만 해요.",
-   "todo": "세트마다 클릭이 30번 넘게 모이도록 기간이나 예산을 늘려 보세요.",
+   "text": "클릭이 적어서 아직 몰라요 (A 13번 · B 17번) · 클릭이 30번 넘게 모이면 알 수 있어요.",
+   "todo": "그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요. 세트마다 클릭이 30번 넘게 모일 때까지 그대로 두세요.",
    "screen": "AN-02"
   },
   {
    "level": "info",
    "mark": "●",
    "kind": "meta_vs_measured",
-   "text": "메타는 자동 노출 위치를 권하지만, 이번 실측은 수동이 CPM 15% 저렴했어요.",
-   "todo": "실측을 우선해요. 메타 추천은 참고로만 봐요.",
-   "screen": "AN-03"
+   "text": "메타는 '노출 위치 자동'을 권하지만, 우리가 돌려 본 결과에선 '직접 고르기(수동)'가 광고비가 15% 쌌어요.",
+   "todo": "지금은 수동을 유지하세요. 메타 추천은 참고로만 봐요.",
+   "screen": "AN-03",
+   "saving": 0.15025380710659875
+  },
+  {
+   "level": "info",
+   "mark": "●",
+   "kind": "untried_budget",
+   "text": "세트당 5,308원까지만 써 봤어요. 그 이상은 가설이라 범위가 넓어요.",
+   "todo": "써 본 적 없는 금액은 점선으로 보여 드려요.",
+   "screen": "AN-05",
+   "spent": 5308.0,
+   "shown_from": "AN-05"
   }
  ],
  "blocked": false,
@@ -40,17 +53,17 @@
    },
    {
     "row": "1",
-    "stage": "노출 단가",
-    "signal": "A_자동노출위치의 CPM이 15% 비쌈",
+    "stage": "광고가 보이는 값",
+    "signal": "B(수동)가 15% 싸요 · 확실해요",
     "status": "ok",
     "field_id": "meta.adset.placements",
     "path": "광고 세트 › 노출 위치",
-    "detail": "피드만노출(AN제외) 쪽을 유지하면 해결돼요"
+    "detail": "B(수동) 쪽을 유지하면 돼요"
    },
    {
     "row": "2",
-    "stage": "클릭",
-    "signal": "클릭률 1.6% 정상",
+    "stage": "누르는 정도",
+    "signal": "1,000명이 보면 약 16명이 눌러요 → 괜찮아요",
     "status": "ok",
     "field_id": null,
     "path": "",
@@ -58,8 +71,8 @@
    },
    {
     "row": "2b",
-    "stage": "클릭 (피로)",
-    "signal": "기간 4일 · 도달 열 없음 → 해당 없음",
+    "stage": "누르는 정도 (같은 소재 피로)",
+    "signal": "기간 4일 · 본 사람 수(도달) 열 없음 → 해당 없음",
     "status": "skip",
     "field_id": null,
     "path": "",
@@ -67,8 +80,8 @@
    },
    {
     "row": "3",
-    "stage": "도착",
-    "signal": "누른 사람 중 80% 도착 (정상)",
+    "stage": "페이지 도착",
+    "signal": "누른 100명 중 80명이 들어왔어요 → 괜찮아요",
     "status": "ok",
     "field_id": null,
     "path": "",
@@ -77,7 +90,7 @@
    {
     "row": "4",
     "stage": "행동",
-    "signal": "행동(구매·문의) 열이 없거나 표본이 적어요 → 보류",
+    "signal": "구매·알림 신청 같은 행동 숫자가 파일에 없거나 적어요 → 아직 몰라요",
     "status": "skip",
     "field_id": null,
     "path": "",
@@ -86,7 +99,7 @@
    {
     "row": "5",
     "stage": "(전 단계)",
-    "signal": "인스타그램 릴스에 지출 72%",
+    "signal": "인스타 릴스에 돈의 72%",
     "status": "found",
     "field_id": "meta.ad.media",
     "path": "광고 › 형식·미디어",
@@ -95,7 +108,7 @@
    {
     "row": "6",
     "stage": "(구조)",
-    "signal": "세트당 주 26회 < 50회 → 학습 완료 어려움",
+    "signal": "세트당 일주일에 클릭 약 26번 < 50번 → 메타가 배우기엔 적어요",
     "status": "watch",
     "field_id": "meta.adset.performance_goal",
     "path": "광고 세트 › 성과 목표",
@@ -108,47 +121,65 @@
    "path": "광고 › 형식·미디어",
    "label": "형식·미디어",
    "now": null,
-   "new": "릴스용 세로(9:16) 소재 추가",
-   "reason": "돈의 72%가 인스타그램 릴스에 쓰였어요. 그 자리에 맞는 모양의 소재가 있으면 더 잘 보여요.",
+   "new": "세로(9:16) 소재를 넣은 세트를 하나 더 만들어 보세요",
+   "new_short": "+ 세로(9:16) 1개",
+   "reason": "돈의 72%가 인스타 릴스(세로 화면)에서 나갔어요. 그 자리에 꽉 차는 세로 소재로 비교해 봐요.",
+   "tag": "테스트 제안",
+   "tested": false,
+   "per_set": 5000,
+   "test": "지금 세트와 5,000원씩 같이 돌려서 직접 비교해요.",
+   "unknown": "세로 소재가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
    "certainty": {
+    "level": "보류",
+    "label": "아직 몰라요",
+    "why": "돌려 본 적 없는 값이라 이번 테스트로 확인해요"
+   },
+   "rule": {
+    "row": "5",
     "level": "유력",
-    "label": "유력",
     "why": "실측 + 진단 규칙 + 메타 권장"
    },
    "grade": "A",
    "meta_says": "메타 Opportunity Score도 릴스에는 9:16 소재를 권해요.",
    "checklist": [
-    "첫날은 심사·학습으로 늦게 나갈 수 있어요. 다음엔 시작 시간에 여유를 두세요.",
-    "세트마다 클릭이 30번 넘게 모이도록 기간이나 예산을 늘려 보세요.",
-    "다음 테스트는 이 칸 1개만 바꾸고, 나머지는 그대로 둬요."
+    "시작 시간을 하루 여유 있게",
+    "클릭이 30번 넘게 모일 때까지 그대로 두기",
+    "바꾸는 칸은 형식·미디어 1개만",
+    "두 세트는 같은 날 같이 시작"
    ]
   },
   "keep": [
    {
     "field_id": "meta.adset.placements",
     "path": "광고 세트 › 노출 위치",
-    "value": "수동 · 피드만노출(AN제외)",
-    "reason": "같은 돈으로 더 많이 보여 줬어요 (CPM 15% 저렴, 확실)"
+    "value": "직접 고르기(수동), Audience Network 제외",
+    "reason": "↓ 광고비 15% 싸요 · 확실해요",
+    "saving": 0.15025380710659875,
+    "arm": "B_피드만노출(AN제외)"
    }
   ],
   "watch": [
    {
-    "field_id": "meta.adset.end_date",
-    "path": "광고 세트 › 시작·종료 날짜",
-    "text": "첫날은 심사·학습으로 늦게 나갈 수 있어요. 다음엔 시작 시간에 여유를 두세요."
-   },
-   {
     "field_id": "meta.adset.daily_budget",
     "path": "광고 세트 › 예산",
-    "text": "기간·예산: 지금 판정은 유력이에요. 세트당 ₩151,000쯤 쓰면 확실히 고를 수 있어요."
+    "title": "기간 · 예산",
+    "text": "클릭이 30번이 안 모여서 아직 몰라요",
+    "need_per_set": 151000
+   },
+   {
+    "field_id": "meta.adset.end_date",
+    "path": "광고 세트 › 시작·종료 날짜",
+    "title": "시작 시간",
+    "text": "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게"
    }
   ],
   "dont": [
-   "여러 칸을 한 번에 바꾸지 않기 — 무엇 때문에 달라졌는지 알 수 없게 돼요.",
-   "평균만 보고 노출 위치·연령을 끄지 않기 — 메타는 다음 1건의 비용으로 돈을 나눠요(Breakdown effect). 끄고 싶으면 다음 5,000원 테스트로 확인해요.",
-   "자주 고치지 않기 — 큰 수정은 학습을 처음부터 다시 시작시켜요."
+   "여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요.",
+   "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 손님 1명에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요.",
+   "자주 고치기 — 큰 수정은 메타가 처음부터 다시 배우게 해요."
   ],
-  "tested_field": "meta.adset.placements"
+  "tested_field": "meta.adset.placements",
+  "settings": []
  },
  "backtest": {
   "ok": true,
@@ -198,6 +229,10 @@
   "note": "하루치로 1번만 확인한 결과라 표본이 작아요. 기간이 길수록 더 믿을 만해져요."
  },
  "check": {
+  "period": {
+   "first": "2026-11-17",
+   "last": "2026-11-20"
+  },
   "ok": true,
   "read": {
    "days": 4,
@@ -229,7 +264,8 @@
    {
     "kind": "no_delivery",
     "date": "2026-11-17",
-    "text": "11/17은 두 세트 모두 광고가 안 나갔어요. 이 날은 비교에서 빼요."
+    "text": "11/17 두 세트 모두 하루 종일 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산",
+    "later": "11/17은 광고가 안 나가서 비교에서 뺐어요"
    }
   ],
   "safety": [
@@ -337,6 +373,118 @@
     "label": "페이스북 스토리",
     "spend": 2.0,
     "share": 0.00018839487565938207,
+    "impressions": 1.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   }
+  ],
+  "placements_by_set": [
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram instagram_reels",
+    "label": "인스타그램 릴스",
+    "spend": 3884.0,
+    "share": 0.73172569706104,
+    "impressions": 561.0,
+    "link_clicks": 10.0,
+    "ctr": 0.017825311942959002
+   },
+   {
+    "adset": "B_피드만노출(AN제외)",
+    "placement": "Instagram instagram_reels",
+    "label": "인스타그램 릴스",
+    "spend": 3712.0,
+    "share": 0.6993217784476262,
+    "impressions": 618.0,
+    "link_clicks": 12.0,
+    "ctr": 0.019417475728155338
+   },
+   {
+    "adset": "B_피드만노출(AN제외)",
+    "placement": "Facebook feed",
+    "label": "페이스북 피드",
+    "spend": 865.0,
+    "share": 0.1629615674453655,
+    "impressions": 303.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram feed",
+    "label": "인스타그램 피드",
+    "spend": 629.0,
+    "share": 0.11850037678975132,
+    "impressions": 57.0,
+    "link_clicks": 1.0,
+    "ctr": 0.017543859649122806
+   },
+   {
+    "adset": "B_피드만노출(AN제외)",
+    "placement": "Instagram feed",
+    "label": "인스타그램 피드",
+    "spend": 609.0,
+    "share": 0.11473247927656367,
+    "impressions": 55.0,
+    "link_clicks": 3.0,
+    "ctr": 0.05454545454545454
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Facebook facebook_reels",
+    "label": "페이스북 릴스",
+    "spend": 304.0,
+    "share": 0.05727204220045215,
+    "impressions": 117.0,
+    "link_clicks": 2.0,
+    "ctr": 0.017094017094017096
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Facebook feed",
+    "label": "페이스북 피드",
+    "spend": 288.0,
+    "share": 0.05425772418990203,
+    "impressions": 84.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram instagram_stories",
+    "label": "인스타그램 스토리",
+    "spend": 195.0,
+    "share": 0.0367370007535795,
+    "impressions": 14.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   },
+   {
+    "adset": "B_피드만노출(AN제외)",
+    "placement": "Instagram instagram_stories",
+    "label": "인스타그램 스토리",
+    "spend": 122.0,
+    "share": 0.022984174830444612,
+    "impressions": 9.0,
+    "link_clicks": 2.0,
+    "ctr": 0.2222222222222222
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Facebook instream_video",
+    "label": "페이스북 인스트림 동영상",
+    "spend": 6.0,
+    "share": 0.0011303692539562924,
+    "impressions": 3.0,
+    "link_clicks": 0.0,
+    "ctr": 0.0
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Facebook facebook_stories",
+    "label": "페이스북 스토리",
+    "spend": 2.0,
+    "share": 0.00037678975131876413,
     "impressions": 1.0,
     "link_clicks": 0.0,
     "ctr": 0.0
@@ -468,6 +616,140 @@
    "reference_only": true
   }
  ],
+ "placements_by_set": [
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram instagram_reels",
+   "label": "인스타그램 릴스",
+   "spend": 3884.0,
+   "share": 0.73172569706104,
+   "impressions": 561.0,
+   "link_clicks": 10.0,
+   "ctr": 0.017825311942959002,
+   "ctr_adjusted": 0.017668817941570325,
+   "reference_only": false
+  },
+  {
+   "adset": "B_피드만노출(AN제외)",
+   "placement": "Instagram instagram_reels",
+   "label": "인스타그램 릴스",
+   "spend": 3712.0,
+   "share": 0.6993217784476262,
+   "impressions": 618.0,
+   "link_clicks": 12.0,
+   "ctr": 0.019417475728155338,
+   "ctr_adjusted": 0.01910578280859806,
+   "reference_only": false
+  },
+  {
+   "adset": "B_피드만노출(AN제외)",
+   "placement": "Facebook feed",
+   "label": "페이스북 피드",
+   "spend": 865.0,
+   "share": 0.1629615674453655,
+   "impressions": 303.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.003195139325401487,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram feed",
+   "label": "인스타그램 피드",
+   "spend": 629.0,
+   "share": 0.11850037678975132,
+   "impressions": 57.0,
+   "link_clicks": 1.0,
+   "ctr": 0.017543859649122806,
+   "ctr_adjusted": 0.016938441239788365,
+   "reference_only": true
+  },
+  {
+   "adset": "B_피드만노출(AN제외)",
+   "placement": "Instagram feed",
+   "label": "인스타그램 피드",
+   "spend": 609.0,
+   "share": 0.11473247927656367,
+   "impressions": 55.0,
+   "link_clicks": 3.0,
+   "ctr": 0.05454545454545454,
+   "ctr_adjusted": 0.03283375154913086,
+   "reference_only": true
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Facebook facebook_reels",
+   "label": "페이스북 릴스",
+   "spend": 304.0,
+   "share": 0.05727204220045215,
+   "impressions": 117.0,
+   "link_clicks": 2.0,
+   "ctr": 0.017094017094017096,
+   "ctr_adjusted": 0.016852597144335242,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Facebook feed",
+   "label": "페이스북 피드",
+   "spend": 288.0,
+   "share": 0.05425772418990203,
+   "impressions": 84.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.00765334473023647,
+   "reference_only": true
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram instagram_stories",
+   "label": "인스타그램 스토리",
+   "spend": 195.0,
+   "share": 0.0367370007535795,
+   "impressions": 14.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.013814428702517517,
+   "reference_only": true
+  },
+  {
+   "adset": "B_피드만노출(AN제외)",
+   "placement": "Instagram instagram_stories",
+   "label": "인스타그램 스토리",
+   "spend": 122.0,
+   "share": 0.022984174830444612,
+   "impressions": 9.0,
+   "link_clicks": 2.0,
+   "ctr": 0.2222222222222222,
+   "ctr_adjusted": 0.039061016857903634,
+   "reference_only": true
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Facebook instream_video",
+   "label": "페이스북 인스트림 동영상",
+   "spend": 6.0,
+   "share": 0.0011303692539562924,
+   "impressions": 3.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.01581508258667851,
+   "reference_only": true
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Facebook facebook_stories",
+   "label": "페이스북 스토리",
+   "spend": 2.0,
+   "share": 0.00037678975131876413,
+   "impressions": 1.0,
+   "link_clicks": 0.0,
+   "ctr": 0.0,
+   "ctr_adjusted": 0.016242780082082776,
+   "reference_only": true
+  }
+ ],
  "funnel": {
   "arms": [
    {
@@ -475,24 +757,24 @@
     "stages": [
      {
       "key": "impressions",
-      "label": "본 사람 (노출)",
+      "label": "보여진 횟수",
       "count": 837.0
      },
      {
       "key": "link_clicks",
-      "label": "누른 사람 (링크 클릭)",
+      "label": "클릭",
       "count": 13.0,
       "rate": 0.015531660692951015,
       "range": [
        0.009171285655418143,
        0.026393294171776792
       ],
-      "per100": "100명이 보면 약 2명이 눌렀어요",
+      "per100": "1,000명이 보면 약 16명이 눌렀어요",
       "unknown": false
      },
      {
       "key": "landing_page_views",
-      "label": "들어온 사람 (랜딩 페이지 도착)",
+      "label": "손님 (페이지 방문)",
       "count": 10.0,
       "rate": 0.7692307692307693,
       "range": [
@@ -509,24 +791,24 @@
     "stages": [
      {
       "key": "impressions",
-      "label": "본 사람 (노출)",
+      "label": "보여진 횟수",
       "count": 985.0
      },
      {
       "key": "link_clicks",
-      "label": "누른 사람 (링크 클릭)",
+      "label": "클릭",
       "count": 17.0,
       "rate": 0.017258883248730966,
       "range": [
        0.010878990497039174,
        0.02745422436940968
       ],
-      "per100": "100명이 보면 약 2명이 눌렀어요",
+      "per100": "1,000명이 보면 약 17명이 눌렀어요",
       "unknown": false
      },
      {
       "key": "landing_page_views",
-      "label": "들어온 사람 (랜딩 페이지 도착)",
+      "label": "손님 (페이지 방문)",
       "count": 14.0,
       "rate": 0.8235294117647058,
       "range": [
@@ -547,7 +829,7 @@
   "metrics": [
    {
     "key": "visits_per_1000won",
-    "label": "1,000원당 도착",
+    "label": "같은 돈으로 온 손님",
     "higher_is_better": true,
     "prob_b_better": 0.786715,
     "a_interval": [
@@ -564,7 +846,7 @@
    },
    {
     "key": "cpm",
-    "label": "1,000회 노출당 비용",
+    "label": "광고 1,000번 보여주는 데 드는 돈 (CPM)",
     "higher_is_better": false,
     "prob_b_better": 0.999735,
     "a_interval": [
@@ -581,7 +863,7 @@
    },
    {
     "key": "cpc",
-    "label": "링크 클릭당 비용",
+    "label": "클릭 1번에 드는 돈 (CPC)",
     "higher_is_better": false,
     "prob_b_better": 0.76227,
     "a_interval": [
@@ -598,7 +880,7 @@
    },
    {
     "key": "ctr",
-    "label": "링크 클릭률",
+    "label": "본 사람 중 누른 비율 (CTR)",
     "higher_is_better": true,
     "prob_b_better": 0.60462,
     "a_interval": [
@@ -616,7 +898,7 @@
   ],
   "badge": {
    "metric": "visits_per_1000won",
-   "label": "1,000원당 도착",
+   "label": "손님 1명당 비용",
    "better": "B",
    "prob": 0.786715,
    "level": "유력",
@@ -662,26 +944,38 @@
    "path": "광고 › 형식·미디어",
    "label": "형식·미디어",
    "now": null,
-   "new": "릴스용 세로(9:16) 소재 추가",
-   "reason": "돈의 72%가 인스타그램 릴스에 쓰였어요. 그 자리에 맞는 모양의 소재가 있으면 더 잘 보여요.",
+   "new": "세로(9:16) 소재를 넣은 세트를 하나 더 만들어 보세요",
+   "new_short": "+ 세로(9:16) 1개",
+   "reason": "돈의 72%가 인스타 릴스(세로 화면)에서 나갔어요. 그 자리에 꽉 차는 세로 소재로 비교해 봐요.",
+   "tag": "테스트 제안",
+   "tested": false,
+   "per_set": 5000,
+   "test": "지금 세트와 5,000원씩 같이 돌려서 직접 비교해요.",
+   "unknown": "세로 소재가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
    "certainty": {
+    "level": "보류",
+    "label": "아직 몰라요",
+    "why": "돌려 본 적 없는 값이라 이번 테스트로 확인해요"
+   },
+   "rule": {
+    "row": "5",
     "level": "유력",
-    "label": "유력",
     "why": "실측 + 진단 규칙 + 메타 권장"
    },
    "grade": "A",
    "meta_says": "메타 Opportunity Score도 릴스에는 9:16 소재를 권해요.",
    "checklist": [
-    "첫날은 심사·학습으로 늦게 나갈 수 있어요. 다음엔 시작 시간에 여유를 두세요.",
-    "세트마다 클릭이 30번 넘게 모이도록 기간이나 예산을 늘려 보세요.",
-    "다음 테스트는 이 칸 1개만 바꾸고, 나머지는 그대로 둬요."
+    "시작 시간을 하루 여유 있게",
+    "클릭이 30번 넘게 모일 때까지 그대로 두기",
+    "바꾸는 칸은 형식·미디어 1개만",
+    "두 세트는 같은 날 같이 시작"
    ],
-   "note": "돈의 72%가 인스타그램 릴스에 쓰였어요. 그 자리에 맞는 모양의 소재가 있으면 더 잘 보여요."
+   "note": "돈의 72%가 인스타 릴스(세로 화면)에서 나갔어요. 그 자리에 꽉 차는 세로 소재로 비교해 봐요."
   },
   "summary": [
-   "이번에 알게 된 것: B_피드만노출(AN제외)가 나을 확률 79% (유력)",
+   "이번에 알게 된 것: B_피드만노출(AN제외)가 나을 확률 79% (B 쪽이에요)",
    "아직 모르는 것: 단정하기엔 도착 수가 적어요",
-   "다음에 바꿀 것: 광고 › 형식·미디어 → 릴스용 세로(9:16) 소재 추가"
+   "다음에 테스트할 것: 광고 › 형식·미디어 → + 세로(9:16) 1개"
   ]
  },
  "code": "AB12"

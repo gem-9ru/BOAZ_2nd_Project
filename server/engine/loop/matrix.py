@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from ..specs import all_fields, fields as _fields
 from ..specs import loop as _loop
+from .words import arm_short, per_people, won
 
 PATH = {
     "meta.campaign.objective": "캠페인 › 목표",
@@ -23,7 +24,10 @@ PATH = {
     "meta.creative.cta": "광고 › 버튼(행동 유도)",
     "meta.ad.website_url": "광고 › 웹사이트 URL",
 }
-LABEL_OF = {"채택": "확실", "유력": "유력", "보류": "보류"}
+# 사장님 화면 판정 3단어 (근거 탭·개발 문서의 level 값은 채택·유력·보류 그대로)
+LABEL_OF = {"채택": "확실해요", "유력": "쪽이에요", "보류": "아직 몰라요"}
+# AN-03 상태 배지 (v4.2: 변경/검토/유지 → 테스트/다시 보기/그대로)
+TEST, RECHECK, SAME = "테스트", "다시 보기", "그대로"
 
 _NAME_HINTS = [
     (("노출위치", "노출 위치", "AN제외", "AN 제외", "피드만", "릴스만", "어드밴티지"), "meta.adset.placements"),
@@ -50,17 +54,44 @@ def _suffix(name: str) -> str:
 def _value(field: Optional[str], arm_name: str) -> str:
     s = _suffix(arm_name)
     if field == "meta.adset.placements":
-        return "자동 (어드밴티지+)" if "자동" in s else f"수동 · {s}"
+        if "자동" in s:
+            return "자동 (Advantage+)"
+        return "직접 고르기(수동)" + (", Audience Network 제외" if any(w in s for w in ("AN제외", "AN 제외")) else "")
     return s
 
 
-def _certainty(level: str, why: str) -> Dict:
-    return {"level": level, "label": LABEL_OF[level], "why": why}
+def _certainty(level: str, why: str, better: str = "B") -> Dict:
+    label = f"{better} 쪽이에요" if level == "유력" else LABEL_OF[level]
+    return {"level": level, "label": label, "why": why}
 
 
 def _row(row: str, stage: str, signal: str, status: str, field: Optional[str] = None, detail: str = "") -> Dict:
     return {"row": row, "stage": stage, "signal": signal, "status": status, "field_id": field,
             "path": PATH.get(field or "", ""), "detail": detail}
+
+
+def _has_vertical(settings: Dict) -> Optional[bool]:
+    """내 광고 설정에 세로 소재가 있는지 (모르면 None)."""
+    vals = [str(v) for k, v in settings.items() if k.startswith(("meta.ad.media", "meta.ad.format"))]
+    if not vals:
+        return None
+    return any(w in " ".join(vals) for w in ("세로", "9:16", "릴스", "동영상", "영상"))
+
+
+def _checklist(alerts: List[Dict], label: str) -> List[str]:
+    """남은 주의 알림 → 할 일 + '칸 1개만' + '같은 날 같이 시작' (v4.2 AN-06 · EX-03, ALT 번호는 숨김)."""
+    cfg = _loop()
+    words = cfg.get("checklist", {})
+    out: List[str] = []
+    for a in alerts:
+        t = words.get(a["kind"]) if a["level"] == "warn" else None
+        if t:
+            t = t.format(min_clicks=cfg["alerts"]["min_clicks"], label=label)
+            if t not in out:
+                out.append(t)
+    out.append(words.get("one_field", "바꾸는 칸은 {label} 1개만").format(label=label))
+    out.append(words.get("same_day", "두 세트는 같은 날 같이 시작"))
+    return out
 
 
 def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict], settings: Optional[Dict] = None) -> Dict:
@@ -80,102 +111,122 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     # 0 게재
     if "underspent" in kinds or (days and len(no_delivery) / days >= 0.5):
         rows.append(_row("0", "게재", "광고가 안 나간 날이 많거나 예산을 반도 못 썼어요", "blocked", "meta.adset.daily_budget"))
-        proposals["0"] = {"field_id": "meta.adset.daily_budget", "new": "총예산을 하루 최소 × 기간 이상으로, 타깃이 좁으면 넓히기",
-                          "reason": "광고가 충분히 나가지 않아 다른 숫자를 판단할 수 없어요.", "level": "유력", "grade": "A"}
+        proposals["0"] = {"field_id": "meta.adset.daily_budget", "new": "총예산을 '하루 최소 × 기간'보다 넉넉하게, 타깃이 좁으면 넓히기",
+                          "short": "총예산 넉넉하게",
+                          "reason": "광고가 충분히 나가지 않아서 다른 숫자를 판단할 수 없어요.", "level": "유력", "grade": "A"}
     elif no_delivery:
         rows.append(_row("0", "게재", f"광고가 안 나간 날 {len(no_delivery)}일", "watch", "meta.adset.end_date"))
-        watch.append({"field_id": "meta.adset.end_date", "path": PATH["meta.adset.end_date"],
-                      "text": "첫날은 심사·학습으로 늦게 나갈 수 있어요. 다음엔 시작 시간에 여유를 두세요."})
+        watch.append({"field_id": "meta.adset.end_date", "path": PATH["meta.adset.end_date"], "title": "시작 시간",
+                      "text": "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게"})
     else:
         rows.append(_row("0", "게재", "매일 광고가 나갔어요", "ok"))
 
-    # 1 노출 단가 (CPM)
+    # 1 광고가 보이는 값 (CPM)
     cpm = next((m for m in (verdict or {}).get("metrics", []) if m["key"] == "cpm"), None)
     if cpm and (cpm["word"] == "확실해요" or max(cpm["prob_b_better"], 1 - cpm["prob_b_better"]) >= 0.9):
-        cheap = arms[1] if cpm["prob_b_better"] >= 0.5 else arms[0]
-        dear = arms[0] if cheap is arms[1] else arms[1]
+        ci = 1 if cpm["prob_b_better"] >= 0.5 else 0
+        cheap, dear = arms[ci], arms[1 - ci]
         pct = 1 - cheap["cpm"] / dear["cpm"]
-        rows.append(_row("1", "노출 단가", f"{dear['name']}의 CPM이 {pct:.0%} 비쌈", "ok", field,
-                         f"{_suffix(cheap['name'])} 쪽을 유지하면 해결돼요"))
+        rows.append(_row("1", "광고가 보이는 값", f"{arm_short(cheap['name'], ci)}가 {pct:.0%} 싸요 · 확실해요", "ok", field,
+                         f"{arm_short(cheap['name'], ci)} 쪽을 유지하면 돼요"))
         if field:
             keep.append({"field_id": field, "path": PATH.get(field, field), "value": _value(field, cheap["name"]),
-                         "reason": f"같은 돈으로 더 많이 보여 줬어요 (CPM {pct:.0%} 저렴, 확실)"})
+                         "reason": f"↓ 광고비 {pct:.0%} 싸요 · 확실해요", "saving": pct, "arm": cheap["name"]})
     elif len(arms) == 1 and arms[0].get("cpm") and arms[0]["cpm"] > cfg["cpm_high"]:
-        rows.append(_row("1", "노출 단가", f"CPM ₩{arms[0]['cpm']:,.0f}이 기준보다 높아요", "blocked", "meta.adset.placements"))
-        proposals["1"] = {"field_id": "meta.adset.placements", "new": "노출 위치 직접 고르기 (피드·릴스), 연령 '더 제한하기'로 고정",
-                          "reason": "노출 단가가 높아 같은 돈으로 적게 보여 줘요.", "level": "유력", "grade": "D"}
+        rows.append(_row("1", "광고가 보이는 값", f"광고 1,000번 보여주는 데 {won(arms[0]['cpm'])} 들어서 기준보다 비싸요", "blocked", "meta.adset.placements"))
+        proposals["1"] = {"field_id": "meta.adset.placements", "new": "노출 위치 직접 고르기(수동: 피드·릴스), 연령 '더 제한하기'로 고정",
+                          "short": "노출 위치 직접 고르기(수동)",
+                          "reason": "광고를 보여주는 값이 비싸서 같은 돈으로 적게 보여요.", "level": "유력", "grade": "D"}
     else:
-        rows.append(_row("1", "노출 단가", "CPM 차이가 뚜렷하지 않아요", "ok"))
+        rows.append(_row("1", "광고가 보이는 값", "두 세트 광고비 차이가 뚜렷하지 않아요", "ok"))
 
-    # 2 클릭
+    # 2 본 사람이 누르는 정도
     ctr = tot["link_clicks"] / tot["impressions"] if tot["impressions"] else None
     if ctr is not None and ctr < cfg["ctr_low"]:
-        rows.append(_row("2", "클릭", f"클릭률 {ctr:.1%}가 기준 {cfg['ctr_low']:.0%}보다 낮아요", "blocked", "meta.ad.media"))
-        proposals["2"] = {"field_id": "meta.ad.media", "new": "소재 바꾸기 (세로형 추가, 첫 장면에 상품)",
+        rows.append(_row("2", "누르는 정도", f"1,000명이 보면 {per_people(ctr)}이 눌러요 · 기준({per_people(cfg['ctr_low'])})보다 적어요", "blocked", "meta.ad.media"))
+        proposals["2"] = {"field_id": "meta.ad.media", "new": "소재 바꾸기 (세로형 추가, 첫 장면에 상품)", "short": "+ 새 소재 1개",
                           "reason": "보는 사람은 많은데 누르는 사람이 적어요. 소재·문구가 눈길을 못 끌어요.", "level": "유력", "grade": "A"}
     else:
-        rows.append(_row("2", "클릭", f"클릭률 {ctr:.1%} 정상" if ctr is not None else "클릭 자료 없음", "ok" if ctr is not None else "skip"))
+        rows.append(_row("2", "누르는 정도", f"1,000명이 보면 {per_people(ctr)}이 눌러요 → 괜찮아요" if ctr is not None else "클릭 자료가 없어요",
+                         "ok" if ctr is not None else "skip"))
 
     # 2b 소재 피로
     if days < cfg["fatigue_days"] or "reach" not in check.get("columns", []):
-        rows.append(_row("2b", "클릭 (피로)", f"기간 {days}일 · 도달 열 없음 → 해당 없음", "skip"))
+        rows.append(_row("2b", "누르는 정도 (같은 소재 피로)", f"기간 {days}일 · 본 사람 수(도달) 열 없음 → 해당 없음", "skip"))
     else:
-        rows.append(_row("2b", "클릭 (피로)", "빈도·클릭률 변화 정상", "ok"))
+        rows.append(_row("2b", "누르는 정도 (같은 소재 피로)", "같은 사람에게 너무 자주 보이지 않았어요", "ok"))
 
-    # 3 도착
+    # 3 누른 뒤 페이지에 들어오는 정도
     vr = tot["landing_page_views"] / tot["link_clicks"] if tot["link_clicks"] else None
     if vr is not None and tot["link_clicks"] >= 10 and vr < cfg["visit_rate_min"]:
-        rows.append(_row("3", "도착", f"누른 사람 중 {vr:.0%}만 도착", "blocked", "meta.ad.website_url"))
-        proposals["3"] = {"field_id": "meta.ad.website_url", "new": "페이지 속도·주소 점검, Audience Network 빼기",
+        rows.append(_row("3", "페이지 도착", f"누른 100명 중 {vr * 100:.0f}명만 페이지에 들어왔어요", "blocked", "meta.ad.website_url"))
+        proposals["3"] = {"field_id": "meta.ad.website_url", "new": "페이지 속도·주소 점검, Audience Network 빼기", "short": "주소·속도 점검",
                           "reason": "누르고도 페이지에 못 들어온 사람이 많아요.", "level": "유력", "grade": "A"}
     else:
-        rows.append(_row("3", "도착", f"누른 사람 중 {vr:.0%} 도착 (정상)" if vr is not None else "도착 자료 없음", "ok" if vr is not None else "skip"))
+        rows.append(_row("3", "페이지 도착", f"누른 100명 중 {vr * 100:.0f}명이 들어왔어요 → 괜찮아요" if vr is not None else "도착 자료가 없어요",
+                         "ok" if vr is not None else "skip"))
 
-    # 4 행동 (구매·문의 열이 있을 때만)
-    rows.append(_row("4", "행동", "행동(구매·문의) 열이 없거나 표본이 적어요 → 보류", "skip"))
+    # 4 들어온 뒤 행동 (구매·알림 신청 열이 있을 때만)
+    rows.append(_row("4", "행동", "구매·알림 신청 같은 행동 숫자가 파일에 없거나 적어요 → 아직 몰라요", "skip"))
 
-    # 5 노출 위치 집중
+    # 5 노출 위치 집중 → 그 자리에 맞는 소재 (돌려 본 적 없는 선택지라 '테스트 제안')
     places = summary.get("placements") or []
     top = max(places, key=lambda p: p["share"]) if places else None
     if top and top["share"] >= cfg["placement_share"]:
         vertical = any(w in top["label"] for w in ("릴스", "스토리"))
-        new = f"{top['label'].split()[-1]}용 세로(9:16) 소재 추가" if vertical else "피드용 정사각(1:1)·세로(4:5) 소재 추가"
-        rows.append(_row("5", "(전 단계)", f"{top['label']}에 지출 {top['share']:.0%}", "found", "meta.ad.media"))
-        proposals["5"] = {"field_id": "meta.ad.media", "new": new,
-                          "reason": f"돈의 {top['share']:.0%}가 {top['label']}에 쓰였어요. 그 자리에 맞는 모양의 소재가 있으면 더 잘 보여요.",
-                          "level": "유력", "grade": "A", "meta_says": "메타 Opportunity Score도 릴스에는 9:16 소재를 권해요."}
+        spot = top["label"].replace("인스타그램", "인스타").replace("페이스북", "페북")
+        has_v = _has_vertical(settings)
+        if vertical:
+            new, short = "세로(9:16) 소재를 넣은 세트를 하나 더 만들어 보세요", "+ 세로(9:16) 1개"
+            what = "세로 소재"
+            why = (f"돈의 {top['share']:.0%}가 {spot}(세로 화면)에서 나갔는데, 세로 소재가 없었어요." if has_v is False
+                   else f"돈의 {top['share']:.0%}가 {spot}(세로 화면)에서 나갔어요. 그 자리에 꽉 차는 세로 소재로 비교해 봐요.")
+        else:
+            new, short = "피드용 정사각(1:1)·세로(4:5) 소재를 넣은 세트를 하나 더 만들어 보세요", "+ 피드용 소재 1개"
+            what = "피드용 소재"
+            why = f"돈의 {top['share']:.0%}가 {spot}에서 나갔어요. 그 자리에 맞는 모양의 소재로 비교해 봐요."
+        rows.append(_row("5", "(전 단계)", f"{spot}에 돈의 {top['share']:.0%}", "found", "meta.ad.media"))
+        proposals["5"] = {"field_id": "meta.ad.media", "new": new, "short": short, "what": what,
+                          "reason": why, "level": "유력", "grade": "A",
+                          "meta_says": "메타 Opportunity Score도 릴스에는 9:16 소재를 권해요." if vertical else None}
     else:
-        rows.append(_row("5", "(전 단계)", "한 자리에 몰리지 않았어요", "ok"))
+        rows.append(_row("5", "(전 단계)", "한 자리에 돈이 몰리지 않았어요", "ok"))
 
     # 6 학습 단계
     per_week = (tot["link_clicks"] / max(1, len(arms))) * 7 / max(1, days)
     learning = per_week < cfg["learning_events"]
-    rows.append(_row("6", "(구조)", f"세트당 주 {per_week:.0f}회 < {cfg['learning_events']}회 → 학습 완료 어려움" if learning else "학습에 충분해요",
+    rows.append(_row("6", "(구조)", f"세트당 일주일에 클릭 약 {per_week:.0f}번 < {cfg['learning_events']}번 → 메타가 배우기엔 적어요" if learning else "메타가 배우기에 충분해요",
                      "watch" if learning else "ok", "meta.adset.performance_goal" if learning else None))
 
     pick = next((r["row"] for r in rows if r["status"] == "blocked"), None) or ("5" if "5" in proposals else None)
     change = None
     if pick:
         p = proposals[pick]
-        cert_level = p["level"]
-        if verdict and verdict["badge"].get("capped") and cert_level == "채택":
-            cert_level = "유력"
-        checklist = [a["todo"] for a in alerts if a["level"] == "warn"]
-        checklist.append("다음 테스트는 이 칸 1개만 바꾸고, 나머지는 그대로 둬요.")
-        change = {"row": pick, "field_id": p["field_id"], "path": PATH[p["field_id"]],
-                  "label": PATH[p["field_id"]].split(" › ")[-1],
-                  "now": settings.get(p["field_id"]), "new": p["new"], "reason": p["reason"],
-                  "certainty": _certainty(cert_level, "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")),
-                  "grade": p["grade"], "meta_says": p.get("meta_says"), "checklist": checklist}
+        label = PATH[p["field_id"]].split(" › ")[-1]
+        per_set = max(5000, int(round(tot["spend"] / max(1, len(arms)), -3))) if arms else 5000
+        what = p.get("what", f"{label} 변경")
+        change = {"row": pick, "field_id": p["field_id"], "path": PATH[p["field_id"]], "label": label,
+                  "now": settings.get(p["field_id"]), "new": p["new"], "new_short": p["short"], "reason": p["reason"],
+                  # v4.2: 결론은 돌려 본 적 없는 선택지 → 판정 배지 대신 '테스트 제안' (효과는 아직 몰라요)
+                  "tag": "테스트 제안", "tested": False, "per_set": per_set,
+                  "test": f"지금 세트와 {won(per_set)}씩 같이 돌려서 직접 비교해요.",
+                  "unknown": f"{what}가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+                  "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
+                  # 근거 탭·개발 문서용: 진단 규칙 자체의 신뢰도 (확실/유력/보류 그대로)
+                  "rule": {"row": pick, "level": p["level"], "why": "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")},
+                  "grade": p["grade"], "meta_says": p.get("meta_says"), "checklist": _checklist(alerts, label)}
 
-    if verdict and verdict["badge"]["level"] == "유력" and verdict.get("min_budget", {}).get("per_group"):
-        watch.append({"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"],
-                      "text": f"기간·예산: 지금 판정은 유력이에요. 세트당 ₩{verdict['min_budget']['per_group']:,}쯤 쓰면 확실히 고를 수 있어요."})
+    if verdict and verdict["badge"]["level"] != "채택":
+        mb = (verdict.get("min_budget") or {}).get("per_group")
+        why = (f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요" if "small_sample" in kinds
+               else f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요")
+        watch.insert(0, {"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"], "title": "기간 · 예산",
+                         "text": why, "need_per_set": mb})
 
-    dont = ["여러 칸을 한 번에 바꾸지 않기 — 무엇 때문에 달라졌는지 알 수 없게 돼요.",
-            "평균만 보고 노출 위치·연령을 끄지 않기 — 메타는 다음 1건의 비용으로 돈을 나눠요(Breakdown effect). 끄고 싶으면 다음 5,000원 테스트로 확인해요."]
+    dont = ["여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요.",
+            "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 손님 1명에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요."]
     if learning:
-        dont.append("자주 고치지 않기 — 큰 수정은 학습을 처음부터 다시 시작시켜요.")
+        dont.append("자주 고치기 — 큰 수정은 메타가 처음부터 다시 배우게 해요.")
 
     return {"rows": rows, "change": change, "keep": keep, "watch": watch, "dont": dont, "tested_field": field,
             "settings": setting_rows(settings, change, keep, watch)}
@@ -190,7 +241,7 @@ def _spec_id(field_id: str) -> Optional[str]:
 
 
 def setting_rows(settings: Dict, change: Optional[Dict], keep: List[Dict], watch: List[Dict]) -> List[Dict]:
-    """AN-03 내 세팅 카드: 받은 세팅값 전부를 광고 관리자 순서로, 칸마다 변경·유지·검토·그대로 + 근거 한 줄."""
+    """AN-03 내 세팅 카드: 받은 세팅값 전부를 광고 관리자 순서로, 칸마다 테스트·다시 보기·그대로 + 근거 한 줄 (사장님 말)."""
     if not settings:
         return []
     order = {f["id"]: i for i, f in enumerate(_fields("meta")["fields"])}
@@ -203,13 +254,13 @@ def setting_rows(settings: Dict, change: Optional[Dict], keep: List[Dict], watch
         spec = known.get(sid or "", {})
         path = PATH.get(fid) or PATH.get(sid or "") or f"{spec.get('stage', '기타')} › {spec.get('label', fid)}"
         if change and sid and (_spec_id(change["field_id"]) == sid or path == change["path"]):   # 같은 자리(형식·미디어)면 같이
-            kind, note = "변경", f"{change['new']} — {change['reason']}"
+            kind, note = TEST, change["reason"]
         elif sid in keep_by:
-            kind, note = "유지", keep_by[sid]["reason"]
+            kind, note = SAME, keep_by[sid]["reason"]
         elif sid in watch_by:
-            kind, note = "검토", watch_by[sid]["text"]
+            kind, note = RECHECK, watch_by[sid]["text"]
         else:
-            kind, note = "그대로", "이번 결과로는 바꿀 이유가 없어요."
+            kind, note = SAME, "—"
         out.append({"field_id": fid, "path": path, "value": str(value), "kind": kind, "note": note,
                     "_order": order.get(sid or "", 999)})
     out.sort(key=lambda x: x.pop("_order"))

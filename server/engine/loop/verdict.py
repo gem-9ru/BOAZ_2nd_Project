@@ -1,5 +1,8 @@
 """4 판정: B가 나을 확률로 채택·유력·보류 (희수 8장 ④ 90/70% 규칙, 다정 M1 확률 계산).
 
+코드 값(level)은 개발 문서·근거 탭용 확실/유력/보류, 사장님 화면 글(word)은
+'확실해요 / ○ 쪽이에요 / 아직 몰라요' 3개만 (설계서 v4.2 AN-TXT). 기준 90% / 70%는 같다.
+
 - 판정 배지 지표: 1,000원당 도착 (11/22 회의 제안, 다정 79%와 같은 계산)
 - 일자별 재현: 날마다 누적해서 다시 계산 → 며칠치로 고르면 뒤집힌다 (다정 M3, Lewis & Rao 2015)
 - 최소 검증 예산: 기대 효과에서 '90% 확신으로 승자를 고를 확률'이 80% 이상이 되는 그룹당 예산 (희수 8장 ④, Feit & Berman 2019는 근거 인용)
@@ -11,11 +14,11 @@ import numpy as np
 from . import posterior, summary
 
 BADGE = "visits_per_1000won"
-METRICS = [  # (키, 이름, 클수록 좋은가)
-    ("visits_per_1000won", "1,000원당 도착", True),
-    ("cpm", "1,000회 노출당 비용", False),
-    ("cpc", "링크 클릭당 비용", False),
-    ("ctr", "링크 클릭률", True),
+METRICS = [  # (키, 사장님 말 이름 (약어), 클수록 좋은가)
+    ("visits_per_1000won", "같은 돈으로 온 손님", True),
+    ("cpm", "광고 1,000번 보여주는 데 드는 돈 (CPM)", False),
+    ("cpc", "클릭 1번에 드는 돈 (CPC)", False),
+    ("ctr", "본 사람 중 누른 비율 (CTR)", True),
 ]
 ADOPT, LIKELY = 0.9, 0.7
 
@@ -51,7 +54,7 @@ def compare(a: Dict, b: Dict, seed: int = 0) -> Dict:
     m = next(x for x in metrics if x["key"] == BADGE)
     conf = max(m["prob_b_better"], 1 - m["prob_b_better"])
     return {"a": a["name"], "b": b["name"], "metrics": metrics,
-            "badge": {"metric": BADGE, "label": "1,000원당 도착", "better": m["better"], "prob": conf,
+            "badge": {"metric": BADGE, "label": "손님 1명당 비용", "better": m["better"], "prob": conf,
                       "level": level(conf), "word": m["word"]}}
 
 
@@ -115,14 +118,15 @@ def _word_for(level_: str, better: str) -> str:
 
 
 def apply_caps(v: Dict, small_sample: bool, spend_gap: bool) -> Dict:
-    """알림에 따라 확실도를 낮춘다: 표본 부족 → 최대 '유력', 지출 쏠림 → 한 단계 낮춤 (v4 6장)."""
+    """알림에 따라 확실도를 낮춘다: 표본 부족(ALT-14) → 최대 '유력', 지출 쏠림(ALT-13) → 한 단계 낮춤.
+    사장님 화면 순서로는 확실해요 → ○ 쪽이에요 → 아직 몰라요."""
     badge = dict(v["badge"])
     i = _ORDER.index(badge["level"])
     reasons = []
     if small_sample and i > 1:
-        i, _ = 1, reasons.append("클릭이 적어 최대 '유력'까지만")
+        i, _ = 1, reasons.append(f"클릭이 적어서 '{badge['better']} 쪽이에요'까지만")
     if spend_gap and i > 0:
-        i, _ = i - 1, reasons.append("두 세트 지출이 쏠려 한 단계 낮춤")
+        i, _ = i - 1, reasons.append("한쪽에 돈이 몰려서 한 단계 낮췄어요")
     if reasons:
         badge.update(level=_ORDER[i], word=_word_for(_ORDER[i], badge["better"]), capped=reasons)
     return dict(v, badge=badge)

@@ -108,7 +108,7 @@ def test_plan_gives_path_certainty_checklist_keep_dont():
     code = _upload().json()["code"]
     p = c.get(f"/plan/{code}").json()
     assert p["change"]["path"] == "광고 › 형식·미디어"
-    assert p["change"]["certainty"]["label"] == "유력" and p["change"]["checklist"]
+    assert p["change"]["certainty"]["label"] == "아직 몰라요" and p["change"]["tag"] == "테스트 제안" and p["change"]["checklist"]
     assert p["keep"][0]["field_id"] == "meta.adset.placements" and p["dont"]
 
 
@@ -136,8 +136,8 @@ def test_setting_rows_cover_every_given_field_in_ads_manager_order():
     rows = r["matrix"]["settings"]
     assert [x["field_id"] for x in rows][:1] == ["meta.campaign.objective"]
     by = {x["field_id"]: x for x in rows}
-    assert by["meta.ad.media"]["kind"] == "변경" and by["meta.ad.media"]["value"] == "정사각 이미지"
-    assert by["meta.adset.placements"]["kind"] == "유지"
+    assert by["meta.ad.media"]["kind"] == "테스트" and by["meta.ad.media"]["value"] == "정사각 이미지"
+    assert by["meta.adset.placements"]["kind"] == "그대로" and by["meta.adset.placements"]["note"].startswith("↓ 광고비")
     assert by["meta.campaign.objective"]["kind"] == "그대로" and by["meta.campaign.objective"]["path"].startswith("캠페인")
 
 
@@ -153,4 +153,4 @@ def test_fields_on_the_same_ads_manager_spot_share_the_change():
     with open(OVEN, "rb") as f:
         r = c.post("/analysis", files={"file": ("o.csv", f, "text/csv")}, data={"settings": json.dumps(s)}).json()
     kinds = {x["field_id"]: x["kind"] for x in r["matrix"]["settings"]}
-    assert kinds == {"meta.ad.format": "변경", "meta.ad.media": "변경"}
+    assert kinds == {"meta.ad.format": "테스트", "meta.ad.media": "테스트"}

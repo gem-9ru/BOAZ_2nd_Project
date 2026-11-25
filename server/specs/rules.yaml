@@ -17,7 +17,7 @@ loop:
     sum_mismatch: 0.01      # ■ 일자별 합 ≠ 노출 위치 합, 1% 초과
     spend_used_min: 0.5     # ▲ 지출 ÷ 설정 예산
     spend_gap_pp: 0.30      # ▲ 두 세트 지출 비중 차이 (희수 28 : 72) → 확실도 한 단계 낮춤
-    min_clicks: 30          # ▲ 링크 클릭이 이보다 적으면 판정 최대 '유력'
+    min_clicks: 30          # ▲ 링크 클릭이 이보다 적으면 판정 최대 '유력' (화면: 'B 쪽이에요')
     min_actions: 5
     visit_rate_min: 0.60    # ▲ 랜딩 조회 ÷ 링크 클릭
     frequency_max: 2.5      # ▲ 노출 ÷ 도달
@@ -33,6 +33,16 @@ loop:
   test_and_roll:            # Feit & Berman 2019, 오븐로그 실측 기준
     share_lo: 0.076
     share_hi: 0.20
+  checklist:                # AN-06 · EX-03 다음 테스트 체크리스트 (v4.2: 남은 알림 → 할 일, ALT 번호는 화면에 안 보임)
+    no_delivery: 시작 시간을 하루 여유 있게
+    small_sample: 클릭이 {min_clicks}번 넘게 모일 때까지 그대로 두기
+    spend_gap: 두 세트 예산을 똑같이 나누기
+    underspent: 총예산을 '하루 최소 × 기간'보다 넉넉하게
+    low_visit_rate: 광고 주소를 휴대폰으로 열어 확인하기
+    high_frequency: 새 소재 준비하기
+    an_skew: 노출 위치에서 Audience Network 빼기
+    one_field: 바꾸는 칸은 {label} 1개만
+    same_day: 두 세트는 같은 날 같이 시작
 
 # ── 찾기·문구 되묻기 (설계 10장): 분야에 묶이지 않는 공통 낱말만 둔다. 분야별 상품 낱말 목록은 두지 않는다 ──
 find:

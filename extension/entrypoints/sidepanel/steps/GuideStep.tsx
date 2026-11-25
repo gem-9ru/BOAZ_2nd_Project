@@ -51,14 +51,14 @@ export default function GuideStep({ state, dispatch }: Props) {
       if (reloaded) ok = await sendWithRetry(send);
     }
     setBusy(false);
-    if (!ok) setError("캐릭터를 부르지 못했어요. 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
+    if (!ok) setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
   }
 
   // [이전 칸] [다음 칸]: 광고 관리자 탭의 캐릭터를 움직인다 (진행은 배경 스크립트가 저장소에 쓴다).
   async function move(delta: 1 | -1) {
     const tab = await findAdsTab();
-    if (!tab?.id) { setError("광고 관리자 탭이 없어요. '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
-    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta }).catch(() => setError("캐릭터를 부르지 못했어요. 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
+    if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
+    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta }).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
   // 수정 안내 목록에 없는 칸만 바뀌었으면: 탭을 열지 않고 글로 알려 준다.

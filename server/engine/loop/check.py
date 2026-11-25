@@ -35,9 +35,10 @@ def run(bundle) -> Dict:
             continue
         if len(off) == len(adsets):
             who = "두 세트 모두" if len(adsets) == 2 else "모든 세트"
-            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}은 {who} 광고가 안 나갔어요. 이 날은 비교에서 빼요."})
+            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)} {who} 하루 종일 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산",
+                             "later": f"{_md(date)}은 광고가 안 나가서 비교에서 뺐어요"})
         else:
-            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에 {', '.join(off)}만 광고가 안 나갔어요."})
+            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에 {', '.join(off)}만 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산"})
     if len(adsets) >= 2:
         spend = daily.groupby("adset")["spend"].sum()
         low, high = spend.idxmin(), spend.idxmax()
@@ -62,7 +63,10 @@ def run(bundle) -> Dict:
     if "landing_page_views" not in daily.columns or float(daily["landing_page_views"].sum()) == 0:
         missing.append("랜딩 페이지 조회 열이 없어요. 내보낼 때 '랜딩 페이지 조회'를 넣어 주세요. (없으면 '도착'은 계산하지 못해요)")
 
+    dates = sorted(daily["date"].unique())
+    period = {"first": str(dates[0])[:10], "last": str(dates[-1])[:10]} if dates else None
     return {
+        "period": period,
         "ok": not missing and all(t["match"] for t in totals),
         "read": {"days": int(daily["date"].nunique()), "adsets": len(adsets), "daily_rows": int(len(daily)),
                  "placement_rows": int(len(place)) if place is not None else 0},

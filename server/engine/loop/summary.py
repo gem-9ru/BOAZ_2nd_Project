@@ -27,7 +27,7 @@ def run(bundle) -> Dict:
     sums = daily.groupby("adset")[cols].sum()
     arms = [arm(str(n), *(float(sums.loc[n].get(c, 0.0)) for c in COUNTS)) for n in sorted(sums.index)]
 
-    placements = []
+    placements, by_set = [], []
     if "meta_placement" in bundle.tables:
         p = bundle.tables["meta_placement"].df.groupby("placement")[["spend", "impressions", "link_clicks"]].sum()
         total = float(p["spend"].sum()) or 1.0
@@ -35,4 +35,14 @@ def run(bundle) -> Dict:
             placements.append({"placement": str(name), "label": placement_label(str(name)), "spend": float(r["spend"]),
                                "share": float(r["spend"]) / total, "impressions": float(r["impressions"]),
                                "link_clicks": float(r["link_clicks"]), "ctr": _div(r["link_clicks"], r["impressions"])})
-    return {"arms": arms, "placements": placements}
+        # v4.2 AN-04 노출 위치별 탭: 세트 × 노출 위치 칸
+        q = bundle.tables["meta_placement"].df
+        if "adset" in q.columns:
+            g = q.groupby(["adset", "placement"])[["spend", "impressions", "link_clicks"]].sum()
+            set_total = q.groupby("adset")["spend"].sum()
+            for (aset, name), r in g.sort_values("spend", ascending=False).iterrows():
+                by_set.append({"adset": str(aset), "placement": str(name), "label": placement_label(str(name)),
+                               "spend": float(r["spend"]), "share": float(r["spend"]) / (float(set_total[aset]) or 1.0),
+                               "impressions": float(r["impressions"]), "link_clicks": float(r["link_clicks"]),
+                               "ctr": _div(r["link_clicks"], r["impressions"])})
+    return {"arms": arms, "placements": placements, "placements_by_set": by_set}

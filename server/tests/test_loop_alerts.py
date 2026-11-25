@@ -17,12 +17,16 @@ def kinds(out, level=None):
 
 def test_ovenlog_shows_the_three_alerts_the_meeting_listed():
     out = _run(read_export(OVEN))
-    assert set(kinds(out)) == {"no_delivery", "small_sample", "meta_vs_measured"}
+    assert set(kinds(out)) == {"no_delivery", "small_sample", "meta_vs_measured", "untried_budget"}
     nd = next(a for a in out if a["kind"] == "no_delivery")
     assert nd["level"] == "warn" and "11/17" in nd["text"] and nd["screen"] == "AN-01"
     assert next(a for a in out if a["kind"] == "small_sample")["level"] == "warn"
     mvm = next(a for a in out if a["kind"] == "meta_vs_measured")
-    assert mvm["level"] == "info" and "자동" in mvm["text"] and "CPM" in mvm["text"]
+    # v4.2: 사장님 말 먼저 · CPM 같은 약어·'₩'는 알림 문구에 안 씀
+    assert mvm["level"] == "info" and "자동" in mvm["text"] and "광고비가 15% 쌌어요" in mvm["text"]
+    assert not any("CPM" in a["text"] or "₩" in a["text"] + a["todo"] or "유력" in a["text"] for a in out)
+    ub = next(a for a in out if a["kind"] == "untried_budget")
+    assert ub["screen"] == "AN-05" and "5,308원" in ub["text"] and ub["shown_from"] == "AN-05"
 
 
 def test_every_alert_has_shape_level_text_and_fix():

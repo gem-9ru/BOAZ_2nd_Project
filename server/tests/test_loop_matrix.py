@@ -16,9 +16,23 @@ def test_ovenlog_change_is_vertical_creative_in_ad_media():
     assert c["field_id"] == "meta.ad.media"
     assert c["path"] == "광고 › 형식·미디어"
     assert "9:16" in c["new"]
-    assert c["certainty"]["level"] == "유력"
+    # v4.2: 돌려 본 적 없는 선택지 → 판정 배지 대신 '테스트 제안', 효과는 '아직 몰라요'. 규칙 신뢰도(유력)는 근거 탭용
+    assert c["tag"] == "테스트 제안" and c["tested"] is False
+    assert c["certainty"]["level"] == "보류" and c["certainty"]["label"] == "아직 몰라요"
+    assert c["rule"]["level"] == "유력"
+    assert "5,000원씩" in c["test"]
     assert c["row"] == "5" and "릴스" in c["reason"]
-    assert c["checklist"]
+    assert c["checklist"][-2:] == ["바꾸는 칸은 형식·미디어 1개만", "두 세트는 같은 날 같이 시작"]
+    assert len(c["checklist"]) == 4 and not any("ALT" in t for t in c["checklist"])
+
+
+def test_owner_words_on_rows_and_keep():
+    m = oven()["matrix"]
+    row1 = next(r for r in m["rows"] if r["row"] == "1")
+    assert row1["signal"] == "B(수동)가 15% 싸요 · 확실해요" and "CPM" not in row1["signal"]
+    assert m["keep"][0]["reason"].startswith("↓ 광고비 15% 싸요")
+    assert m["keep"][0]["value"].startswith("직접 고르기(수동)")
+    assert not any("₩" in w["text"] or "유력" in w["text"] for w in m["watch"])
 
 
 def test_ovenlog_keeps_manual_placement_and_lists_dont():

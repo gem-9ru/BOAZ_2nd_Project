@@ -32,6 +32,7 @@ def run(bundle, seed: int = 0, settings: Optional[Dict] = None) -> Dict:
         "summary": s,
         "intervals": {x["name"]: posterior.intervals(x, seed=seed) for x in arms},
         "placements": posterior.shrink(s["placements"]),
+        "placements_by_set": posterior.shrink(s.get("placements_by_set") or []) if s.get("placements_by_set") else [],
         "funnel": funnel.run(arms),
         "verdict": v,
         "replay": replay,

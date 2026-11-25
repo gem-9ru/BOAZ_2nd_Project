@@ -143,23 +143,39 @@ describe("5단계: 세팅값을 분석 페이지로 (값은 URL에 넣지 않고
 
 const plan: Plan = {
   code: "AB12", action: "한 번 더",
-  change: { field_id: "meta.ad.media", label: "형식·미디어", new: "릴스용 세로(9:16) 소재 추가", note: "돈의 72%가 릴스에",
-    path: "광고 › 형식·미디어", certainty: { level: "유력", label: "유력", why: "실측" }, checklist: ["다음 테스트는 이 칸 1개만"] },
+  change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로(9:16) 소재를 넣은 세트를 하나 더 만들어 보세요", note: "돈의 72%가 릴스에",
+    path: "광고 › 형식·미디어", certainty: { level: "보류", label: "아직 몰라요", why: "돌려 본 적 없음" },
+    checklist: ["시작 시간을 하루 여유 있게", "클릭이 30번 넘게 모일 때까지 그대로 두기", "바꾸는 칸은 형식·미디어 1개만", "두 세트는 같은 날 같이 시작"],
+    ...{ tag: "테스트 제안", new_short: "+ 세로(9:16) 1개" } },
   summary: ["a", "b", "c"], badge: { word: "B 쪽이에요", prob: 0.79 },
-  keep: [{ field_id: "meta.adset.placements", path: "광고 세트 › 노출 위치", value: "수동 · 피드만", reason: "CPM 15% 저렴" }],
+  keep: [{ field_id: "meta.adset.placements", path: "광고 세트 › 노출 위치", value: "직접 고르기(수동)", reason: "↓ 광고비 15% 싸요 · 확실해요" }],
   dont: ["여러 칸을 한 번에 바꾸지 않기 — 이유"],
 };
 
 describe("EX-03 바꿀 칸 받기", () => {
-  it("pins the change card with path, certainty, keep (유지) and checklist", () => {
+  it("pins the test card (v4.2: '테스트 제안' tag, no 유력), keep (유지) and the 4-item checklist", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "첫 말", suggestions: ["q1", "q2"] })));
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
     const card = screen.getByRole("region", { name: "바꿀 칸" });
     expect(within(card).getByText("광고 › 형식·미디어")).toBeTruthy();
-    expect(within(card).getByText("유력")).toBeTruthy();
+    expect(within(card).getByText("+ 세로(9:16) 1개")).toBeTruthy();
+    expect(within(card).getByText("테스트 제안")).toBeTruthy();
+    expect(within(card).queryByText(/유력|보류|채택/)).toBeNull();
     expect(screen.getByText(/유지/)).toBeTruthy();
-    expect(screen.getByText(/수동 · 피드만/)).toBeTruthy();
-    expect(screen.getByText("다음 테스트는 이 칸 1개만")).toBeTruthy();
+    expect(screen.getByText(/직접 고르기\(수동\)/)).toBeTruthy();
+    expect(screen.getByText(/복제한 세트에서 이 칸만 바꾸세요/)).toBeTruthy();
+    expect(screen.getByText("다음 테스트 체크리스트")).toBeTruthy();
+    expect(screen.getAllByRole("checkbox").length).toBe(4);
+    expect(screen.getByText("두 세트는 같은 날 같이 시작")).toBeTruthy();
+  });
+
+  it("an old dev label (유력) is still shown in owner words only", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    const old = { ...plan, change: { ...plan.change, certainty: { level: "유력" as const, label: "유력", why: "실측" }, tag: undefined } };
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: old }} dispatch={() => {}} />);
+    const card = screen.getByRole("region", { name: "바꿀 칸" });
+    expect(within(card).getByText("B 쪽이에요")).toBeTruthy();
+    expect(within(card).queryByText("유력")).toBeNull();
   });
 
   it("the chatbot greets from the server and answers a suggested question", async () => {
@@ -179,7 +195,7 @@ describe("EX-03 바꿀 칸 받기", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
-    fireEvent.click(screen.getByRole("button", { name: "바꾸러 가기" }));
+    fireEvent.click(screen.getByRole("button", { name: "그 칸으로 이동" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
   });
 });

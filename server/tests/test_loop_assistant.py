@@ -75,3 +75,21 @@ def test_ex03_extension_chatbot_takes_over_the_change():
     assert "형식·미디어" in o["message"] and "그대로" in o["message"]
     assert len(o["suggestions"]) == 2
     assert "matrix" in assistant.context(oven(), "EX-03")
+
+
+def test_v42_speech_rules_are_in_the_system_prompt():
+    # 분석 페이지와 확장 프로그램 챗봇(EX-03)이 같은 SYSTEM을 쓴다
+    for rule in ("확실해요 / ○ 쪽이에요 / 아직 몰라요", "범위나 확률", "광고 덕분에 늘었어요", "5,000원씩 두 세트", "사장님 말을 먼저"):
+        assert rule in assistant.SYSTEM
+    fake = FakeClient()
+    assistant.answer(oven(), "EX-03", "세로 소재는 어떻게 만들어요?", client=fake)
+    assert fake.sent["system"] == assistant.SYSTEM
+
+
+def test_v42_openings_use_owner_words_only():
+    r = oven()
+    for s in STEPS + ["EX-03"]:
+        o = assistant.opening(r, s)
+        for bad in ("유력", "보류", "₩", "코치"):
+            assert bad not in o["message"], (s, bad)
+    assert "보통" in assistant.opening(r, "AN-05")["message"] and "적게" in assistant.opening(r, "AN-05")["message"]

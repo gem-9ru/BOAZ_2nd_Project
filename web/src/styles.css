@@ -28,6 +28,7 @@
   --color-warn-bg: var(--tone-warn-bg);
   --color-info-bg: var(--tone-info-bg);
   --color-info: var(--tone-info);
+  --color-reference: var(--tone-reference);
   --color-warn-mark: var(--tone-warn-mark);
   --color-block: var(--tone-block);
   --color-block-ink: var(--tone-block-ink);
