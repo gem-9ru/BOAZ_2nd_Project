@@ -350,3 +350,23 @@ describe("FindStep — 분야·손님 무리", () => {
     expect(picked.checked).toBe(true);
   });
 });
+
+describe("FindStep — 이 상품 검색 카드", () => {
+  const stats = { keyword: "수제쿠키", total_qc: 9320, mobile: 0.526,
+    audience: { female: 0.7, ages: { "20": 0.2, "30": 0.45, "40": 0.35 }, top_age: "30" } };
+
+  it("shows the product's monthly searches, device split and who searches it", () => {
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText("'수제쿠키' 검색")).toBeTruthy();
+    expect(screen.getByText("9,320회")).toBeTruthy();
+    expect(screen.getByText("모바일 53% · PC 47%")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /30대 45%/ })).toBeTruthy();
+  });
+
+  it("without a category shows the count and asks for the category", () => {
+    const r: Research = { ...withSegs, category: null, segments: [], product_stats: { ...stats, audience: null } };
+    render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText("9,320회")).toBeTruthy();
+    expect(screen.getByText("분야를 고르면 누가 찾는지도 보여 드릴게요.")).toBeTruthy();
+  });
+});

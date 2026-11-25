@@ -6,6 +6,7 @@ import { ageGroupToRange, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import AgeFigure from "./find/AgeFigure";
 import CategoryPick, { CategoryAsk } from "./find/CategoryPick";
+import ProductStats from "./find/ProductStats";
 import SegmentCards from "./find/SegmentCards";
 
 interface Props {
@@ -297,6 +298,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       {r.category && (
         <CategoryPick product={product} category={r.category} categories={r.categories} onPick={onPickCategory} />
       )}
+      {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} />}
       <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
         title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
       <Negatives words={r.negatives} />

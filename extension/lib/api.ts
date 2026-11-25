@@ -18,6 +18,16 @@ export interface Research {
   category_candidates?: Category[];
   segments?: Segment[];
   modifiers?: Modifier[];
+  /** 상품 이름 그대로의 월 검색 수·찾는 사람 (분야를 모르면 audience 없음) */
+  product_stats?: ProductStats | null;
+}
+
+export interface ProductStats {
+  keyword: string;
+  total_qc: number;
+  /** 모바일 비중 0~1 */
+  mobile: number | null;
+  audience: { female: number; ages: Record<string, number>; top_age: string } | null;
 }
 
 export interface Category { code: string; name: string }

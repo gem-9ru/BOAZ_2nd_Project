@@ -96,11 +96,11 @@ def _research(body: ResearchIn) -> dict:
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
         return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice,
-                **wide, "segments": [], "modifiers": []}
+                **wide, "segments": [], "modifiers": [], "product_stats": None}
     if not report.recommended:
         return {"headline": report.headline, "keywords": [], "audience": None, "fetched": report.fetched,
                 "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요.",
-                **wide, "segments": [], "modifiers": report.modifiers}
+                **wide, "segments": [], "modifiers": report.modifiers, "product_stats": report.product_stats}
     kw = report.keywords.set_index("keyword")["total_qc"]
     keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
     audience = None
@@ -113,7 +113,7 @@ def _research(body: ResearchIn) -> dict:
     live = report.fetched_parts.get("product", report.fetched) == today   # 이 상품 자료가 오늘 받은 것이면 실시간
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
             "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None,
-            **wide, "segments": report.segments, "modifiers": report.modifiers}
+            **wide, "segments": report.segments, "modifiers": report.modifiers, "product_stats": report.product_stats}
 
 
 ASKED_KINDS = ("question", "precheck")
@@ -151,7 +151,8 @@ def _copies(body: CopiesIn) -> dict:
     clean = lambda cs: [c for c in cs if not any(w in c["text"] + c["headline"] for w in avoid)]
     words = list(body.strengths) + list(body.keywords)
     seg = body.segment.model_dump() if body.segment else None
-    made, used_claude = copywriter.meta_copies_with_source(body.product, words, n=3, client=client or False, segment=seg)
+    made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths), n=3, client=client or False,
+                                                           segment=seg, keywords=list(body.keywords))
     made = clean(made)
     if len(made) < 3:   # 뺄 말이 들어간 문구를 버렸으면 문장 틀로 채운다
         for c in clean(copywriter.meta_copies(body.product, words, n=6, client=False, segment=seg)):

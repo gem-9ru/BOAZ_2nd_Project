@@ -365,5 +365,33 @@ def test_build_without_category_makes_no_audience_calls(monkeypatch):
 def test_build_with_category_but_no_kept_keywords_makes_no_audience_calls(monkeypatch):
     calls = _count_hub(monkeypatch)
     r = market.build(SEEDS, online=False, category=market.DEFAULT_CATEGORY, keep=[])
-    assert calls == [] and r.audiences == {} and r.segments == []
+    # 상품 이름 그대로('휘낭시에')의 찾는 사람 카드만 조회한다 (무리·트렌드 조회는 없음)
+    assert all(kind == "si" and (a[2] in ("휘낭시에", None)) for kind, a in calls if kind != "http"), calls
+    assert not any(kind == "trend" for kind, _ in calls)
+    assert r.audiences == {} and r.segments == []
     assert "번 검색돼요" in r.headline
+
+
+def test_product_stats_uses_the_exact_product_name(monkeypatch):
+    """상품 이름 그대로의 월 검색 수와 찾는 사람 (사장님이 '내 상품을 몇 번, 누가 찾나'를 먼저 본다)."""
+    import pandas as pd
+    from server.engine import market
+    kw = pd.DataFrame([{"keyword": "스탠리텀블러", "total_qc": 158600, "mobile_qc": 120000},
+                       {"keyword": "텀블러", "total_qc": 128900, "mobile_qc": 90700}])
+    seen = []
+    aud = {"female": 0.55, "ages": {"20": 0.2, "30": 0.5, "40": 0.3}, "index": {"30": 1.4}}
+    monkeypatch.setattr(market, "audience", lambda k, c, online=True: seen.append((k, c)) or aud)
+    s = market.product_stats(kw, "텀블러", "50000008", online=False)
+    assert seen == [("텀블러", "50000008")]
+    assert s["keyword"] == "텀블러" and s["total_qc"] == 128900 and s["mobile"] == 0.704
+    assert s["audience"]["female"] == 0.55 and s["audience"]["top_age"] == "30"
+
+
+def test_product_stats_without_category_has_count_only_and_none_when_missing(monkeypatch):
+    import pandas as pd
+    from server.engine import market
+    monkeypatch.setattr(market, "audience", lambda *a, **k: (_ for _ in ()).throw(AssertionError("분야 없으면 조회 안 함")))
+    kw = pd.DataFrame([{"keyword": "수제쿠키", "total_qc": 9320, "mobile_qc": 4900}])
+    s = market.product_stats(kw, "수제 쿠키", None, online=False)
+    assert s["total_qc"] == 9320 and s["audience"] is None
+    assert market.product_stats(kw, "마카롱", None, online=False) is None

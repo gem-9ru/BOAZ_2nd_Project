@@ -463,6 +463,23 @@ def audience_targets(kw: pd.DataFrame, rec: List[str], n: int = 3) -> List[str]:
     return sorted(rec, key=lambda k: rank.get(intent.get(k), 3))[:n]
 
 
+def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: bool = True) -> Optional[dict]:
+    """상품 이름 그대로(띄어쓰기 없앰)의 월 검색 수와, 분야가 있으면 그 말을 찾는 사람의 성별·연령.
+    키워드 표에 그 말이 없으면 None. 연령·성별을 못 받으면 audience만 None."""
+    word = name.replace(" ", "")
+    row = kw[kw["keyword"] == word]
+    if not word or row.empty:
+        return None
+    r = row.iloc[0]
+    total = int(r["total_qc"])
+    aud = audience(word, category, online) if category else None
+    out = {"keyword": word, "total_qc": total,
+           "mobile": round(float(r["mobile_qc"]) / total, 3) if total > 0 and "mobile_qc" in row else None,
+           "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None}
+    log.info("product stats keyword=%s qc=%d audience=%s", word, total, "yes" if aud else "no")
+    return out
+
+
 @dataclass
 class MarketReport:
     seeds: List[str]
@@ -477,6 +494,7 @@ class MarketReport:
     category: Optional[str] = None                                # 쇼핑인사이트 분야 code (없으면 None)
     segments: List[dict] = field(default_factory=list)            # 손님 무리 (분야가 없으면 비어 있음)
     modifiers: List[dict] = field(default_factory=list)           # 꾸밈말
+    product_stats: Optional[dict] = None                          # 상품 이름 그대로의 검색 수·찾는 사람
 
 
 def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
@@ -494,8 +512,9 @@ def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
     rec = recommend(kw, seeds=words)
     segs = segments(kw, rec, category, online, keep) if category else []
     mods = modifiers(kw, words, strip=strip_words(name, seeds))
+    stats = product_stats(kw, name, category, online)
     common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
-                  negatives=negative_list(kw), category=category, segments=segs, modifiers=mods)
+                  negatives=negative_list(kw), category=category, segments=segs, modifiers=mods, product_stats=stats)
     stamp = lambda: dict(fetched=api.oldest_fetched() or "", fetched_parts=api.fetched_parts())
     if segs:   # 무리의 대표 검색어가 손님 조회의 대표 (첫 무리가 대표)
         auds = {s["lead"]: {**s["audience"]} for s in segs if s["audience"]}
