@@ -145,10 +145,11 @@ def strip_words(product: str, seeds: List[str]) -> List[str]:
 
 
 def has_product(keyword: str, seeds: List[str]) -> bool:
-    """내가 입력한 낱말(seeds)이나 그 오타·변형이 들어 있는가. 분야별 상품 낱말 목록은 쓰지 않는다."""
+    """내가 입력한 낱말(seeds)이나 그 오타·변형이 들어 있는가. 분야별 상품 낱말 목록은 쓰지 않는다.
+    검색어가 내 낱말보다 짧으면 끝부분(머리 명사, 2글자 이상)일 때만 상품: '의자'⊂'캠핑의자'는 상품, '캠핑'·'립'은 아님."""
     k = keyword.replace(" ", "")
     clean = [s.replace(" ", "") for s in seeds if s]
-    return any(s in k or k in s for s in clean) or is_variant(k, clean)
+    return any(s in k or (len(k) >= 2 and s.endswith(k)) for s in clean) or is_variant(k, clean)
 
 
 PEAK_MAX = 50                  # 분야 추정: 최고 달 검색 수를 1~이 값 안에서 찾는다 (못 찾으면 그보다 많은 것으로 봄)

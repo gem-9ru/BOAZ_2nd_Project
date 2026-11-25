@@ -133,3 +133,16 @@ def test_ratios_and_points_read_same_response(monkeypatch):
     monkeypatch.setattr(api, "_http_hub", lambda keys, path, b: Resp(200, body))
     assert api.category_keyword_ratios("50000002", "립밤") == [50.0, 100.0]
     assert api.category_keyword_points("50000002", "립밤") == 2
+
+
+def test_bare_front_piece_is_not_my_product():
+    """앞 조각만 있는 검색어('캠핑', '립')는 내 상품이 아니다. 끝 조각('의자')은 같은 종류라 상품."""
+    camp = market.product_words("캠핑 의자", [])
+    assert not market.has_product("캠핑", camp)
+    assert market.has_product("의자", camp)
+    assert market.has_product("경량캠핑의자", camp)
+    lip = market.product_words("립밤", [])
+    assert not market.has_product("립", lip)
+    cookie = market.product_words("수제 쿠키", ["쿠키선물세트"])
+    assert market.has_product("쿠키", cookie)
+    assert not market.has_product("수제", cookie)
