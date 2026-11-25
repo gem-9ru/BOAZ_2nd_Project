@@ -84,6 +84,35 @@ describe("CopyStep", () => {
     expect(dispatch).toHaveBeenCalledWith({ type: "editFind" });
   });
 
+  it("non-seasonal segment: no peak month shown or sent", async () => {
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const flatSeg = { ...(seg as object), trend: { monthly: {}, peak_month: 3, seasonal: false } } as never;
+    render(<CopyStep state={{ ...withMods(), segment: flatSeg }} dispatch={() => {}} />);
+    expect(screen.getByText(/고른 손님: 선물로 찾는 손님/).textContent).not.toContain("월에 많음");
+    fireEvent.click(screen.getByRole("button", { name: /개별포장/ }));
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => expect(f).toHaveBeenCalled());
+    const body = JSON.parse(f.mock.calls[0]![1].body);
+    expect(body.segment).toEqual({ intent: "선물·답례", label: "선물로 찾는 손님" });
+  });
+
+  it("'그 밖' group is last and folded; opening shows chips and a brand-name hint", () => {
+    const others = [...mods, { word: "스탠리", group: "그 밖", total_qc: 5000, examples: [] }, { word: "경량", group: "그 밖", total_qc: 900, examples: [] }];
+    render(<CopyStep state={{ ...withMods(), research: { ...research, modifiers: others } }} dispatch={() => {}} />);
+    const more = screen.getByRole("button", { name: "그 밖 2개 더 보기" });
+    expect(more.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("button", { name: /스탠리/ })).toBeNull();
+    expect(screen.queryByText("다른 가게·브랜드 이름은 고르지 마세요. 문구에 그대로 들어가요.")).toBeNull();
+    const groupLabels = screen.getAllByText(/^(포장|맛·재료|그 밖 2개 더 보기)$/).map((e) => e.textContent);
+    expect(groupLabels[groupLabels.length - 1]).toBe("그 밖 2개 더 보기");
+    fireEvent.click(more);
+    expect(screen.getByRole("button", { name: /그 밖/, expanded: true })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /스탠리/ })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /경량/ })).toBeTruthy();
+    expect(screen.getByText("다른 가게·브랜드 이름은 고르지 마세요. 문구에 그대로 들어가요.")).toBeTruthy();
+  });
+
   it("old state without modifiers still lets owner type", () => {
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
     expect(screen.getByRole("button", { name: "문구 써 주세요" }).hasAttribute("disabled")).toBe(false);

@@ -9,7 +9,8 @@ interface Props {
   dispatch: (ev: FlowEvent) => void;
 }
 
-const GROUPS = ["포장", "맛·재료", "배송", "양", "그 밖"];
+const GROUPS = ["포장", "맛·재료", "배송", "양"];
+const OTHER = "그 밖";   // 가게·브랜드 이름이 섞이기 쉬워서 맨 끝에 접어 둔다
 
 /** ② 문구: 좋은 점 한두 마디 → 문구 3안 → 하나 고르기. */
 export default function CopyStep({ state, dispatch }: Props) {
@@ -18,14 +19,33 @@ export default function CopyStep({ state, dispatch }: Props) {
   const [list, setList] = useState<Copy[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOther, setShowOther] = useState(false);
 
   const mods = state.research?.modifiers ?? [];
   const hasMods = mods.length > 0;
   const seg = state.segment;
+  const peak = seg?.trend?.seasonal ? seg.trend.peak_month : null;   // 시즌일 때만 "N월에 많음"
+  const others = mods.filter((m) => m.group === OTHER);
   const typed = strengths.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
   const all = [...picked, ...typed];
   const blocked = hasMods && all.length === 0;
   const toggle = (w: string) => setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : [...p, w]));
+
+  const chips = (items: typeof mods) => (
+    <div className="flex flex-wrap gap-2">
+      {items.map((m) => {
+        const on = picked.includes(m.word);
+        return (
+          <button key={m.word} type="button" aria-pressed={on} onClick={() => toggle(m.word)}
+            className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+              on ? "border-accent bg-accent-soft text-ink" : "border-line bg-paper text-soft"}`}>
+            <span>{on ? "✓ " : ""}{m.word}</span>
+            <span className="text-small text-soft">월 {compact(m.total_qc)}</span>
+          </button>
+        );
+      })}
+    </div>
+  );
 
   async function write() {
     setBusy(true);
@@ -33,7 +53,7 @@ export default function CopyStep({ state, dispatch }: Props) {
     try {
       const r = await fetchCopies({
         product: state.product ?? "", strengths: all, keywords: state.keywords, avoid: state.research?.negatives ?? [],
-        ...(seg ? { segment: { intent: seg.intent, label: seg.label, peak_month: seg.trend?.peak_month } } : {}),
+        ...(seg ? { segment: { intent: seg.intent, label: seg.label, ...(peak ? { peak_month: peak } : {}) } } : {}),
       });
       setList(r.copies);
     } catch (e) {
@@ -52,7 +72,7 @@ export default function CopyStep({ state, dispatch }: Props) {
       </Coach>
       {seg && (
         <p className="flex flex-wrap items-center gap-1.5 text-caption">
-          <span>고른 손님: {seg.label}{seg.trend?.peak_month ? ` · ${seg.trend.peak_month}월에 많음` : ""}</span>
+          <span>고른 손님: {seg.label}{peak ? ` · ${peak}월에 많음` : ""}</span>
           <button type="button" onClick={() => dispatch({ type: "editFind" })}
             className="text-caption font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
         </p>
@@ -63,22 +83,24 @@ export default function CopyStep({ state, dispatch }: Props) {
         return (
           <div key={g} className="flex flex-col gap-2">
             <span className="text-caption font-semibold text-soft">{g}</span>
-            <div className="flex flex-wrap gap-2">
-              {items.map((m) => {
-                const on = picked.includes(m.word);
-                return (
-                  <button key={m.word} type="button" aria-pressed={on} onClick={() => toggle(m.word)}
-                    className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
-                      on ? "border-accent bg-accent-soft text-ink" : "border-line bg-paper text-soft"}`}>
-                    <span>{on ? "✓ " : ""}{m.word}</span>
-                    <span className="text-small text-soft">월 {compact(m.total_qc)}</span>
-                  </button>
-                );
-              })}
-            </div>
+            {chips(items)}
           </div>
         );
       })}
+      {hasMods && others.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <button type="button" aria-expanded={showOther} onClick={() => setShowOther((v) => !v)}
+            className="self-start text-caption font-semibold text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            {showOther ? `${OTHER} 접기` : `${OTHER} ${others.length}개 더 보기`}
+          </button>
+          {showOther && (
+            <>
+              <p className="text-small text-soft">다른 가게·브랜드 이름은 고르지 마세요. 문구에 그대로 들어가요.</p>
+              {chips(others)}
+            </>
+          )}
+        </div>
+      )}
       <div className="flex flex-col gap-2">
         <label htmlFor="strengths" className="text-caption text-soft">{hasMods ? "직접 적기" : "상품의 좋은 점"}</label>
         <input
@@ -86,7 +108,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           value={strengths}
           onChange={(e) => setStrengths(e.target.value)}
           placeholder={hasMods ? "예: 버터 듬뿍" : "예: 버터 듬뿍, 당일 구움"}
-          className="rounded-button border border-line bg-paper px-3 py-2.5 text-body"
+          className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
         />
         {error && <ErrorLine message={error} onRetry={write} />}
       </div>
