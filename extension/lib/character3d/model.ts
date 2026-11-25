@@ -39,6 +39,14 @@ export function buildMungchi(c: MungchiColors): Mungchi {
     const f = capsule(0.07, h, limb); f.position.set(dx, 2.62 + h / 2, -0.05); f.rotation.z = rz; trunk.add(f);
   }
 
+  // 꼬리깃: 위로 걸어갈 때(등이 보일 때) 앞뒤를 알아보게 한다
+  for (const [dx, h, rz] of [[-0.14, 0.26, 0.3], [0, 0.34, 0], [0.14, 0.26, -0.3]] as const) {
+    const f = capsule(0.075, h, limb);
+    f.rotation.set(-1.0, 0, rz);
+    f.position.set(dx, 0.95 + 0.54 * (h / 2 + 0.07), -0.82 - 0.84 * (h / 2 + 0.07));
+    trunk.add(f);
+  }
+
   const joint = (x: number, y: number) => { const g = new THREE.Group(); g.position.set(x, y, 0); trunk.add(g); return g; };
   const [armL, armR] = [-1, 1].map((s) => {
     const sh = joint(s * 0.95, 1.5);
