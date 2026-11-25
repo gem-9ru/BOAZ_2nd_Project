@@ -5,10 +5,12 @@
 - 키 값은 출력·로그·예외 문구 어디에도 넣지 않는다.
 """
 import json
+import logging
 import os
 import re
 from typing import Dict, List, Optional, Sequence, Union
 
+log = logging.getLogger("coach.copy")
 MODEL = "claude-haiku-5-5"
 KEY_NAME = "ANTHROPIC_API_KEY"
 
@@ -235,7 +237,8 @@ def _ask_claude(client, media: str, product: str, strengths: List[str], n: int,
             messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
         text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "")
         return _parse(text)
-    except Exception:  # noqa: BLE001
+    except Exception as e:  # noqa: BLE001
+        log.warning("claude degraded err=%s", type(e).__name__)   # 메시지는 요청 내용이 섞일 수 있어 남기지 않음
         return []
 
 

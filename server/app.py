@@ -5,8 +5,10 @@
 """
 import datetime
 import json
+import logging
 import os
 import threading
+import time
 from typing import List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -17,6 +19,16 @@ from pydantic import BaseModel
 from server.engine import analyze as analysis, copywriter, market, naver_api, specs
 from server.engine.meta_export import read_export
 from server.engine.loop import run as loop_run, simulate as loop_simulate
+
+# 로그: coach.* 로거만 stderr로 (uvicorn 로거는 건드리지 않음). 수준은 COACH_LOG_LEVEL (기본 INFO)
+_coach_log = logging.getLogger("coach")
+if not _coach_log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    _coach_log.addHandler(_h)
+    _coach_log.propagate = False
+_coach_log.setLevel(os.environ.get("COACH_LOG_LEVEL", "INFO").upper())
+log = logging.getLogger("coach.api")
 
 MAX_KEYWORDS = 10
 _NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
@@ -51,6 +63,17 @@ def _category_out(code: Optional[str], guessed: bool) -> Optional[dict]:
 
 @app.post("/research")
 def research(body: ResearchIn) -> dict:
+    t0 = time.perf_counter()
+    out = _research(body)
+    cat = out.get("category")
+    log.info("research done product=%s category=%s guessed=%s segments=%d modifiers=%d source=%s notice=%s ms=%d",
+             body.product, cat["code"] if cat else None, bool(cat and cat["guessed"]), len(out.get("segments") or []),
+             len(out.get("modifiers") or []), out.get("source"), "yes" if out.get("notice") else "no",
+             (time.perf_counter() - t0) * 1000)
+    return out
+
+
+def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
         code, cands = (body.category, []) if body.category else market.category_guess(body.product, _online())
@@ -103,6 +126,14 @@ class CopiesIn(BaseModel):
 
 @app.post("/copies")
 def copies(body: CopiesIn) -> dict:
+    t0 = time.perf_counter()
+    out = _copies(body)
+    log.info("copies done source=%s n=%d segment=%s ms=%d", out["source"], len(out["copies"]),
+             body.segment.intent if body.segment else None, (time.perf_counter() - t0) * 1000)
+    return out
+
+
+def _copies(body: CopiesIn) -> dict:
     client = None if os.environ.get("COACH_NO_LLM") == "1" else copywriter.make_client()
     # 상품 이름에 들어 있는 말은 빼지 않는다 (예: '쿠키만들기 키트'를 파는데 '쿠키만들기'를 빼면 문구가 남지 않음)
     product = body.product.replace(" ", "")

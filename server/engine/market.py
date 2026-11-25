@@ -4,12 +4,15 @@
   성별·연령·기기·월별은 데이터랩 쇼핑 인사이트 클릭 추이(B 매체 추산, 상대값이라 절대 인원이 아님).
 - 네트워크가 안 되거나 키가 없으면 저장본(cache_examples)으로, 그것도 없으면 None. 앱을 멈추지 않는다.
 """
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
 from . import naver_api as api, specs
+
+log = logging.getLogger("coach.market")
 
 DEFAULT_CATEGORY = "50000006"  # 쇼핑 인사이트 분야: 식품
 HUB = "/shopping/v1/category"
@@ -158,6 +161,10 @@ def category_guess(product: str, online: bool = True) -> Tuple[Optional[str], Li
     code = leaders[0] if top >= GUESS_MIN_POINTS and len(leaders) == 1 else None
     order = {c["code"]: i for i, c in enumerate(CATEGORIES)}
     cands = sorted((c for c, n in points.items() if n >= GUESS_MIN_POINTS), key=lambda c: (-points[c], order[c]))
+    names = {c["code"]: c["name"] for c in CATEGORIES}
+    best = sorted(points, key=lambda c: (-points[c], order[c]))[:3]
+    log.info("category guess product=%s code=%s candidates=%s top=%s", product, code, ",".join(cands) or "-",
+             ",".join(f"{names[c]}:{points[c]}" for c in best))
     return code, cands
 
 
@@ -403,6 +410,8 @@ def segments(kw: pd.DataFrame, rec: List[str], category: Optional[str], online: 
                     "total_qc": total, "lead": lead,
                     "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
                     "trend": trend, "trend_source": source, "line": segment_line(aud)})
+    log.info("segments done n=%d intents=%s trend=%s", len(out), ",".join(o["intent"] for o in out),
+             ",".join(str(o["trend_source"]) for o in out) or "-")
     return out
 
 

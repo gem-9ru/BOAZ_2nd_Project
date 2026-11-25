@@ -10,6 +10,7 @@ import base64
 import hashlib
 import hmac
 import json
+import logging
 import os
 import time
 from pathlib import Path
@@ -17,6 +18,7 @@ from typing import Callable, Dict, Iterable, List, Optional
 
 import requests
 
+log = logging.getLogger("coach.naver")
 ROOT = Path(__file__).resolve().parents[2]
 ENV_FILE = ROOT / ".env"
 CACHE_DIR = ROOT / "server" / "data" / "cache"
@@ -100,9 +102,11 @@ def _guarded(kind: str, key: str, online: bool, call: Callable[[], object]) -> O
         data, _ = fetch_cached(kind, key, online, call)
     except NaverError as e:
         _set_error(e.message)
+        log.warning("naver degraded kind=%s status=%s msg=%s", kind, e.status, e.message)
         return None
-    except Exception:  # noqa: BLE001  (SSL·프록시 등 예상 못 한 오류도 앱을 멈추지 않음; 문구에는 원문을 넣지 않음)
+    except Exception as e:  # noqa: BLE001  (SSL·프록시 등 예상 못 한 오류도 앱을 멈추지 않음; 문구에는 원문을 넣지 않음)
         _set_error(UNKNOWN_ERROR)
+        log.warning("naver degraded kind=%s err=%s", kind, type(e).__name__)
         return None
     return data
 
@@ -183,6 +187,12 @@ def save(kind: str, key: str, response, directory: Optional[Path] = None) -> Non
 
 
 def fetch_cached(kind: str, key: str, online: bool, call: Callable[[], object]):
+    data, source = _fetch_cached(kind, key, online, call)
+    log.debug("naver source kind=%s source=%s", kind, source or "none")
+    return data, source
+
+
+def _fetch_cached(kind: str, key: str, online: bool, call: Callable[[], object]):
     """저장본 → 시연 저장본 → (online이면) call() → 오래된 저장본. → (응답, 출처) 또는 (None, "").
     call이 NaverError를 내면 오래된 저장본이 있으면 그것을, 없으면 NaverError를 그대로 올림."""
     name = cache_name(kind, key)
@@ -204,6 +214,7 @@ def fetch_cached(kind: str, key: str, online: bool, call: Callable[[], object]):
         data = call()
     except NaverError as e:
         if mine is not None:
+            log.warning("naver degraded kind=%s status=%s msg=%s stale_cache=yes", kind, e.status, e.message)
             _set_error(e.message)        # 오래된 저장본으로 대신 보여 주지만 실시간 조회는 실패했음
             _note_fetched(mine.get("fetched_at"), part)
             return mine["response"], "지난 저장본"
@@ -230,6 +241,7 @@ def _note_429() -> None:
     _STATE["rate_hits"] = hits
     if len(hits) >= BURST_COUNT:
         _STATE["paused_until"] = now + PAUSE_SECONDS
+        log.warning("naver paused until=%d", int(now + PAUSE_SECONDS))
 
 
 def _http_ad(keys: Dict[str, str], params: dict):
@@ -240,6 +252,20 @@ def _http_ad(keys: Dict[str, str], params: dict):
                "X-API-KEY": keys["NAVER_AD_API_KEY"], "X-Customer": str(keys["NAVER_AD_CUSTOMER_ID"]),
                "X-Signature": naver_signature(keys["NAVER_AD_SECRET_KEY"], ts, "GET", uri)}
     return requests.get(AD_BASE + uri, params=params, headers=headers, timeout=20)
+
+
+def _timed(kind: str, path: str, send: Callable[[], object]):
+    """실제 HTTP 호출 한 번을 재서 한 줄 남김 (키·헤더·응답 내용은 남기지 않음)."""
+    t0 = time.perf_counter()
+    try:
+        resp = send()
+    except Exception as e:  # noqa: BLE001
+        log.warning("naver call kind=%s path=%s status=error err=%s ms=%d", kind, path, type(e).__name__,
+                    (time.perf_counter() - t0) * 1000)
+        raise
+    log.info("naver call kind=%s path=%s status=%s ms=%d", kind, path, getattr(resp, "status_code", "?"),
+             (time.perf_counter() - t0) * 1000)
+    return resp
 
 
 def _to_error(resp) -> NaverError:
@@ -265,7 +291,7 @@ def keyword_tool_raw(hints: List[str]) -> Optional[dict]:
     for attempt in (0, 1):
         _STATE["last_kw"] = _now()
         try:
-            resp = _http_ad(keys, params)
+            resp = _timed("keywordstool", "/keywordstool", lambda: _http_ad(keys, params))
         except Exception as e:  # noqa: BLE001  (연결 실패뿐 아니라 SSL·프록시 오류도)
             raise NaverError("네이버에 연결하지 못했어요. 지금은 저장해 둔 값으로 보여 드려요.") from e
         if resp.status_code == 200:
@@ -310,7 +336,7 @@ def hub_raw(path: str, body: dict) -> Optional[dict]:
     if keys is None:
         return None
     try:
-        resp = _http_hub(keys, path, body)
+        resp = _timed("trend" if path == SEARCH_TREND else "hub", path, lambda: _http_hub(keys, path, body))
     except Exception as e:  # noqa: BLE001
         raise NaverError("네이버 데이터랩에 연결하지 못했어요. 지금은 저장해 둔 값으로 보여 드려요.") from e
     if resp.status_code != 200:
