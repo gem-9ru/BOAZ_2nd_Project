@@ -11,8 +11,8 @@ export function MetricRow({ m }: { m: Metric }) {
   const tone = (k: "A" | "B") => (k === m.better ? "var(--tone-series-b)" : "var(--tone-series-a)");
   return (
     <li className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2 text-body"><b>{m.label}</b><VerdictBadge word={m.word} small /><span className="text-soft">B가 나을 확률 {pct(p)}</span></div>
-      <ProbBar p={p} />
+      <div className="flex flex-wrap items-center gap-2 text-body"><b>{m.label}</b><VerdictBadge word={m.word} small /><span className="text-soft">{m.better}가 나을 확률 {pct(m.better === "B" ? p : 1 - p)}</span></div>
+      <ProbBar p={m.better === "B" ? p : 1 - p} />
       <div className="grid grid-cols-[2rem_1fr] gap-x-2 gap-y-1 text-caption text-soft">
         {(["A", "B"] as const).map((k) => {
           const iv = k === "A" ? m.a_interval : m.b_interval;

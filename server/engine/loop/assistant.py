@@ -79,11 +79,12 @@ def opening(result: Dict, step: str) -> Dict:
     badge = v.get("badge") or {}
     alerts = [a for a in result.get("alerts", []) if a["screen"] == step]
     label = c.get("label", "")
-    what = (c.get("unknown") or "").split("가 손님을")[0] or f"{label} 칸"
+    what = c.get("what") or f"{label} 칸"
     msg: str
     sug: List[str]
     if step == "AN-01":
-        msg = (f"이번엔 {what} 하나만 바꿔서 테스트해 보세요. 나머지는 그대로 두세요. "
+        one = what if what.endswith("소재") else f"{label} 칸"
+        msg = (f"이번엔 {one} 하나만 바꿔서 테스트해 보세요. 나머지는 그대로 두세요. "
                f"({c.get('path', label)})")
         sug = ["왜 이 칸이에요?", "테스트는 어떻게 해요?"]
     elif step == "AN-02":

@@ -1,0 +1,801 @@
+{
+ "settings": {},
+ "alerts": [
+  {
+   "level": "info",
+   "mark": "●",
+   "kind": "untried_budget",
+   "text": "세트당 19,342원까지만 써 봤어요. 그 이상은 가설이라 범위가 넓어요.",
+   "todo": "써 본 적 없는 금액은 점선으로 보여 드려요.",
+   "screen": "AN-05",
+   "spent": 19342.0,
+   "shown_from": "AN-05"
+  }
+ ],
+ "blocked": false,
+ "matrix": {
+  "rows": [
+   {
+    "row": "0",
+    "stage": "게재",
+    "signal": "매일 광고가 나갔어요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "1",
+    "stage": "광고가 보이는 값",
+    "signal": "A(자동)가 26% 싸요 · 확실해요",
+    "status": "ok",
+    "field_id": "meta.adset.placements",
+    "path": "광고 세트 › 노출 위치",
+    "detail": "A(자동) 쪽을 유지하면 돼요"
+   },
+   {
+    "row": "2",
+    "stage": "누르는 정도",
+    "signal": "1,000명이 보면 약 21명이 눌러요 → 괜찮아요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "2b",
+    "stage": "누르는 정도 (같은 소재 피로)",
+    "signal": "기간 4일 · 본 사람 수(도달) 열 없음 → 해당 없음",
+    "status": "skip",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "3",
+    "stage": "페이지 도착",
+    "signal": "누른 100명 중 77명이 들어왔어요 → 괜찮아요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "4",
+    "stage": "행동",
+    "signal": "구매·알림 신청 같은 행동 숫자가 파일에 없어요 → 아직 몰라요",
+    "status": "skip",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "5",
+    "stage": "(전 단계)",
+    "signal": "한 자리에 돈이 몰리지 않았어요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "6",
+    "stage": "(구조)",
+    "signal": "메타가 배우기에 충분해요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   }
+  ],
+  "change": {
+   "row": "-",
+   "field_id": "meta.creative.copy",
+   "path": "광고 › 기본 문구·제목",
+   "label": "기본 문구·제목",
+   "now": null,
+   "new": "기본 문구를 바꾼 세트를 하나 더 만들어 보세요",
+   "new_short": "+ 새 문구 1개",
+   "reason": "크게 막힌 곳이 없어요. 지금 세팅은 그대로 두고 문구 하나만 바꿔 비교해 봐요.",
+   "tag": "테스트 제안",
+   "tested": false,
+   "per_set": 17000,
+   "what": "새 문구",
+   "test": "지금 세트와 17,000원씩 같이 돌려서 직접 비교해요.",
+   "unknown": "새 문구가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+   "certainty": {
+    "level": "보류",
+    "label": "아직 몰라요",
+    "why": "돌려 본 적 없는 값이라 이번 테스트로 확인해요"
+   },
+   "rule": {
+    "row": "-",
+    "level": "보류",
+    "why": "실측 + 진단 규칙"
+   },
+   "grade": "D",
+   "meta_says": null,
+   "checklist": [
+    "바꾸는 칸은 기본 문구·제목 1개만",
+    "두 세트는 같은 날 같이 시작"
+   ]
+  },
+  "keep": [
+   {
+    "field_id": "meta.adset.placements",
+    "path": "광고 세트 › 노출 위치",
+    "value": "자동 (Advantage+)",
+    "reason": "↓ 광고비 26% 싸요 · 확실해요",
+    "saving": 0.25684406165315143,
+    "arm": "A_자동노출위치"
+   }
+  ],
+  "watch": [],
+  "dont": [
+   "여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요.",
+   "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 손님 1명에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요."
+  ],
+  "tested_field": "meta.adset.placements",
+  "settings": []
+ },
+ "backtest": {
+  "ok": true,
+  "train_days": [
+   "2026-11-17",
+   "2026-11-18",
+   "2026-11-19"
+  ],
+  "test_day": "2026-11-20",
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "budget": 4762.0,
+    "link_clicks": {
+     "lo": 14,
+     "hi": 27,
+     "median": 20.0,
+     "actual": 17,
+     "inside": true
+    },
+    "visits": {
+     "lo": 10,
+     "hi": 21,
+     "median": 15.0,
+     "actual": 14,
+     "inside": true
+    }
+   },
+   {
+    "name": "B_수동노출위치",
+    "budget": 4012.0,
+    "link_clicks": {
+     "lo": 7,
+     "hi": 18,
+     "median": 12.0,
+     "actual": 13,
+     "inside": true
+    },
+    "visits": {
+     "lo": 5,
+     "hi": 14,
+     "median": 9.0,
+     "actual": 9,
+     "inside": true
+    }
+   }
+  ],
+  "note": "하루치로 1번만 확인한 결과라 표본이 작아요. 기간이 길수록 더 믿을 만해져요."
+ },
+ "check": {
+  "period": {
+   "first": "2026-11-17",
+   "last": "2026-11-20"
+  },
+  "ok": true,
+  "read": {
+   "days": 4,
+   "adsets": 2,
+   "daily_rows": 8,
+   "placement_rows": 28
+  },
+  "totals": [
+   {
+    "metric": "spend",
+    "daily": 35014.0,
+    "placement": 35014.0,
+    "match": true
+   },
+   {
+    "metric": "impressions",
+    "daily": 5968.0,
+    "placement": 5968.0,
+    "match": true
+   },
+   {
+    "metric": "link_clicks",
+    "daily": 125.0,
+    "placement": 125.0,
+    "match": true
+   }
+  ],
+  "warnings": [],
+  "safety": [
+   {
+    "ok": true,
+    "text": "모든 숫자는 메타 기여 기준(클릭 후 7일 또는 조회 후 1일)이에요."
+   },
+   {
+    "ok": true,
+    "text": "퍼널은 광고 관리자 숫자로 계산해요. 픽셀에 섞일 수 있는 팀·본인 방문은 넣지 않아요."
+   },
+   {
+    "ok": false,
+    "text": "두 세트를 동시에 돌렸다면 같은 사람을 두고 경쟁했을 수 있어요. 메타 'A/B 테스트'로 만들면 사람을 나눠서 보여 줘요."
+   }
+  ],
+  "missing": []
+ },
+ "summary": {
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "spend": 19342.0,
+    "impressions": 3725.0,
+    "link_clicks": 77.0,
+    "landing_page_views": 61.0,
+    "cpm": 5192.48322147651,
+    "ctr": 0.020671140939597314,
+    "cpc": 251.19480519480518,
+    "click_to_visit": 0.7922077922077922,
+    "visits_per_1000won": 3.153758659911074,
+    "cost_per_visit": 317.08196721311475,
+    "actions": null,
+    "daily_max": 5001.0
+   },
+   {
+    "name": "B_수동노출위치",
+    "spend": 15672.0,
+    "impressions": 2243.0,
+    "link_clicks": 48.0,
+    "landing_page_views": 35.0,
+    "cpm": 6987.070887204637,
+    "ctr": 0.02139991083370486,
+    "cpc": 326.5,
+    "click_to_visit": 0.7291666666666666,
+    "visits_per_1000won": 2.233282286881062,
+    "cost_per_visit": 447.77142857142854,
+    "actions": null,
+    "daily_max": 4103.0
+   }
+  ],
+  "placements": [
+   {
+    "placement": "Instagram 릴스",
+    "label": "인스타그램 릴스",
+    "spend": 17269.0,
+    "share": 0.493202718912435,
+    "impressions": 1999.0,
+    "link_clicks": 41.0,
+    "ctr": 0.02051025512756378
+   },
+   {
+    "placement": "Instagram 피드",
+    "label": "인스타그램 피드",
+    "spend": 9845.0,
+    "share": 0.2811732449877192,
+    "impressions": 1312.0,
+    "link_clicks": 27.0,
+    "ctr": 0.020579268292682928
+   },
+   {
+    "placement": "Facebook 피드",
+    "label": "페이스북 피드",
+    "spend": 3979.0,
+    "share": 0.1136402581824413,
+    "impressions": 894.0,
+    "link_clicks": 20.0,
+    "ctr": 0.02237136465324385
+   },
+   {
+    "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+    "label": "Audience Network 네이티브·배너·전면",
+    "spend": 3921.0,
+    "share": 0.11198377791740446,
+    "impressions": 1763.0,
+    "link_clicks": 37.0,
+    "ctr": 0.02098695405558707
+   }
+  ],
+  "placements_by_set": [
+   {
+    "adset": "B_수동노출위치",
+    "placement": "Instagram 릴스",
+    "label": "인스타그램 릴스",
+    "spend": 8664.0,
+    "share": 0.552833078101072,
+    "impressions": 1093.0,
+    "link_clicks": 21.0,
+    "ctr": 0.0192131747483989
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram 릴스",
+    "label": "인스타그램 릴스",
+    "spend": 8605.0,
+    "share": 0.444886774894013,
+    "impressions": 906.0,
+    "link_clicks": 20.0,
+    "ctr": 0.02207505518763797
+   },
+   {
+    "adset": "B_수동노출위치",
+    "placement": "Instagram 피드",
+    "label": "인스타그램 피드",
+    "spend": 4954.0,
+    "share": 0.3161051556916794,
+    "impressions": 667.0,
+    "link_clicks": 15.0,
+    "ctr": 0.022488755622188907
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram 피드",
+    "label": "인스타그램 피드",
+    "spend": 4891.0,
+    "share": 0.2528694033709027,
+    "impressions": 645.0,
+    "link_clicks": 12.0,
+    "ctr": 0.018604651162790697
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+    "label": "Audience Network 네이티브·배너·전면",
+    "spend": 3921.0,
+    "share": 0.20271947058215284,
+    "impressions": 1763.0,
+    "link_clicks": 37.0,
+    "ctr": 0.02098695405558707
+   },
+   {
+    "adset": "B_수동노출위치",
+    "placement": "Facebook 피드",
+    "label": "페이스북 피드",
+    "spend": 2054.0,
+    "share": 0.1310617662072486,
+    "impressions": 483.0,
+    "link_clicks": 12.0,
+    "ctr": 0.024844720496894408
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Facebook 피드",
+    "label": "페이스북 피드",
+    "spend": 1925.0,
+    "share": 0.09952435115293144,
+    "impressions": 411.0,
+    "link_clicks": 8.0,
+    "ctr": 0.019464720194647202
+   }
+  ],
+  "action_label": null
+ },
+ "intervals": {
+  "A_자동노출위치": {
+   "cpm": [
+    5054.367902449716,
+    5334.669666580163
+   ],
+   "ctr": [
+    0.017250007884728646,
+    0.024917237876160018
+   ],
+   "cpc": [
+    207.7236181330869,
+    301.89739071542357
+   ],
+   "click_to_visit": [
+    0.7048846365381919,
+    0.855948152536537
+   ],
+   "visits_per_1000won": [
+    2.569141163757275,
+    3.9055370492200985
+   ]
+  },
+  "B_수동노출위치": {
+   "cpm": [
+    6748.35681311488,
+    7234.43823785673
+   ],
+   "ctr": [
+    0.017041486999799592,
+    0.027113850584231908
+   ],
+   "cpc": [
+    256.5401347988803,
+    411.5176817604582
+   ],
+   "click_to_visit": [
+    0.6114066299524944,
+    0.8182599608018813
+   ],
+   "visits_per_1000won": [
+    1.7080023609948922,
+    2.9632549783688464
+   ]
+  }
+ },
+ "placements": [
+  {
+   "placement": "Instagram 릴스",
+   "label": "인스타그램 릴스",
+   "spend": 17269.0,
+   "share": 0.493202718912435,
+   "impressions": 1999.0,
+   "link_clicks": 41.0,
+   "ctr": 0.02051025512756378,
+   "ctr_adjusted": 0.02094417281302398,
+   "reference_only": false
+  },
+  {
+   "placement": "Instagram 피드",
+   "label": "인스타그램 피드",
+   "spend": 9845.0,
+   "share": 0.2811732449877192,
+   "impressions": 1312.0,
+   "link_clicks": 27.0,
+   "ctr": 0.020579268292682928,
+   "ctr_adjusted": 0.020944560950510144,
+   "reference_only": false
+  },
+  {
+   "placement": "Facebook 피드",
+   "label": "페이스북 피드",
+   "spend": 3979.0,
+   "share": 0.1136402581824413,
+   "impressions": 894.0,
+   "link_clicks": 20.0,
+   "ctr": 0.02237136465324385,
+   "ctr_adjusted": 0.020946314209573852,
+   "reference_only": false
+  },
+  {
+   "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+   "label": "Audience Network 네이티브·배너·전면",
+   "spend": 3921.0,
+   "share": 0.11198377791740446,
+   "impressions": 1763.0,
+   "link_clicks": 37.0,
+   "ctr": 0.02098695405558707,
+   "ctr_adjusted": 0.020945113978533058,
+   "reference_only": false
+  }
+ ],
+ "placements_by_set": [
+  {
+   "adset": "B_수동노출위치",
+   "placement": "Instagram 릴스",
+   "label": "인스타그램 릴스",
+   "spend": 8664.0,
+   "share": 0.552833078101072,
+   "impressions": 1093.0,
+   "link_clicks": 21.0,
+   "ctr": 0.0192131747483989,
+   "ctr_adjusted": 0.020943149352235218,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram 릴스",
+   "label": "인스타그램 릴스",
+   "spend": 8605.0,
+   "share": 0.444886774894013,
+   "impressions": 906.0,
+   "link_clicks": 20.0,
+   "ctr": 0.02207505518763797,
+   "ctr_adjusted": 0.02094606308132553,
+   "reference_only": false
+  },
+  {
+   "adset": "B_수동노출위치",
+   "placement": "Instagram 피드",
+   "label": "인스타그램 피드",
+   "spend": 4954.0,
+   "share": 0.3161051556916794,
+   "impressions": 667.0,
+   "link_clicks": 15.0,
+   "ctr": 0.022488755622188907,
+   "ctr_adjusted": 0.020946069186329932,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram 피드",
+   "label": "인스타그램 피드",
+   "spend": 4891.0,
+   "share": 0.2528694033709027,
+   "impressions": 645.0,
+   "link_clicks": 12.0,
+   "ctr": 0.018604651162790697,
+   "ctr_adjusted": 0.020943531636571623,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+   "label": "Audience Network 네이티브·배너·전면",
+   "spend": 3921.0,
+   "share": 0.20271947058215284,
+   "impressions": 1763.0,
+   "link_clicks": 37.0,
+   "ctr": 0.02098695405558707,
+   "ctr_adjusted": 0.020945113978533058,
+   "reference_only": false
+  },
+  {
+   "adset": "B_수동노출위치",
+   "placement": "Facebook 피드",
+   "label": "페이스북 피드",
+   "spend": 2054.0,
+   "share": 0.1310617662072486,
+   "impressions": 483.0,
+   "link_clicks": 12.0,
+   "ctr": 0.024844720496894408,
+   "ctr_adjusted": 0.020946922850740304,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Facebook 피드",
+   "label": "페이스북 피드",
+   "spend": 1925.0,
+   "share": 0.09952435115293144,
+   "impressions": 411.0,
+   "link_clicks": 8.0,
+   "ctr": 0.019464720194647202,
+   "ctr_adjusted": 0.02094443205290347,
+   "reference_only": false
+  }
+ ],
+ "funnel": {
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "stages": [
+     {
+      "key": "impressions",
+      "label": "보여진 횟수",
+      "count": 3725.0
+     },
+     {
+      "key": "link_clicks",
+      "label": "클릭",
+      "count": 77.0,
+      "rate": 0.020671140939597314,
+      "range": [
+       0.016576648975812958,
+       0.025765990296875055
+      ],
+      "per100": "1,000명이 보면 약 21명이 눌렀어요",
+      "unknown": false
+     },
+     {
+      "key": "landing_page_views",
+      "label": "손님 (페이지 방문)",
+      "count": 61.0,
+      "rate": 0.7922077922077922,
+      "range": [
+       0.6888719676058799,
+       0.8675096474393408
+      ],
+      "per100": "100명이 누르면 약 79명이 들어왔어요",
+      "unknown": false
+     }
+    ]
+   },
+   {
+    "name": "B_수동노출위치",
+    "stages": [
+     {
+      "key": "impressions",
+      "label": "보여진 횟수",
+      "count": 2243.0
+     },
+     {
+      "key": "link_clicks",
+      "label": "클릭",
+      "count": 48.0,
+      "rate": 0.02139991083370486,
+      "range": [
+       0.016181079891314457,
+       0.028287648327579993
+      ],
+      "per100": "1,000명이 보면 약 21명이 눌렀어요",
+      "unknown": false
+     },
+     {
+      "key": "landing_page_views",
+      "label": "손님 (페이지 방문)",
+      "count": 35.0,
+      "rate": 0.7291666666666666,
+      "range": [
+       0.5896515973958965,
+       0.8343939589203823
+      ],
+      "per100": "100명이 누르면 약 73명이 들어왔어요",
+      "unknown": false
+     }
+    ]
+   }
+  ],
+  "hint": null
+ },
+ "verdict": {
+  "a": "A_자동노출위치",
+  "b": "B_수동노출위치",
+  "metrics": [
+   {
+    "key": "visits_per_1000won",
+    "label": "같은 돈으로 온 손님",
+    "higher_is_better": true,
+    "prob_b_better": 0.051835,
+    "a_interval": [
+     2.458675144126285,
+     4.055571603887317
+    ],
+    "b_interval": [
+     1.6067490114245435,
+     3.1078481150509365
+    ],
+    "overlap": true,
+    "better": "A",
+    "word": "확실해요"
+   },
+   {
+    "key": "cpm",
+    "label": "광고 1,000번 보여주는 데 드는 돈 (CPM)",
+    "higher_is_better": false,
+    "prob_b_better": 0.0,
+    "a_interval": [
+     5027.850711756752,
+     5362.664084760614
+    ],
+    "b_interval": [
+     6704.63708810527,
+     7282.485031684751
+    ],
+    "overlap": false,
+    "better": "A",
+    "word": "확실해요"
+   },
+   {
+    "key": "cpc",
+    "label": "클릭 1번에 드는 돈 (CPC)",
+    "higher_is_better": false,
+    "prob_b_better": 0.076005,
+    "a_interval": [
+     200.86839935837298,
+     313.6617652057119
+    ],
+    "b_interval": [
+     246.45788596448725,
+     432.2189282532792
+    ],
+    "overlap": true,
+    "better": "A",
+    "word": "확실해요"
+   },
+   {
+    "key": "ctr",
+    "label": "본 사람 중 누른 비율 (CTR)",
+    "higher_is_better": true,
+    "prob_b_better": 0.586265,
+    "a_interval": [
+     0.01660426751129172,
+     0.025765588958613556
+    ],
+    "b_interval": [
+     0.016187936482155784,
+     0.028264128487826407
+    ],
+    "overlap": true,
+    "better": "B",
+    "word": "아직 몰라요"
+   }
+  ],
+  "badge": {
+   "metric": "visits_per_1000won",
+   "label": "손님 1명당 비용",
+   "better": "A",
+   "prob": 0.948165,
+   "level": "채택",
+   "word": "확실해요"
+  },
+  "min_budget": {
+   "per_group": 90000,
+   "total": 180000,
+   "lift": 0.2,
+   "confidence": 0.9,
+   "power": 0.8175,
+   "metric": "visits_per_1000won"
+  }
+ },
+ "replay": [
+  {
+   "date": "2026-11-17",
+   "prob": 0.3211,
+   "min_visits": 9.0,
+   "word": "아직 몰라요"
+  },
+  {
+   "date": "2026-11-18",
+   "prob": 0.12306,
+   "min_visits": 16.0,
+   "word": "A 쪽이에요"
+  },
+  {
+   "date": "2026-11-19",
+   "prob": 0.06864,
+   "min_visits": 26.0,
+   "word": "확실해요"
+  },
+  {
+   "date": "2026-11-20",
+   "prob": 0.05322,
+   "min_visits": 35.0,
+   "word": "확실해요"
+  }
+ ],
+ "diagnosis": {
+  "status": "fired",
+  "finding": {
+   "id": "rule.placement_quality",
+   "title": "노출 위치 품질",
+   "funnel": "클릭",
+   "message": "클릭의 30%가 다른 앱 광고 자리(Audience Network)에서 나왔어요. 클릭은 싸지만 구매로 잘 안 이어져요."
+  }
+ },
+ "next": {
+  "action": "고정하고 새 변수",
+  "change": {
+   "row": "-",
+   "field_id": "meta.creative.copy",
+   "path": "광고 › 기본 문구·제목",
+   "label": "기본 문구·제목",
+   "now": null,
+   "new": "기본 문구를 바꾼 세트를 하나 더 만들어 보세요",
+   "new_short": "+ 새 문구 1개",
+   "reason": "크게 막힌 곳이 없어요. 지금 세팅은 그대로 두고 문구 하나만 바꿔 비교해 봐요.",
+   "tag": "테스트 제안",
+   "tested": false,
+   "per_set": 17000,
+   "what": "새 문구",
+   "test": "지금 세트와 17,000원씩 같이 돌려서 직접 비교해요.",
+   "unknown": "새 문구가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+   "certainty": {
+    "level": "보류",
+    "label": "아직 몰라요",
+    "why": "돌려 본 적 없는 값이라 이번 테스트로 확인해요"
+   },
+   "rule": {
+    "row": "-",
+    "level": "보류",
+    "why": "실측 + 진단 규칙"
+   },
+   "grade": "D",
+   "meta_says": null,
+   "checklist": [
+    "바꾸는 칸은 기본 문구·제목 1개만",
+    "두 세트는 같은 날 같이 시작"
+   ],
+   "note": "크게 막힌 곳이 없어요. 지금 세팅은 그대로 두고 문구 하나만 바꿔 비교해 봐요."
+  },
+  "summary": [
+   "이번에 알게 된 것: A(자동)가 같은 돈으로 손님을 더 데려왔어요 (나을 확률 95% · 확실해요)",
+   "아직 모르는 것: 다른 칸을 바꾸면 더 나아질지",
+   "다음에 테스트할 것: 광고 › 기본 문구·제목 → + 새 문구 1개"
+  ]
+ },
+ "code": "TWO2"
+}

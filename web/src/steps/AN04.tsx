@@ -27,7 +27,8 @@ export function AN04({ r }: { r: Result }) {
             className={`rounded-badge border px-4 py-1.5 text-body ${tab === id ? "border-accent bg-accent text-on-action font-semibold" : "border-line bg-surface"}`}>{t}</button>
         ))}
       </div>
-      {!v && tab !== "places" && <Card title="비교할 세트가 하나예요" summary="세트가 두 개 이상이어야 값을 비교할 수 있어요" />}
+      {!v && tab !== "places" && <><Lead>비교할 세트가 하나라 값 비교는 없어요</Lead>
+        <Card title="비교할 세트가 하나예요" summary="세트가 두 개 이상이어야 값을 비교할 수 있어요. 다음엔 칸 1개만 다르게 두 세트를 같은 날 같이 돌려 보세요" /></>}
       {v && tab === "ab" && <><CostPerCustomer r={r} /><AdCost r={r} /><Days r={r} /></>}
       {v && tab === "days" && <Days r={r} />}
       {tab === "places" && <Places r={r} />}
@@ -69,8 +70,9 @@ function CostPerCustomer({ r }: { r: Result }) {
         ))}
       </ul>
       {same && <p className="text-body">같은 돈({won(same.base)})으로 온 손님 <b>A {same.counts[0]}명 · B {same.counts[1]}명</b></p>}
-      <p className="flex flex-wrap items-center gap-2 text-body">B가 나을 확률 <b className="tabular-nums">{pct(m.prob_b_better)}</b> <VerdictBadge word={v.badge.word} small /></p>
-      <ProbBar p={m.prob_b_better} />
+      {/* 이긴 쪽 기준으로 말한다 (A가 이기면 'A가 나을 확률 95%') */}
+      <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{pct(v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better)}</b> <VerdictBadge word={v.badge.word} small /></p>
+      <ProbBar p={v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better} />
       <p className="text-caption text-soft">점선: 70% 넘으면 '○ 쪽이에요' · 90% 넘으면 '확실해요'{v.badge.capped ? " · 클릭이 적거나 돈이 한쪽에 몰리면 한 단계 낮춰 보여 드려요" : ""}</p>
     </Card>
   );
@@ -114,18 +116,20 @@ function Days({ r }: { r: Result }) {
   if (!days.length) return null;
   const last = days[days.length - 1]!;
   const lastWord = last.word ?? wordOf(last.prob);
-  const steady = days.length >= 2 && days.every((d, i) => i === 0 || d.prob >= days[i - 1]!.prob);
+  // 마지막 날 이긴 쪽 기준 확률로 보여 준다 (B가 이기면 B가 나을 확률, A가 이기면 A가 나을 확률)
   const side = last.prob >= 0.5 ? "B" : "A";
+  const of = (p: number) => (side === "B" ? p : 1 - p);
+  const steady = days.length >= 2 && days.every((d, i) => i === 0 || of(d.prob) >= of(days[i - 1]!.prob) - 0.03);
   return (
     <Card title={steady ? `하루씩 쌓일수록 ${side} 쪽으로 굳어지고 있어요` : "하루씩 더해 보면 아직 오락가락해요"}
-      summary="손님 1명당 비용 기준 · 더 돌리면 '확실해요'까지 갈 수도 있지만 아직 장담은 못 해요">
+      summary={`손님 1명당 비용 기준 · ${side}가 나을 확률${lastWord === "확실해요" ? "" : " · 더 돌리면 '확실해요'까지 갈 수도 있지만 아직 장담은 못 해요"}`}>
       <ol className="flex flex-wrap items-center gap-2">
         {days.map((d, i) => (
           <li key={d.date} className="flex items-center gap-2">
             {i > 0 && <span aria-hidden="true" className="text-soft">→</span>}
             <span className="flex flex-col items-center gap-1 rounded-button bg-bg px-3 py-2">
               <span className="text-caption text-soft">{md(d.date)}</span>
-              <b className="text-lead tabular-nums">{pct(d.prob)}</b>
+              <b className="text-lead tabular-nums">{pct(of(d.prob))}</b>
               <VerdictBadge word={d.word ?? wordOf(d.prob)} small />
             </span>
           </li>

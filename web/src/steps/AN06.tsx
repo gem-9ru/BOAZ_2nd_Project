@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Result } from "../api";
-import { Button, Card, TestTag, won } from "../ui";
+import { Button, Card, josa, TestTag, won } from "../ui";
 import { DEV_LABEL } from "./Certainty";
 import { Lead } from "./shared";
 
@@ -12,7 +12,7 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
   const c = r.matrix.change ?? r.next.change;
   const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
   const [tab, setTab] = useState<(typeof EVIDENCE)[number]>("메타 공식 신호");
-  const what = c.unknown?.split("가 손님을")[0] ?? c.label;
+  const what = c.what ?? c.label;
   const days = r.check.read.days;
   // 옆 광고 어시스턴트(확장 프로그램 패널)로 바로 보낸다. 패널이 안 열려 있을 때를 위해 코드도 복사해 둔다.
   function send() {
@@ -29,18 +29,20 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
   const ok = r.matrix.keep[0];
   return (
     <>
-      <Lead>{c.tested === false ? `${what}를 넣은 세트 하나만 더 만들면 돼요` : `${c.label} 칸 하나만 바꾸면 돼요`}</Lead>
+      <Lead>{c.tested === false
+        ? (what.endsWith("소재") ? `${josa(what, "을를")} 넣은 세트 하나만 더 만들면 돼요` : `${c.label} 칸만 바꾼 세트 하나만 더 만들면 돼요`)
+        : `${c.label} 칸 하나만 바꾸면 돼요`}</Lead>
       <Card title="테스트안" summary={c.path ?? c.label}>
         <div className="flex flex-col gap-2 rounded-button border-2 border-accent px-5 py-4">
           <p className="flex flex-wrap items-center gap-2 text-lead font-bold">
-            <span>지금 세트: {c.now ? <>{c.now} <span className="font-normal text-soft">(그대로)</span></> : "지금 소재 그대로"}</span>
+            <span>지금 세트: {c.now ? <>{c.now} <span className="font-normal text-soft">(그대로)</span></> : "그대로"}</span>
             <span aria-hidden="true">·</span>
             <span>새 세트: {c.new_short ?? c.new}</span>
             {c.tag && <TestTag text={c.tag} />}
           </p>
           <p className="text-body">이유: {c.reason ?? c.note}</p>
           {c.tested === false && <p className="text-body">{what} 효과: 아직 몰라요 → 이번 테스트로 확인</p>}
-          <p className="text-body text-soft">세트당 총 {won(c.per_set ?? 5000)}, {days}일 (Test & Roll 권장 범위 안)</p>
+          <p className="text-body text-soft">세트당 총 {won(c.per_set ?? 5000)}, {days}일 · 두 세트 같은 날 같이 시작</p>
         </div>
       </Card>
       <Card title="다음 테스트 체크리스트" summary={`${checklist.length}개만 지키면 다음 결과로 효과를 잴 수 있어요`}>

@@ -28,7 +28,8 @@ export function AN03({ r, focus }: { r: Result; focus?: string | null }) {
   const tabs: ("전체" | Kind)[] = ["전체", "테스트", "다시 보기", "그대로"];
   return (
     <>
-      <Lead>테스트할 칸 {n("테스트")}개, 다시 볼 칸 {n("다시 보기")}개, 나머지 {n("그대로")}개는 그대로 두세요</Lead>
+      <Lead>{[`테스트할 칸 ${n("테스트")}개`, n("다시 보기") ? `다시 볼 칸 ${n("다시 보기")}개` : null,
+        n("그대로") ? `나머지 ${n("그대로")}개는 그대로 두세요` : "나머지는 그대로 두세요"].filter(Boolean).join(", ")}</Lead>
       <Card title="광고 관리자 순서로 본 내 세팅" summary="광고 관리자 칸 이름 그대로, 위에서부터 캠페인 → 광고 세트 → 광고 순서예요">
         <div role="tablist" aria-label="상태로 거르기" className="flex flex-wrap gap-2">
           {tabs.map((t) => (

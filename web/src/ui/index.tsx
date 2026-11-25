@@ -153,6 +153,12 @@ export function people(rate: number | null | undefined, base = 1000): string {
 export function band(b: { median: number; lo: number; hi: number }, unit = "명", fmt: (x: number) => string = (x) => Math.round(x).toLocaleString()): string {
   return `보통 ${fmt(b.median)}${unit} (적게 ${fmt(b.lo)}${unit} ~ 많이 ${fmt(b.hi)}${unit})`;
 }
+/** 받침에 맞는 조사: josa("세로 소재", "을를") → "세로 소재를", josa("새 문구", "이가") → "새 문구가" */
+export function josa(word: string, pair: "이가" | "을를" | "은는" | "과와" = "이가"): string {
+  const c = word.trim().slice(-1).charCodeAt(0);
+  const has = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
+  return word + (has ? pair[0] : pair[1]);
+}
 /** '2026-11-18' → '11/18' */
 export function md(d: string | undefined): string {
   if (!d) return "";

@@ -40,3 +40,32 @@ def test_alt23_two_fields_differ_by_set_names():
     many = next(a for a in out if a["kind"] == "many_fields")
     assert many["level"] == "info" and many["screen"] == "AN-04" and "어느 칸 덕인지는 몰라요" in many["text"]
     assert "many_fields" not in [a["kind"] for a in oven()["alerts"]]   # 오븐로그는 노출 위치 한 칸만 다름
+
+
+# ── 예외 파일 (화면 확인 2026-11-25) ──
+TWO = "server/tests/fixtures/meta_export_2sets_no_actions.csv"   # 광고 관리자 내보내기, 행동 열 없음, A(자동)가 이김
+ONE = "server/tests/fixtures/meta_export_ko.csv"                  # 세트 1개
+
+
+def test_two_sets_without_actions_still_give_one_test_proposal_not_the_kept_field():
+    r = loop_run.run(read_export(TWO))
+    assert all(a.get("actions") is None for a in r["summary"]["arms"])
+    assert "small_sample" not in [a["kind"] for a in r["alerts"]] and not r["blocked"]
+    row4 = next(x for x in r["matrix"]["rows"] if x["row"] == "4")
+    assert "파일에 없어요" in row4["signal"]
+    keep = r["matrix"]["keep"][0]
+    assert keep["field_id"] == "meta.adset.placements" and keep["value"].startswith("자동")
+    c = r["matrix"]["change"]   # 막힌 곳이 없으면 문구 하나만 바꿔 비교 (유지할 노출 위치를 바꾸라고 하지 않음)
+    assert c["field_id"] == "meta.creative.copy" and c["tag"] == "테스트 제안" and c["what"] == "새 문구"
+    assert c["unknown"].startswith("새 문구가 ") and c["per_set"] <= r["summary"]["arms"][0]["spend"]
+    assert "A(자동)가" in r["next"]["summary"][0] and "_" not in r["next"]["summary"][0]
+
+
+def test_single_set_has_no_ad_cost_comparison_and_a_test_proposal():
+    r = loop_run.run(read_export(ONE))
+    assert r["verdict"] is None
+    row1 = next(x for x in r["matrix"]["rows"] if x["row"] == "1")
+    assert row1["status"] == "skip" and "세트가 하나" in row1["signal"]
+    c = r["matrix"]["change"]
+    assert c["field_id"] == "meta.ad.website_url" and c["unknown"].startswith("주소·속도를 고친 페이지가 ")
+    assert c["per_set"] == 6000   # 6,660원 쓴 세트 → 내림 (써 본 금액 안)
