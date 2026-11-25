@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 
 from ..specs import all_fields, fields as _fields
 from ..specs import loop as _loop
-from .words import arm_short, per_people, won
+from .words import arm_short, josa, per_people, won
 
 PATH = {
     "meta.campaign.objective": "캠페인 › 목표",
@@ -116,7 +116,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     if "underspent" in kinds or (days and len(no_delivery) / days >= 0.5):
         rows.append(_row("0", "게재", "광고가 안 나간 날이 많거나 예산을 반도 못 썼어요", "blocked", "meta.adset.daily_budget"))
         proposals["0"] = {"field_id": "meta.adset.daily_budget", "new": "총예산을 '하루 최소 × 기간'보다 넉넉하게, 타깃이 좁으면 넓히기",
-                          "short": "총예산 넉넉하게",
+                          "short": "총예산 넉넉하게", "what": "넉넉한 총예산",
                           "reason": "광고가 충분히 나가지 않아서 다른 숫자를 판단할 수 없어요.", "level": "유력", "grade": "A"}
     elif no_delivery:
         rows.append(_row("0", "게재", f"광고가 안 나간 날 {len(no_delivery)}일", "watch", "meta.adset.end_date"))
@@ -139,16 +139,17 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     elif len(arms) == 1 and arms[0].get("cpm") and arms[0]["cpm"] > cfg["cpm_high"]:
         rows.append(_row("1", "광고가 보이는 값", f"광고 1,000번 보여주는 데 {won(arms[0]['cpm'])} 들어서 기준보다 비싸요", "blocked", "meta.adset.placements"))
         proposals["1"] = {"field_id": "meta.adset.placements", "new": "노출 위치 직접 고르기(수동: 피드·릴스), 연령 '더 제한하기'로 고정",
-                          "short": "노출 위치 직접 고르기(수동)",
+                          "short": "노출 위치 직접 고르기(수동)", "what": "직접 고른 노출 위치",
                           "reason": "광고를 보여주는 값이 비싸서 같은 돈으로 적게 보여요.", "level": "유력", "grade": "D"}
     else:
-        rows.append(_row("1", "광고가 보이는 값", "두 세트 광고비 차이가 뚜렷하지 않아요", "ok"))
+        rows.append(_row("1", "광고가 보이는 값", "두 세트 광고비 차이가 뚜렷하지 않아요" if len(arms) > 1
+                         else "비교할 세트가 하나라 광고비 비교는 없어요", "ok" if len(arms) > 1 else "skip"))
 
     # 2 본 사람이 누르는 정도
     ctr = tot["link_clicks"] / tot["impressions"] if tot["impressions"] else None
     if ctr is not None and ctr < cfg["ctr_low"]:
         rows.append(_row("2", "누르는 정도", f"1,000명이 보면 {per_people(ctr)}이 눌러요 · 기준({per_people(cfg['ctr_low'])})보다 적어요", "blocked", "meta.ad.media"))
-        proposals["2"] = {"field_id": "meta.ad.media", "new": "소재 바꾸기 (세로형 추가, 첫 장면에 상품)", "short": "+ 새 소재 1개",
+        proposals["2"] = {"field_id": "meta.ad.media", "new": "소재 바꾸기 (세로형 추가, 첫 장면에 상품)", "short": "+ 새 소재 1개", "what": "새 소재",
                           "reason": "보는 사람은 많은데 누르는 사람이 적어요. 소재·문구가 눈길을 못 끌어요.", "level": "유력", "grade": "A"}
     else:
         rows.append(_row("2", "누르는 정도", f"1,000명이 보면 {per_people(ctr)}이 눌러요 → 괜찮아요" if ctr is not None else "클릭 자료가 없어요",
@@ -164,7 +165,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     vr = tot["landing_page_views"] / tot["link_clicks"] if tot["link_clicks"] else None
     if vr is not None and tot["link_clicks"] >= 10 and vr < cfg["visit_rate_min"]:
         rows.append(_row("3", "페이지 도착", f"누른 100명 중 {vr * 100:.0f}명만 페이지에 들어왔어요", "blocked", "meta.ad.website_url"))
-        proposals["3"] = {"field_id": "meta.ad.website_url", "new": "페이지 속도·주소 점검, Audience Network 빼기", "short": "주소·속도 점검",
+        proposals["3"] = {"field_id": "meta.ad.website_url", "new": "페이지 속도·주소 점검, Audience Network 빼기", "short": "주소·속도 점검", "what": "주소·속도를 고친 페이지",
                           "reason": "누르고도 페이지에 못 들어온 사람이 많아요.", "level": "유력", "grade": "A"}
     else:
         rows.append(_row("3", "페이지 도착", f"누른 100명 중 {vr * 100:.0f}명이 들어왔어요 → 괜찮아요" if vr is not None else "도착 자료가 없어요",
@@ -212,19 +213,25 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     rows.append(_row("6", "(구조)", f"세트당 일주일에 클릭 약 {per_week:.0f}번 < {cfg['learning_events']}번 → 메타가 배우기엔 적어요" if learning else "메타가 배우기에 충분해요",
                      "watch" if learning else "ok", "meta.adset.performance_goal" if learning else None))
 
-    pick = next((r["row"] for r in rows if r["status"] == "blocked"), None) or ("5" if "5" in proposals else None)
+    # 막힌 곳도, 돈이 몰린 자리도 없으면: 이긴 세팅은 그대로 두고 문구 하나만 바꿔 비교 (v4.2: 결론은 언제나 테스트 제안 1개)
+    if not any(r["status"] == "blocked" for r in rows) and "5" not in proposals:
+        proposals["-"] = {"field_id": "meta.creative.copy", "new": "기본 문구를 바꾼 세트를 하나 더 만들어 보세요", "short": "+ 새 문구 1개",
+                          "what": "새 문구", "reason": "크게 막힌 곳이 없어요. 지금 세팅은 그대로 두고 문구 하나만 바꿔 비교해 봐요.",
+                          "level": "보류", "grade": "D"}
+    pick = next((r["row"] for r in rows if r["status"] == "blocked"), None) or ("5" if "5" in proposals else "-" if "-" in proposals else None)
     change = None
     if pick:
         p = proposals[pick]
         label = PATH[p["field_id"]].split(" › ")[-1]
-        per_set = max(5000, int(round(tot["spend"] / max(1, len(arms)), -3))) if arms else 5000
+        # 써 본 금액 안에서 천 원 단위로 내림 (올리면 '써 본 적 없는 금액'이 돼요)
+        per_set = max(5000, int(tot["spend"] / max(1, len(arms)) // 1000 * 1000)) if arms else 5000
         what = p.get("what", f"{label} 변경")
         change = {"row": pick, "field_id": p["field_id"], "path": PATH[p["field_id"]], "label": label,
                   "now": settings.get(p["field_id"]), "new": p["new"], "new_short": p["short"], "reason": p["reason"],
                   # v4.2: 결론은 돌려 본 적 없는 선택지 → 판정 배지 대신 '테스트 제안' (효과는 아직 몰라요)
-                  "tag": "테스트 제안", "tested": False, "per_set": per_set,
+                  "tag": "테스트 제안", "tested": False, "per_set": per_set, "what": what,
                   "test": f"지금 세트와 {won(per_set)}씩 같이 돌려서 직접 비교해요.",
-                  "unknown": f"{what}가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+                  "unknown": f"{josa(what)} 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
                   "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
                   # 근거 탭·개발 문서용: 진단 규칙 자체의 신뢰도 (확실/유력/보류 그대로)
                   "rule": {"row": pick, "level": p["level"], "why": "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")},

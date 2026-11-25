@@ -29,7 +29,8 @@ export function AN02({ r }: { r: Result }) {
       meaning: unknown ? <>두 세트가 비슷해요 <VerdictBadge word="아직 몰라요" small /></>
         : <>{paren(armName(cheap.name, bi))}가 {pct}% 싸요 <VerdictBadge word={cpm.word} small /></> };
   } else {
-    first = { n: "①", stage: "광고가 보이는 값", suspect: "노출 위치 · 타깃", kind: ok("1") ? "ok" : "low", meaning: row("1")?.signal ?? "–" };
+    const skip = row("1")?.status === "skip";
+    first = { n: "①", stage: "광고가 보이는 값", suspect: ok("1") ? "—" : "노출 위치 · 타깃", kind: skip ? "unknown" : ok("1") ? "ok" : "low", meaning: row("1")?.signal ?? "–" };
   }
   const lines: Line[] = [
     first,

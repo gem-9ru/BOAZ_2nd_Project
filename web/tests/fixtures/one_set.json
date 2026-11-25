@@ -1,0 +1,513 @@
+{
+ "settings": {},
+ "alerts": [
+  {
+   "level": "warn",
+   "mark": "▲",
+   "kind": "small_sample",
+   "text": "클릭이 적어서 아직 몰라요 (A 23번) · 클릭이 30번 넘게 모이면 알 수 있어요.",
+   "todo": "그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요. 클릭이 30번 넘게 모일 때까지 그대로 두세요.",
+   "screen": "AN-02"
+  },
+  {
+   "level": "warn",
+   "mark": "▲",
+   "kind": "low_visit_rate",
+   "text": "A_자동노출위치: 누른 10명 중 페이지에 들어온 사람이 4명뿐이에요 → 링크 주소 · 페이지 속도",
+   "todo": "휴대폰으로 광고 주소를 열어 주소가 맞는지, 빨리 열리는지 확인해 주세요.",
+   "screen": "AN-02"
+  },
+  {
+   "level": "info",
+   "mark": "●",
+   "kind": "untried_budget",
+   "text": "세트당 6,660원까지만 써 봤어요. 그 이상은 가설이라 범위가 넓어요.",
+   "todo": "써 본 적 없는 금액은 점선으로 보여 드려요.",
+   "screen": "AN-05",
+   "spent": 6660.0,
+   "shown_from": "AN-05"
+  }
+ ],
+ "blocked": false,
+ "matrix": {
+  "rows": [
+   {
+    "row": "0",
+    "stage": "게재",
+    "signal": "매일 광고가 나갔어요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "1",
+    "stage": "광고가 보이는 값",
+    "signal": "비교할 세트가 하나라 광고비 비교는 없어요",
+    "status": "skip",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "2",
+    "stage": "누르는 정도",
+    "signal": "1,000명이 보면 약 19명이 눌러요 → 괜찮아요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "2b",
+    "stage": "누르는 정도 (같은 소재 피로)",
+    "signal": "기간 2일 · 본 사람 수(도달) 열 없음 → 해당 없음",
+    "status": "skip",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "3",
+    "stage": "페이지 도착",
+    "signal": "누른 100명 중 43명만 페이지에 들어왔어요",
+    "status": "blocked",
+    "field_id": "meta.ad.website_url",
+    "path": "광고 › 웹사이트 URL",
+    "detail": ""
+   },
+   {
+    "row": "4",
+    "stage": "행동",
+    "signal": "구매·알림 신청 같은 행동 숫자가 파일에 없어요 → 아직 몰라요",
+    "status": "skip",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   },
+   {
+    "row": "5",
+    "stage": "(전 단계)",
+    "signal": "인스타 릴스에 돈의 60%",
+    "status": "found",
+    "field_id": "meta.ad.media",
+    "path": "광고 › 형식·미디어",
+    "detail": ""
+   },
+   {
+    "row": "6",
+    "stage": "(구조)",
+    "signal": "메타가 배우기에 충분해요",
+    "status": "ok",
+    "field_id": null,
+    "path": "",
+    "detail": ""
+   }
+  ],
+  "change": {
+   "row": "3",
+   "field_id": "meta.ad.website_url",
+   "path": "광고 › 웹사이트 URL",
+   "label": "웹사이트 URL",
+   "now": null,
+   "new": "페이지 속도·주소 점검, Audience Network 빼기",
+   "new_short": "주소·속도 점검",
+   "reason": "누르고도 페이지에 못 들어온 사람이 많아요.",
+   "tag": "테스트 제안",
+   "tested": false,
+   "per_set": 6000,
+   "what": "주소·속도를 고친 페이지",
+   "test": "지금 세트와 6,000원씩 같이 돌려서 직접 비교해요.",
+   "unknown": "주소·속도를 고친 페이지가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+   "certainty": {
+    "level": "보류",
+    "label": "아직 몰라요",
+    "why": "돌려 본 적 없는 값이라 이번 테스트로 확인해요"
+   },
+   "rule": {
+    "row": "3",
+    "level": "유력",
+    "why": "실측 + 진단 규칙"
+   },
+   "grade": "A",
+   "meta_says": null,
+   "checklist": [
+    "클릭이 30번 넘게 모일 때까지 그대로 두기",
+    "광고 주소를 휴대폰으로 열어 확인하기",
+    "바꾸는 칸은 웹사이트 URL 1개만",
+    "두 세트는 같은 날 같이 시작"
+   ]
+  },
+  "keep": [],
+  "watch": [],
+  "dont": [
+   "여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요.",
+   "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 손님 1명에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요."
+  ],
+  "tested_field": "meta.adset.placements",
+  "settings": []
+ },
+ "backtest": {
+  "ok": false,
+  "note": "광고가 나간 날이 3일보다 적어서 백테스트를 못 해요."
+ },
+ "check": {
+  "period": {
+   "first": "2026-11-17",
+   "last": "2026-11-18"
+  },
+  "ok": true,
+  "read": {
+   "days": 2,
+   "adsets": 1,
+   "daily_rows": 2,
+   "placement_rows": 5
+  },
+  "totals": [
+   {
+    "metric": "spend",
+    "daily": 6660.0,
+    "placement": 6660.0,
+    "match": true
+   },
+   {
+    "metric": "impressions",
+    "daily": 1180.0,
+    "placement": 1180.0,
+    "match": true
+   },
+   {
+    "metric": "link_clicks",
+    "daily": 23.0,
+    "placement": 23.0,
+    "match": true
+   }
+  ],
+  "warnings": [],
+  "safety": [
+   {
+    "ok": true,
+    "text": "모든 숫자는 메타 기여 기준(클릭 후 7일 또는 조회 후 1일)이에요."
+   },
+   {
+    "ok": true,
+    "text": "퍼널은 광고 관리자 숫자로 계산해요. 픽셀에 섞일 수 있는 팀·본인 방문은 넣지 않아요."
+   }
+  ],
+  "missing": []
+ },
+ "summary": {
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "spend": 6660.0,
+    "impressions": 1180.0,
+    "link_clicks": 23.0,
+    "landing_page_views": 10.0,
+    "cpm": 5644.067796610169,
+    "ctr": 0.019491525423728815,
+    "cpc": 289.5652173913044,
+    "click_to_visit": 0.43478260869565216,
+    "visits_per_1000won": 1.5015015015015014,
+    "cost_per_visit": 666.0,
+    "actions": null,
+    "daily_max": 4760.0
+   }
+  ],
+  "placements": [
+   {
+    "placement": "Instagram 릴스",
+    "label": "인스타그램 릴스",
+    "spend": 4000.0,
+    "share": 0.6006006006006006,
+    "impressions": 470.0,
+    "link_clicks": 11.0,
+    "ctr": 0.023404255319148935
+   },
+   {
+    "placement": "Instagram 피드",
+    "label": "인스타그램 피드",
+    "spend": 1200.0,
+    "share": 0.18018018018018017,
+    "impressions": 160.0,
+    "link_clicks": 3.0,
+    "ctr": 0.01875
+   },
+   {
+    "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+    "label": "Audience Network 네이티브·배너·전면",
+    "spend": 960.0,
+    "share": 0.14414414414414414,
+    "impressions": 450.0,
+    "link_clicks": 8.0,
+    "ctr": 0.017777777777777778
+   },
+   {
+    "placement": "Facebook 피드",
+    "label": "페이스북 피드",
+    "spend": 500.0,
+    "share": 0.07507507507507508,
+    "impressions": 100.0,
+    "link_clicks": 1.0,
+    "ctr": 0.01
+   }
+  ],
+  "placements_by_set": [
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram 릴스",
+    "label": "인스타그램 릴스",
+    "spend": 4000.0,
+    "share": 0.6006006006006006,
+    "impressions": 470.0,
+    "link_clicks": 11.0,
+    "ctr": 0.023404255319148935
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Instagram 피드",
+    "label": "인스타그램 피드",
+    "spend": 1200.0,
+    "share": 0.18018018018018017,
+    "impressions": 160.0,
+    "link_clicks": 3.0,
+    "ctr": 0.01875
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+    "label": "Audience Network 네이티브·배너·전면",
+    "spend": 960.0,
+    "share": 0.14414414414414414,
+    "impressions": 450.0,
+    "link_clicks": 8.0,
+    "ctr": 0.017777777777777778
+   },
+   {
+    "adset": "A_자동노출위치",
+    "placement": "Facebook 피드",
+    "label": "페이스북 피드",
+    "spend": 500.0,
+    "share": 0.07507507507507508,
+    "impressions": 100.0,
+    "link_clicks": 1.0,
+    "ctr": 0.01
+   }
+  ],
+  "action_label": null
+ },
+ "intervals": {
+  "A_자동노출위치": {
+   "cpm": [
+    5379.710370632394,
+    5921.06375640659
+   ],
+   "ctr": [
+    0.014078673826923075,
+    0.027466130456999947
+   ],
+   "cpc": [
+    204.22653935316964,
+    402.4808144184189
+   ],
+   "click_to_visit": [
+    0.2820763047189101,
+    0.6027562910585853
+   ],
+   "visits_per_1000won": [
+    0.9292693818597393,
+    2.549699475092352
+   ]
+  }
+ },
+ "placements": [
+  {
+   "placement": "Instagram 릴스",
+   "label": "인스타그램 릴스",
+   "spend": 4000.0,
+   "share": 0.6006006006006006,
+   "impressions": 470.0,
+   "link_clicks": 11.0,
+   "ctr": 0.023404255319148935,
+   "ctr_adjusted": 0.019493363542863667,
+   "reference_only": false
+  },
+  {
+   "placement": "Instagram 피드",
+   "label": "인스타그램 피드",
+   "spend": 1200.0,
+   "share": 0.18018018018018017,
+   "impressions": 160.0,
+   "link_clicks": 3.0,
+   "ctr": 0.01875,
+   "ctr_adjusted": 0.01949140679864103,
+   "reference_only": false
+  },
+  {
+   "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+   "label": "Audience Network 네이티브·배너·전면",
+   "spend": 960.0,
+   "share": 0.14414414414414414,
+   "impressions": 450.0,
+   "link_clicks": 8.0,
+   "ctr": 0.017777777777777778,
+   "ctr_adjusted": 0.01949075458416594,
+   "reference_only": false
+  },
+  {
+   "placement": "Facebook 피드",
+   "label": "페이스북 피드",
+   "spend": 500.0,
+   "share": 0.07507507507507508,
+   "impressions": 100.0,
+   "link_clicks": 1.0,
+   "ctr": 0.01,
+   "ctr_adjusted": 0.019490576366092204,
+   "reference_only": false
+  }
+ ],
+ "placements_by_set": [
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram 릴스",
+   "label": "인스타그램 릴스",
+   "spend": 4000.0,
+   "share": 0.6006006006006006,
+   "impressions": 470.0,
+   "link_clicks": 11.0,
+   "ctr": 0.023404255319148935,
+   "ctr_adjusted": 0.019493363542863667,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Instagram 피드",
+   "label": "인스타그램 피드",
+   "spend": 1200.0,
+   "share": 0.18018018018018017,
+   "impressions": 160.0,
+   "link_clicks": 3.0,
+   "ctr": 0.01875,
+   "ctr_adjusted": 0.01949140679864103,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Audience Network 네이티브, 배너 및 전면 광고",
+   "label": "Audience Network 네이티브·배너·전면",
+   "spend": 960.0,
+   "share": 0.14414414414414414,
+   "impressions": 450.0,
+   "link_clicks": 8.0,
+   "ctr": 0.017777777777777778,
+   "ctr_adjusted": 0.01949075458416594,
+   "reference_only": false
+  },
+  {
+   "adset": "A_자동노출위치",
+   "placement": "Facebook 피드",
+   "label": "페이스북 피드",
+   "spend": 500.0,
+   "share": 0.07507507507507508,
+   "impressions": 100.0,
+   "link_clicks": 1.0,
+   "ctr": 0.01,
+   "ctr_adjusted": 0.019490576366092204,
+   "reference_only": false
+  }
+ ],
+ "funnel": {
+  "arms": [
+   {
+    "name": "A_자동노출위치",
+    "stages": [
+     {
+      "key": "impressions",
+      "label": "보여진 횟수",
+      "count": 1180.0
+     },
+     {
+      "key": "link_clicks",
+      "label": "클릭",
+      "count": 23.0,
+      "rate": 0.019491525423728815,
+      "range": [
+       0.013083868574937083,
+       0.02909922922568619
+      ],
+      "per100": "1,000명이 보면 약 19명이 눌렀어요",
+      "unknown": false
+     },
+     {
+      "key": "landing_page_views",
+      "label": "손님 (페이지 방문)",
+      "count": 10.0,
+      "rate": 0.43478260869565216,
+      "range": [
+       0.25513311203498273,
+       0.6342346893905488
+      ],
+      "per100": "100명이 누르면 약 43명이 들어왔어요",
+      "unknown": false
+     }
+    ]
+   }
+  ],
+  "hint": "누른 사람 중 43%만 들어왔어요. 클릭은 했는데 도착이 적으면 페이지가 늦게 열리는지 점검해 보세요."
+ },
+ "verdict": null,
+ "replay": [],
+ "diagnosis": {
+  "status": "fired",
+  "finding": {
+   "id": "rule.placement_quality",
+   "title": "노출 위치 품질",
+   "funnel": "클릭",
+   "message": "클릭의 35%가 다른 앱 광고 자리(Audience Network)에서 나왔어요. 클릭은 싸지만 구매로 잘 안 이어져요."
+  }
+ },
+ "next": {
+  "action": "바꿔 보기",
+  "change": {
+   "row": "3",
+   "field_id": "meta.ad.website_url",
+   "path": "광고 › 웹사이트 URL",
+   "label": "웹사이트 URL",
+   "now": null,
+   "new": "페이지 속도·주소 점검, Audience Network 빼기",
+   "new_short": "주소·속도 점검",
+   "reason": "누르고도 페이지에 못 들어온 사람이 많아요.",
+   "tag": "테스트 제안",
+   "tested": false,
+   "per_set": 6000,
+   "what": "주소·속도를 고친 페이지",
+   "test": "지금 세트와 6,000원씩 같이 돌려서 직접 비교해요.",
+   "unknown": "주소·속도를 고친 페이지가 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+   "certainty": {
+    "level": "보류",
+    "label": "아직 몰라요",
+    "why": "돌려 본 적 없는 값이라 이번 테스트로 확인해요"
+   },
+   "rule": {
+    "row": "3",
+    "level": "유력",
+    "why": "실측 + 진단 규칙"
+   },
+   "grade": "A",
+   "meta_says": null,
+   "checklist": [
+    "클릭이 30번 넘게 모일 때까지 그대로 두기",
+    "광고 주소를 휴대폰으로 열어 확인하기",
+    "바꾸는 칸은 웹사이트 URL 1개만",
+    "두 세트는 같은 날 같이 시작"
+   ],
+   "note": "누르고도 페이지에 못 들어온 사람이 많아요."
+  },
+  "summary": [
+   "이번에 알게 된 것: 노출 위치 품질",
+   "아직 모르는 것: 비교할 세트가 하나뿐이라 무엇이 더 나은지는 몰라요",
+   "다음에 테스트할 것: 광고 › 웹사이트 URL → 주소·속도 점검"
+  ]
+ },
+ "code": "ONE1"
+}

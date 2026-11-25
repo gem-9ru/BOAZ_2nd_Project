@@ -11,7 +11,7 @@ export function AN05({ r }: { r: Result }) {
       <Simulator r={r} />
       {bt.ok && bt.arms && (
         <Card title="예측이 맞았나? (검증)"
-          summary={`${bt.train_days?.map(md).join("~")} 자료로 ${md(bt.test_day)}을 예측 → ${allIn ? "실제 A·B 모두 범위 안" : "범위를 벗어난 세트가 있어요"}`}>
+          summary={`${bt.train_days?.length ? (bt.train_days.length > 1 ? `${md(bt.train_days[0])}~${md(bt.train_days[bt.train_days.length - 1])}` : md(bt.train_days[0])) : ""} 자료로 ${md(bt.test_day)}을 예측 → ${allIn ? "실제 A·B 모두 범위 안" : "범위를 벗어난 세트가 있어요"}`}>
           <ul className="grid gap-3 sm:grid-cols-2">
             {bt.arms.map((a, i) => (
               <li key={a.name} className="rounded-button bg-bg px-4 py-3 text-body">

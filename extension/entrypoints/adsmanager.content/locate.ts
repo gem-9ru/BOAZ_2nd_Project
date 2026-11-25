@@ -197,7 +197,11 @@ export function goToLevel(doc: Document, level: Level): boolean {
 /** 지금 열려 있는 창(크리에이티브 설정·미디어 등): 화면에 그려진 큰 [role=dialog] 중 마지막. 없으면 null.
  *  창이 열려 있으면 그 뒤의 칸은 가려져 누를 수 없으므로 창 안에서만 찾는다. */
 export function openDialog(doc: Document): HTMLElement | null {
+  // 화면이 실제로 그려지면(크기가 있으면) 크기가 있는 창만 연 창으로 본다: 메타는 목록 화면에 크기 0인 '알림 기본 설정' 창을 숨겨 둔다.
+  // 그림이 없는 환경(테스트)에서는 내용이 있는 창을 연 창으로 본다.
+  const laidOut = doc.body ? doc.body.getClientRects().length > 0 : false;
+  const shown = (d: HTMLElement) => Array.from(d.getClientRects()).some((r) => r.width > 0 && r.height > 0);
   const list = Array.from(doc.querySelectorAll<HTMLElement>("[role=dialog], [aria-modal=true]"))
-    .filter((d) => d.isConnected && (d.getClientRects().length > 0 || d.childElementCount > 0) && !d.closest("ad-coach-buddy"));
+    .filter((d) => d.isConnected && (laidOut ? shown(d) : d.childElementCount > 0) && !d.closest("ad-coach-buddy"));
   return list.at(-1) ?? null;
 }

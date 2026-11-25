@@ -1,7 +1,9 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
+import oneSet from "./fixtures/one_set.json";
 import oven from "./fixtures/oven.json";
+import twoSets from "./fixtures/two_sets_a_wins.json";
 
 const ok = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body), { status: 200 }));
 const sim = { budget: 30000, runs: 200000, arm: "B", impressions: { median: 5000, lo: 4500, hi: 5600 },
@@ -218,6 +220,7 @@ describe("7단계 결과 (v4.2)", () => {
     fireEvent.click(await screen.findByRole("button", { name: "이 테스트 바로 준비 →" }));
     expect(screen.getByText(oven.code)).toBeTruthy();
     expect(screen.getByText(/새 세트: \+ 세로\(9:16\) 1개/)).toBeTruthy();
+    expect(screen.getByText("세로 소재를 넣은 세트 하나만 더 만들면 돼요")).toBeTruthy();   // 설계서 AN-06 한 줄 요약
     expect(screen.getAllByRole("checkbox").length).toBe(4);
     expect(screen.getByText("두 세트는 같은 날 같이 시작")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/ALT-\d/);
@@ -324,5 +327,45 @@ describe("세팅값 받기 (v4 8장 입력 ②)", () => {
     expect(screen.getByRole("tab", { name: "그대로 2" })).toBeTruthy();
     expect(screen.getByText("정사각 이미지").closest("tr")!.className).toContain("border-l-accent");
     expect(screen.queryByText(/결과 파일로 알 수 있는 칸만/)).toBeNull();
+  });
+});
+
+describe("예외 파일 (행동 열 없음 · A가 이김 / 세트 1개)", () => {
+  function show(result: unknown) {
+    vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
+      if (String(url).includes("/simulate")) return ok({ ...sim, tried: true, next_test: { total: 100000, per_set_lo: 4000, per_set_hi: 10000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
+      void init;
+      return ok(result);
+    }));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
+  }
+
+  it("when A wins, numbers are told from A's side (A가 나을 확률 95%), and ④ says the action column is missing", async () => {
+    show(twoSets);
+    expect(await screen.findByText("기본 문구를 바꾼 세트를 하나 더 만들어 보세요")).toBeTruthy();
+    expect(screen.getByText(/노출 위치 = 자동 \(Advantage\+\)/)).toBeTruthy();
+    await next("왜 그런지 보기 ▶");
+    expect(screen.getByText(/행동 숫자가 파일에 없어요/)).toBeTruthy();
+    await next("내 세팅 보기 ▶");
+    expect(screen.queryByText(/다시 볼 칸 0개/)).toBeNull();
+    await next("값 비교 보기 ▶");
+    expect(screen.getByText("A(자동)가 같은 돈으로 손님을 더 데려왔어요")).toBeTruthy();
+    const main = screen.getByRole("heading", { name: "손님 1명당 비용" }).closest("section")!;
+    expect(within(main).getByText(/^A가 나을 확률/)).toBeTruthy();
+    expect(within(main).getByText("95%")).toBeTruthy();
+    expect(within(main).queryByText(/B가 나을 확률/)).toBeNull();
+    expect(screen.getByText("하루씩 쌓일수록 A 쪽으로 굳어지고 있어요")).toBeTruthy();
+  });
+
+  it("a single ad set: no A/B wording, ① is '–', AN-04 still has a one-line summary", async () => {
+    show(oneSet);
+    expect(await screen.findByText(/페이지 속도·주소 점검/)).toBeTruthy();
+    await next("왜 그런지 보기 ▶");
+    const row1 = screen.getByText(/비교할 세트가 하나라 광고비 비교는 없어요/).closest("tr")!;
+    expect(row1.querySelector('[aria-label="아직 몰라요"]')).toBeTruthy();
+    await next("내 세팅 보기 ▶");
+    await next("값 비교 보기 ▶");
+    expect(screen.getByText("비교할 세트가 하나라 값 비교는 없어요")).toBeTruthy();
   });
 });

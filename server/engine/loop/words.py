@@ -36,6 +36,13 @@ def per_people(rate: Optional[float], base: int = 1000) -> str:
     return f"약 {n:.0f}명" if n >= 1 else f"약 {n:.1f}명"
 
 
+def josa(word: str, pair: str = "이가") -> str:
+    """받침에 맞는 조사: josa('세로 소재', '이가') → '세로 소재가', josa('새 문구', '이가') → '새 문구가'."""
+    last = word.rstrip()[-1:] if word else ""
+    has = "가" <= last <= "힣" and (ord(last) - 0xAC00) % 28 != 0
+    return word + (pair[0] if has else pair[1])
+
+
 def arm_short(name: str, index: int) -> str:
     """세트 이름 → 'A(자동)' · 'B(수동)'. 노출 위치를 비교한 이름이 아니면 글자만."""
     letter = "AB"[index] if index < 2 else str(index + 1)

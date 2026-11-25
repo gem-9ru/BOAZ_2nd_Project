@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { simulate, type Result, type Simulation } from "../api";
-import { Lead } from "../steps/shared";
+import { armName, Lead } from "../steps/shared";
 import { AlertMark, band, Card, HowCalculated, won } from "../ui";
 
 /** AN-05 예상 범위 (v4.2): 예산(세트당 총액)과 기간(4일/7일)을 고르면 '보통 ○명 (적게 ○명 ~ 많이 ○명)'.
@@ -34,10 +34,10 @@ export function Simulator({ r }: { r: Result }) {
   const first = sims[0];
   const max = Math.max(...sims.map((s) => s.visits.hi), 1);
   const nt = first?.next_test;
-  const who = arms.length > 1 ? `${"AB"[bi]} ${arm.name.includes("자동") ? "자동" : "수동"}` : arm.name;
+  const who = armName(arm.name, bi);
   return (
     <>
-      <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.unknown ? ` · ${c.unknown.split("가 손님을")[0]} 효과는 아직 재 본 적 없어요` : ""}`}>
+      <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.what ? ` · ${c.what} 효과는 아직 재 본 적 없어요` : ""}`}>
         {first ? `지금 세팅으로 세트당 총 ${won(budget)}을 ${days}일 동안 쓰면 ${band(first.visits)} 와요` : "계산하는 중…"}
       </Lead>
       <Card title="예상 손님 수" summary="10번 중 8번은 이 안에 들어요">
@@ -95,7 +95,9 @@ export function Simulator({ r }: { r: Result }) {
         {error && <p role="alert" className="text-body text-warn">{error}</p>}
       </Card>
       {nt && (
-        <Card title="다음 테스트에 쓸 돈 (Test & Roll)" summary={`이번처럼 세트당 총 ${won(start)}이면 적당해요`}>
+        <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
+          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `이번처럼 세트당 총 ${won(start)}이면 적당해요`
+            : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
               className="w-32 rounded-button border border-field-line bg-surface px-2 py-1 tabular-nums" />원
