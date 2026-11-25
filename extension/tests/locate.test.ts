@@ -492,6 +492,18 @@ describe("열린 창(크리에이티브 설정 등)이 있을 때", () => {
     expect(g.view().waiting).toBe("owner");
   });
 
+  it("ignores a zero-size dialog the page keeps hidden (메타 '알림 기본 설정')", () => {
+    document.body.innerHTML = `<div role="button" id="make">만들기</div>
+      <div role="dialog" id="hidden-dlg"><span>알림</span><span>기본 설정</span></div>`;
+    const box = (w: number, h: number) => () => [{ width: w, height: h, top: 0, left: 0, right: w, bottom: h, x: 0, y: 0, toJSON: () => ({}) }] as unknown as DOMRectList;
+    document.body.getClientRects = box(1000, 800);
+    document.getElementById("make")!.getClientRects = box(80, 30);
+    document.getElementById("hidden-dlg")!.getClientRects = () => [] as unknown as DOMRectList;
+    const g = new Guide(document, [step("meta.campaign.objective", [{ labelledBy: "트래픽" }, { role: "button", text: "만들기", say: "먼저 '+ 만들기'를 누르세요" }], { auto: "click", level: "campaign" })], 0, () => {}, 0);
+    expect(g.view().target?.id).toBe("make");
+    expect(g.view().text).not.toMatch(/열린 창/);
+  });
+
   it("a field inside the dialog is found normally", () => {
     document.body.innerHTML = `<div role="dialog"><span id="h">제목</span><input id="head" aria-labelledby="h"></div>`;
     const g = new Guide(document, [step("meta.creative.copy.headline", [{ labelledBy: "제목" }], { auto: "type" }, "수제 쿠키")], 0, () => {}, 0);

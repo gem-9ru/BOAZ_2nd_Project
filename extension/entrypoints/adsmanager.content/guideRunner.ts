@@ -25,10 +25,13 @@ export interface GuideView {
 }
 
 // 사장님이 눈으로 따라올 수 있게 천천히 (2026-11-25 요청): 뭉치가 걸어가 가리키고, 말풍선을 읽을 시간을 둔다
-const ACT_GAP = 3800;    // 한 번 대신 한 뒤 다음 동작까지
-const HINT_GAP = 4500;   // 창을 넘긴 뒤
-const SCAN_GAP = 1500;   // 스크롤 한 번 뒤
-const LOOK_FIRST = 2200; // 칸을 찾으면 바로 하지 않고 가리킨 채 잠깐 보여 준다
+const PACE = 1 / 1.5;     // 기다리는 시간 배율 (2026-11-25 사장님 요청으로 1.5배 빠르게)
+const ACT_GAP = Math.round(3800 * PACE);    // 한 번 대신 한 뒤 다음 동작까지
+const HINT_GAP = Math.round(4500 * PACE);   // 창을 넘긴 뒤
+const SCAN_GAP = Math.round(1500 * PACE);   // 스크롤 한 번 뒤
+const LOOK_FIRST = Math.round(2200 * PACE); // 칸을 찾으면 바로 하지 않고 가리킨 채 잠깐 보여 준다
+const SURVEY_LEVEL_WAIT = Math.round(1500 * PACE);  // 둘러보기: 화면을 바꾼 뒤 그려질 때까지
+const SURVEY_SCROLL_WAIT = Math.round(700 * PACE);  // 둘러보기: 한 번 내린 뒤
 
 export class Guide {
   private tries = 0;
@@ -165,7 +168,7 @@ export class Guide {
       const items = this.steps.filter((s) => s.entry.level === level && !s.entry.publish);
       if (!items.length || !goToLevel(this.doc, level)) continue;
       this.surveying = NAMES[level]!;
-      await pace.wait(1500);
+      await pace.wait(SURVEY_LEVEL_WAIT);
       const sc = mainScroller(this.doc);
       const look = (top: number) => {
         for (const s of items) {
@@ -179,7 +182,7 @@ export class Guide {
         for (let y = 0; y < sc.scrollHeight; y += Math.round(sc.clientHeight * 0.6)) {
           sc.scrollTop = y;
           sc.dispatchEvent(new Event("scroll"));
-          await pace.wait(700);
+          await pace.wait(SURVEY_SCROLL_WAIT);
           look(sc.scrollTop);
           if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4) break;
         }
