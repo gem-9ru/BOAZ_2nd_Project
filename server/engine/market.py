@@ -156,6 +156,37 @@ def classify(df: pd.DataFrame, seeds: List[str]) -> pd.DataFrame:
     return out
 
 
+def _modifier_of(keyword: str, seeds: List[str]) -> Optional[str]:
+    """키워드에서 상품 낱말·선물·시즌·지역·군더더기(추천 등)를 지우고 남은 말. 상품 낱말이 안 들어 있거나 2~6자가 아니거나 숫자뿐이면 None."""
+    k = keyword.replace(" ", "")
+    mine = sorted({s.replace(" ", "") for s in seeds if s}, key=len, reverse=True)
+    if not any(s in k for s in mine):
+        return None
+    for w in mine:
+        k = k.replace(w, "")
+    for w in sorted(GIFT_WORDS + SEASON_WORDS + PLACE_WORDS + MODIFIER_SKIP, key=len, reverse=True):
+        k = k.replace(w, "")
+    return k if 2 <= len(k) <= 6 and not k.isdigit() else None
+
+
+def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15) -> List[dict]:
+    """손님이 상품과 함께 검색하는 꾸밈말(좋은 점 후보). 뜻이 '상품'인 키워드만 보고, 같은 꾸밈말은 검색수를 더해
+    검색수 순 limit개. 각 항목: word, group(포장|맛·재료|배송|양|그 밖), total_qc, examples(최대 3)."""
+    found: Dict[str, dict] = {}
+    for row in kw[kw["intent"] == "상품"].sort_values("total_qc", ascending=False).itertuples():
+        word = _modifier_of(row.keyword, seeds)
+        if word is None:
+            continue
+        item = found.setdefault(word, {"word": word, "total_qc": 0, "examples": []})
+        item["total_qc"] += int(row.total_qc)
+        if len(item["examples"]) < 3:
+            item["examples"].append(row.keyword)
+    for item in found.values():
+        item["group"] = next((g for g, ws in MODIFIER_GROUPS.items() if any(w in item["word"] for w in ws)), "그 밖")
+    ranked = sorted(found.values(), key=lambda m: m["total_qc"], reverse=True)[:max(limit, 0)]
+    return [{"word": m["word"], "group": m["group"], "total_qc": m["total_qc"], "examples": m["examples"]} for m in ranked]
+
+
 def group_summary(kw: pd.DataFrame) -> pd.DataFrame:
     """뜻별 요약: intent, count(키워드 수), total_qc(검색수 합), mobile_ctr(평균 클릭률 %), top_keyword(대표 키워드)."""
     rows = []
