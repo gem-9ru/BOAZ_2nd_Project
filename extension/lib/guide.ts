@@ -29,8 +29,9 @@ export interface GuideStage {
   say: string;
   /** buddy = 뭉치가 대신 누름, owner = 사장님이 직접 (뭉치는 짚고 기다림) */
   by: "buddy" | "owner";
-  /** 열린 창 안에서만 찾는다 (창 밖의 같은 이름 버튼을 잡지 않게) */
-  inDialog?: true;
+  /** page = 열린 창이 없을 때만 찾는다 (메타 사진 창 위쪽 단계 표시에도 '크리에이티브 설정' 버튼이 있어서),
+   *  dialog = 열린 창 안에서만 찾는다 (편집 화면 아래의 '다음'을 잡지 않게) */
+  where?: "page" | "dialog";
 }
 
 export interface GuideEntry {

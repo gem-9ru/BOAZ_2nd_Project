@@ -504,6 +504,30 @@ describe("열린 창(크리에이티브 설정 등)이 있을 때", () => {
     expect(g.view().text).not.toMatch(/열린 창/);
   });
 
+  it("after the dialog closes, auto picks the field up again instead of staying stuck on '다 했어요'", () => {
+    document.body.innerHTML = `<input id="behind" aria-label="웹사이트 URL">
+      <div role="dialog" id="dlg"><div role="button">다음</div></div>`;
+    const g = new Guide(document, [step("meta.ad.website_url", [{ aria: "웹사이트 URL" }], { auto: "type", level: "ad" }, "https://x")], 0, () => {}, 0);
+    g.setAuto(true);
+    g.autoStep(5000);
+    expect(g.view().waiting).toBe("owner");
+    document.getElementById("dlg")!.remove();
+    g.tick();
+    expect(g.view().waiting).toBeUndefined();
+    expect(g.view().target?.id).toBe("behind");
+  });
+
+  it("[다 했어요] while the field is behind an open dialog does not skip the field", () => {
+    document.body.innerHTML = `<input id="behind" aria-label="웹사이트 URL">
+      <div role="dialog" id="dlg"><div role="button">다음</div></div>`;
+    let moved = 0;
+    const g = new Guide(document, [step("meta.ad.website_url", [{ aria: "웹사이트 URL" }], { auto: "type", level: "ad" }, "https://x"), step("meta.publish", [{ role: "button", text: "게시" }], {})], 0, () => { moved++; }, 0);
+    g.setAuto(true);
+    g.autoStep(5000);
+    g.apply();
+    expect(g.view().index).toBe(0);
+  });
+
   it("a field inside the dialog is found normally", () => {
     document.body.innerHTML = `<div role="dialog"><span id="h">제목</span><input id="head" aria-labelledby="h"></div>`;
     const g = new Guide(document, [step("meta.creative.copy.headline", [{ labelledBy: "제목" }], { auto: "type" }, "수제 쿠키")], 0, () => {}, 0);

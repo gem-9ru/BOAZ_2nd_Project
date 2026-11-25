@@ -245,6 +245,7 @@
   "stages": [
    {
     "by": "buddy",
+    "where": "page",
     "find": [
      {
       "role": "button",
@@ -255,17 +256,10 @@
    },
    {
     "by": "buddy",
+    "where": "page",
     "find": [
      {
       "role": "menuitem",
-      "textStarts": "이미지 광고"
-     },
-     {
-      "role": "menuitemradio",
-      "textStarts": "이미지 광고"
-     },
-     {
-      "role": "option",
       "textStarts": "이미지 광고"
      },
      {
@@ -277,7 +271,7 @@
    },
    {
     "by": "owner",
-    "inDialog": true,
+    "where": "dialog",
     "find": [
      {
       "role": "button",
@@ -286,12 +280,7 @@
      {
       "role": "button",
       "text": "다음",
-      "say": "사진을 골랐으면 오른쪽 아래 '다음'을 누르세요"
-     },
-     {
-      "role": "button",
-      "text": "완료",
-      "say": "'완료'를 누르세요"
+      "say": "사진을 골랐으면 오른쪽 아래 '다음'을 눌러 '문구'까지 가세요"
      }
     ],
     "say": "사진을 고르거나 '업로드'로 올리세요 ({value})"

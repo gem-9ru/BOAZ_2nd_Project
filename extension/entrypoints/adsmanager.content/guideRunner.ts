@@ -59,6 +59,7 @@ export class Guide {
   private hintPresses = 0;
   /** 찾는 칸이 열린 창 뒤에 가려져 있음 (창을 먼저 마쳐야 함) */
   private behindDialog = false;
+  private dialogWait = false;   // 칸이 창 뒤라서 기다리는 중 (창이 닫히면 저절로 풀린다)
   /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
   private pasteAsk = false;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
   /** 하위 단계가 있는 칸: 지금 하위 단계(-1 = 아직), 안 보인 횟수, 가리켜 보여 준 단계, 사장님이 되돌아갔는지 */
@@ -113,7 +114,7 @@ export class Guide {
     }
     // 진짜 칸이 아직 없다 → 다른 편집 화면에 있는 칸이면 그 화면으로, 아니면 끝까지 내려 보며 찾고, 그래도 없으면 준비 안내(만들기·계속·다음)를 누른다
     const dialog = openDialog(this.doc);
-    if (dialog && this.behindDialog) { this.waiting = "owner"; return; }   // 칸이 창 뒤 → 창을 마칠 때까지 기다림
+    if (dialog && this.behindDialog) { this.waiting = "owner"; this.dialogWait = true; return; }   // 칸이 창 뒤 → 창을 마칠 때까지 기다림
     if (!this.surveyed && !dialog && currentLevel(this.doc) !== "list") {
       // 편집 화면에 처음 들어왔다 → 세 화면을 훑어 칸 위치 지도를 만든다 (그동안 다른 동작은 쉼)
       this.busy = true;
@@ -262,6 +263,7 @@ export class Guide {
   apply(): void {
     const item = this.steps[this.index];
     const el = this.target;
+    if (this.behindDialog) { this.seek(); return; }   // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않고 창이 닫혔는지만 다시 본다
     const ownerDone = this.waiting === "owner";   // [다 했어요]: 사장님이 직접 맞췄다 → 다시 하지 않고 다음 칸
     this.waiting = undefined;
     if (this.languageOk && item?.entry.stages) {
@@ -371,6 +373,7 @@ export class Guide {
     this.scan = { wrapped: false, done: false };
     this.waiting = undefined;
     this.hintPresses = 0;
+    this.dialogWait = false;
     this.pasteAsk = false;
     this.resetStage();
     this.index -= 1;
@@ -384,6 +387,7 @@ export class Guide {
     this.scan = { wrapped: false, done: false };
     this.waiting = undefined;
     this.hintPresses = 0;
+    this.dialogWait = false;
     this.pasteAsk = false;
     this.resetStage();
     this.index += 1;
@@ -407,6 +411,11 @@ export class Guide {
     // (창 안의 '다음' 같은 준비 버튼이 보여도, 진짜 칸이 창 뒤에 있으면 그 버튼을 누르지 않는다)
     const realInside = Boolean(hit && !item?.entry.find[hit.index]?.say);
     this.behindDialog = Boolean(item && dialog && !realInside && locateWith(this.doc, item.entry.find.filter((f) => !f.say)));
+    if (!this.behindDialog && this.dialogWait) {   // 창이 닫혔다 → 기다림을 풀고 자동 진행이 이 칸을 다시 짚는다
+      this.dialogWait = false;
+      if (this.waiting === "owner") this.waiting = undefined;
+      this.nextAt = 0;
+    }
     this.target = hit?.el ?? null;
     this.matched = hit?.index ?? 0;
     const isHint = hit ? Boolean(item!.entry.find[hit.index]?.say) : false;
@@ -444,9 +453,11 @@ export class Guide {
     let found: { at: number; el: HTMLElement; matched: number } | null = null;
     for (let at = stages.length - 1; at >= 0 && !found; at -= 1) {
       const st = stages[at]!;
-      if (st.inDialog && !dialog) continue;
+      if ((st.where === "dialog" && !dialog) || (st.where === "page" && dialog)) continue;
       const hit = locateWith(root, st.find);
-      if (hit) found = { at, el: hit.el, matched: hit.index };
+      // 새 단계로는 그 단계의 첫 방법으로 찾았을 때만 들어간다: 메타 사진 창은 '다음'이 먼저 뜨고 '업로드'가 0.7초 뒤에 떠서,
+      // '다음'으로 들어가면 뭉치가 '다음'에 갔다가 '업로드'로 다시 걸어간다
+      if (hit && (at <= this.stage || hit.index === 0)) found = { at, el: hit.el, matched: hit.index };
     }
     if (found && found.at >= this.stage) {
       if (found.at > this.stage) this.enterStage(found.at);
@@ -475,6 +486,7 @@ export class Guide {
     this.stage = at;
     this.stageShown = -1;
     this.hintPresses = 0;
+    this.dialogWait = false;
     this.nextAt = 0;   // 다음 요소가 떴다 → 앞 단계의 '누른 뒤 기다리기'는 끝, 바로 이어서
     // 사장님이 직접 다음 단계로 넘겼으면 기다림을 풀고 이어서 한다
     if (this.waiting === "owner" && !this.stageBack) this.waiting = undefined;
