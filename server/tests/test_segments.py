@@ -66,9 +66,30 @@ def test_keep_filters_and_no_category_skips_audience(monkeypatch):
     assert segs[0]["line"] == "누가 찾는지 자료가 아직 없어요"
 
 
-def test_hub_calls_within_15(monkeypatch, isolated):  # noqa: F811
+def _hub_payload(path, body):
+    """경로별 현실적인 허브 응답: 성별·연령·기기 구분마다 두 달치 ratio."""
+    if path == api.SEARCH_TREND:
+        return {"results": [{"title": g["groupName"], "keywords": g["keywords"], "data": [
+            {"period": "2025-11-01", "ratio": 40.0}, {"period": "2025-12-01", "ratio": 100.0}]}
+            for g in body["keywordGroups"]]}
+    groups = ("f", "m") if path.endswith("gender") else ("mo", "pc") if path.endswith("device") \
+        else ("10", "20", "30", "40", "50", "60")
+    rows = [{"period": p_, "group": g, "ratio": 10.0 + i + j}
+            for j, p_ in enumerate(("2025-11-01", "2025-12-01")) for i, g in enumerate(groups)]
+    return {"results": [{"title": "x", "data": rows}]}
+
+
+def test_hub_calls_within_15(monkeypatch, isolated, tmp_path):  # noqa: F811
     fake_keys(monkeypatch)
-    n = []
-    monkeypatch.setattr(api, "_http_hub", lambda keys, path, body: (n.append(1), Resp(200, {"results": []}))[1])
-    market.segments(KW, REC, "50000006", online=True)
-    assert len(n) <= 15
+    monkeypatch.setattr(api, "EXAMPLES_DIR", tmp_path / "no_examples")   # 시연 저장본이 호출을 가리지 않게
+    paths = []
+
+    def hub(keys, path, body):
+        paths.append(path)
+        return Resp(200, _hub_payload(path, body))
+    monkeypatch.setattr(api, "_http_hub", hub)
+    segs = market.segments(KW, REC, "50000006", online=True)
+    assert len(segs) == 3 and all(s["audience"] is not None for s in segs)
+    assert segs[0]["trend_source"] == "search"
+    assert "/shopping/v1/category/gender" in paths    # 분야 평균(baseline) 호출까지 센다
+    assert len(paths) <= 15, paths
