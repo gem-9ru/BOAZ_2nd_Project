@@ -14,20 +14,29 @@ from typing import List, Optional
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from server.engine import analyze as analysis, copywriter, market, naver_api, specs
 from server.engine.meta_export import read_export
 from server.engine.loop import run as loop_run, simulate as loop_simulate
 
 # 로그: coach.* 로거만 stderr로 (uvicorn 로거는 건드리지 않음). 수준은 COACH_LOG_LEVEL (기본 INFO)
+_LEVELS = ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL")
+
+
+def _log_level(value: Optional[str]) -> str:
+    """COACH_LOG_LEVEL 값 → 로그 수준 이름. 비었거나 잘못 적었으면 INFO (서버가 뜨다가 멈추지 않게)."""
+    name = (value or "").strip().upper()
+    return name if name in _LEVELS else "INFO"
+
+
 _coach_log = logging.getLogger("coach")
 if not _coach_log.handlers:
     _h = logging.StreamHandler()
     _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
     _coach_log.addHandler(_h)
     _coach_log.propagate = False
-_coach_log.setLevel(os.environ.get("COACH_LOG_LEVEL", "INFO").upper())
+_coach_log.setLevel(_log_level(os.environ.get("COACH_LOG_LEVEL")))
 log = logging.getLogger("coach.api")
 
 MAX_KEYWORDS = 10
@@ -76,12 +85,13 @@ def research(body: ResearchIn) -> dict:
 def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
-        code, cands = (body.category, []) if body.category else market.category_guess(body.product, _online())
+        given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
+        code, cands = (given, []) if given else market.category_guess(body.product, _online())
         if code:
             cands = []
         report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
         why = naver_api.last_error()
-    wide = {"category": _category_out(code, not body.category), "categories": [dict(c) for c in market.CATEGORIES],
+    wide = {"category": _category_out(code, not given), "categories": [dict(c) for c in market.CATEGORIES],
             "category_candidates": [{"code": c, "name": _category_out(c, True)["name"]} for c in cands]}
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
@@ -113,7 +123,7 @@ SET_KINDS = ("default", "auto", "next_cycle")
 class SegmentIn(BaseModel):
     intent: str
     label: str
-    peak_month: Optional[int] = None
+    peak_month: Optional[int] = Field(None, ge=1, le=12)   # 시즌일 때만 옴 (1~12월)
 
 
 class CopiesIn(BaseModel):

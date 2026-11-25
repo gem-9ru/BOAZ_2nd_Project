@@ -1,0 +1,39 @@
+{
+ "key": "/shopping/v1/category/keywords|50000001|립밤|month",
+ "fetched_at": "2026-11-25 15:24:25",
+ "response": {
+  "startDate": "2025-11-01",
+  "endDate": "2026-10-31",
+  "timeUnit": "month",
+  "results": [
+   {
+    "title": "립밤",
+    "keyword": [
+     "립밤"
+    ],
+    "data": [
+     {
+      "period": "2025-11-01",
+      "ratio": 28.57142
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 100
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 42.85714
+     },
+     {
+      "period": "2026-05-01",
+      "ratio": 14.28571
+     },
+     {
+      "period": "2026-09-01",
+      "ratio": 14.28571
+     }
+    ]
+   }
+  ]
+ }
+}

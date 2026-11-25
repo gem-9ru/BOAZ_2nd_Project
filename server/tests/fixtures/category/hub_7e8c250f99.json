@@ -1,0 +1,27 @@
+{
+ "key": "/shopping/v1/category/keywords|50000004|텀블러|month",
+ "fetched_at": "2026-11-25 15:35:15",
+ "response": {
+  "startDate": "2025-11-01",
+  "endDate": "2026-10-31",
+  "timeUnit": "month",
+  "results": [
+   {
+    "title": "텀블러",
+    "keyword": [
+     "텀블러"
+    ],
+    "data": [
+     {
+      "period": "2025-11-01",
+      "ratio": 50
+     },
+     {
+      "period": "2026-05-01",
+      "ratio": 100
+     }
+    ]
+   }
+  ]
+ }
+}

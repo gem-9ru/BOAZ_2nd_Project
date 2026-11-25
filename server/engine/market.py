@@ -129,7 +129,17 @@ def is_variant(keyword: str, cores: List[str]) -> bool:
 
 
 def product_words(product: str, seeds: List[str]) -> List[str]:
-    """사장님이 입력한 낱말: 상품 이름(띄어쓰기 없앰), 띄어쓰기로 나눈 2글자 이상 조각, seeds(띄어쓰기 없앰). 중복 없음."""
+    """내 상품인지 맞춰 볼 낱말: 상품 이름(띄어쓰기 없앰), 마지막 조각(머리 명사, 2글자 이상), seeds(띄어쓰기 없앰). 중복 없음.
+    앞 조각(캠핑 의자의 '캠핑')은 넣지 않는다: '캠핑카대여'·'캠핑텐트'가 내 상품으로 잡히지 않게."""
+    pieces = product.split()
+    head = [pieces[-1]] if pieces and len(pieces[-1]) >= 2 else []
+    words = [product.replace(" ", "")] + head + [s.replace(" ", "") for s in seeds]
+    return [w for w in dict.fromkeys(words) if w]
+
+
+def strip_words(product: str, seeds: List[str]) -> List[str]:
+    """꾸밈말을 뽑을 때 키워드에서 지울 낱말: 상품 이름, 띄어쓰기로 나눈 2글자 이상 조각 전부, seeds. 중복 없음.
+    ('경량캠핑의자'에서 '캠핑'까지 지워 '경량'만 남게)"""
     words = [product.replace(" ", "")] + [p for p in product.split() if len(p) >= 2] + [s.replace(" ", "") for s in seeds]
     return [w for w in dict.fromkeys(words) if w]
 
@@ -141,30 +151,51 @@ def has_product(keyword: str, seeds: List[str]) -> bool:
     return any(s in k or k in s for s in clean) or is_variant(k, clean)
 
 
-def _category_points(product: str, online: bool) -> Dict[str, int]:
-    """분야 12개별 달별 자료 수 (guess_category·category_candidates가 함께 씀)."""
+PEAK_MAX = 50                  # 분야 추정: 최고 달 검색 수를 1~이 값 안에서 찾는다 (못 찾으면 그보다 많은 것으로 봄)
+PEAK_TOLERANCE = 0.02          # ratio×n/100이 정수에서 이만큼 안이면 정수로 봄 (응답의 반올림)
+
+
+def _category_ratios(product: str, online: bool) -> Dict[str, List[float]]:
+    """분야 12개별 달별 상대값 목록 (값이 없거나 못 받으면 빈 목록). 분야마다 한 번씩만 조회."""
     name = product.replace(" ", "")
     if not name:
         return {}
-    return {c["code"]: api.category_keyword_points(c["code"], name, online) or 0 for c in CATEGORIES}
+    return {c["code"]: api.category_keyword_ratios(c["code"], name, online) or [] for c in CATEGORIES}
+
+
+def peak_count(ratios: List[float]) -> Optional[int]:
+    """가장 많은 달의 검색(클릭) 수 추정: ratio는 (그 달 수 ÷ 최고 달 수 × 100)이라, 최고 달 수 n이 작으면
+    모든 ratio×n/100이 정수에 가깝다. 그런 가장 작은 n(1~PEAK_MAX). 없으면 None (= PEAK_MAX보다 많음)."""
+    vals = [r for r in ratios if r > 0]
+    if not vals:
+        return None
+    for n in range(1, PEAK_MAX + 1):
+        if all(abs(r * n / 100 - round(r * n / 100)) <= PEAK_TOLERANCE for r in vals):
+            return n
+    return None
 
 
 def category_guess(product: str, online: bool = True) -> Tuple[Optional[str], List[str]]:
     """분야 12개를 한 번만 조회해 (추정 code, 후보 code들)를 함께 돌려줌.
-    추정: 달별 자료가 가장 많고 6 이상이며 1위가 혼자일 때만, 아니면 None(사장님께 묻는다).
-    후보: 6 이상인 분야를 많은 순으로 (동점이면 분야 목록 순서)."""
-    points = _category_points(product, online)
-    if not points:
+    순위: 자료가 있는 달 수가 많은 순 → 같으면 최고 달 검색 수 추정(peak_count, None은 아주 많음)이 큰 순.
+    추정: 1위가 2위보다 그 순위에서 확실히 앞서고 달 수가 6 이상일 때만, 아니면 None(사장님께 묻는다).
+    후보: 달 수가 6 이상이고 가장 많은 달 수와 같은 분야를 순위대로 최대 3개 (같으면 분야 목록 순서)."""
+    ratios = _category_ratios(product, online)
+    if not ratios:
         return None, []
-    top = max(points.values())
-    leaders = [code for code, n in points.items() if n == top]
-    code = leaders[0] if top >= GUESS_MIN_POINTS and len(leaders) == 1 else None
     order = {c["code"]: i for i, c in enumerate(CATEGORIES)}
-    cands = sorted((c for c, n in points.items() if n >= GUESS_MIN_POINTS), key=lambda c: (-points[c], order[c]))
+    peaks = {c: peak_count(r) for c, r in ratios.items()}
+    points = {c: len(r) for c, r in ratios.items()}
+    key = {c: (points[c], float("inf") if peaks[c] is None else peaks[c]) for c in ratios}
+    ranked = sorted(ratios, key=lambda c: (-key[c][0], -key[c][1], order[c]))
+    lead = ranked[0]
+    clear = len(ranked) == 1 or key[lead] > key[ranked[1]]
+    code = lead if clear and points[lead] >= GUESS_MIN_POINTS else None
+    top = points[lead]
+    cands = [c for c in ranked if points[c] >= GUESS_MIN_POINTS and points[c] == top][:3]
     names = {c["code"]: c["name"] for c in CATEGORIES}
-    best = sorted(points, key=lambda c: (-points[c], order[c]))[:3]
     log.info("category guess product=%s code=%s candidates=%s top=%s", product, code, ",".join(cands) or "-",
-             ",".join(f"{names[c]}:{points[c]}" for c in best))
+             ",".join(f"{names[c]}:{points[c]}/{peaks[c] or 'many'}" for c in ranked[:3]))
     return code, cands
 
 
@@ -183,12 +214,13 @@ def classify(df: pd.DataFrame, seeds: List[str]) -> pd.DataFrame:
     return out
 
 
-def _modifier_of(keyword: str, seeds: List[str]) -> Optional[str]:
-    """키워드에서 상품 낱말·선물·시즌·지역·군더더기(추천 등)를 지우고 남은 말. 상품 낱말이 안 들어 있거나 2~6자가 아니거나 숫자뿐이면 None."""
+def _modifier_of(keyword: str, seeds: List[str], strip: Optional[List[str]] = None) -> Optional[str]:
+    """키워드에서 상품 낱말(seeds + strip)·선물·시즌·지역·군더더기(추천 등)를 지우고 남은 말.
+    seeds(맞추기 낱말)가 안 들어 있거나 2~6자가 아니거나 숫자뿐이면 None."""
     k = keyword.replace(" ", "")
-    mine = sorted({s.replace(" ", "") for s in seeds if s}, key=len, reverse=True)
-    if not any(s in k for s in mine):
+    if not any(s.replace(" ", "") in k for s in seeds if s):
         return None
+    mine = sorted({s.replace(" ", "") for s in list(seeds) + list(strip or []) if s}, key=len, reverse=True)
     for w in mine:
         k = k.replace(w, "")
     for w in sorted(GIFT_WORDS + SEASON_WORDS + PLACE_WORDS + MODIFIER_SKIP, key=len, reverse=True):
@@ -196,12 +228,12 @@ def _modifier_of(keyword: str, seeds: List[str]) -> Optional[str]:
     return k if 2 <= len(k) <= 6 and not k.isdigit() and k not in MODIFIER_SKIP_EXACT else None
 
 
-def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15) -> List[dict]:
+def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15, strip: Optional[List[str]] = None) -> List[dict]:
     """손님이 상품과 함께 검색하는 꾸밈말(좋은 점 후보). 뜻이 '상품'인 키워드만 보고, 같은 꾸밈말은 검색수를 더해
-    검색수 순 limit개. 각 항목: word, group(포장|맛·재료|배송|양|그 밖), total_qc, examples(최대 3)."""
+    검색수 순 limit개. strip은 더 지울 상품 낱말(strip_words). 각 항목: word, group(포장|맛·재료|배송|양|그 밖), total_qc, examples(최대 3)."""
     found: Dict[str, dict] = {}
     for row in kw[kw["intent"] == "상품"].sort_values("total_qc", ascending=False).itertuples():
-        word = _modifier_of(row.keyword, seeds)
+        word = _modifier_of(row.keyword, seeds, strip)
         if word is None:
             continue
         item = found.setdefault(word, {"word": word, "total_qc": 0, "examples": []})
@@ -449,16 +481,18 @@ class MarketReport:
 def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
           keep: Optional[List[str]] = None, *, product: Optional[str] = None) -> Optional[MarketReport]:
     """한 번에: 키워드 표 → 분류 → 추천·제외·꾸밈말 → (분야가 있으면) 손님 무리 → 한 줄 요약. 키워드를 못 받으면 None.
+    분야가 없거나 손님 무리가 비면 손님(쇼핑 인사이트) 조회 없이 첫 추천 검색어의 검색수 한 줄.
     product가 있으면 그 이름으로 사장님 낱말을 만들고, 없으면 첫 seed를 상품 이름으로 본다."""
     api.reset_fetched()
     table = keyword_table(seeds, online)
     if table is None:
         return None
-    words = product_words(product, seeds) if product else product_words(seeds[0] if seeds else "", seeds)
+    name = product if product else (seeds[0] if seeds else "")
+    words = product_words(name, seeds)
     kw = classify(table, words)
     rec = recommend(kw, seeds=words)
     segs = segments(kw, rec, category, online, keep) if category else []
-    mods = modifiers(kw, words)
+    mods = modifiers(kw, words, strip=strip_words(name, seeds))
     common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
                   negatives=negative_list(kw), category=category, segments=segs, modifiers=mods)
     stamp = lambda: dict(fetched=api.oldest_fetched() or "", fetched_parts=api.fetched_parts())
@@ -471,14 +505,7 @@ def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
             qc = float(kw.loc[kw["keyword"] == first["lead"], "total_qc"].iloc[0])
             head = headline(first["lead"], None, qc)
         return MarketReport(audiences=auds, headline=head, **common, **stamp())
-    auds = {}
-    for k in audience_targets(kw, rec):
-        a = audience(k, online=online)
-        if a:
-            auds[k] = a
-    lead = lead_audience(auds)
-    if lead:   # 대표를 맨 앞에 (서버 응답과 화면은 첫 번째를 대표로 쓴다)
-        auds = {lead: auds[lead], **{k: v for k, v in auds.items() if k != lead}}
-    top = lead or (rec[0] if rec else None)
+    # 분야를 모르거나 고른 검색어가 없으면 손님 조회를 하지 않는다 (기본 분야로 조회하면 엉뚱한 분야 평균과 비교하게 됨)
+    top = rec[0] if rec else None
     qc = float(kw.loc[kw["keyword"] == top, "total_qc"].iloc[0]) if top else None
-    return MarketReport(audiences=auds, headline=headline(top, auds.get(top), qc) if top else "", **common, **stamp())
+    return MarketReport(audiences={}, headline=headline(top, None, qc) if top else "", **common, **stamp())

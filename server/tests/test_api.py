@@ -236,7 +236,30 @@ def test_research_returns_category_candidates_when_unknown(monkeypatch):
 def test_research_counts_category_points_calls_once_even_when_all_fail(monkeypatch):
     from server.engine import market, naver_api
     calls = []
-    monkeypatch.setattr(naver_api, "category_keyword_points", lambda c, k, online=True: calls.append(c))   # 전부 실패(None)
+    monkeypatch.setattr(naver_api, "category_keyword_ratios", lambda c, k, online=True: calls.append(c))   # 전부 실패(None)
     monkeypatch.setattr(market, "build", lambda *a, **k: None)
     TestClient(app).post("/research", json={"product": "캠핑의자"})
     assert 0 < len(calls) <= 12
+
+
+def test_research_unknown_category_code_is_guessed(monkeypatch):
+    from server.engine import market
+    seen = {}
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: ("50000008", ["50000008"]))
+
+    def build(seeds, online=True, category=None, keep=None, **kw):
+        seen["category"] = category
+        return _fake_report()
+    monkeypatch.setattr(market, "build", build)
+    b = TestClient(app).post("/research", json={"product": "텀블러", "category": "99999999"}).json()
+    assert seen["category"] == "50000008"
+    assert b["category"]["code"] == "50000008" and b["category"]["guessed"] is True
+
+
+def test_copies_rejects_peak_month_out_of_range(monkeypatch):
+    monkeypatch.setenv("COACH_NO_LLM", "1")
+    seg = {"intent": "시즌", "label": "시즌에 찾는 손님"}
+    r = TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 13}})
+    assert r.status_code == 422
+    assert TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 0}}).status_code == 422
+    assert TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 12}}).status_code == 200

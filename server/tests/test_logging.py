@@ -90,7 +90,7 @@ def test_research_done_logged(monkeypatch, caplog):
 
 
 def test_category_guess_logged(monkeypatch, caplog):
-    monkeypatch.setattr(api, "category_keyword_points", lambda c, k, online=True: 12 if c == "50000002" else 0)
+    monkeypatch.setattr(api, "category_keyword_ratios", lambda c, k, online=True: [100.0] * 12 if c == "50000002" else None)
     with caplog.at_level(logging.INFO, logger="coach"):
         market.category_guess("립밤", False)
     msg = records(caplog, "category guess")[0].getMessage()
@@ -115,3 +115,9 @@ def test_claude_degraded_logged_without_message(caplog):
     rec = records(caplog, "claude degraded")[0]
     assert rec.levelno == logging.WARNING and "err=RuntimeError" in rec.getMessage()
     assert SECRET not in caplog.text
+
+
+def test_log_level_falls_back_to_info_when_invalid():
+    from server.app import _log_level
+    assert _log_level("debug") == "DEBUG" and _log_level("WARNING") == "WARNING"
+    assert _log_level("loud") == "INFO" and _log_level(None) == "INFO" and _log_level("") == "INFO"

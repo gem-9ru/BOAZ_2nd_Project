@@ -363,8 +363,8 @@ def shopping_insight(path: str, category: str, keyword: Optional[str] = None, on
     return _guarded("hub", key, online and hub_available(), lambda: hub_raw(path, body))
 
 
-def category_keyword_points(category: str, keyword: str, online: bool = True) -> Optional[int]:
-    """쇼핑인사이트 분야+낱말 하나의 달별 자료 수 (지난 12개월 중 몇 달에 값이 있나). 분야 추정에 씀. 못 받으면 None.
+def category_keyword_ratios(category: str, keyword: str, online: bool = True) -> Optional[List[float]]:
+    """쇼핑인사이트 분야+낱말 하나의 달별 상대값(ratio, 가장 많은 달 = 100) 목록. 값이 있는 달만 온다. 못 받으면 None.
     저장본 키는 shopping_insight와 같은 규칙: (경로, 분야, 낱말, month)."""
     path = "/shopping/v1/category/keywords"
     key = f"{path}|{category}|{keyword}|month"
@@ -373,9 +373,15 @@ def category_keyword_points(category: str, keyword: str, online: bool = True) ->
     _set_error(None)
     data = _guarded("hub", key, online and hub_available(), lambda: hub_raw(path, body))
     try:
-        return len(data["results"][0]["data"])
-    except (TypeError, KeyError, IndexError):
+        return [float(row["ratio"]) for row in data["results"][0]["data"]]
+    except (TypeError, KeyError, IndexError, ValueError):
         return None
+
+
+def category_keyword_points(category: str, keyword: str, online: bool = True) -> Optional[int]:
+    """달별 자료 수 (지난 12개월 중 몇 달에 값이 있나). 못 받으면 None."""
+    ratios = category_keyword_ratios(category, keyword, online)
+    return None if ratios is None else len(ratios)
 
 
 SEARCH_TREND = "/search-trend/v1/search"

@@ -264,7 +264,7 @@ def test_headline_variants():
 
 
 def test_build_offline_report():
-    r = market.build(SEEDS, online=False)
+    r = market.build(SEEDS, online=False, category=market.DEFAULT_CATEGORY)
     assert isinstance(r, market.MarketReport)
     assert r.seeds == SEEDS and len(r.keywords) > 100
     assert 3 <= len(r.recommended) <= 10 and r.negatives
@@ -336,6 +336,34 @@ def test_lead_audience_is_the_most_distinctive_one():
     b = {"ages": {"30": 0.48, "20": 0.17}, "index": {"30": 2.84, "20": 0.9}, "female": 0.82}
     assert market.lead_audience({"쿠키선물세트": a, "답례품쿠키": b}) == "답례품쿠키"
     assert market.lead_audience({}) is None
-    r = market.build(["수제 쿠키"], online=False)
-    assert next(iter(r.audiences)) == "답례품쿠키"
-    assert r.headline.startswith("답례품쿠키를 찾는 사람은 30대 여성이 분야 평균의 2.84배")
+    r = market.build(["수제 쿠키"], online=False, category=market.DEFAULT_CATEGORY)
+    lead = next(iter(r.audiences))           # build는 손님 무리의 대표 검색어로 손님을 보여 준다 (분야가 있을 때만)
+    assert lead in {s["lead"] for s in r.segments}
+    assert r.headline.startswith(f"{lead}{market._obj(lead)} 찾는 사람은 30대 여성이 분야 평균의")
+
+
+def _count_hub(monkeypatch):
+    """손님(쇼핑 인사이트)·트렌드 호출 수를 센다. 실제 호출은 그대로 (오프라인 저장본)."""
+    calls = []
+    real_si, real_tr = api.shopping_insight, api.search_trend
+    monkeypatch.setattr(api, "shopping_insight", lambda *a, **k: calls.append(("si", a[:3])) or real_si(*a, **k))
+    monkeypatch.setattr(api, "search_trend", lambda *a, **k: calls.append(("trend", a[:1])) or real_tr(*a, **k))
+    monkeypatch.setattr(api, "_http_hub", lambda *a, **k: calls.append(("http", a[1:2])) or Resp(500))
+    return calls
+
+
+def test_build_without_category_makes_no_audience_calls(monkeypatch):
+    """분야를 모르면 식품(기본 분야)으로 손님을 조회하지 않는다: 손님 없음 + 검색수 한 줄."""
+    calls = _count_hub(monkeypatch)
+    r = market.build(SEEDS, online=False, category=None)
+    assert calls == []
+    assert r.audiences == {} and r.segments == []
+    qc = float(r.keywords.loc[r.keywords["keyword"] == r.recommended[0], "total_qc"].iloc[0])
+    assert r.headline == market.headline(r.recommended[0], None, qc)
+
+
+def test_build_with_category_but_no_kept_keywords_makes_no_audience_calls(monkeypatch):
+    calls = _count_hub(monkeypatch)
+    r = market.build(SEEDS, online=False, category=market.DEFAULT_CATEGORY, keep=[])
+    assert calls == [] and r.audiences == {} and r.segments == []
+    assert "번 검색돼요" in r.headline
