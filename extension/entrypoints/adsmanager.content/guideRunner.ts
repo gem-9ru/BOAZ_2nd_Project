@@ -32,6 +32,11 @@ const SCAN_GAP = Math.round(1500 * PACE);   // 스크롤 한 번 뒤
 const LOOK_FIRST = Math.round(2200 * PACE); // 칸을 찾으면 바로 하지 않고 가리킨 채 잠깐 보여 준다
 const SURVEY_LEVEL_WAIT = Math.round(1500 * PACE);  // 둘러보기: 화면을 바꾼 뒤 그려질 때까지
 const SURVEY_SCROLL_WAIT = Math.round(700 * PACE);  // 둘러보기: 한 번 내린 뒤
+// 하위 단계(사진 고르기 등): 칸 하나 안에서 버튼 → 메뉴 → 창이 차례로 늦게 뜬다
+const STAGE_LOOK = Math.round(1200 * PACE);   // 하위 단계 버튼을 가리킨 뒤 누르기까지 (첫 칸보다 짧게)
+const STAGE_PRESS_WAIT = Math.round(4500 * PACE);   // 누른 뒤 다음 요소가 뜰 때까지 기다리는 시간 (그 전엔 다시 누르지 않음)
+const STAGE_PRESSES = 2;   // 한 하위 단계 버튼을 누르는 최대 횟수
+const STAGE_HOLD = 3;   // 뒤 단계 요소가 이만큼(확인 횟수) 연달아 안 보여야 정말 사라진 것으로 본다 (다시 그리는 중엔 그대로)
 
 export class Guide {
   private tries = 0;
@@ -56,6 +61,11 @@ export class Guide {
   private behindDialog = false;
   /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
   private pasteAsk = false;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
+  /** 하위 단계가 있는 칸: 지금 하위 단계(-1 = 아직), 안 보인 횟수, 가리켜 보여 준 단계, 사장님이 되돌아갔는지 */
+  private stage = -1;
+  private stageMiss = 0;
+  private stageShown = -1;
+  private stageBack = false;
 
   constructor(
     private doc: Document,
@@ -92,6 +102,7 @@ export class Guide {
     if (!item) { this.auto = false; return; }
     const kind = item.entry.publish ? "stop" : (item.entry.auto ?? "owner");
     if (kind === "stop") { this.waiting = "publish"; this.auto = false; return; }
+    if (item.entry.stages) return this.autoStage(now);
     const hint = this.target ? Boolean(item.entry.find[this.matched]?.say) : false;
     if (this.target && !hint) {
       if (kind === "owner") { this.waiting = "owner"; return; }
@@ -173,7 +184,7 @@ export class Guide {
       const look = (top: number) => {
         for (const s of items) {
           if (this.map[s.entry.id]) continue;
-          const real = s.entry.find.filter((f) => !f.say);
+          const real = s.entry.stages?.[0]?.find ?? s.entry.find.filter((f) => !f.say);
           if (real.length && locateWith(this.doc, real)) this.map[s.entry.id] = { level, scrollTop: top };
         }
       };
@@ -216,6 +227,13 @@ export class Guide {
     const item = this.steps[this.index];
     if (!item) return { index: this.index, total, found: false, text: "안내를 모두 마쳤어요." };
     if (!this.languageOk) return { index: this.index, total, found: false, text: LANGUAGE_TEXT };
+    const stages = item.entry.stages;
+    if (stages && this.stage >= 0) {
+      const st = stages[this.stage]!;
+      const say = (this.target ? st.find[this.matched]?.say : undefined) ?? st.say;
+      const text = `${this.stage + 1}/${stages.length} · ${say.replace("{value}", item.value ?? "").replace(" ()", "")}`;
+      return { index: this.index, total, found: Boolean(this.target), target: this.target ?? undefined, hint: st.by === "buddy", text };
+    }
     if (this.target) {
       const hint = item.entry.find[this.matched]?.say;
       return { index: this.index, total, found: true, target: this.target, publish: item.entry.publish, hint: Boolean(hint),
@@ -246,6 +264,16 @@ export class Guide {
     const el = this.target;
     const ownerDone = this.waiting === "owner";   // [다 했어요]: 사장님이 직접 맞췄다 → 다시 하지 않고 다음 칸
     this.waiting = undefined;
+    if (this.languageOk && item?.entry.stages) {
+      if (!el && this.ensureLevel()) return;
+      const st = item.entry.stages[this.stage];
+      if (ownerDone || !el || !st || st.by === "owner") return this.advance();   // 사장님 차례(사진)에서 누르면 = 다 했어요
+      if (isPublishLike(el)) return;
+      this.hintPresses += 1;
+      el.click();
+      this.timer = setTimeout(() => this.recheck(), 600);
+      return;
+    }
     if (this.languageOk && item && (!el || item.entry.find[this.matched]?.say) && this.ensureLevel()) return;   // 다른 화면의 칸 → 그 화면으로
     if (!this.languageOk || !item || !el) return this.markDone();
     if (item.entry.publish || isPublishLike(el)) return;   // 게시는 사장님이 직접
@@ -322,6 +350,7 @@ export class Guide {
   tick(): void {
     if (!this.steps[this.index] || !this.languageOk) return;
     const item = this.steps[this.index]!;
+    if (item.entry.stages) return this.seekStage();
     const better = this.matched > 0 && locateWith(openDialog(this.doc) ?? this.doc, item.entry.find.slice(0, this.matched)) !== null;
     if (!this.target || !this.target.isConnected || better || this.behindDialog || (openDialog(this.doc) && !openDialog(this.doc)!.contains(this.target))) {
       const tries = this.tries;
@@ -343,6 +372,7 @@ export class Guide {
     this.waiting = undefined;
     this.hintPresses = 0;
     this.pasteAsk = false;
+    this.resetStage();
     this.index -= 1;
     this.tries = 0;
     this.onProgress(this.index);
@@ -355,6 +385,7 @@ export class Guide {
     this.waiting = undefined;
     this.hintPresses = 0;
     this.pasteAsk = false;
+    this.resetStage();
     this.index += 1;
     this.tries = 0;
     this.onProgress(this.index);
@@ -365,6 +396,11 @@ export class Guide {
     this.detach?.();
     this.detach = null;
     const item = this.steps[this.index];
+    if (item?.entry.stages && this.languageOk) {
+      this.seekStage();
+      if (!this.target && this.stage < 0 && this.retryMs > 0 && this.tries < MAX_TRIES) this.timer = setTimeout(() => this.retryNow(), this.retryMs);
+      return;
+    }
     const dialog = openDialog(this.doc);
     const hit = item && this.languageOk ? locateWith(dialog ?? this.doc, item.entry.find) : null;
     // 창 안에 없고 창 밖(가려진 곳)에 진짜 칸이 있으면: 창을 먼저 마쳐야 한다
@@ -384,5 +420,90 @@ export class Guide {
     if (!this.target && item && this.languageOk && this.retryMs > 0 && this.tries < MAX_TRIES) {
       this.timer = setTimeout(() => this.retryNow(), this.retryMs);
     }
+  }
+
+  // ── 하위 단계가 있는 칸 (사진 고르기 등) ──
+
+  private resetStage(): void {
+    this.stage = -1;
+    this.stageMiss = 0;
+    this.stageShown = -1;
+    this.stageBack = false;
+  }
+
+  /** 지금 하위 단계 찾기: 화면에 나타난 가장 뒤 단계가 지금 단계 (앞 단계를 다시 찾아 왔다갔다하지 않음).
+   *  끝 신호(doneWhen)가 보이면 바로 다음 칸. 뒤 단계 요소가 잠깐 사라지면(다시 그리는 중) STAGE_HOLD번까지는 그대로 둔다. */
+  private seekStage(): void {
+    const item = this.steps[this.index];
+    const stages = item?.entry.stages;
+    if (!item || !stages) return;
+    this.behindDialog = false;
+    const dialog = openDialog(this.doc);
+    const root = dialog ?? this.doc;
+    if (item.entry.doneWhen && locateWith(root, item.entry.doneWhen)) return this.advance();
+    let found: { at: number; el: HTMLElement; matched: number } | null = null;
+    for (let at = stages.length - 1; at >= 0 && !found; at -= 1) {
+      const st = stages[at]!;
+      if (st.inDialog && !dialog) continue;
+      const hit = locateWith(root, st.find);
+      if (hit) found = { at, el: hit.el, matched: hit.index };
+    }
+    if (found && found.at >= this.stage) {
+      if (found.at > this.stage) this.enterStage(found.at);
+      this.target = found.el;
+      this.matched = found.matched;
+      this.stageMiss = 0;
+      return;
+    }
+    // 뒤 단계 요소가 안 보임: 잠깐은 기다리고(같은 곳을 가리킨 채), 그래도 없으면 받아들인다
+    if (this.stage >= 0 && this.stageMiss < STAGE_HOLD) {
+      this.stageMiss += 1;
+      if (this.target && !this.target.isConnected) this.target = null;
+      return;
+    }
+    if (!found) { this.target = null; return; }   // 단계는 그대로 두고, 다음 요소가 나타나길 기다린다
+    // 정말 앞 단계로 돌아갔다 (사장님이 창을 닫음 등) → 뭉치는 더 누르지 않고 사장님을 기다린다
+    this.stage = found.at;
+    this.target = found.el;
+    this.matched = found.matched;
+    this.stageMiss = 0;
+    this.stageBack = true;
+    if (this.auto) this.waiting = "owner";
+  }
+
+  private enterStage(at: number): void {
+    this.stage = at;
+    this.stageShown = -1;
+    this.hintPresses = 0;
+    this.nextAt = 0;   // 다음 요소가 떴다 → 앞 단계의 '누른 뒤 기다리기'는 끝, 바로 이어서
+    // 사장님이 직접 다음 단계로 넘겼으면 기다림을 풀고 이어서 한다
+    if (this.waiting === "owner" && !this.stageBack) this.waiting = undefined;
+  }
+
+  /** 자동 진행 한 걸음 (하위 단계 칸): 뭉치 단계는 가리키고 → 누르고 → 다음 요소가 뜰 때까지 기다림, 사장님 단계는 짚고 기다림. */
+  private autoStage(now: number): void {
+    const item = this.steps[this.index]!;
+    const st = item.entry.stages![this.stage];
+    if (!this.target || !st) {
+      const dialog = openDialog(this.doc);
+      if (this.stage >= 0) { this.nextAt = now + SCAN_GAP; return; }   // 단계 사이: 스크롤하지 않고 다음 요소를 기다린다
+      if (!this.surveyed && !dialog && currentLevel(this.doc) !== "list") {
+        this.busy = true;
+        void this.survey().finally(() => { this.busy = false; this.nextAt = 0; });
+        return;
+      }
+      if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return; }
+      if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return; }
+      if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return; }
+      this.waiting = "owner";
+      return;
+    }
+    if (st.by === "owner" || this.stageBack) { this.waiting = "owner"; return; }
+    if (isPublishLike(this.target)) { this.waiting = "publish"; this.auto = false; return; }
+    if (this.stageShown !== this.stage) { this.stageShown = this.stage; this.nextAt = now + STAGE_LOOK; return; }   // 먼저 가리켜 보여 주고
+    if (this.hintPresses >= STAGE_PRESSES) { this.waiting = "owner"; return; }   // 눌러도 다음 요소가 안 뜸 → 사장님께
+    this.hintPresses += 1;
+    this.target.click();
+    this.nextAt = now + STAGE_PRESS_WAIT;   // 다음 요소가 늦게 떠도 그 전엔 다시 누르지 않는다
   }
 }

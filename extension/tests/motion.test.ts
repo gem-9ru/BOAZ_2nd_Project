@@ -79,3 +79,71 @@ describe("말풍선 자리", () => {
     expect(b.x).toBe(300 + size + 4);
   });
 });
+
+import { angleDiff, blendPose, headingYaw, pose as poseAt, REST, travelAt, travelDuration } from "../lib/character3d/motion";
+
+describe("상하좌우로 걸을 때 몸 방향", () => {
+  it("faces the way it walks: down = front, up = back, sides = profile", () => {
+    expect(headingYaw(0, 100)).toBeCloseTo(0, 5);                 // 아래로 걸어옴 → 정면
+    expect(Math.abs(headingYaw(0, -100))).toBeCloseTo(Math.PI, 5); // 위로 걸어감 → 등
+    expect(headingYaw(100, 0)).toBeCloseTo(Math.PI / 2, 5);        // 오른쪽
+    expect(headingYaw(-100, 0)).toBeCloseTo(-Math.PI / 2, 5);      // 왼쪽
+  });
+  it("diagonals sit between the two directions", () => {
+    expect(headingYaw(100, -100)).toBeCloseTo((3 * Math.PI) / 4, 5);  // 오른쪽 위: 오른쪽 등
+    expect(headingYaw(-100, 100)).toBeCloseTo(-Math.PI / 4, 5);       // 왼쪽 아래: 왼쪽 앞
+  });
+  it("turns the short way round, never a full spin", () => {
+    expect(angleDiff(-Math.PI / 2, Math.PI)).toBeCloseTo(-Math.PI / 2, 5);   // 왼쪽 → 위: 90°만
+    expect(angleDiff(Math.PI * 0.9, -Math.PI * 0.9)).toBeCloseTo(Math.PI * 0.2, 5);
+    for (const [a, b] of [[0, 3], [3, -3], [-2.5, 2.5], [10, -10]]) expect(Math.abs(angleDiff(a!, b!))).toBeLessThanOrEqual(Math.PI + 1e-9);
+  });
+});
+
+describe("천천히 출발해 천천히 멈춤", () => {
+  const speed = 170, ramp = 0.35;
+  it("starts and ends at zero speed and covers the whole distance", () => {
+    const total = travelDuration(600, speed, ramp);
+    expect(travelAt(0, 600, speed, ramp).v).toBe(0);
+    expect(travelAt(total / 2, 600, speed, ramp).v).toBeCloseTo(speed, 5);
+    const end = travelAt(total, 600, speed, ramp);
+    expect(end.d).toBe(600);
+    expect(end.done).toBe(true);
+    expect(travelAt(total - 0.01, 600, speed, ramp).v).toBeLessThan(speed * 0.1);
+  });
+  it("never jumps or goes backwards", () => {
+    const total = travelDuration(600, speed, ramp);
+    let prev = 0;
+    for (let t = 0; t <= total + 0.05; t += 1 / 60) {
+      const { d } = travelAt(t, 600, speed, ramp);
+      expect(d).toBeGreaterThanOrEqual(prev - 1e-9);
+      expect(d - prev).toBeLessThanOrEqual(speed / 60 + 1e-6);   // 한 프레임에 최고 속도보다 많이 가지 않음
+      prev = d;
+    }
+    expect(prev).toBe(600);
+  });
+  it("short hops never reach full speed but still ease in and out", () => {
+    const total = travelDuration(20, speed, ramp);
+    let top = 0;
+    for (let t = 0; t <= total; t += 0.005) top = Math.max(top, travelAt(t, 20, speed, ramp).v);
+    expect(top).toBeLessThan(speed);
+    expect(travelAt(total, 20, speed, ramp).d).toBe(20);
+  });
+});
+
+describe("동작 이어 붙이기", () => {
+  it("steps follow distance: one cycle puts the legs back where they started", () => {
+    const a = poseAt("walk", 0, undefined, 0.25), b = poseAt("walk", 99, undefined, 1.25);
+    expect(a.legLeft).toBeCloseTo(b.legLeft, 5);
+  });
+  it("walking waddles side to side with the steps", () => {
+    expect(Math.sign(poseAt("walk", 0, undefined, 0.25).sway)).toBe(-Math.sign(poseAt("walk", 0, undefined, 0.75).sway));
+  });
+  it("blending moves smoothly from one pose to the next", () => {
+    const run = poseAt("run", 0, undefined, 0.25);
+    const half = blendPose(REST, run, 0.5);
+    expect(half.lean).toBeCloseTo(run.lean / 2, 5);
+    expect(blendPose(REST, run, 0)).toEqual(REST);
+    expect(blendPose(REST, run, 1).legLeft).toBeCloseTo(run.legLeft, 5);
+  });
+});

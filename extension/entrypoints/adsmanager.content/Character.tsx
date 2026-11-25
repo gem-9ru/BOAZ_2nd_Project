@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Character3D } from "../../lib/character3d/Character3D";
-import { bubbleSpot, gaitFor, handPoint, home, pointAngle, standSpot, type Mode, type Point, type Side } from "../../lib/character3d/motion";
+import { bubbleSpot, gaitFor, handPoint, headingYaw, home, pointAngle, standSpot, travelAt, type Mode, type Point, type Side } from "../../lib/character3d/motion";
 import type { GuideView } from "./guideRunner";
 import { isChoice, reveal } from "./locate";
 
@@ -13,6 +13,8 @@ interface Props {
 }
 
 const BUBBLE_GAP = 4;
+const RAMP_WALK = 0.35;   // 최고 속도까지 걸리는 시간(초)
+const RAMP_RUN = 0.5;
 
 /** 짚을 영역: 작은 고르는 칸은 이름표(aria-labelledby·label)까지 합쳐서 테두리와 뭉치가 글자를 가리지 않게. */
 function targetBox(el: HTMLElement): DOMRect {
@@ -44,7 +46,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
   const vp = () => ({ width: window.innerWidth, height: window.innerHeight });
   const [pos, setPos] = useState<Point>(() => home(vp(), size));
   const [mode, setMode] = useState<Mode>("idle");
-  const [facing, setFacing] = useState<-1 | 0 | 1>(0);
+  const [move, setMove] = useState<{ heading: number; speed: number; full: number } | undefined>();
   const [point, setPoint] = useState<{ side: Side; angle: number } | undefined>();
   const [leaving, setLeaving] = useState(false);
   const posRef = useRef(pos);
@@ -90,7 +92,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
         setMode("wave");
         setPoint(undefined);
       }
-      setFacing(0);
+      setMove(undefined);
     };
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     if (dist < 2 || reduce) {
@@ -101,14 +103,18 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
     const gait = gaitFor(dist, speeds);
     const speed = gait === "run" ? speeds.run : speeds.walk;
     setMode(gait);
-    setFacing(Math.abs(dx) < 4 ? 0 : dx > 0 ? 1 : -1);
-    let raf = 0, last = performance.now(), done = 0;
+    // 상하좌우·대각선 모두: 가는 방향으로 몸을 돌리고(아래 = 정면, 위 = 등), 천천히 출발해 천천히 멈춘다
+    const heading = headingYaw(dx, dy);
+    const ramp = gait === "run" ? RAMP_RUN : RAMP_WALK;
+    setMove({ heading, speed: 0, full: speed });
+    const start = performance.now();
+    let raf = 0;
     const step = (now: number) => {
-      done = Math.min(dist, done + (speed * (now - last)) / 1000);
-      last = now;
-      const k = done / dist;
+      const { d, v, done } = travelAt((now - start) / 1000, dist, speed, ramp);
+      const k = d / dist;
       setPos({ x: from.x + dx * k, y: from.y + dy * k });
-      if (done < dist) raf = requestAnimationFrame(step);
+      setMove({ heading, speed: v, full: speed });
+      if (!done) raf = requestAnimationFrame(step);
       else arrive();
     };
     raf = requestAnimationFrame(step);
@@ -131,7 +137,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
         />
       )}
       <div className="coach-mungchi" style={{ left: pos.x, top: pos.y, width: size, height: size }} data-mode={mode}>
-        <Character3D mode={mode} size={size} facing={facing} point={point} label="광고 어시스턴트 뭉치" />
+        <Character3D mode={mode} size={size} move={move} point={point} label="광고 어시스턴트 뭉치" />
       </div>
       {!leaving && (
         <div ref={bubbleEl} className="coach-bubble-wrap" style={{ left: bubbleLeft, top: bubbleTop, opacity: moving ? 0.35 : 1 }}>
