@@ -279,20 +279,80 @@ def headline(keyword: str, aud: Optional[dict], fallback_qc: Optional[float] = N
         if fallback_qc:
             return f"'{keyword}'은(는) 한 달에 약 {int(fallback_qc):,}번 검색돼요"
         return f"'{keyword}'를 찾는 사람 정보는 아직 못 가져왔어요"
+    return f"{keyword}{_obj(keyword)} 찾는 사람은 {segment_line(aud)}"
+
+
+def _seasonal(monthly: Dict[str, float]) -> bool:
+    """최고 달이 평균의 SEASON_PEAK배 이상인가."""
+    return bool(monthly and max(monthly.values()) >= SEASON_PEAK * (sum(monthly.values()) / len(monthly)))
+
+
+def segment_line(aud: Optional[dict]) -> str:
+    """손님 무리 한 줄. 예: "30대 여성이 분야 평균의 2.8배, 12월에 가장 많이 찾아요"."""
+    if not aud:
+        return "누가 찾는지 자료가 아직 없어요"
     idx = aud.get("index", {})
     best = top_age(aud)
     sex = "여성" if aud["female"] >= 0.6 else "남성" if aud["female"] <= 0.4 else ""
     who = f"{best}대 {sex}".strip() + ("이" if sex else "가")
     mult = idx.get(best)
     strong = bool(mult and mult >= HIGH_INDEX)
-    monthly = aud.get("monthly") or {}
-    seasonal = bool(aud.get("peak_month") and monthly
-                    and max(monthly.values()) >= SEASON_PEAK * (sum(monthly.values()) / len(monthly)))
-    head = f"{keyword}{_obj(keyword)} 찾는 사람은 {who}"
+    seasonal = bool(aud.get("peak_month") and _seasonal(aud.get("monthly") or {}))
     when = f", {aud['peak_month']}월에 가장 많이 찾아요" if seasonal else ""
     if strong:
-        return f"{head} 분야 평균의 {mult:g}배" + (when or "예요")
-    return f"{head} 가장 많고{when}" if seasonal else f"{head} 가장 많아요"
+        return f"{who} 분야 평균의 {mult:g}배" + (when or "예요")
+    return f"{who} 가장 많고{when}" if seasonal else f"{who} 가장 많아요"
+
+
+SEGMENT_LABEL: Dict[str, str] = {"선물·답례": "선물로 찾는 손님", "시즌": "시즌에 찾는 손님", "상품": "상품 자체로 찾는 손님"}
+
+
+def _trend_of(monthly: Dict[str, float]) -> dict:
+    peak = max(monthly, key=monthly.get) if monthly else None
+    return {"monthly": monthly, "peak_month": int(peak[5:7]) if peak else None, "seasonal": _seasonal(monthly)}
+
+
+def trend_by_group(groups: Dict[str, List[str]], online: bool = True) -> Dict[str, dict]:
+    """데이터랩 검색어 트렌드를 무리별 달 곡선으로. 무리마다 최고 달 = 100. 응답이 없으면 {}."""
+    data = api.search_trend(groups, online)
+    out: Dict[str, dict] = {}
+    try:
+        for res in data["results"]:
+            by = {str(r["period"])[:7]: float(r["ratio"]) for r in res["data"]}
+            top = max(by.values()) if by else 0
+            if top > 0:
+                out[res["title"]] = _trend_of({m: round(v / top * 100, 1) for m, v in sorted(by.items())})
+    except (TypeError, KeyError, ValueError):
+        return {}
+    return out
+
+
+def segments(kw: pd.DataFrame, rec: List[str], category: Optional[str], online: bool = True,
+             keep: Optional[List[str]] = None) -> List[dict]:
+    """추천 검색어를 뜻(선물·답례/시즌/상품)으로 묶은 손님 무리 최대 3개 (검색수 합이 큰 순)."""
+    chosen = [k for k in rec if keep is None or k in keep]
+    sub = kw[kw["keyword"].isin(chosen)].sort_values("total_qc", ascending=False)
+    groups = []
+    for intent, g in sub.groupby("intent", sort=False):
+        groups.append((intent, list(g["keyword"]), int(g["total_qc"].sum())))
+    groups = sorted(groups, key=lambda x: -x[2])[:3]
+    if not groups:
+        return []
+    trends = trend_by_group({i: kws[:5] for i, kws, _ in groups}, online)
+    out = []
+    for intent, kws, total in groups:
+        lead = kws[0]
+        aud = audience(lead, category, online) if category else None
+        trend, source = trends.get(intent), "search" if intent in trends else None
+        if trend is None and aud and aud.get("monthly"):
+            trend, source = _trend_of(aud["monthly"]), "shopping"
+        if aud and trend:
+            aud = {**aud, "monthly": trend["monthly"], "peak_month": trend["peak_month"]}
+        out.append({"intent": intent, "label": SEGMENT_LABEL.get(intent, intent), "keywords": kws,
+                    "total_qc": total, "lead": lead,
+                    "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
+                    "trend": trend, "trend_source": source, "line": segment_line(aud)})
+    return out
 
 
 def _obj(word: str) -> str:
