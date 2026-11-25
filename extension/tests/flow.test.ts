@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 import { initialState, reduce, type FlowState } from "../lib/flow";
 import { loadState, saveState } from "../lib/storage";
-import type { Copy, Research } from "../lib/api";
+import type { Copy, Research, Segment } from "../lib/api";
 
 const research: Research = {
   headline: "쿠키선물세트를 찾는 사람은 30대 여성이 분야 평균의 1.82배",
@@ -82,5 +82,24 @@ describe("flow", () => {
 
   it("reset returns to initial state", () => {
     expect(reduce(toGuide(), { type: "reset" })).toEqual(initialState());
+  });
+});
+
+const seg: Segment = { intent: "선물·답례", label: "선물용", keywords: ["쿠키선물"], total_qc: 500, lead: "쿠키선물", audience: null, trend: null, trend_source: null, line: "" };
+describe("분야·손님 무리 상태", () => {
+  it("pickCategory clears segment", () => {
+    const s = reduce({ ...initialState(), segment: seg }, { type: "pickCategory", category: "50000002" });
+    expect(s.category).toBe("50000002"); expect(s.segment).toBeUndefined();
+  });
+  it("pickSegment sets segment", () => expect(reduce(initialState(), { type: "pickSegment", segment: seg }).segment).toEqual(seg));
+  it("confirmTarget keeps segment and goes to copy", () => {
+    const s = reduce(initialState(), { type: "confirmTarget", target, keywords: ["a"], segment: seg });
+    expect(s.segment).toEqual(seg); expect(s.step).toBe("copy");
+  });
+  it("pickCopy keeps strengths", () => expect(reduce(initialState(), { type: "pickCopy", copy, strengths: ["촉촉"] }).strengths).toEqual(["촉촉"]));
+  it("editFind goes back to find", () => expect(reduce({ ...initialState(), step: "copy" }, { type: "editFind" }).step).toBe("find"));
+  it("researched clears segment and takes category", () => {
+    const s = reduce({ ...initialState(), segment: seg }, { type: "researched", research: { ...research, category: { code: "1", name: "n", guessed: true } } });
+    expect(s.segment).toBeUndefined(); expect(s.category).toBe("1");
   });
 });

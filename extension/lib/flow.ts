@@ -1,5 +1,5 @@
 // 사이드 패널의 단계 상태 기계. 순수 함수만 둔다 (저장은 storage.ts).
-import type { Change, Copy, Research } from "./api";
+import type { Change, Copy, Research, Segment } from "./api";
 
 export type Step = "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan" | "fix";
 
@@ -36,6 +36,9 @@ export interface FlowState {
   keywords: string[];
   dropped: string[];          // ① 찾기에서 뺀 키워드 (패널을 다시 열어도 유지)
   copy?: Copy;
+  category?: string;          // 고른 분야 코드
+  segment?: Segment;          // 고른 손님 무리
+  strengths?: string[];       // 고른 좋은 점
   answers: Record<string, string>;
   settings: Setting[];
   /** away: 뭉치가 광고 관리자에 나가 있음 (패널 제목 왼쪽 집이 빔). 닫으면 false → 집으로 돌아옴 */
@@ -47,8 +50,11 @@ export interface FlowState {
 export type FlowEvent =
   | { type: "researched"; research: Research; product?: string }
   | { type: "toggleKeyword"; keyword: string }
-  | { type: "confirmTarget"; target: Target; keywords: string[] }
-  | { type: "pickCopy"; copy: Copy }
+  | { type: "pickCategory"; category: string }
+  | { type: "pickSegment"; segment: Segment }
+  | { type: "confirmTarget"; target: Target; keywords: string[]; segment?: Segment }
+  | { type: "pickCopy"; copy: Copy; strengths?: string[] }
+  | { type: "editFind" }
   | { type: "answer"; id: string; value: string }
   | { type: "unanswer"; id: string }
   | { type: "questionsDone"; settings: Setting[]; endDate?: string }
@@ -71,11 +77,18 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
     case "toggleKeyword":
       return { ...s, dropped: s.dropped.includes(ev.keyword) ? s.dropped.filter((k) => k !== ev.keyword) : [...s.dropped, ev.keyword] };
     case "researched":
-      return { ...s, research: ev.research, product: ev.product ?? s.product, dropped: [] };
+      return { ...s, research: ev.research, product: ev.product ?? s.product, dropped: [], segment: undefined,
+        category: ev.research.category?.code ?? s.category };
+    case "pickCategory":
+      return { ...s, category: ev.category, segment: undefined };
+    case "pickSegment":
+      return { ...s, segment: ev.segment };
     case "confirmTarget":
-      return { ...s, target: ev.target, keywords: ev.keywords, step: "copy" };
+      return { ...s, target: ev.target, keywords: ev.keywords, segment: ev.segment ?? s.segment, step: "copy" };
     case "pickCopy":
-      return { ...s, copy: ev.copy, step: "questions" };
+      return { ...s, copy: ev.copy, strengths: ev.strengths ?? s.strengths, step: "questions" };
+    case "editFind":
+      return { ...s, step: "find" };
     case "answer":
       return { ...s, answers: { ...s.answers, [ev.id]: ev.value } };
     case "unanswer": {

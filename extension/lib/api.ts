@@ -11,11 +11,32 @@ export interface Research {
   /** 광고에서 뺄 말 (만들기·매장·관련 낮음, 최대 20개) */
   negatives?: string[];
   notice: string | null;
+  /** 아래 넷은 모두 선택: 예전 저장 상태도 그대로 열린다 */
+  category?: (Category & { guessed: boolean }) | null;
+  categories?: Category[];
+  segments?: Segment[];
+  modifiers?: Modifier[];
 }
+
+export interface Category { code: string; name: string }
+export interface Segment {
+  intent: "선물·답례" | "시즌" | "상품";
+  label: string;
+  keywords: string[];
+  total_qc: number;
+  lead: string;
+  audience: { female: number; ages: Record<string, number>; top_age: string } | null;
+  trend: { monthly: Record<string, number>; peak_month: number | null; seasonal: boolean } | null;
+  trend_source: "search" | "shopping" | null;
+  line: string;
+}
+export interface Modifier { word: string; group: string; total_qc: number; examples: string[] }
 
 export interface Copy {
   primary_text: string;
   headline: string;
+  /** 문구에 쓴 근거 낱말 */
+  basis?: string[];
 }
 
 export interface Field {
@@ -90,11 +111,16 @@ const json = (body: unknown): RequestInit => ({
   body: JSON.stringify(body),
 });
 
-export function research(product: string, seeds?: string[]): Promise<Research> {
-  return call("/research", json(seeds ? { product, seeds } : { product }));
+export function research(product: string, opts: { seeds?: string[]; category?: string; keywords?: string[] } = {}): Promise<Research> {
+  const body: Record<string, unknown> = { product };
+  if (opts.seeds) body.seeds = opts.seeds;
+  if (opts.category) body.category = opts.category;
+  if (opts.keywords) body.keywords = opts.keywords;
+  return call("/research", json(body));
 }
 
-export function copies(body: { product: string; strengths: string[]; keywords: string[]; avoid: string[] }): Promise<{ copies: Copy[]; source: string }> {
+export function copies(body: { product: string; strengths: string[]; keywords: string[]; avoid: string[];
+  segment?: { intent: string; label: string; peak_month?: number | null } }): Promise<{ copies: Copy[]; source: string }> {
   return call("/copies", json(body));
 }
 
