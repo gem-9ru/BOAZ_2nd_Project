@@ -102,4 +102,13 @@ describe("분야·손님 무리 상태", () => {
     const s = reduce({ ...initialState(), segment: seg }, { type: "researched", research: { ...research, category: { code: "1", name: "n", guessed: true } } });
     expect(s.segment).toBeUndefined(); expect(s.category).toBe("1");
   });
+  it("researched without a category drops the previous product's category", () => {
+    const s = reduce({ ...initialState(), category: "50000006" }, { type: "researched", research: { ...research, category: null } });
+    expect(s.category).toBeUndefined();
+  });
+  it("researched keeps the owner's dropped words only when passed (re-search)", () => {
+    const base = { ...initialState(), dropped: ["수제쿠키"] };
+    expect(reduce(base, { type: "researched", research }).dropped).toEqual([]);
+    expect(reduce(base, { type: "researched", research, dropped: base.dropped }).dropped).toEqual(["수제쿠키"]);
+  });
 });

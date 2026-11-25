@@ -48,7 +48,8 @@ export interface FlowState {
 }
 
 export type FlowEvent =
-  | { type: "researched"; research: Research; product?: string }
+  /** dropped: 같은 상품을 다시 찾을 때(분야 바꾸기·이 말로 다시 찾기) 사장님이 뺀 말을 그대로 둔다 */
+  | { type: "researched"; research: Research; product?: string; dropped?: string[] }
   | { type: "toggleKeyword"; keyword: string }
   | { type: "pickCategory"; category: string }
   | { type: "pickSegment"; segment: Segment }
@@ -77,8 +78,8 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
     case "toggleKeyword":
       return { ...s, dropped: s.dropped.includes(ev.keyword) ? s.dropped.filter((k) => k !== ev.keyword) : [...s.dropped, ev.keyword] };
     case "researched":
-      return { ...s, research: ev.research, product: ev.product ?? s.product, dropped: [], segment: undefined,
-        category: ev.research.category?.code ?? s.category };
+      return { ...s, research: ev.research, product: ev.product ?? s.product, dropped: ev.dropped ?? [], segment: undefined,
+        category: ev.research.category?.code };
     case "pickCategory":
       return { ...s, category: ev.category, segment: undefined };
     case "pickSegment":
