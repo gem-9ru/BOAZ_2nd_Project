@@ -141,6 +141,33 @@ def _meta_templates(product: str, strengths: List[str]) -> List[Copy]:
     return out
 
 
+def _segment_template(product: str, strength: str, segment: Optional[dict]) -> Optional[Copy]:
+    """고른 손님 무리에 맞는 틀 하나 (선물·답례 / 달이 있는 시즌). 없으면 None."""
+    if not segment:
+        return None
+    intent, m = segment.get("intent"), segment.get("peak_month")
+    if intent == "선물·답례":
+        head, body = f"{strength} {product}", f"고마운 분께 {product} 어떠세요? {strength}."
+    elif intent == "시즌" and m:
+        head, body = f"{m}월 {product}", f"{m}월, {product} 준비하세요. {strength}."
+    else:
+        return None
+    return {"headline": _clip(tidy(head, 0), META_HEADLINE_MAX), "text": _clip(tidy(body), META_TEXT_MAX)}
+
+
+def basis(copy: Copy, words: Sequence[str], segment: Optional[dict]) -> List[str]:
+    """문구 글자에 실제로 들어간 낱말(띄어쓰기 무시, 중복 없음) + 고른 손님 무리 이름."""
+    flat = re.sub(r"\s+", "", copy.get("headline", "") + copy.get("text", ""))
+    out: List[str] = []
+    for w in words:
+        w = (w or "").strip()
+        if w and re.sub(r"\s+", "", w) in flat and w not in out:
+            out.append(w)
+    if segment and segment.get("label"):
+        out.append(segment["label"])
+    return out
+
+
 # ── Claude 호출 ─────────────────────────────────────────
 
 def _read_key() -> Optional[str]:
@@ -194,13 +221,18 @@ def _parse(text: str) -> List[Copy]:
     return out
 
 
-def _ask_claude(client, media: str, product: str, strengths: List[str], n: int) -> List[Copy]:
+def _ask_claude(client, media: str, product: str, strengths: List[str], n: int,
+                segment: Optional[dict] = None) -> List[Copy]:
     """Claude에게 문구를 받음. 어떤 실패든 빈 목록 (오류 문구에 키가 섞이지 않게 내용은 버림)."""
     try:
+        payload: Dict[str, object] = {"상품": product, "장점": strengths, "개수": n}
+        if segment and segment.get("label"):   # 낱말만: 손님 무리 이름과 시기. 네이버 숫자는 넣지 않는다
+            payload["손님"] = segment["label"]
+            if segment.get("peak_month"):
+                payload["시기"] = f"{segment['peak_month']}월"
         resp = client.messages.create(
             model=MODEL, max_tokens=1024, system=_system_prompt(media, n),
-            messages=[{"role": "user", "content": json.dumps(
-                {"상품": product, "장점": strengths, "개수": n}, ensure_ascii=False)}])
+            messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
         text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "")
         return _parse(text)
     except Exception:  # noqa: BLE001
@@ -213,7 +245,8 @@ def _copies(media: str, product: str, strengths: Strengths, n: int, client) -> L
     return _copies_with_source(media, product, strengths, n, client)[0]
 
 
-def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, client):
+def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, client,
+                        segment: Optional[dict] = None):
     """→ (문구 목록, Claude가 쓴 문구가 하나라도 들어갔는지)."""
     n = max(int(n), 0)
     if n == 0:
@@ -224,8 +257,11 @@ def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, 
         client = make_client()
     elif client is False:
         client = None
-    candidates: List[Copy] = _ask_claude(client, media, product, pieces, n) if client else []
+    candidates: List[Copy] = _ask_claude(client, media, product, pieces, n, segment) if client else []
     templates = _naver_templates(product, pieces) if media == "naver" else _meta_templates(product, pieces)
+    seg_tpl = _segment_template(product, pieces[0], segment) if media == "meta" else None
+    if seg_tpl:
+        templates.insert(0, seg_tpl)
     out: List[Copy] = []
     used_claude = False
     for i, c in enumerate(candidates + templates):
@@ -238,14 +274,16 @@ def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, 
     return out, used_claude
 
 
-def meta_copies(product: str, strengths: Strengths, n: int = 3, client=None) -> List[Copy]:
+def meta_copies(product: str, strengths: Strengths, n: int = 3, client=None,
+                segment: Optional[dict] = None) -> List[Copy]:
     """메타 문구 n개 [{headline, text}]. client: None이면 키로 자동, False면 항상 문장 틀 (테스트·미리보기)."""
-    return _copies("meta", product, strengths, n, client)
+    return _copies_with_source("meta", product, strengths, n, client, segment)[0]
 
 
-def meta_copies_with_source(product: str, strengths: Strengths, n: int = 3, client=None):
+def meta_copies_with_source(product: str, strengths: Strengths, n: int = 3, client=None,
+                            segment: Optional[dict] = None):
     """meta_copies와 같고, Claude 문구가 쓰였는지도 돌려준다 (화면의 출처 표시용)."""
-    return _copies_with_source("meta", product, strengths, n, client)
+    return _copies_with_source("meta", product, strengths, n, client, segment)
 
 
 def naver_copies(product: str, strengths: Strengths, n: int = 3, client=None) -> List[Copy]:

@@ -84,11 +84,18 @@ ASKED_KINDS = ("question", "precheck")
 SET_KINDS = ("default", "auto", "next_cycle")
 
 
+class SegmentIn(BaseModel):
+    intent: str
+    label: str
+    peak_month: Optional[int] = None
+
+
 class CopiesIn(BaseModel):
     product: str
     strengths: List[str] = []
     keywords: List[str] = []
     avoid: List[str] = []      # ① 찾기의 뺄 말: 문구에 넣지 않는다
+    segment: Optional[SegmentIn] = None   # ① 찾기에서 고른 손님 무리
 
 
 @app.post("/copies")
@@ -98,16 +105,18 @@ def copies(body: CopiesIn) -> dict:
     product = body.product.replace(" ", "")
     avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product]
     clean = lambda cs: [c for c in cs if not any(w in c["text"] + c["headline"] for w in avoid)]
-    made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths) + list(body.keywords),
-                                                          n=3, client=client or False)
+    words = list(body.strengths) + list(body.keywords)
+    seg = body.segment.model_dump() if body.segment else None
+    made, used_claude = copywriter.meta_copies_with_source(body.product, words, n=3, client=client or False, segment=seg)
     made = clean(made)
     if len(made) < 3:   # 뺄 말이 들어간 문구를 버렸으면 문장 틀로 채운다
-        for c in clean(copywriter.meta_copies(body.product, list(body.strengths) + list(body.keywords), n=6, client=False)):
+        for c in clean(copywriter.meta_copies(body.product, words, n=6, client=False, segment=seg)):
             if len(made) >= 3:
                 break
             if c not in made:
                 made.append(c)
-    return {"copies": [{"primary_text": c["text"], "headline": c["headline"]} for c in made],
+    return {"copies": [{"primary_text": c["text"], "headline": c["headline"],
+                        "basis": copywriter.basis(c, words, seg)} for c in made],
             "source": "claude" if used_claude else "template"}
 
 

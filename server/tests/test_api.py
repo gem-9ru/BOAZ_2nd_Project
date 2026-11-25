@@ -47,7 +47,7 @@ def test_copies_without_key_uses_template(monkeypatch):
                                                  "keywords": ["쿠키 선물"]}).json()
     assert body["source"] == "template" and len(body["copies"]) == 3
     assert all(c["primary_text"] and c["headline"] for c in body["copies"])
-    assert all(set(c) == {"primary_text", "headline"} for c in body["copies"])
+    assert all(set(c) == {"primary_text", "headline", "basis"} for c in body["copies"])
 
 
 def test_copies_without_strengths_still_three(monkeypatch):
