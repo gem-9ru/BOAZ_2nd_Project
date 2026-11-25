@@ -13,6 +13,7 @@ from . import naver_api as api
 
 DEFAULT_CATEGORY = "50000006"  # 쇼핑 인사이트 분야: 식품
 HUB = "/shopping/v1/category"
+SOURCE = "네이버 검색광고 키워드 도구 · 네이버 데이터랩 쇼핑인사이트"   # 화면에 보일 자료 출처
 AGE_GROUPS = ("10", "20", "30", "40", "50", "60")
 MIN_AGE_SHARE = 0.25           # 헤드라인에 쓸 연령은 비중이 이 이상일 때만 (작은 집단의 큰 배수는 잡음)
 HIGH_INDEX = 1.2               # 이 배수 이상일 때만 "분야 평균의 N배"라고 말함
@@ -285,10 +286,12 @@ class MarketReport:
     negatives: List[str] = field(default_factory=list)
     audiences: Dict[str, dict] = field(default_factory=dict)
     headline: str = ""
+    fetched: str = ""          # 쓴 응답 중 가장 오래된 받은 날 'YYYY-MM-DD' (화면의 조회일)
 
 
 def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
     """한 번에: 키워드 표 → 분류 → 추천·제외 → 추천 상위 3개의 손님 → 한 줄 요약. 키워드를 못 받으면 None."""
+    api.reset_fetched()
     table = keyword_table(seeds, online)
     if table is None:
         return None
@@ -303,4 +306,5 @@ def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
     qc = float(kw.loc[kw["keyword"] == top, "total_qc"].iloc[0]) if top else None
     return MarketReport(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
                         negatives=negative_list(kw), audiences=auds,
-                        headline=headline(top, auds.get(top), qc) if top else "")
+                        headline=headline(top, auds.get(top), qc) if top else "",
+                        fetched=api.oldest_fetched() or "")

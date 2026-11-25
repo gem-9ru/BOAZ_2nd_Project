@@ -12,7 +12,7 @@ import pandas as pd  # noqa: E402
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from v2.app import board, data, guide, state, ui  # noqa: E402
+from v2.app import board, data, guide, state, ui, viz  # noqa: E402
 from v2.engine import datacheck, diagnose, effect, plan_io  # noqa: E402
 from v2.engine.metrics import fmt  # noqa: E402
 
@@ -122,18 +122,27 @@ def kpis(m: dict, virtual: bool, eff_grade: str) -> None:
                   help="한 개 팔면 남는 돈 (내가 입력한 값)")
     delta = None
     if est and margin:
-        delta = "한도보다 {} {}".format(ui.won(abs(est - margin)), "많음" if est > margin else "적음")
+        if ui.won(est) == ui.won(margin):
+            delta = "한도와 같아요"
+        else:
+            delta = "{}{} · 한도보다 {}".format("+" if est > margin else "-", ui.won(abs(est - margin)), "많음" if est > margin else "적음")
     top[1].metric("실제 손님 1명 비용", ui.won(est) if est else "-", delta=delta,
                   delta_color="inverse" if delta else "off", help="총 지출 ÷ 광고 덕분 주문(추정)")
     bottom = st.columns(2, border=True)
     bottom[0].metric("총 지출", ui.won(m.get("total_spend")),
                      delta="예산의 {}".format(fmt("budget_use", m.get("budget_use"))) if m.get("budget_use") else None,
                      delta_color="off")
-    bottom[1].metric("광고 덕분 주문", "{:.0f}건".format(m["est_orders"]) if m.get("est_orders") is not None else "-",
-                     delta="광고 클릭 주문만 세면 {:.0f}건".format(m["lastclick_orders"]) if m.get("lastclick_orders") is not None else None,
-                     delta_color="off")
+    bottom[1].metric("광고 덕분 주문", "{:.0f}건".format(m["est_orders"]) if m.get("est_orders") is not None else "-")
+    if m.get("lastclick_orders") is not None:
+        bottom[1].caption("광고 클릭 주문만 세면 {:.0f}건".format(m["lastclick_orders"]))
     st.caption("근거: 한도 A(내 입력) · 총 지출 {} · 실제 비용·광고 덕분 주문 {} (시즌·검색 경유를 뺀 추정)".format(
         ui.grade("A", virtual), ui.grade(eff_grade, virtual)))
+    bars = [(n, v, c) for n, v, c in (("손님 1명 한도", margin, viz.PRIMARY), ("실제 비용(추정)", est, viz.GRAY_DARK),
+                                      ("마지막 클릭만 센 비용", last, viz.GRAY)) if v]
+    if len(bars) >= 2:
+        viz.hbar([b[0] for b in bars], [b[1] for b in bars], [ui.won(b[1]) for b in bars], [b[2] for b in bars],
+                 "손님 1명 비용, 한도와 견줘 보기" if margin else "손님 1명 비용 견줘 보기 (한도 미입력)",
+                 "chart_cac_compare", height=200)
     gap = m.get("margin_gap")
     if gap is not None and est and margin:
         if gap > 0:
@@ -155,7 +164,7 @@ def rule_id(f: diagnose.Finding) -> str:
 def finding_card(f: diagnose.Finding, m: dict, virtual: bool, eff_grade: str) -> None:
     with st.container(border=True, key=guide.tid(rule_id(f))):
         focused = guide.focus() == rule_id(f)
-        st.markdown("{}**{}** · :gray[{} 단계]".format(board.mark(focused), f.title, f.funnel))
+        st.markdown("{}**{}** · :blue-badge[{} 단계]".format(board.mark(focused), f.title, f.funnel))
         st.write(f.message)
         if f.advice:
             st.write("→ " + f.advice)
@@ -187,10 +196,87 @@ def findings_section(findings: List[diagnose.Finding], m: dict, virtual: bool, e
                          + ("(올린 자료에 필요한 숫자가 없어요)" if f.status == "no_data" else ""))
 
 
+def _funnel_fig(labels, values, key: str, title: str) -> None:
+    import plotly.graph_objects as go
+    fig = go.Figure(go.Funnel(y=labels, x=values, textinfo="value+percent previous", marker=dict(color=viz.PRIMARY),
+                              connector=dict(line=dict(color=viz.GRAY))))
+    viz._base(fig, 260, title)
+    viz.show(fig, key)
+
+
+def _meta_lastclick_orders(sel, start, end) -> Optional[float]:
+    """스토어 일별 통계의 메타 마지막 클릭 주문 합 (엔진 지표와 같은 기간: 광고 기간 ~ 끝난 뒤 RESIDUAL_DAYS일)."""
+    store = sel.get("store_daily")
+    if store is None or not len(store) or "orders_meta" not in store or not store["orders_meta"].notna().any():
+        return None
+    if start is None or end is None:
+        period = effect.ad_period(sel)
+        if not period:
+            return None
+        start, end = period
+    rend = pd.Timestamp(end) + pd.Timedelta(days=effect.RESIDUAL_DAYS)
+    win = store[(store["date"] >= pd.Timestamp(start)) & (store["date"] <= rend)]
+    return float(win["orders_meta"].sum())
+
+
+def trend_section(sel, m: dict, virtual: bool = False, start=None, end=None) -> None:
+    """손님이 어디서 빠지는지(퍼널)와 날짜별 지출. 숫자는 올린 보고서와 지표 계산 결과 그대로."""
+    meta, naver = sel.get("meta_daily"), sel.get("naver_daily")
+    has_meta = (meta is not None and len(meta) and "impressions" in meta and m.get("link_clicks") and m.get("meta_sessions"))
+    has_naver = (naver is not None and len(naver) and {"impressions", "clicks"} <= set(naver.columns)
+                 and naver["impressions"].sum() > 0)
+    st.markdown("#### 손님이 어디서 빠졌나요")
+    tabs = []
+    if has_meta:
+        tabs.append("메타")
+    if has_naver:
+        tabs.append("네이버")
+    tabs.append("날짜별 지출")
+    boxes = dict(zip(tabs, st.tabs(tabs)))
+    if has_meta:
+        with boxes["메타"]:
+            orders = _meta_lastclick_orders(sel, start, end)
+            labels = ["광고를 본 횟수", "링크 클릭", "스토어 방문"]
+            vals = [float(meta["impressions"].sum()), float(m["link_clicks"]), float(m["meta_sessions"])]
+            if orders is not None:
+                labels.append("광고 클릭 주문(마지막 클릭)")
+                vals.append(orders)
+            _funnel_fig(labels, vals, "chart_funnel_meta", "메타 광고: 본 사람 → 주문")
+            st.caption("각 줄의 퍼센트는 바로 윗줄 대비예요. 본 횟수·링크 클릭은 올린 메타 보고서 전체, 스토어 방문·주문은 "
+                       "광고 기간부터 끝난 뒤 {}일까지 스마트스토어 통계라 기간이 달라요. 주문은 마지막 클릭 기준이라 "
+                       "위 '광고 덕분 주문'과 달라요. {}".format(effect.RESIDUAL_DAYS, ui.grade("A", virtual)))
+    if has_naver:
+        with boxes["네이버"]:
+            labels = ["검색 결과에 보인 횟수", "클릭"]
+            vals = [float(naver["impressions"].sum()), float(naver["clicks"].sum())]
+            if "store_orders" in naver and naver["store_orders"].notna().any():
+                labels.append("주문")
+                vals.append(float(naver["store_orders"].sum()))
+            _funnel_fig(labels, vals, "chart_funnel_naver",
+                        "네이버 검색광고: 보임 → 주문" if len(vals) == 3 else "네이버 검색광고: 보임 → 클릭")
+            st.caption(ui.grade("A", virtual))
+    with boxes["날짜별 지출"]:
+        import plotly.graph_objects as go
+        fig = go.Figure()
+        for df, col, name, color in ((meta, "spend", "메타", viz.PRIMARY), (naver, "cost", "네이버", viz.GRAY_DARK)):
+            if df is not None and len(df) and col in df and df[col].sum() > 0:
+                d = df.groupby("date")[col].sum().reset_index()
+                fig.add_trace(go.Bar(x=d["date"], y=d[col], name=name, marker_color=color,
+                                     hovertemplate="%{x|%m/%d} " + name + " %{y:,.0f}원<extra></extra>"))
+        if fig.data:
+            viz._base(fig, 260)
+            fig.update_layout(barmode="stack", showlegend=True, legend=dict(orientation="h", y=1.12, x=0),
+                              yaxis_title="하루 지출(원)", xaxis_title=None)
+            viz.show(fig, "chart_daily_spend")
+            st.caption("날짜별로 매체마다 얼마를 썼는지예요. " + ui.grade("A", virtual))
+        else:
+            st.caption("올린 자료에 날짜별 지출이 없어요.")
+
+
 def lift_chart(eff: effect.Effect) -> go.Figure:
     fig = go.Figure(go.Bar(x=["광고 전후 비교\n(시즌 포함)", "시즌을 뺀 진짜 변화"],
                            y=[(eff.naive_lift or 0) * 100, (eff.corrected_lift or 0) * 100],
-                           marker_color=["#BAB0AC", "#4C78A8"],
+                           marker_color=[viz.GRAY, viz.PRIMARY],
                            text=[pct(eff.naive_lift), pct(eff.corrected_lift)], textposition="outside"))
     fig.update_layout(height=300, margin=dict(l=10, r=10, t=30, b=10), yaxis_title="우리 가게 이름 검색량 변화 (%)", showlegend=False)
     return fig
@@ -228,7 +314,7 @@ def effect_section(m: dict, virtual: bool) -> str:
             st.write("전후만 비교하면 {} 보이지만, 연말 검색 증가를 빼면 {}. 광고 효과를 부풀려 보지 않도록 시즌을 뺀 숫자를 기준으로 삼아요."
                      .format(ui.josa(pct(eff.naive_lift), "으로"), ui.josa(pct(eff.corrected_lift), "이에요")))
         with b:
-            st.plotly_chart(lift_chart(eff), use_container_width=True)
+            viz.show(lift_chart(eff), "chart_lift")
         line = "광고를 보고 나중에 검색해서 산 주문은 약 {:.0f}건으로 추정해요.".format(eff.extra_brand_orders)
         if eff.truth_brand_orders is not None:
             line += " (가상 데이터의 정답은 {:.0f}건)".format(eff.truth_brand_orders)
@@ -335,16 +421,21 @@ def analysis_board(plan: plan_io.Plan, s_ctx: dict) -> Optional[dict]:
         st.info("연습용 가상 데이터예요. 실제 광고 결과가 아니라서 숫자 옆에 '가상'을 붙였어요.")
     s = plan.store
     margin = s.get("margin_per_order")
-    with st.spinner("결과를 분석하는 중이에요…"):
+    m = findings = None
+    with st.status("결과를 분석하는 중이에요…", expanded=False) as status:
         try:
+            status.update(label="지표를 계산하는 중…")
             if virtual and case:
                 m, findings = data.demo_case(case, mode, start, end, float(s.get("budget") or 0), margin)
             else:
                 m, findings = data.analyze(sel, start, end, float(s.get("budget") or 0), margin)
+            status.update(label="분석 끝: 진단 규칙 {}개를 확인했어요".format(len(findings)), state="complete")
         except Exception:  # noqa: BLE001
-            st.error("올린 자료로 지표를 계산하지 못했어요. 열 이름이 광고 관리자에서 내보낸 그대로인지 확인하고, 다시 올려 주세요.")
-            guide.set_focus(None)
-            return None
+            status.update(label="분석하지 못했어요", state="error")
+    if m is None:
+        st.error("올린 자료로 지표를 계산하지 못했어요. 열 이름이 광고 관리자에서 내보낸 그대로인지 확인하고, 다시 올려 주세요.")
+        guide.set_focus(None)
+        return None
     st.session_state["diag_done"] = True
     eff = m.get("effect")
     eff_grade = eff.grade if eff is not None else "D"
@@ -355,6 +446,7 @@ def analysis_board(plan: plan_io.Plan, s_ctx: dict) -> Optional[dict]:
     board.ensure(CHAT_KEY, sig, steps, s_ctx)
     board.point(CHAT_KEY)
     kpis(m, virtual, eff_grade)
+    trend_section(sel, m, virtual, start, end)
     findings_section(findings, m, virtual, eff_grade)
     effect_section(m, virtual)
     details(sel, m, virtual, eff_grade)
@@ -386,7 +478,7 @@ def render() -> None:
     guide.toggle()
     with st.container(key="diag_cols"):     # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
         left, right = st.columns([7, 5])
-        with left:
+        with left, guide.board_container("diag"):
             res = analysis_board(plan, {"store": dict(s["store"]), "budget_plan": dict(s["budget_plan"]), "media": list(s["media"])})
         with right:
             if res is None:
@@ -395,6 +487,7 @@ def render() -> None:
                                   "궁금한 건 지금 물어봐도 돼요.", "다음 카드")
             else:
                 board.render_chat(CHAT_KEY, res["steps"], res["intro"], "다음 카드")
+    guide.live()
 
 
 if __name__ == "__main__":

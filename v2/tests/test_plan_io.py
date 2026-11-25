@@ -194,3 +194,9 @@ def test_measured_set_from_rule_value_may_return():
     ch = diagnose.Change("meta.adset.cost_goal", "목표 비용", "meta", 300, "n", rid)
     _, diff = plan_io.next_month(p, _fired([ch]))
     assert diff.empty                                    # 같은 값이면 그대로 건너뜀
+
+
+def test_budget_keys_are_real_fields():
+    """일 예산·입찰 칸 id가 칸 사양에 실제로 있어야 다음 달 예산 계획도 같이 맞춰진다."""
+    from v2.engine import plan_io, specs
+    assert set(plan_io.BUDGET_KEYS) <= set(specs.all_fields())

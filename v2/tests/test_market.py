@@ -314,3 +314,13 @@ def test_stale_cache_fallback_still_records_error(monkeypatch):
     monkeypatch.setattr(api, "_http_ad", lambda keys, params: Resp(500))
     assert api.keyword_tool(["낡은쿠키"], online=True) == {"keywordList": []}
     assert api.last_error()
+
+
+def test_report_carries_fetched_date_for_source_line():
+    """데이터랩·키워드 도구 출처 표기용: 쓴 응답의 받은 날(가장 오래된 날)이 리포트에 실린다."""
+    from v2.app import ui
+    rep = market.build(["휘낭시에", "쿠키선물세트", "답례품쿠키", "디저트선물", "수제쿠키"], online=False)
+    assert rep is not None and len(rep.fetched) == 10 and rep.fetched[4] == "-"
+    line = ui.market_source(rep.fetched)
+    assert "네이버 데이터랩" in line and "키워드 도구" in line and rep.fetched in line
+    assert "조회일" not in ui.market_source("")

@@ -13,7 +13,9 @@ if str(ROOT) not in sys.path:
 import plotly.graph_objects as go  # noqa: E402
 import streamlit as st  # noqa: E402
 
-from v2.app import chat, guide, state, ui  # noqa: E402
+import pandas as pd  # noqa: E402
+
+from v2.app import chat, guide, state, ui, viz  # noqa: E402
 from v2.engine import conversation, intake, plan_io  # noqa: E402
 
 MEDIA_NAMES = {"meta": "메타 (인스타그램·페이스북)", "naver": "네이버 검색광고"}
@@ -33,16 +35,16 @@ GUIDE_SAY = {"store": "여기에 들어가요", "market": "찾은 검색 단어�
 def _focus(cs: dict) -> None:
     """지금 오른쪽 대화가 말하는 칸·카드를 캐릭터가 가리키도록 정한다."""
     ph = cs["phase"]
-    fid = None
+    fid, label = None, ""
     if ph == "store":
-        fid = "store-" + str(cs["step"])
+        fid, label = "store-" + str(cs["step"]), conversation.STORE_LABEL.get(cs["step"], "")
     elif ph == "market" and (cs.get("market") or {}).get("recommended"):
-        fid = "market"
+        fid, label = "market", "내 손님 판"
     elif ph == "budget" and cs.get("plan"):
-        fid = "budget"
+        fid, label = "budget", "예산 판"
     elif ph == "ask":
-        fid = str(cs["step"]).replace(".", "-")
-    guide.set_focus(fid, GUIDE_SAY["field" if ph == "ask" else ph] if fid else "")
+        fid = str(cs["step"]).replace(".", "-")     # 칸 이름은 세팅 보드 줄이 그릴 때 알려 준다 (guide.here의 label)
+    guide.set_focus(fid, GUIDE_SAY["field" if ph == "ask" else ph] if fid else "", label, chat.position(cs) if fid else "")
 
 
 # ───────────────────────── 왼쪽 작업판 ─────────────────────────
@@ -76,18 +78,45 @@ def _audience_charts(report) -> None:
     ages = aud.get("ages") or {}
     if ages:
         fig = go.Figure(go.Bar(x=["{}대".format(a) for a in ages], y=[round(v * 100) for v in ages.values()],
-                               marker_color=NAVER_COLOR))
+                               marker_color=viz.PRIMARY))
         fig.update_layout(title="누가 찾나요 (연령별 %, 여성 {}%)".format(round(aud.get("female", 0) * 100)),
                           height=220, margin=dict(l=10, r=10, t=40, b=10), yaxis_title=None, xaxis_title=None)
-        st.plotly_chart(fig, key="chart_age", use_container_width=True)
+        viz.show(fig, "chart_age")
     monthly = aud.get("monthly") or {}
     if monthly:
         fig = go.Figure(go.Scatter(x=list(monthly), y=list(monthly.values()), mode="lines+markers",
-                                   line=dict(color=NAVER_COLOR)))
+                                   line=dict(color=viz.PRIMARY)))
         fig.update_layout(title="언제 찾나요 (월별 검색 관심도)", height=220, margin=dict(l=10, r=10, t=40, b=10),
                           yaxis_title=None, xaxis_title=None)
-        st.plotly_chart(fig, key="chart_month", use_container_width=True)
+        viz.show(fig, "chart_month")
     st.caption(ui.grade(aud.get("grade", "B")))
+
+
+def _keyword_table(m: dict, report) -> None:
+    """광고 검색어 표: 월 검색량은 막대(ProgressColumn), 경쟁도·묶음은 글자. 값은 네이버 키워드 도구가 준 것 그대로."""
+    words = list((m.get("picked") or m["recommended"])[:10])
+    df = getattr(report, "keywords", None) if report is not None else None
+    if df is not None and len(df) and {"keyword", "total_qc"} <= set(df.columns):
+        sub = df[df["keyword"].isin(words)].drop_duplicates("keyword")
+        cols = [c for c in ("keyword", "total_qc", "comp", "intent") if c in sub.columns]
+        view = sub[cols].sort_values("total_qc", ascending=False).reset_index(drop=True)
+    else:
+        rows = [r for r in (m.get("rows") or []) if r.get("keyword") in words]
+        view = pd.DataFrame(rows, columns=["keyword", "total_qc", "intent"]) if rows else pd.DataFrame()
+    if not len(view):
+        st.markdown("**광고 검색어** · " + ", ".join("`{}`".format(w) for w in words))
+        return
+    top = view["total_qc"].max()
+    top = float(top) if pd.notna(top) and top > 0 else 1.0
+    st.markdown("**광고 검색어** · 월 검색량이 많은 순")
+    st.dataframe(view, hide_index=True, width="stretch", key="market_kw_table", column_config={
+        "keyword": st.column_config.TextColumn("검색어", width="medium"),
+        "total_qc": st.column_config.ProgressColumn(
+            "월 검색량", format="%d회", min_value=0, max_value=top, width="medium",
+            help="한 달 동안 네이버에서 이 단어를 검색한 횟수예요 (PC+모바일, 근거 B 추산)."),
+        "comp": st.column_config.TextColumn("경쟁도", width="small", help="이 단어에 광고하려는 사람이 많은 정도예요. 높을수록 클릭 값이 올라가요."),
+        "intent": st.column_config.TextColumn("어떤 손님", width="small")})
+    st.caption(ui.grade("B"))
 
 
 def _market_board(cs: dict, open_: bool) -> None:
@@ -105,7 +134,7 @@ def _market_board(cs: dict, open_: bool) -> None:
             for g in m.get("groups") or []:
                 st.markdown("· {} · {}개 · 월 검색 {:,}회 · 대표 {}".format(
                     g.get("intent", ""), int(g.get("count", 0) or 0), int(g.get("total_qc", 0) or 0), g.get("top_keyword", "")))
-            st.markdown("**광고 검색어** · " + ", ".join("`{}`".format(w) for w in (m.get("picked") or m["recommended"])[:10]))
+            _keyword_table(m, report)
             if m.get("negatives"):
                 st.markdown("**제외어** · " + ", ".join("`{}`".format(w) for w in m["negatives"][:8]))
 
@@ -119,17 +148,33 @@ def _budget_board(cs: dict, open_: bool) -> None:
             guide.here("budget")
             nf, mf = p.get("naver_forecast") or {}, p.get("meta_forecast") or {}
             lo, hi = state.expected_orders(p)
-            cells = [("한 달 광고비", ui.won(p.get("budget"))), ("예상 주문", "{:.0f}~{:.0f}건".format(lo, hi)),
-                     ("네이버 하루 예산", ui.won(p.get("naver_daily"))), ("예상 네이버 클릭", "{:,.0f}회".format(nf.get("clicks", 0) or 0)),
+            margin = (cs.get("store") or {}).get("margin") or 0
+            be = (p["budget"] / margin) if margin and p.get("budget") else None
+            top = st.columns(3 if be else 2, border=True)
+            top[0].metric("한 달 광고비", ui.won(p.get("budget")))
+            if be is None:
+                gap = None
+            elif lo >= be:
+                gap = "본전보다 많음"
+            elif hi < be:
+                gap = "본전보다 적음"
+            else:
+                gap = "본전을 넘을 수도, 못 넘을 수도"
+            top[1].metric("예상 주문", "{:.0f}~{:.0f}건".format(lo, hi), delta=gap, delta_color="off",
+                          help="예상 클릭 × 구매율 가정이에요 (근거 D).")
+            if be:
+                top[2].metric("본전 주문 수", "{:.0f}건".format(be), help="한 달 광고비 ÷ 한 개 팔면 남는 돈")
+            cells = [("네이버 하루 예산", ui.won(p.get("naver_daily"))), ("예상 네이버 클릭", "{:,.0f}회".format(nf.get("clicks", 0) or 0)),
                      ("메타 하루 예산", ui.won(p.get("meta_daily"))), ("예상 메타 도달", "{:,.0f}명".format(mf.get("reach", 0) or 0))]
             for i in range(0, len(cells), 2):
                 row = st.columns(2)
                 for col, (label, val) in zip(row, cells[i:i + 2]):
                     col.metric(label, val)
-            st.caption("예상 주문은 클릭 × 구매율 가정이에요. " + ui.grade("D"))
-            margin = (cs.get("store") or {}).get("margin") or 0
-            if margin and p.get("budget"):
-                be = p["budget"] / margin
+            nm, mm = float(p.get("naver_month") or 0), float(p.get("meta_month") or 0)
+            if nm > 0 and mm > 0:
+                viz.donut(["네이버", "메타"], [nm, mm], "한 달 광고비를 이렇게 나눠요", ui.won(p.get("budget")), key="chart_budget_split")
+            st.caption("예상 주문은 클릭 × 구매율 가정이에요. " + ui.grade("D") + " · 실제와 많이 다를 수 있어요.")
+            if be:
                 if hi < be:
                     st.warning("광고비를 본전으로 돌리려면 {:.0f}건 넘게 팔려야 하는데, 예상은 최대 {:.0f}건이에요. "
                                "첫 달은 손해일 수 있어요.".format(be, hi))
@@ -161,7 +206,7 @@ def _setting_board(cs: dict) -> None:
                         b.write(str(r["value"]) or "-")
                         c.markdown(ui.kind_badge(r["kind_label"]))
                         if here:
-                            guide.here(r["field_id"].replace(".", "-"))
+                            guide.here(r["field_id"].replace(".", "-"), str(r["label"]))
 
 
 def work_board(cs: dict) -> None:
@@ -317,12 +362,13 @@ def render() -> None:
         left, right = st.columns([7, 5])
         with right:
             chat.render()
-        with left:
+        with left, guide.board_container("setup"):
             if s["chat"]["phase"] == "done":
                 step_sheet()
             else:
                 work_board(s["chat"])
                 guide.scroll()
+    guide.live()
 
 
 if __name__ == "__main__":

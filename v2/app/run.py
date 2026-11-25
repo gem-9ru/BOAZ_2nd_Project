@@ -10,7 +10,9 @@ import datetime as dt  # noqa: E402
 
 import streamlit as st  # noqa: E402
 
-from v2.app import board, guide, state, ui  # noqa: E402
+import plotly.graph_objects as go  # noqa: E402
+
+from v2.app import board, guide, state, ui, viz  # noqa: E402
 
 AD_DAYS = 30        # 한 달 집행 (가상 데이터와 같은 기간)
 RESIDUAL_DAYS = 7   # 광고가 끝난 뒤에도 남는 효과를 보는 날 (effect.RESIDUAL_DAYS와 같게)
@@ -82,12 +84,12 @@ def guide_steps(media: list, start: dt.date) -> list:
 def work_board(plan, bp: dict, s) -> None:
     """왼쪽 작업판: 하루 예산 · 체크리스트 · 결과 올릴 날 · 다음 할 일."""
     st.caption("{}개월 차 · 하루 예산은 세팅값 시트 그대로예요.".format(plan.month_index))
-    c1, c2, c3 = st.columns(3)
+    cols = iter(st.columns(len(s["media"]) + 1, border=True))
     if "naver" in s["media"]:
-        c1.metric("네이버 하루 예산", ui.won(bp.get("naver_daily")))
+        next(cols).metric("네이버 하루 예산", ui.won(bp.get("naver_daily")))
     if "meta" in s["media"]:
-        c2.metric("메타 하루 예산", ui.won(bp.get("meta_daily")))
-    c3.metric("한 달 광고비", ui.won(s["store"].get("budget")))
+        next(cols).metric("메타 하루 예산", ui.won(bp.get("meta_daily")))
+    next(cols).metric("한 달 광고비", ui.won(s["store"].get("budget")))
 
     st.markdown("#### 광고를 켜기 전에")
     checklist(s["media"])
@@ -98,8 +100,20 @@ def work_board(plan, bp: dict, s) -> None:
         ui.init_widget("w_ad_start", default)
         start = st.date_input("광고를 켜는 날", key="w_ad_start")
         s["ad_start"] = start
-        st.info("한 달 광고가 끝나고 {}일이 지난 **{}** 에 결과 파일을 올려 주세요. 광고를 본 뒤 나중에 검색해서 산 주문까지 보려고 {}일을 더 기다려요."
-                .format(RESIDUAL_DAYS, result_day(start).strftime("%Y년 %m월 %d일"), RESIDUAL_DAYS))
+        end = start + dt.timedelta(days=AD_DAYS - 1)
+        up = result_day(start)
+        d1, d2, d3 = st.columns(3, border=True)
+        multi_year = len({start.year, end.year, up.year}) > 1
+        fmt_day = (lambda d: "{}년 {}월 {}일".format(d.year, d.month, d.day)) if multi_year else (lambda d: d.strftime("%m월 %d일"))
+        d1.metric("광고 켜는 날", fmt_day(start))
+        d2.metric("광고 끝나는 날", fmt_day(end))
+        d2.caption("{}일 동안".format(AD_DAYS))
+        left_days = (up - dt.date.today()).days
+        d3.metric("결과 올리는 날", fmt_day(up),
+                  help="광고가 끝나고 {}일 더 기다린 다음 날이에요.".format(RESIDUAL_DAYS))
+        d3.caption("오늘부터 {}일 뒤".format(left_days) if left_days >= 0 else "{}일 지났어요".format(-left_days))
+        timeline(start)
+        st.info("광고를 본 뒤 나중에 검색해서 산 주문까지 보려고 {}일을 더 기다린 다음, 위 날짜에 결과 파일을 올려 주세요.".format(RESIDUAL_DAYS))
         st.caption("올릴 파일: 메타 광고 보고서(일·광고 세트 단위), 네이버 광고 키워드별 일별 보고서, 스마트스토어 일별 통계. 엑셀 한 파일이나 CSV 여러 개 모두 돼요.")
         if guide.here("run-date"):
             st.caption(board.mark(True) + "지금 안내하는 항목이에요")
@@ -109,6 +123,26 @@ def work_board(plan, bp: dict, s) -> None:
         ui.next_link("diag", "③ 진단으로 가기", ":material/arrow_forward:")
         if guide.here("run-next"):
             st.caption(board.mark(True) + "지금 안내하는 항목이에요")
+
+
+def timeline(start: dt.date) -> None:
+    """일정 타임라인: 광고 30일 → 기다리는 7일 → 결과 올리는 날. 막대 안에 글자로 뜻을 쓴다."""
+    end = start + dt.timedelta(days=AD_DAYS - 1)
+    wait_end = end + dt.timedelta(days=RESIDUAL_DAYS)
+    up = result_day(start)
+    fig = go.Figure()
+    for label, a, b, color in (("광고 {}일".format(AD_DAYS), start, end + dt.timedelta(days=1), viz.PRIMARY),
+                               ("기다리는 {}일".format(RESIDUAL_DAYS), end + dt.timedelta(days=1), wait_end + dt.timedelta(days=1), viz.GRAY)):
+        fig.add_trace(go.Bar(y=["일정"], x=[(b - a).days * 86400000], base=[a], orientation="h", marker_color=color, text=label,
+                             textposition="inside", insidetextanchor="middle", hoverinfo="skip",
+                             textfont=dict(color="#FFFFFF" if color == viz.PRIMARY else viz.TEXT)))
+    fig.add_trace(go.Scatter(x=[up], y=["일정"], mode="markers+text", text=["결과 올리는 날"], textposition="top center",
+                             marker=dict(symbol="diamond", size=14, color=viz.TEXT), hoverinfo="skip"))
+    viz._base(fig, 180)
+    fig.update_layout(barmode="overlay", margin=dict(l=10, r=10, t=30, b=10))
+    fig.update_yaxes(visible=False)
+    fig.update_xaxes(type="date", tickformat="%m/%d", range=[start - dt.timedelta(days=1), up + dt.timedelta(days=4)])
+    viz.show(fig, "chart_run_timeline")
 
 
 def render() -> None:
@@ -130,12 +164,13 @@ def render() -> None:
     board.point(CHAT_KEY)
     with st.container(key="run_cols"):     # 좁은 화면에서는 CSS가 오른쪽(대화)을 위로 올린다
         left, right = st.columns([7, 5])
-        with left:
+        with left, guide.board_container("run"):
             work_board(plan, bp, s)
             guide.scroll()
         with right:
             board.render_chat(CHAT_KEY, steps, "광고를 켜기 전에 확인할 게 {}가지 있어요. 하나씩 같이 볼게요. "
                               "모르는 건 아래에 물어봐도 돼요.".format(len(checklist_items(s["media"]))), "다음")
+    guide.live()
 
 
 if __name__ == "__main__":

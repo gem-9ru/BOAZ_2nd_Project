@@ -1,0 +1,139 @@
+{
+ "key": "/shopping/v1/category/gender|50000006||month",
+ "fetched_at": "2026-11-22 12:26:11",
+ "response": {
+  "startDate": "2025-11-01",
+  "endDate": "2026-10-31",
+  "timeUnit": "month",
+  "results": [
+   {
+    "title": "50000006",
+    "category": [
+     "50000006"
+    ],
+    "data": [
+     {
+      "period": "2025-11-01",
+      "ratio": 81.43073,
+      "group": "f"
+     },
+     {
+      "period": "2025-11-01",
+      "ratio": 44.63958,
+      "group": "m"
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 86.53422,
+      "group": "f"
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 48.85055,
+      "group": "m"
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 100,
+      "group": "f"
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 57.44276,
+      "group": "m"
+     },
+     {
+      "period": "2026-02-01",
+      "ratio": 85.11868,
+      "group": "f"
+     },
+     {
+      "period": "2026-02-01",
+      "ratio": 50.46677,
+      "group": "m"
+     },
+     {
+      "period": "2026-03-01",
+      "ratio": 81.434,
+      "group": "f"
+     },
+     {
+      "period": "2026-03-01",
+      "ratio": 49.27287,
+      "group": "m"
+     },
+     {
+      "period": "2026-04-01",
+      "ratio": 82.4559,
+      "group": "f"
+     },
+     {
+      "period": "2026-04-01",
+      "ratio": 49.56907,
+      "group": "m"
+     },
+     {
+      "period": "2026-05-01",
+      "ratio": 76.55193,
+      "group": "f"
+     },
+     {
+      "period": "2026-05-01",
+      "ratio": 46.45029,
+      "group": "m"
+     },
+     {
+      "period": "2026-06-01",
+      "ratio": 71.10123,
+      "group": "f"
+     },
+     {
+      "period": "2026-06-01",
+      "ratio": 42.72628,
+      "group": "m"
+     },
+     {
+      "period": "2026-07-01",
+      "ratio": 71.02797,
+      "group": "f"
+     },
+     {
+      "period": "2026-07-01",
+      "ratio": 43.49415,
+      "group": "m"
+     },
+     {
+      "period": "2026-08-01",
+      "ratio": 59.85987,
+      "group": "f"
+     },
+     {
+      "period": "2026-08-01",
+      "ratio": 36.32722,
+      "group": "m"
+     },
+     {
+      "period": "2026-09-01",
+      "ratio": 64.75423,
+      "group": "f"
+     },
+     {
+      "period": "2026-09-01",
+      "ratio": 38.66781,
+      "group": "m"
+     },
+     {
+      "period": "2026-10-01",
+      "ratio": 55.1212,
+      "group": "f"
+     },
+     {
+      "period": "2026-10-01",
+      "ratio": 33.80622,
+      "group": "m"
+     }
+    ]
+   }
+  ]
+ }
+}

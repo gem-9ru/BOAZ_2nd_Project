@@ -5,7 +5,7 @@
   (그래야 왼쪽 작업판이 같은 실행에서 새 상태로 그려진다).
 - 숫자는 엔진이 준 값만 보여 준다. 도움말 답에는 출처와 ✅/△/❓ 확인 표시를 붙인다. kind=="llm"이면 한 글자씩 흘려 쓴다.
 """
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 import streamlit as st
 
@@ -17,68 +17,6 @@ DEMO_SEEDS_CHIP = "예시 단어로 찾기"
 HELP_NOTE = {"help": "도움말에 미리 적어 둔 답이에요.", "coach": "사장님 숫자로 바로 계산한 답이에요.",
              "llm": "AI가 도움말을 바탕으로 쓴 답이에요. 틀릴 수 있으니 출처도 함께 확인해 주세요.",
              "none": ""}
-
-
-# ── 안내 캐릭터 (왼쪽 작업판에서 지금 말하는 칸을 가리킴) ─────────
-
-GUIDE_CSS = """<style>
-.coach{display:flex;justify-content:flex-end;align-items:center;gap:8px;margin:2px 0;
- animation:coach-in .5s ease-out both}
-.coach-face{display:inline-flex;gap:6px;align-items:center;justify-content:center;width:34px;height:34px;
- border-radius:50%;background:#2F5D8A;flex:none}
-.coach-face i{width:6px;height:6px;border-radius:50%;background:#fff;display:block}
-.coach-bubble{background:#F7F8FA;border:2px solid #2F5D8A;border-radius:12px;padding:3px 10px;
- font-size:.85rem;color:#2B3340}
-.coach-hand{color:#2F5D8A;font-weight:700}
-@keyframes coach-in{from{transform:translateX(60px);opacity:0}to{transform:none;opacity:1}}
-@media (prefers-reduced-motion:reduce){.coach{animation:none}}
-@media (max-width:640px){
- .coach{display:none}
- .st-key-setup_cols [data-testid="stHorizontalBlock"]>[data-testid="stColumn"]:last-child{order:-1}
-}
-</style>"""
-GUIDE_SAY = {"store": "여기에 들어가요", "market": "찾은 검색 단어예요", "budget": "예산을 이렇게 나눴어요",
-             "field": "이 칸에 들어가요"}
-
-
-def guide_on() -> bool:
-    ui.init_widget("w_guide", True)
-    return bool(st.session_state.get("w_guide"))
-
-
-def focus_id(cs: dict) -> Optional[str]:
-    """지금 오른쪽 대화가 말하는 칸·카드의 컨테이너 id (왼쪽 작업판의 t-… 키에서 't-'를 뺀 것)."""
-    ph = cs["phase"]
-    if ph == "store":
-        return "store-" + str(cs["step"])
-    if ph == "market" and (cs.get("market") or {}).get("recommended"):
-        return "market"
-    if ph == "budget" and cs.get("plan"):
-        return "budget"
-    if ph == "ask":
-        return str(cs["step"]).replace(".", "-")
-    return None
-
-
-def guide_here(cs: dict, my_id: str) -> None:
-    """내 컨테이너가 지금 가리키는 대상이면 캐릭터와 말풍선을 그린다 (좁은 화면에서는 CSS가 숨김)."""
-    if not guide_on() or focus_id(cs) != my_id:
-        return
-    kind = "field" if cs["phase"] == "ask" else cs["phase"]
-    st.markdown('<div class="coach"><span class="coach-bubble">{}</span><span class="coach-hand">&#9654;</span>'
-                '<span class="coach-face"><i></i><i></i></span></div>'.format(GUIDE_SAY.get(kind, "")),
-                unsafe_allow_html=True)
-
-
-def scroll_to_focus(cs: dict) -> None:
-    """부모 문서에서 가리킬 칸을 화면 가운데로. 막혀 있거나 좁은 화면(대화가 위)이면 조용히 건너뛴다."""
-    fid = focus_id(cs)
-    if not fid:
-        return
-    import streamlit.components.v1 as components
-    js = ("<script>try{var p=window.parent;if(p.innerWidth>640){var e=p.document.querySelector('.st-key-t-" + fid +
-          "');if(e){e.scrollIntoView({block:'center',behavior:'smooth'});}}}catch(x){}</script>")
-    components.html(js, height=0)
 
 
 # ── 입력 받기 (콜백은 적어 두기만) ─────────────────────────
@@ -146,7 +84,7 @@ def _market_card(t: conversation.Turn) -> None:
         st.markdown("광고에 쓸 단어: " + ", ".join("`{}`".format(w) for w in d["recommended"][:8]))
         if d.get("negatives"):
             st.markdown("뺄 단어: " + ", ".join("`{}`".format(w) for w in d["negatives"][:6]))
-        st.caption(ui.grade("B"))
+        st.caption(ui.market_source(d.get("fetched")))
     st.markdown(t.text.split("\n\n")[-1])
 
 
@@ -206,6 +144,17 @@ def _turn(cs: dict, t: conversation.Turn, live: bool) -> None:
 
 
 # ── 위쪽 띠: 진행 · 고치기 · 권장 답 ─────────────────────
+
+def position(cs: dict) -> str:
+    """지금 위치 숫자 (예: "3/12"). 위쪽 진행 표시와 작업판의 캐릭터 말풍선이 같은 값을 쓴다.
+    칸 질문 단계면 몇 번째 칸인지, 그 밖에는 몇 번째 단계인지."""
+    p = conversation.progress(cs)
+    if p["done"]:
+        return ""
+    if p["label"] == p["stages"][-1] and p["question_total"]:
+        return "{}/{}".format(p["question_no"], p["question_total"])
+    return "{}/{}".format(p["index"] + 1, len(p["stages"]))
+
 
 def _progress(cs: dict) -> None:
     p = conversation.progress(cs)

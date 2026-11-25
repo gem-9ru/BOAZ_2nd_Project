@@ -1,0 +1,23 @@
+/* 색·크기는 design-system/tokens.json 의 component.coach / component.character 에서 만든 변수를 쓴다 */
+@import "../../assets/overlay-tokens.css";
+
+:host { all: initial; }
+.coach-ring { position: fixed; z-index: 2147483646; border: var(--coach-ring-width) solid var(--coach-ring); border-radius: var(--coach-ring-radius); pointer-events: none;
+  box-shadow: 0 0 0 9999px color-mix(in srgb, var(--coach-scrim) 22%, transparent); transition: left var(--coach-move-duration) var(--coach-easing), top var(--coach-move-duration) var(--coach-easing), width var(--coach-move-duration) var(--coach-easing), height var(--coach-move-duration) var(--coach-easing); }
+/* 뭉치(3D)는 rAF로 걷고 뛰므로 위치 transition 없음. 클릭은 말풍선만 받는다 */
+.coach-mungchi { position: fixed; z-index: 2147483647; pointer-events: none; }
+.coach-bubble-wrap { position: fixed; z-index: 2147483647; width: var(--coach-width); font-family: var(--coach-font-family);
+  transition: left var(--coach-walk-duration) var(--coach-easing), top var(--coach-walk-duration) var(--coach-easing), opacity var(--coach-move-duration) var(--coach-easing); }
+.coach-bubble { background: var(--coach-bubble-bg); color: var(--coach-bubble-fg); border: 1.5px solid var(--coach-bubble-border); box-shadow: var(--coach-shadow); border-radius: var(--coach-radius); padding: var(--coach-padding-y) var(--coach-padding-x); font-size: var(--coach-font-size); line-height: var(--coach-line-height); flex: 1; }
+.coach-count { margin: 0 0 4px; font-size: var(--coach-small-font-size); color: var(--coach-count-fg); font-weight: 700; }
+.coach-text { margin: 0 0 var(--coach-gap); }
+.coach-shot { width: 100%; border-radius: 8px; margin-bottom: var(--coach-gap); }
+.coach-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.coach-actions button { font: inherit; font-size: var(--coach-button-font-size); border-radius: var(--coach-button-radius); padding: 6px 12px; cursor: pointer;
+  background: var(--coach-button-bg); color: var(--coach-button-fg); border: 1px solid var(--coach-button-border); }
+.coach-actions .coach-primary { background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-color: var(--coach-primary-bg); font-weight: 700; }
+.coach-actions .coach-primary:hover { background: var(--coach-primary-hover-bg); }
+.coach-actions button:focus-visible { outline: var(--coach-focus-width) solid var(--coach-focus); outline-offset: var(--coach-focus-offset); }
+.coach-note { margin: 8px 0 0; font-size: var(--coach-small-font-size); color: var(--coach-note-fg); }
+@media (prefers-reduced-motion: reduce) { .coach-ring, .coach-bubble-wrap { transition: none; } }
+.coach-actions button:disabled { opacity: .4; cursor: default; }

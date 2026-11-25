@@ -1,0 +1,84 @@
+{
+ "key": "/shopping/v1/category/keyword/device|50000006|휘낭시에빼빼로|month",
+ "fetched_at": "2026-11-15 14:35:11",
+ "response": {
+  "startDate": "2025-11-01",
+  "endDate": "2026-10-31",
+  "timeUnit": "month",
+  "results": [
+   {
+    "title": "휘낭시에빼빼로",
+    "keyword": [
+     "휘낭시에빼빼로"
+    ],
+    "data": [
+     {
+      "period": "2025-11-01",
+      "ratio": 100,
+      "group": "mo"
+     },
+     {
+      "period": "2025-11-01",
+      "ratio": 15.87561,
+      "group": "pc"
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 0.90016,
+      "group": "mo"
+     },
+     {
+      "period": "2025-12-01",
+      "ratio": 0.24549,
+      "group": "pc"
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 0.08183,
+      "group": "mo"
+     },
+     {
+      "period": "2026-01-01",
+      "ratio": 0.08183,
+      "group": "pc"
+     },
+     {
+      "period": "2026-02-01",
+      "ratio": 0.16366,
+      "group": "mo"
+     },
+     {
+      "period": "2026-02-01",
+      "ratio": 0.08183,
+      "group": "pc"
+     },
+     {
+      "period": "2026-03-01",
+      "ratio": 0.24549,
+      "group": "mo"
+     },
+     {
+      "period": "2026-06-01",
+      "ratio": 0.08183,
+      "group": "mo"
+     },
+     {
+      "period": "2026-09-01",
+      "ratio": 1.47299,
+      "group": "mo"
+     },
+     {
+      "period": "2026-10-01",
+      "ratio": 6.62847,
+      "group": "mo"
+     },
+     {
+      "period": "2026-10-01",
+      "ratio": 1.63666,
+      "group": "pc"
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -1,0 +1,254 @@
+# 진단 규칙 사양
+# 원본: 다정 진단 규칙 8개(⑥, 11/12) + 희수 깔때기 진단 규칙(5장, 11/12)
+#
+# when: 조건 목록 (모두 참이면 걸림). metric 이름은 v2/engine/metrics.py의 case_metrics 결과
+#       metric 값이 없으면(그 데이터가 안 올라옴) 그 규칙은 '데이터 없음'으로 건너뜀
+# says: 사장님에게 보여 줄 문장. {metric}으로 숫자를 넣음 (형식은 metrics.FORMATS)
+# changes: 다음 달 세팅에서 바꿀 칸 (meta_fields.yaml · naver_fields.yaml의 id)
+#   set: 새 값 / set_from: metrics가 계산한 값으로 / note: 왜 바꾸는지
+# grade: hypothesis(기준값을 실제 데이터로 아직 확인 못 함) | checked(실제 데이터로 확인) | calc(사장님 숫자로 바로 계산, 기준값 없음)
+# funnel: 어느 단계 문제인가 (노출 · 클릭 · 도착 · 구매 · 측정 · 예산)
+
+# ── v4 분석 루프 기준값 (회의 2026-11-25: 코드에 박지 않고 여기서 바꾼다) ──
+loop:
+  simulation:
+    runs: 200000            # 몬테카를로 횟수 (수만 번 이상이면 됨, 설정값)
+  alerts:
+    sum_mismatch: 0.01      # ■ 일자별 합 ≠ 노출 위치 합, 1% 초과
+    spend_used_min: 0.5     # ▲ 지출 ÷ 설정 예산
+    spend_gap_pp: 0.30      # ▲ 두 세트 지출 비중 차이 (희수 28 : 72) → 확실도 한 단계 낮춤
+    min_clicks: 30          # ▲ 링크 클릭(세트 합)이 이보다 적으면 판정 최대 '유력' (화면: 'B 쪽이에요')
+    min_actions: 5          # ▲ 들어온 뒤 행동(알림 신청 등)이 세트 합으로 이보다 적으면 ④단계 '아직 몰라요'
+    replay_min_visits: 5    # AN-04 날짜별: 그날까지 손님이 세트마다 이보다 적으면 그날 판정은 '아직 몰라요'
+    visit_rate_min: 0.60    # ▲ 랜딩 조회 ÷ 링크 클릭
+    frequency_max: 2.5      # ▲ 노출 ÷ 도달
+    an_share_max: 0.5       # ▲ Audience Network에 쓴 지출 비중
+    placement_min_impressions: 100   # ● 노출 위치 표 '참고만'
+  matrix:
+    cpm_high: 12000         # 세트가 하나일 때 CPM 기준 (D 가정)
+    ctr_low: 0.01           # 클릭률 기준 (실측 1.6~3.7% 정상)
+    visit_rate_min: 0.60
+    placement_share: 0.60   # 한 노출 위치에 지출 집중
+    fatigue_days: 7         # 소재 피로는 이 기간 이상일 때만
+    learning_events: 50     # 학습 단계: 7일에 최적화 이벤트 약 50회
+  meta_daily_min: 1336      # 메타가 받는 하루 최소 예산(원) 약값 — 오븐로그 11/17 사례 (설계서 v4.2 EX-01 ④). AN-05 기간 토글 경고
+  test_and_roll:            # Feit & Berman 2019, 오븐로그 실측 기준
+    share_lo: 0.076
+    share_hi: 0.20
+  checklist:                # AN-06 · EX-03 다음 테스트 체크리스트 (v4.2: 남은 알림 → 할 일, ALT 번호는 화면에 안 보임)
+    no_delivery: 시작 시간을 하루 여유 있게
+    small_sample: 클릭이 {min_clicks}번 넘게 모일 때까지 그대로 두기
+    spend_gap: 두 세트 예산을 똑같이 나누기
+    underspent: 총예산을 '하루 최소 × 기간'보다 넉넉하게
+    low_visit_rate: 광고 주소를 휴대폰으로 열어 확인하기
+    high_frequency: 새 소재 준비하기
+    an_skew: 노출 위치에서 Audience Network 빼기
+    one_field: 바꾸는 칸은 {label} 1개만
+    same_day: 두 세트는 같은 날 같이 시작
+
+# ── 찾기·문구 되묻기 (설계 10장): 분야에 묶이지 않는 공통 낱말만 둔다. 분야별 상품 낱말 목록은 두지 않는다 ──
+find:
+  categories:               # 네이버 쇼핑인사이트 분야 12개 (순서 고정)
+    - {code: "50000000", name: 패션의류}
+    - {code: "50000001", name: 패션잡화}
+    - {code: "50000002", name: 화장품/미용}
+    - {code: "50000003", name: 디지털/가전}
+    - {code: "50000004", name: 가구/인테리어}
+    - {code: "50000005", name: 출산/육아}
+    - {code: "50000006", name: 식품}
+    - {code: "50000007", name: 스포츠/레저}
+    - {code: "50000008", name: 생활/건강}
+    - {code: "50000009", name: 여가/생활편의}
+    - {code: "50000010", name: 면세점}
+    - {code: "50005542", name: 도서}
+  common:
+    making: [만들기, 만드는, 레시피, 키트, 베이킹, 클래스, 원데이, 반죽, 밀키트, diy, DIY, 창업, 장사, 재료, 도매, 납품, 학원]
+    place: [맛집, 근처, 가볼만, 카페, 빵집, 베이커리, 매장, 지점, 주변, 핫플, 데이트, 여행,
+            서울, 부산, 대구, 인천, 광주, 대전, 울산, 세종, 제주, 수원, 성남, 성수, 강남,
+            홍대, 송도, 분당, 일산, 경기, 강원, 전주, 경주, 속초, 여수, 판교, 잠실,
+            전문점]
+    gift: [선물, 답례, 기프트, 감사, 축하, 집들이, 상견례, 돌잔치, 하객, 생일, 기념일]
+    season: [크리스마스, 발렌타인, 밸런타인, 화이트데이, 빼빼로, 할로윈, 핼러윈, 추석, 설날, 명절,
+             어버이날, 스승의날, 어린이날, 연말, 수능, 새해, 시즌, 설선물, 설연휴]
+  modifier_groups:          # 꾸밈말 묶음 초판. 목록에 없으면 '그 밖'
+    포장: [포장, 박스, 상자, 쇼핑백, 리본, 개별포장, 소포장, 파우치, 케이스]
+    맛·재료: [맛, 비건, 글루텐프리, 무설탕, 저당, 저탄수, 유기농, 수제, 천연, 국산, 버터, 초코, 딸기, 녹차, 오리지널, 무첨가, 순한, 향]
+    배송: [배송, 택배, 당일, 당일발송, 무료배송, 새벽배송, 냉동, 냉장, 퀵, 발송, 주문제작]
+    양: [대용량, 소용량, 미니, 대량, 벌크, 묶음, 개입, 낱개, 큰, 작은, 1kg, 500g]
+  modifier_skip: [추천, 순위, 가격, 후기, 리뷰, 최저가, 인기, 베스트, 비교, 판매, 구매, 구입, 파는곳, 사이트, 쿠폰, 할인, 전문점, 종류, 쇼핑몰, 생지, 세트]
+  modifier_skip_exact: [포장, 주문, 배달, 브랜드, 남자, 남성, 남성용, 여성, 여성용, 여자, 아기, 유아, 어린이, 아이, 키즈, 1+1]   # 그것만 남았을 땐 좋은 점이 아님 (개별포장·선물포장은 살림)
+
+rules:
+  # ── 다정 규칙 8개 ──
+  - id: rule.weekly_freq_high
+    title: 주간 빈도 과다
+    funnel: 노출
+    when: [{metric: weekly_freq_max, op: ">", value: 3}]
+    says: 같은 사람이 일주일에 평균 {weekly_freq_max}번 광고를 봤어요. 지쳐서 그냥 넘기기 시작해요.
+    changes:
+      - {field: meta.ad.creative_test, set: 켜기 (사진 2~3개 비교), note: 새 소재로 같은 사람의 피로를 줄여요}
+      - {field: meta.adset.age_gender, set: 넓게 (어드밴티지+ 타겟 추천), note: 새 사람에게 닿게 범위를 넓혀요}
+    grade: hypothesis
+
+  - id: rule.awareness_freq_low
+    title: 인지도 빈도 부족
+    funnel: 노출
+    when: [{metric: awareness_weekly_freq_min, op: "<", value: 1}]
+    says: 알리기 광고를 본 사람이 일주일에 평균 {awareness_weekly_freq_min}번밖에 못 봤어요. 한 번 보고 잊기 쉬워요.
+    changes:
+      - {field: meta.adset.end_date, set: 7일, note: 같은 돈을 짧게 몰아 써서 일주일에 한 번 이상 보이게 해요}
+    caveat: 가상 데이터(C1b)에서는 기간을 줄여 규칙은 통과했지만 손님 1명 비용은 거의 그대로였어요. '며칠이면 잊나'를 실제로 재기 전까지는 가설이에요.
+    grade: hypothesis
+
+  - id: rule.creative_fatigue
+    title: 소재 피로
+    funnel: 클릭
+    when: [{metric: ctr_drop_max, op: ">=", value: 0.30}]
+    says: 첫 주보다 마지막 주 링크 클릭률이 {ctr_drop_max} 떨어졌어요. 같은 사진에 사람들이 질렸어요.
+    changes:
+      - {field: meta.ad.creative_test, set: 켜기 (새 사진 2~3개 비교), note: 질린 소재를 바꿔요}
+      - {field: meta.creative.copy, set: 새 문구 3개, note: 첫 문장을 바꿔요}
+    grade: hypothesis
+    expect: {metric: link_ctr, low: 0.15, high: 0.50, grade: hypothesis}   # 임시 가설값
+
+  - id: rule.placement_quality
+    title: 노출 위치 품질
+    funnel: 클릭
+    when: [{metric: an_click_share, op: ">", value: 0.20}]
+    says: 클릭의 {an_click_share}가 다른 앱 광고 자리(Audience Network)에서 나왔어요. 클릭은 싸지만 구매로 잘 안 이어져요.
+    changes:
+      - {field: meta.adset.placements, set: "어드밴티지+ 노출 위치, Audience Network 제외", note: 싸지만 안 팔리는 자리를 빼요}
+    grade: hypothesis
+    expect: {metric: visit_rate, low: 0.05, high: 0.30, grade: hypothesis}   # 임시 가설값: 다정 근거값 오면 교체
+
+  - id: rule.ig_share_low
+    title: 인스타그램 비중 낮음
+    funnel: 노출
+    when: [{metric: ig_spend_share, op: "<", value: 0.30}]
+    says: "'인스타 광고'라고 생각했지만 인스타그램에 쓴 돈은 {ig_spend_share}뿐이에요."
+    changes:
+      - {field: meta.adset.placements, set: "수동 노출 위치: Instagram 피드·스토리·릴스", note: 인스타그램에 보여 주고 싶다면 직접 골라요}
+      - {field: meta.ad.media, set: 둘 다, note: 스토리·릴스용 세로 사진을 더해요}
+    grade: hypothesis
+
+  - id: rule.search_demand_cap
+    title: 검색 수요 한계
+    funnel: 예산
+    when:
+      - {metric: budget_use, op: "<", value: 0.90}
+      - {metric: naver_spend, op: ">", value: 0}
+    says: 예산의 {budget_use}만 쓰였어요. 네이버는 검색하는 사람만큼만 돈을 쓸 수 있어서 남았어요.
+    changes:
+      - {field: naver.campaign.daily_budget, set_from: naver_daily_spend, note: 실제로 쓸 수 있었던 만큼으로 맞춰요}
+      - {field: meta.adset.daily_budget, set_from: meta_daily_with_leftover, note: 남은 돈은 메타로 옮겨요}
+    grade: hypothesis
+
+  - id: rule.target_saturation
+    title: 타겟 포화
+    funnel: 노출
+    when: [{metric: saturation_max, op: ">", value: 0.70}]
+    says: 메타가 실제로 보여 줄 수 있는 사람의 {saturation_max}가 이미 광고를 봤어요. 돈을 더 써도 새 사람이 없어요.
+    changes:
+      - {field: meta.adset.location, set: 전국 (택배), note: 지역을 넓혀요}
+      - {field: meta.adset.age_gender, set: 넓게 (어드밴티지+ 타겟 추천), note: 나이·성별 범위를 넓혀요}
+    grade: hypothesis
+
+  - id: rule.awareness_hidden
+    title: 인지도 효과 숨음
+    funnel: 측정
+    when: [{metric: hidden_ratio, op: ">", value: 1.5}]
+    says: 스토어 유입 경로로만 보면 손님 1명 비용이 {lastclick_cac}원이지만, 광고를 보고 나중에 검색해서 산 주문까지 치면 약 {est_cac}원이에요 ({hidden_ratio}배 차이).
+    changes: []
+    advice: 광고를 끄기 전에 구매 후 설문("어디서 알게 되셨나요?")과 브랜드 검색량을 같이 보세요.
+    grade: hypothesis
+
+  # ── 희수 깔때기 규칙 ──
+  - id: rule.creative_weak
+    title: 광고가 안 끌림
+    funnel: 클릭
+    when: [{metric: link_ctr, op: "<", value: 0.008}]
+    says: 링크 클릭률이 {link_ctr}예요. 광고를 보고도 누르지 않아요.
+    changes:
+      - {field: meta.creative.copy, set: 새 문구 3개, note: 첫 문장과 사진을 바꿔요}
+      - {field: meta.ad.creative_test, set: 켜기 (사진 2~3개 비교), note: 무엇이 끌리는지 비교해요}
+    grade: hypothesis
+    expect: {metric: link_ctr, low: 0.10, high: 0.40, grade: hypothesis}   # 임시 가설값
+
+  - id: rule.click_without_visit
+    title: 눌렀는데 페이지에 안 옴
+    funnel: 도착
+    when: [{metric: visit_per_click, op: "<", value: 0.60}]
+    says: 광고를 누른 사람 중 스토어에 도착한 사람은 {visit_per_click}뿐이에요. 페이지가 느리거나 잘못 눌린 클릭이 많아요.
+    changes:
+      - {field: meta.creative.cta, set: 구매하기, note: 스토어로 갈 이유를 분명히 해요}
+    advice: 휴대폰으로 광고 링크를 직접 눌러 3초 안에 열리는지 확인하세요.
+    grade: hypothesis
+
+  - id: rule.visit_no_sale
+    title: 왔는데 안 삼
+    funnel: 구매
+    when:
+      - {metric: meta_sessions, op: ">=", value: 100}
+      - {metric: cvr_meta, op: "<", value: 0.01}
+    says: 메타로 스토어에 온 {meta_sessions}명 중 {cvr_meta}만 샀어요. 광고보다 상세페이지·가격 문제일 가능성이 커요.
+    changes: []
+    advice: 광고비를 늘리지 말고 상세페이지(첫 사진·가격·후기)부터 고치세요. 광고는 그대로 두고 비교해요.
+    grade: hypothesis
+
+  - id: rule.cost_rising
+    title: 클릭 비용 상승
+    funnel: 예산
+    when: [{metric: cpc_rise, op: ">", value: 0.30}]
+    says: 마지막 주 링크 클릭 비용이 첫 주보다 {cpc_rise} 올랐어요.
+    changes:
+      - {field: meta.campaign.bid_strategy, set: 결과당 비용 목표, note: 첫 달 평균을 상한으로 정해요}
+      - {field: meta.adset.cost_goal, set_from: meta_cpc_avg, note: 첫 달 평균 링크 클릭 비용}
+    grade: hypothesis
+
+  - id: rule.keyword_no_sales
+    title: 클릭만 받고 안 팔린 키워드
+    funnel: 구매
+    when: [{metric: naver_dead_keywords, op: ">", value: 0}]
+    says: "'{naver_dead_keyword_names}' 키워드는 클릭을 30번 넘게 받았지만 주문이 없었어요."
+    changes:
+      - {field: naver.keywords.negative, set_from: naver_dead_keyword_names, note: 다음 달엔 빼거나 입찰가를 낮춰요}
+    grade: hypothesis
+
+  - id: rule.keyword_low_ctr
+    title: 네이버 클릭률 낮음
+    funnel: 클릭
+    when: [{metric: naver_ctr, op: "<", value: 0.01}]
+    says: 네이버 광고 클릭률이 {naver_ctr}예요. 검색한 사람에게 문구가 답이 되지 못하고 있어요.
+    changes:
+      - {field: naver.ad.copy, set: 새 제목·설명, note: 검색어(질문)에 답하는 문구로 바꿔요}
+    grade: hypothesis
+
+  - id: rule.cac_over_margin
+    title: 첫 구매로는 손해
+    funnel: 구매
+    when: [{metric: margin_gap, op: ">", value: 0}]
+    says: 손님 1명을 데려오는 데 약 {est_cac}원이 들었고, 1개 팔면 남는 돈은 {margin_per_order}원이에요.
+    changes: []
+    advice: 재구매가 있는 상품이면 1년 기준으로 다시 보세요. 없다면 광고비보다 객단가(세트 구성)를 먼저 올려요.
+    grade: calc
+
+  - id: rule.segment_winner
+    title: 잘되는 그룹 발견
+    funnel: 클릭
+    when: [{metric: segment_lift, op: ">", value: 1.5}]
+    says: "'{segment_best}' 그룹의 클릭 비용이 평균보다 {segment_lift}배 좋아요."
+    changes:
+      - {field: meta.adset.value_rules, set_from: segment_best, note: 이 그룹의 우선순위를 높여요}
+    advice: 리포트를 연령·성별로 나눠 내보내면 이 규칙이 돌아요.
+    grade: hypothesis
+
+  # ── v3: 판단 보류 (다른 규칙이 하나도 안 걸리고 클릭이 적을 때만 analyze.py가 고름) ──
+  - id: rule.hold_small_sample
+    title: 아직 판단하기 일러요
+    funnel: 측정
+    when: [{metric: link_clicks, op: "<", value: 100}]
+    says: 아직 링크 클릭이 {link_clicks}번이라 무엇이 문제인지 단정하기 일러요. 같은 설정으로 조금 더 돌려 보세요.
+    changes:
+      - {field: meta.adset.end_date, set: 7일 더 연장, note: 클릭이 100번쯤 모이면 판단할 수 있어요}
+    grade: calc
+

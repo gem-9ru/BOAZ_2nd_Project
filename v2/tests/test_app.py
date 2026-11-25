@@ -516,9 +516,9 @@ def test_setup_layout_puts_chat_first_on_narrow_screens_and_has_guide_toggle():
     cs = at.session_state["chat"]
     assert guide.focus() is None or at.session_state["guide_focus"][0] in ("budget", "market") or cs["phase"] == "ask"
     html = " ".join(str(m.value) for m in at.markdown)
-    assert '<span class="coach-bubble">' in html
+    assert 'class="coach-bubble"' in html
     at.toggle(key="w_guide").set_value(False).run()
-    assert '<span class="coach-bubble">' not in " ".join(str(m.value) for m in at.markdown)
+    assert 'class="coach-bubble"' not in " ".join(str(m.value) for m in at.markdown)
 
 
 # ── ②③ 오른쪽 대화 + 가리키는 캐릭터 ─────────────────────────────
@@ -529,7 +529,7 @@ def _focus(at) -> str:
 
 
 def _coach_html(at) -> str:
-    return " ".join(str(m.value) for m in at.markdown if str(m.value).startswith('<div class="coach">'))
+    return " ".join(str(m.value) for m in at.markdown if 'class="coach"' in str(m.value))
 
 
 def _keys(at) -> set:
@@ -548,7 +548,7 @@ def test_run_page_walks_checklist_item_by_item_and_ends_with_next_action():
     for i, want in enumerate(ids):
         assert _focus(at) == want and at.session_state["rd_run"]["pos"] == i
         seen.append(_focus(at))
-        assert '<span class="coach-bubble">' in _coach_html(at) and _coach_html(at).count("coach-bubble") == 1
+        assert 'class="coach-bubble"' in _coach_html(at) and _coach_html(at).count("coach-bubble") == 1
         if i + 1 < len(ids):
             chip(at, "다음")
     assert seen == ids
@@ -647,3 +647,142 @@ def test_shared_guide_has_no_green_meta_color_and_layouts_use_7_5_columns():
         for line in path.read_text(encoding="utf-8").splitlines():
             if "META_COLOR" in line and "=" in line and "#" in line:
                 assert "#C8661A" in line, (path.name, line)
+
+
+# ── U2 스포트라이트·말풍선·알림 영역 ─────────────────────────────
+
+def _md_all(el) -> str:
+    return " ".join(str(m.value) for m in el.markdown if not str(m.value).startswith("<style>"))     # 공용 CSS 글은 뺀다
+
+
+def _live(at) -> str:
+    hits = [str(m.value) for m in at.markdown if 'aria-live="polite"' in str(m.value)]
+    assert len(hits) == 1, hits
+    return hits[0]
+
+
+def _live_text(at) -> str:
+    import re
+    return re.sub(r"<[^>]+>", "", _live(at))
+
+
+def _left_right(at):
+    """setup_cols 안의 두 열 (왼쪽 작업판, 오른쪽 대화)."""
+    cols = [c for c in at.columns if abs(c.proto.weight - 7 / 12) < 0.01 or abs(c.proto.weight - 5 / 12) < 0.01]
+    assert len(cols) == 2, [c.proto.weight for c in at.columns]
+    return cols[0], cols[1]
+
+
+def test_u2_spotlight_markup_only_in_left_board_and_chat_has_none():
+    at = demo_to_budget(fresh())            # 칸 질문 단계: 가리키는 칸이 있다
+    left, right = _left_right(at)
+    lm, rm = _md_all(left), _md_all(right)
+    assert 'class="t-on t-dim"' in lm and 'class="coach"' in lm and lm.count('class="coach-bubble"') == 1
+    assert "t-on" not in rm and "t-dim" not in rm and "coach" not in rm      # 오른쪽 대화는 흐려지지 않는다
+    from v2.app import guide
+    css = guide.CSS
+    assert 'st-key-board_' in css and ":has(.t-dim)" in css and "opacity:.45" in css and "transition:opacity .2s" in css
+    # 흐림 규칙은 작업판 컨테이너(board_…) 안으로만 걸린다: 선택자가 board_로 시작해야 하고 채팅 열은 지목하지 않음
+    dim_rules = [ln for ln in css.splitlines() if "opacity:.45" in ln]
+    assert dim_rules and all(ln.strip().startswith('[class*="st-key-board_"]') for ln in dim_rules)
+    assert "stChatMessage" not in "".join(dim_rules) and "chat_" not in "".join(dim_rules)
+    # 글자 크기: 얼굴 44px 이상, 대상에는 기준색 테두리와 그림자
+    import re
+    face = re.search(r"\.coach-face\{[^}]*width:(\d+)px;height:(\d+)px", css)
+    assert face and int(face.group(1)) >= 44 and int(face.group(2)) >= 44
+    assert "box-shadow" in css.split(":has(.t-on){")[1].split("}")[0] and "#2F5D8A" in css.split(":has(.t-on){")[1]
+
+
+def test_u2_bubble_and_live_show_label_and_same_progress_as_chat_on_setup():
+    from v2.app import chat
+    at = demo_to_budget(fresh())
+    cs = at.session_state["chat"]
+    assert cs["phase"] == "ask"
+    n = chat.position(cs)
+    assert n == "{}/{}".format(cs["qno"], cs["qtotal"]) and cs["qtotal"] > 3
+    bubble = _md_all(_left_right(at)[0])
+    shown = " ".join(e.proto.text for e in at.get("progress"))              # 오른쪽 위 진행 표시
+    assert "({}번째 칸)".format(n) in shown
+    assert '<span class="coach-prog">{}</span>'.format(n) in bubble
+    label = at.session_state["guide_focus"][2]
+    assert label and '<span class="coach-label">{}</span>'.format(label) in bubble
+    assert _live_text(at) == "지금 보는 칸: {} ({})".format(label, n)
+    # 가게 단계에서도 같은 함수의 숫자: 몇 번째 단계
+    at2 = fresh()
+    into(at2, "home_demo", SETUP)
+    cs2 = at2.session_state["chat"]
+    p = conversation.progress(cs2)
+    assert at2.session_state["guide_focus"] is None or _live_text(at2).endswith("({}/{})".format(p["index"] + 1, len(p["stages"])))
+
+
+def test_u2_live_text_follows_focus_on_run_and_diag_with_chat_numbers():
+    at = demo_to_sheet(fresh())
+    at.switch_page(RUN).run()
+    cs = at.session_state["rd_run"]
+    for i, title in enumerate(cs["titles"]):
+        assert _live_text(at) == "지금 보는 칸: {} ({}/{})".format(title, i + 1, cs["n"])
+        assert "**{}** · {}/{}".format(title, i + 1, cs["n"]) in _md_all(_left_right(at)[1])          # 채팅 쪽 숫자와 같다
+        assert '<span class="coach-prog">{}/{}</span>'.format(i + 1, cs["n"]) in _md_all(_left_right(at)[0])
+        assert "coach" not in _md_all(_left_right(at)[1])
+        if i + 1 < cs["n"]:
+            chip(at, "다음")
+    at.switch_page(DIAG).run()
+    cd = at.session_state["rd_diag"]
+    assert _live_text(at) == "지금 보는 칸: {} (1/{})".format(cd["titles"][0], cd["n"])
+    chip(at, "다음 카드")
+    assert _live_text(at) == "지금 보는 칸: {} (2/{})".format(cd["titles"][1], cd["n"])
+    assert "t-dim" in _md_all(_left_right(at)[0]) and "t-dim" not in _md_all(_left_right(at)[1])
+
+
+def test_u2_toggle_off_removes_character_and_dimming_but_keeps_border_marker_and_live_text():
+    for go in (lambda a: a, lambda a: a.switch_page(RUN).run(), lambda a: a.switch_page(DIAG).run()):
+        at = demo_to_sheet(fresh())
+        go(at)
+        before = _live_text(at)
+        assert before.startswith("지금 보는 칸: ") or at.session_state["guide_focus"] is None
+        at.toggle(key="w_guide").set_value(False).run()
+        assert not at.exception, at.exception
+        md = _md_all(at)
+        assert 'class="coach"' not in md and "t-dim" not in md and "coach-bubble" not in md
+        if at.session_state["guide_focus"]:
+            assert 'class="t-on"' in md                    # 강조 테두리의 근거는 남는다
+            assert _live_text(at) == before                # 알림 글도 그대로
+    at = demo_to_budget(fresh())
+    at.toggle(key="w_guide").set_value(False).run()
+    assert 'class="t-on"' in _md_all(_left_right(at)[0]) and "t-dim" not in _md_all(at)
+    assert _live_text(at).startswith("지금 보는 칸: ")
+
+
+def test_u2_decorations_are_aria_hidden_and_reduced_motion_and_scroll_rules_exist():
+    from v2.app import guide
+    at = demo_to_budget(fresh())
+    left = _md_all(_left_right(at)[0])
+    assert 'class="coach" aria-hidden="true"' in left and 'class="t-on t-dim" aria-hidden="true"' in left
+    assert "aria-hidden" not in _live(at) and 'aria-live="polite"' in _live(at)
+    css = guide.CSS
+    rm = css.split("@media (prefers-reduced-motion:reduce){")[1].split("}\n")[0]
+    assert ".coach{animation:none}" in rm and "transition:none" in rm
+    assert ".coach-bubble:before" in css and "border-width:8px 10px 8px 0" in css       # 대상 쪽(왼쪽)을 가리키는 화살표
+    # 스크롤: 화면 밖일 때만, 움직임 줄이기면 auto
+    import inspect
+    src = inspect.getsource(guide.scroll)
+    assert "getBoundingClientRect" in src and "rm?'auto':'smooth'" in src and "prefers-reduced-motion" in src
+
+
+def test_chat_history_scrolls_to_newest_on_every_chat_page():
+    import inspect
+    from v2.app import guide, setup, run, diagnose
+    js = guide.CHAT_SCROLL_JS
+    assert "stChatMessage" in js and "scrollTo({top:e.scrollHeight" in js and "scrollIntoView" not in js
+    assert "closest(" in js and "_history" in js and "parentElement" not in js          # 대화 상자에서 멈춤, 위로 더 안 올라감
+    for bad in ("stMain", "window.scroll", "scrollingElement", "documentElement", "p.scroll", "d.body"):
+        assert bad not in js, bad
+    assert "scroll_chat()" in inspect.getsource(guide.live)
+    for mod in (setup, run, diagnose):          # (1)(2)(3) 모두 쪽 끝에서 live()를 부른다
+        assert "guide.live()" in inspect.getsource(mod)
+
+
+def test_chat_module_has_no_duplicate_guide_code():
+    from v2.app import chat
+    for name in ("GUIDE_CSS", "guide_on", "focus_id", "guide_here", "scroll_to_focus"):
+        assert not hasattr(chat, name), name

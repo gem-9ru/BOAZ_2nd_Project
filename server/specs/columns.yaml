@@ -1,0 +1,99 @@
+# 입력 계약: 결과 파일의 열 이름 → 영문 열 이름 → 검사
+# 원본: 다정 '디저트_가상광고데이터.xlsx' 컬럼 사전·실제_템플릿 시트 (11/12)
+# 같은 분석 코드가 가상 데이터(mode=forecast·sim)와 실제 데이터(mode=real)를 똑같이 읽는다.
+#
+# type: str | date | int | float | ratio   (ratio는 합산하지 않음 — 다시 계산함)
+# aliases: 엑셀 한글 머리글, 메타·네이버·스토어 화면 이름 (실제 내보내기 파일을 그대로 올려도 읽히게)
+# required: 없으면 그 표를 쓰지 않음. 아니면 없어도 되고, 그 열이 필요한 규칙만 '데이터 없음'
+
+modes:
+  forecast: 추천 예측 (집행 전 계획값)
+  sim: 가상 실제 (시뮬레이션)
+  real: 실제 집행
+
+tables:
+  meta_daily:
+    sheet: 메타_일별
+    title: 메타 일별 (광고 세트 단위)
+    source: 광고 관리자 → 보고서 → 내보내기 (일·광고 세트 단위). 도달·빈도는 기간 전체로 따로 내보내기
+    columns:
+      case: {type: str, aliases: [케이스], required: false}
+      mode: {type: str, aliases: [구분], required: false}
+      campaign_objective: {type: str, aliases: [목표, 캠페인 목표, Objective], required: true}
+      adset: {type: str, aliases: [광고 세트, 광고 세트 이름, Ad set name], required: true}
+      target: {type: str, aliases: [타겟], required: false}
+      setting: {type: str, aliases: [노출 위치 설정], required: false}
+      date: {type: date, aliases: [날짜, 일, 보고 시작, Day, Reporting starts], required: true}
+      spend: {type: float, aliases: [지출(원), 지출 금액, 지출 금액 (KRW), Amount spent (KRW)], required: true}
+      impressions: {type: int, aliases: [노출, Impressions], required: true}
+      reach_daily: {type: int, aliases: [도달(일별), 도달, Reach], required: false}
+      reach_cum: {type: int, aliases: [도달(누적), 도달(기간 선택)], required: false}
+      frequency_cum: {type: float, aliases: [빈도(누적), 빈도, Frequency], required: false}
+      cpm: {type: ratio, aliases: [CPM(원), CPM(1,000회 노출당 비용), CPM (cost per 1,000 impressions)], required: false}
+      link_clicks: {type: float, aliases: [링크 클릭, Link clicks], required: false}
+      ctr_link: {type: ratio, aliases: [CTR(링크), CTR(링크 클릭률), CTR (link click-through rate)], required: false}
+      cpc_link: {type: ratio, aliases: [CPC(원), CPC(링크 클릭당 비용), CPC (cost per link click)], required: false}
+      landing_page_views: {type: float, aliases: [랜딩 페이지 조회, Landing page views], required: false}
+      actions: {type: float, aliases: [오픈 알림(Lead), 리드, 잠재 고객, Leads], required: false}   # 들어온 뒤 행동 (v4.2 AN-02 ④ · ALT-14)
+
+  meta_placement:
+    sheet: 메타_노출위치
+    title: 메타 노출 위치별
+    source: 광고 관리자 → 보고서 → 분석 데이터 → 게재 → 노출 위치
+    columns:
+      case: {type: str, aliases: [케이스], required: false}
+      mode: {type: str, aliases: [구분], required: false}
+      adset: {type: str, aliases: [광고 세트, 광고 세트 이름], required: true}
+      date: {type: date, aliases: [날짜, 일], required: false}
+      placement: {type: str, aliases: [노출 위치, Placement], required: true}
+      spend: {type: float, aliases: [지출(원), 지출 금액, 지출 금액 (KRW)], required: true}
+      impressions: {type: int, aliases: [노출], required: false}
+      link_clicks: {type: float, aliases: [링크 클릭], required: true}
+      store_orders: {type: float, aliases: [스토어 주문], required: false}
+
+  naver_daily:
+    sheet: 네이버_일별
+    title: 네이버 검색광고 키워드별 일별
+    source: 네이버 검색광고 → 보고서 → 키워드별 일별
+    columns:
+      case: {type: str, aliases: [케이스], required: false}
+      mode: {type: str, aliases: [구분], required: false}
+      date: {type: date, aliases: [날짜, 일별], required: true}
+      keyword: {type: str, aliases: [키워드], required: true}
+      impressions: {type: int, aliases: [노출, 노출수], required: true}
+      clicks: {type: float, aliases: [클릭, 클릭수], required: true}
+      ctr: {type: ratio, aliases: [CTR, 클릭률(%)], required: false}
+      cpc: {type: ratio, aliases: [CPC(원), 평균클릭비용(VAT포함,원)], required: false}
+      cost: {type: float, aliases: [비용(원), 총비용, 총비용(VAT포함,원)], required: true}
+      store_orders: {type: float, aliases: [스토어 주문], required: false}
+
+  store_daily:
+    sheet: 스토어_일별
+    title: 스토어 유입 경로(NT)별 일별 + 검색량
+    source: 스마트스토어 통계 → 마케팅 분석 → 사용자 정의 채널(NT) + 네이버 데이터랩 브랜드·카테고리 검색량
+    columns:
+      case: {type: str, aliases: [케이스], required: false}
+      mode: {type: str, aliases: [구분], required: false}
+      date: {type: date, aliases: [날짜], required: true}
+      sessions_meta: {type: float, aliases: [방문·메타], required: false}
+      orders_meta: {type: float, aliases: [주문·메타], required: true}
+      sessions_naver_ad: {type: float, aliases: [방문·네이버광고], required: false}
+      orders_naver_ad: {type: float, aliases: [주문·네이버광고], required: true}
+      sessions_brand_search: {type: float, aliases: [방문·브랜드검색], required: false}
+      orders_brand_search: {type: float, aliases: [주문·브랜드검색], required: false}
+      sessions_organic: {type: float, aliases: [방문·자연], required: false}
+      orders_organic: {type: float, aliases: [주문·자연], required: false}
+      brand_search: {type: float, aliases: [브랜드 검색], required: false}
+      category_search: {type: float, aliases: [카테고리 검색(대조)], required: false}
+      # 시뮬레이터만 아는 정답 — 실제 데이터에는 없음. 추정이 얼마나 맞는지 확인하는 데만 씀
+      true_ad_brand_orders: {type: float, aliases: [광고 덕분 검색 주문(정답)], required: false, truth: true}
+      true_ad_brand_search: {type: float, aliases: [광고 덕분 검색(정답)], required: false, truth: true}
+
+  survey:
+    sheet: 설문
+    title: 구매 후 설문 "어디서 알게 되셨나요?"
+    source: 구매 확정 메시지·리뷰 이벤트로 받은 응답
+    columns:
+      case: {type: str, aliases: [케이스], required: false}
+      answer: {type: str, aliases: [응답], required: true}
+      count: {type: int, aliases: [응답 수], required: true}

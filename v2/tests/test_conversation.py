@@ -556,3 +556,18 @@ def test_real_services_smoke_flow(monkeypatch):
 def test_not_knowing_is_a_help_request(sv):
     st = cv.handle(cv.demo_state(sv), "잘 모르겠어요", sv)
     assert st["turns"][-2]["kind"] == "help"
+
+
+def test_market_failure_says_why(sv, fk):
+    """검색 실패 말풍선에 이유가 붙는다 (배포 앱에 네이버 키가 없을 때 원인을 바로 알 수 있게)."""
+    sv2 = cv.Services(sv.market, sv.plan, sv.help, sv.questions, sv.copies,
+                      market_error=lambda: "네이버 키가 없어요")
+    st = cv.choose(cv.demo_state(sv2), "맞아요", sv2)
+    fk.market_report = None
+    st = say(st, sv2, "마들렌")
+    assert st["step"] == "fail" and "이유: 네이버 키가 없어요" in last(st).text
+    json.dumps(st)
+    # 이유를 모르면 예전 문장 그대로
+    st = cv.choose(cv.demo_state(sv), "맞아요", sv)
+    st = say(st, sv, "마들렌")
+    assert "이유:" not in last(st).text

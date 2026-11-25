@@ -179,9 +179,17 @@ def test_coach_without_numbers_does_not_invent():
     assert a.kind == "coach" and not any(ch.isdigit() for ch in a.text)
 
 
-def test_orders_are_never_predicted():
+def test_orders_match_budget_panel():
+    """코치의 예상 주문은 예산 판(state.expected_orders)과 같은 계산이고, 가정(근거 D)임을 밝힌다."""
+    from v2.engine import planner
+    lo, hi = planner.expected_orders(CTX["budget_plan"])
     a = hd.answer("주문 몇 개 정도 예상돼요?", None, CTX)
-    assert a.kind == "coach" and "예측하지 않아요" in a.text
+    assert a.kind == "coach" and "%.0f~%.0f건" % (lo, hi) in a.text and "근거 D" in a.text
+
+
+def test_orders_without_plan_do_not_invent():
+    a = hd.answer("주문 몇 개 정도 예상돼요?", None, {})
+    assert a.kind == "coach" and "아직 계산된 숫자가 없어요" in a.text and not any(ch.isdigit() for ch in a.text)
 
 
 def test_help_questions_are_not_taken_as_coach():

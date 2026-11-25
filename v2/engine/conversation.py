@@ -60,6 +60,7 @@ class Services:
     questions: Callable[[List[str]], List[dict]]                 # intake.questions
     copies: Callable[[str, str], Dict[str, list]]                # product, strengths → {"meta": [...], "naver": [...]}
     is_question: Optional[Callable[[str], bool]] = None          # 없으면 chat_parse.looks_like_question
+    market_error: Optional[Callable[[], Optional[str]]] = None   # 검색 실패 이유(쉬운 문장, 키 값 없음)
 
 
 class _Bad(Exception):
@@ -249,7 +250,9 @@ def _prompt(st: dict) -> dict:
                        chips=_seed_chips(s))
         if step == "pick":
             return _market_card(st)
-        return _mk("검색 자료를 지금은 불러오지 못했어요. 다시 찾아보거나, 자료 없이 넘어갈 수 있어요. "
+        why = str((st.get("market") or {}).get("why") or "").strip()
+        return _mk("검색 자료를 지금은 불러오지 못했어요." + (" (이유: %s)" % why if why else "")
+                   + " 다시 찾아보거나, 자료 없이 넘어갈 수 있어요. "
                    "넘어가면 방금 적은 단어를 그대로 쓰고, 예산은 검색량 없이 나눠요.",
                    kind="error", chips=[MARKET_RETRY, MARKET_SKIP])
     if ph == "budget":
@@ -346,7 +349,7 @@ def _market_card(st: dict) -> dict:
     lines.append("이 단어로 광고를 낼까요? 다른 단어를 직접 적어도 돼요.")
     chips = [MARKET_OK, MARKET_AGAIN] if rec else [MARKET_AGAIN, MARKET_SKIP]
     return _mk("\n\n".join(lines), kind="market_card",
-               data={k: m.get(k) for k in ("seeds", "headline", "recommended", "negatives", "audience_hint", "groups")},
+               data={k: m.get(k) for k in ("seeds", "headline", "recommended", "negatives", "audience_hint", "groups", "fetched")},
                chips=chips)
 
 
@@ -704,7 +707,13 @@ def _run_market(st: dict, seeds: List[str], sv: Services) -> None:
     except Exception:  # noqa: BLE001
         rep = None
     if rep is None:
-        st["market"] = {"seeds": list(seeds), "fail": True}
+        why = None
+        if sv.market_error is not None:
+            try:
+                why = sv.market_error()
+            except Exception:  # noqa: BLE001
+                why = None
+        st["market"] = {"seeds": list(seeds), "fail": True, "why": why}
         st["step"] = "fail"
         _append_prompt(st)
         return
@@ -715,7 +724,8 @@ def _run_market(st: dict, seeds: List[str], sv: Services) -> None:
         groups = []
     st["market"] = {"seeds": list(seeds), "recommended": rec, "negatives": [str(x) for x in (getattr(rep, "negatives", None) or [])],
                     "headline": str(getattr(rep, "headline", "") or ""), "audience_hint": _audience_hint(rep),
-                    "groups": groups, "rows": _rows(rep, rec), "picked": None}
+                    "groups": groups, "rows": _rows(rep, rec), "picked": None,
+                    "fetched": str(getattr(rep, "fetched", "") or "")}
     st["step"] = "pick"
     _append_prompt(st)
 
@@ -1025,6 +1035,12 @@ def make_services(online: bool = True) -> Services:
             rep = mk.build(seeds, online=True)
         return rep
 
+    def market_error() -> Optional[str]:
+        from . import naver_api as api
+        if not api.ad_available():
+            return "이 앱에 네이버 검색광고 API 키(NAVER_AD_API_KEY·NAVER_AD_SECRET_KEY·NAVER_AD_CUSTOMER_ID)가 없어요"
+        return api.last_error()
+
     def plan(store: dict, mkt, objective: str, days: int):
         import pandas as pd
         from . import planner
@@ -1061,4 +1077,5 @@ def make_services(online: bool = True) -> Services:
         from . import copywriter
         return {"meta": copywriter.meta_copies(product, strengths), "naver": copywriter.naver_copies(product, strengths)}
 
-    return Services(market=market, plan=plan, help=help_, questions=questions, copies=copies, is_question=is_question)
+    return Services(market=market, plan=plan, help=help_, questions=questions, copies=copies, is_question=is_question,
+                    market_error=market_error)

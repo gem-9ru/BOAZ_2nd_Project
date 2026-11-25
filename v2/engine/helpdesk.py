@@ -486,8 +486,12 @@ def _coach_answer(kind: str, ctx: Optional[dict]) -> HelpAnswer:
         if r:
             text = "메타 광고는 한 달에 약 %s명에게 보일 것으로 예상해요. (예산 계획의 예측값이라 실제와 다를 수 있어요)" % "{:,}".format(int(r))
     elif kind == "orders":
-        text = ("주문 수는 미리 예측하지 않아요. 클릭한 사람이 얼마나 사 갈지는 가게마다 달라서, "
-                "첫 달 결과를 올려 주시면 실제 주문으로 확인해 드려요.")
+        if plan is not None:
+            from .planner import expected_orders
+            lo, hi = expected_orders(plan)
+            if hi > 0:
+                text = ("예산 판과 같은 계산으로 한 달 주문은 약 %.0f~%.0f건이에요. 예상 클릭 × 구매율 가정(근거 D)이라 "
+                        "가게마다 크게 다를 수 있어요. 첫 달 결과를 올려 주시면 실제 주문으로 확인해 드려요." % (lo, hi))
     elif kind == "bid":
         bid = _num(_g(plan, "naver_bid"))
         if bid:

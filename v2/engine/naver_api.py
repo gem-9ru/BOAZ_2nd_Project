@@ -49,6 +49,25 @@ _LAST = {"error": None}
 UNKNOWN_ERROR = "네이버에서 값을 가져오는 중 문제가 생겼어요. 지금은 저장해 둔 값으로 보여 드려요."
 
 
+# ── 받은 날 (화면에 "조회일"을 보여 주기용) ───────────────────────────────
+_FETCHED: List[str] = []
+
+
+def reset_fetched() -> None:
+    """조회일 기록을 비운다. 한 번의 조회 묶음(market.build)을 시작할 때 부른다."""
+    _FETCHED.clear()
+
+
+def oldest_fetched() -> Optional[str]:
+    """reset_fetched 뒤로 쓴 응답 중 가장 오래된 받은 날 'YYYY-MM-DD'. 없으면 None."""
+    return min(_FETCHED) if _FETCHED else None
+
+
+def _note_fetched(stamp: Optional[str]) -> None:
+    if stamp:
+        _FETCHED.append(str(stamp)[:10])
+
+
 def last_error() -> Optional[str]:
     """가장 최근 네이버 호출이 실패했으면 쉬운 문장, 성공했으면 None. (키 값은 담기지 않음)"""
     return _LAST["error"]
@@ -160,22 +179,32 @@ def fetch_cached(kind: str, key: str, online: bool, call: Callable[[], object]):
     name = cache_name(kind, key)
     mine = _load(CACHE_DIR / name)
     if mine is not None and (not online or not _stale(mine)):
+        _note_fetched(mine.get("fetched_at"))
         return mine["response"], "저장본"
     pinned = _load(EXAMPLES_DIR / name)
     if pinned is not None:
+        _note_fetched(pinned.get("fetched_at"))
         return pinned["response"], "예시 저장본"
     if not online:
-        return (mine["response"], "저장본") if mine else (None, "")
+        if mine:
+            _note_fetched(mine.get("fetched_at"))
+            return mine["response"], "저장본"
+        return None, ""
     try:
         data = call()
     except NaverError as e:
         if mine is not None:
             _set_error(e.message)        # 오래된 저장본으로 대신 보여 주지만 실시간 조회는 실패했음
+            _note_fetched(mine.get("fetched_at"))
             return mine["response"], "지난 저장본"
         raise
     if data is None:
-        return (mine["response"], "지난 저장본") if mine else (None, "")
+        if mine:
+            _note_fetched(mine.get("fetched_at"))
+            return mine["response"], "지난 저장본"
+        return None, ""
     save(kind, key, data)
+    _note_fetched(time.strftime("%Y-%m-%d %H:%M:%S"))
     return data, "실시간"
 
 

@@ -1,0 +1,385 @@
+// 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
+import type { GuideStepItem } from "../../lib/guide";
+import { checkLocation, setAgeGender, setEndDate, type Pace } from "./actions";
+import type { Level } from "../../lib/guide";
+import { currentLevel, goToLevel, hasValue, openDialog, isChecked, isChoice, isKorean, isPublishLike, isTextField, locateWith, mainScroller, typeInto } from "./locate";
+
+export const MAX_TRIES = 3;
+const LANGUAGE_TEXT = "화면 언어를 한국어로 바꿔 주세요. (메뉴 › 설정 › 언어) 바꾼 뒤 '다음 칸'을 눌러 주세요.";
+
+export interface GuideView {
+  index: number;
+  total: number;
+  found: boolean;
+  text: string;
+  copy?: string;
+  image?: string;
+  target?: HTMLElement;
+  publish?: boolean;
+  /** 진짜 칸이 아니라 그 칸으로 가는 준비 안내("'+ 만들기'를 누르세요")를 짚는 중 */
+  hint?: boolean;
+  /** 자동 진행 중인지 */
+  auto?: boolean;
+  /** 자동 진행이 멈춰 기다리는 이유: owner = 사장님이 직접 맞출 칸, publish = 게시는 직접 */
+  waiting?: "owner" | "publish";
+}
+
+// 사장님이 눈으로 따라올 수 있게 천천히 (2026-11-25 요청): 뭉치가 걸어가 가리키고, 말풍선을 읽을 시간을 둔다
+const ACT_GAP = 3800;    // 한 번 대신 한 뒤 다음 동작까지
+const HINT_GAP = 4500;   // 창을 넘긴 뒤
+const SCAN_GAP = 1500;   // 스크롤 한 번 뒤
+const LOOK_FIRST = 2200; // 칸을 찾으면 바로 하지 않고 가리킨 채 잠깐 보여 준다
+
+export class Guide {
+  private tries = 0;
+  private target: HTMLElement | null = null;
+  private matched = 0;   // 찾은 방법의 순서 (0보다 크면 더 앞의 진짜 칸이 나타나는지 계속 본다)
+  private languageOk: boolean;
+  private detach: (() => void) | null = null;
+  private timer: ReturnType<typeof setTimeout> | null = null;
+  private auto = false;
+  private waiting: GuideView["waiting"];
+  private nextAt = 0;
+  private scan = { wrapped: false, done: false };
+  private busy = false;   // 복잡한 칸을 대신 맞추는 중 (여러 번 눌러야 해서 시간이 걸림)
+  /** 칸 위치 지도: 칸 id → 어느 편집 화면의 어느 높이에 있었는지 (처음 편집 화면에 들어올 때 한 번 훑어 만든다) */
+  private map: Record<string, { level: Level; scrollTop: number }> = {};
+  private surveyed = false;
+  private surveying: string | null = null;
+  private jumped = -1;   // 지도로 점프한 단계 (한 단계에 한 번만)
+  private shown = -1;   // 이 단계 칸을 이미 가리켜 보여 줬는지
+  private hintPresses = 0;
+  /** 찾는 칸이 열린 창 뒤에 가려져 있음 (창을 먼저 마쳐야 함) */
+  private behindDialog = false;
+  /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
+  private pasteAsk = false;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
+
+  constructor(
+    private doc: Document,
+    private steps: GuideStepItem[],
+    private index: number,
+    private onProgress: (index: number) => void,
+    private retryMs = 2000,
+  ) {
+    this.languageOk = isKorean(doc);
+    this.seek();
+  }
+
+  view(): GuideView {
+    const v = this.baseView();
+    if (this.pasteAsk && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
+      text: "문구를 칸에 넣지 못했어요. 복사해 두었으니 칸을 누르고 붙여 넣어(⌘V) 주세요. 다 했으면 '다 했어요'." };
+    if (this.behindDialog) return { ...v, auto: this.auto, waiting: this.waiting,
+      text: "열린 창 안의 일을 먼저 마쳐 주세요 (창 오른쪽 아래 '다음'·'완료'). 창이 닫히면 이 칸을 짚을게요." };
+    if (this.surveying) return { ...v, found: false, target: undefined, auto: this.auto, text: `화면을 먼저 둘러보고 칸 위치를 적어 둘게요 (${this.surveying})` };
+    return { ...v, auto: this.auto, waiting: this.waiting,
+      text: this.waiting === "owner" ? `${v.text} 다 맞췄으면 '다 했어요'를 누르세요.`
+        : this.waiting === "publish" ? "여기까지 왔어요. 게시는 내용을 확인하고 사장님이 직접 눌러 주세요." : v.text };
+  }
+
+  setAuto(on: boolean): void {
+    this.auto = on;
+    if (on) { this.waiting = this.waiting === "owner" ? "owner" : undefined; this.nextAt = 0; }
+  }
+
+  /** 자동 진행 한 걸음 (콘텐츠 스크립트가 tick 뒤에 부른다). now = ms */
+  autoStep(now: number): void {
+    if (!this.auto || this.waiting || this.busy || now < this.nextAt || !this.languageOk) return;
+    const item = this.steps[this.index];
+    if (!item) { this.auto = false; return; }
+    const kind = item.entry.publish ? "stop" : (item.entry.auto ?? "owner");
+    if (kind === "stop") { this.waiting = "publish"; this.auto = false; return; }
+    const hint = this.target ? Boolean(item.entry.find[this.matched]?.say) : false;
+    if (this.target && !hint) {
+      if (kind === "owner") { this.waiting = "owner"; return; }
+      if (this.shown !== this.index) { this.shown = this.index; this.nextAt = now + LOOK_FIRST; return; }   // 먼저 가리켜 보여 주고
+      this.apply();
+      this.nextAt = now + ACT_GAP;
+      return;
+    }
+    // 진짜 칸이 아직 없다 → 다른 편집 화면에 있는 칸이면 그 화면으로, 아니면 끝까지 내려 보며 찾고, 그래도 없으면 준비 안내(만들기·계속·다음)를 누른다
+    const dialog = openDialog(this.doc);
+    if (dialog && this.behindDialog) { this.waiting = "owner"; return; }   // 칸이 창 뒤 → 창을 마칠 때까지 기다림
+    if (!this.surveyed && !dialog && currentLevel(this.doc) !== "list") {
+      // 편집 화면에 처음 들어왔다 → 세 화면을 훑어 칸 위치 지도를 만든다 (그동안 다른 동작은 쉼)
+      this.busy = true;
+      void this.survey().finally(() => { this.busy = false; this.nextAt = 0; });
+      return;
+    }
+    if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return; }
+    if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return; }
+    if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return; }
+    if (this.target && hint) {
+      if (isPublishLike(this.target)) { this.waiting = "publish"; this.auto = false; return; }
+      // 사장님이 직접 할 칸(사진 등)은 준비 버튼을 한 번만 열어 주고 기다린다. 어떤 칸이든 3번 눌러도 그대로면 멈춘다.
+      if ((kind === "owner" && this.hintPresses >= 1) || this.hintPresses >= 3) { this.waiting = "owner"; return; }
+      this.hintPresses += 1;
+      this.apply();
+      this.scan = { wrapped: false, done: false };
+      this.nextAt = now + HINT_GAP;
+      return;
+    }
+    this.waiting = "owner";   // 화면 어디에도 없다 → 대신 그림과 함께 사장님을 기다린다
+  }
+
+  /** 칸이 다른 편집 화면(캠페인·광고 세트·광고)에 있으면 왼쪽 목록으로 그 화면에 간다. 갔으면 true.
+   *  캠페인 목록(아직 초안이 없음)에서는 넘나들 수 없어 '만들기·계속' 안내를 따른다. */
+  private ensureLevel(): boolean {
+    const want = this.steps[this.index]?.entry.level;
+    const now = currentLevel(this.doc);
+    if (!want || want === "list" || now === "list" || now === want) return false;
+    if (!goToLevel(this.doc, want)) return false;
+    this.scan = { wrapped: false, done: false };
+    const mainSc = mainScroller(this.doc);
+    if (mainSc) mainSc.scrollTop = 0;
+    this.recheck();
+    return true;
+  }
+
+  /** 지도 없이 바로 시작 (이미 둘러봤거나, 테스트) */
+  skipSurvey(): void {
+    this.surveyed = true;
+  }
+
+  /** 지도에 이 칸의 높이가 있으면 그 높이로 바로 점프 (한 단계에 한 번). */
+  private jumpFromMap(): boolean {
+    const item = this.steps[this.index];
+    const spot = item && this.map[item.entry.id];
+    const sc = mainScroller(this.doc);
+    if (!spot || !sc || this.jumped === this.index || spot.level !== currentLevel(this.doc)) return false;
+    this.jumped = this.index;
+    sc.scrollTop = spot.scrollTop;
+    sc.dispatchEvent(new Event("scroll"));
+    this.recheck();
+    return true;
+  }
+
+  /** 칸 위치 지도 만들기: 캠페인 → 광고 세트 → 광고 화면을 차례로 열고 끝까지 내려 보며, 이 안내의 칸이 처음 보인 높이를 적는다.
+   *  다 훑고 나면 원래 화면으로 돌아간다. 눌러야만 생기는 창(크리에이티브 설정 등) 안의 칸은 지도에 없고, 그 자리에서 찾는다. */
+  async survey(pace: Pace = { wait: (ms) => new Promise((r) => setTimeout(r, ms)) }): Promise<Record<string, { level: Level; scrollTop: number }>> {
+    this.surveyed = true;
+    const start = currentLevel(this.doc);
+    if (start === "list") return this.map;
+    const NAMES: Record<string, string> = { campaign: "캠페인", adset: "광고 세트", ad: "광고" };
+    for (const level of ["campaign", "adset", "ad"] as const) {
+      const items = this.steps.filter((s) => s.entry.level === level && !s.entry.publish);
+      if (!items.length || !goToLevel(this.doc, level)) continue;
+      this.surveying = NAMES[level]!;
+      await pace.wait(1500);
+      const sc = mainScroller(this.doc);
+      const look = (top: number) => {
+        for (const s of items) {
+          if (this.map[s.entry.id]) continue;
+          const real = s.entry.find.filter((f) => !f.say);
+          if (real.length && locateWith(this.doc, real)) this.map[s.entry.id] = { level, scrollTop: top };
+        }
+      };
+      look(0);
+      if (sc) {
+        for (let y = 0; y < sc.scrollHeight; y += Math.round(sc.clientHeight * 0.6)) {
+          sc.scrollTop = y;
+          sc.dispatchEvent(new Event("scroll"));
+          await pace.wait(700);
+          look(sc.scrollTop);
+          if (sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4) break;
+        }
+        sc.scrollTop = 0;
+      }
+    }
+    this.surveying = null;
+    if (start !== currentLevel(this.doc)) goToLevel(this.doc, start);
+    this.recheck();
+    return this.map;
+  }
+
+  /** 편집 화면을 한 화면의 60%씩 내려 본다. 끝에 닿으면 맨 위로 한 번 돌아가 훑고, 두 번째 끝에서 멈춘다. */
+  private scanStep(): void {
+    const dialog = openDialog(this.doc);
+    const sc = dialog ? (mainScroller(this.doc, dialog) ?? null) : mainScroller(this.doc);
+    if (!sc) { this.scan.done = true; return; }
+    const atEnd = sc.scrollTop + sc.clientHeight >= sc.scrollHeight - 4;
+    if (atEnd) {
+      if (this.scan.wrapped) { this.scan.done = true; return; }
+      this.scan.wrapped = true;
+      sc.scrollTop = 0;
+    } else {
+      sc.scrollTop = Math.min(sc.scrollHeight - sc.clientHeight, sc.scrollTop + Math.round(sc.clientHeight * 0.6));
+    }
+    this.recheck();
+  }
+
+  private baseView(): GuideView {
+    const total = this.steps.length;
+    const item = this.steps[this.index];
+    if (!item) return { index: this.index, total, found: false, text: "안내를 모두 마쳤어요." };
+    if (!this.languageOk) return { index: this.index, total, found: false, text: LANGUAGE_TEXT };
+    if (this.target) {
+      const hint = item.entry.find[this.matched]?.say;
+      return { index: this.index, total, found: true, target: this.target, publish: item.entry.publish, hint: Boolean(hint),
+               text: (hint ?? item.entry.say).replace("{value}", item.value ?? ""), copy: hint ? undefined : item.value };
+    }
+    if (this.tries >= MAX_TRIES) {
+      return { index: this.index, total, found: false, text: item.entry.fallback.text, image: item.entry.fallback.image, copy: item.value };
+    }
+    return { index: this.index, total, found: false, text: "칸을 찾는 중이에요…" };
+  }
+
+  /** [다음 칸]: 언어를 바꿨거나, 못 찾은 칸을 직접 채웠거나, 수동 단계를 마침. 게시 버튼은 절대 누르지 않는다. */
+  markDone(): void {
+    if (!this.languageOk) {
+      this.languageOk = true;
+      this.seek();
+      return;
+    }
+    this.advance();
+  }
+
+  /** [다음 칸]: 지금 칸을 페이지에서 대신 해 준다. 게시 버튼은 어떤 경우에도 누르지 않는다.
+   *  - 준비 안내('+ 만들기', '계속')면 그 버튼을 누르고, 같은 단계에서 진짜 칸을 다시 찾는다
+   *  - 고르는 칸이면 고르고, 글자 칸이면 값을 넣고 다음 단계로
+   *  - 그 밖(날짜·지역처럼 복잡한 칸, 못 찾은 칸)은 사장님이 한 것으로 보고 다음 단계로 */
+  apply(): void {
+    const item = this.steps[this.index];
+    const el = this.target;
+    const ownerDone = this.waiting === "owner";   // [다 했어요]: 사장님이 직접 맞췄다 → 다시 하지 않고 다음 칸
+    this.waiting = undefined;
+    if (this.languageOk && item && (!el || item.entry.find[this.matched]?.say) && this.ensureLevel()) return;   // 다른 화면의 칸 → 그 화면으로
+    if (!this.languageOk || !item || !el) return this.markDone();
+    if (item.entry.publish || isPublishLike(el)) return;   // 게시는 사장님이 직접
+    if (ownerDone) return this.advance();
+    const hint = Boolean(item.entry.find[this.matched]?.say);
+    if (hint) {
+      // 이미 고른 준비 선택지('수동 트래픽 캠페인' ✓)면 그 뒤의 준비 버튼('계속')을 누른다
+      if (isChoice(el) && isChecked(el)) {
+        const later = locateWith(this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
+        if (later && !isPublishLike(later.el)) later.el.click();
+        this.timer = setTimeout(() => this.recheck(), 600);
+        return;
+      }
+      el.click();
+      this.timer = setTimeout(() => this.recheck(), 600);
+      return;
+    }
+    // 값이 바뀌면 seek()의 change 리스너가 이미 넘겼을 수 있다 → 아직 같은 단계일 때만 넘긴다
+    const at = this.index;
+    const next = () => { if (this.index === at) this.advance(); };
+    const kind = item.entry.auto;
+    if (kind === "skip" || kind === "owner") return next();   // 그대로 두는 칸 / 사장님이 맞춘 칸
+    if (kind === "endDate" || kind === "ageGender" || kind === "location") {
+      // 여러 번 눌러야 하는 칸: 끝나면 다음, 못 하면 사장님께 (자동 진행은 기다림)
+      const value = item.value ?? "";
+      const run = kind === "endDate" ? setEndDate(this.doc, value)
+        : kind === "ageGender" ? setAgeGender(this.doc, value)
+        : Promise.resolve(checkLocation(this.doc, value));
+      this.busy = true;
+      void run.then((ok) => {
+        this.busy = false;
+        if (ok) next();
+        else if (this.index === at) this.waiting = "owner";
+      }, () => { this.busy = false; this.waiting = "owner"; });
+      return;
+    }
+    if (isChoice(el)) {
+      if (!isChecked(el)) el.click();
+      return next();
+    }
+    if (isTextField(el) && item.value) {
+      // 넣은 뒤 정말 들어갔는지 확인하고 넘어간다. 안 들어갔으면 복사해 두고 붙여넣기를 부탁한다.
+      const value = item.value;
+      typeInto(el, value);
+      this.busy = true;
+      setTimeout(() => {
+        this.busy = false;
+        if (this.index !== at) return;
+        if (hasValue(el, value)) return next();
+        this.pasteAsk = true;
+        this.waiting = "owner";
+        void navigator.clipboard?.writeText(value).catch(() => {});
+      }, 700);
+      return;
+    }
+    next();
+  }
+
+  /** 준비 안내대로 눌렀으니 진짜 칸을 바로 다시 찾는다 (단계는 넘기지 않음). */
+  recheck(): void {
+    const tries = this.tries;
+    this.seek();
+    this.tries = tries;
+  }
+
+  /** 못 찾았을 때 다시 찾기 (콘텐츠 스크립트는 retryMs마다 부르고, 테스트는 직접 부른다). */
+  retryNow(): void {
+    if (this.target || !this.steps[this.index]) return;
+    this.tries += 1;
+    this.seek();
+  }
+
+  /** 화면이 바뀌었을 수 있으니 다시 본다: 아직 못 찾았거나, 찾았던 칸이 다시 그려져 사라졌으면 다시 찾는다. */
+  tick(): void {
+    if (!this.steps[this.index] || !this.languageOk) return;
+    const item = this.steps[this.index]!;
+    const better = this.matched > 0 && locateWith(openDialog(this.doc) ?? this.doc, item.entry.find.slice(0, this.matched)) !== null;
+    if (!this.target || !this.target.isConnected || better || this.behindDialog || (openDialog(this.doc) && !openDialog(this.doc)!.contains(this.target))) {
+      const tries = this.tries;
+      this.seek();
+      this.tries = tries;
+    }
+  }
+
+  stop(): void {
+    this.detach?.();
+    if (this.timer) clearTimeout(this.timer);
+  }
+
+  /** [이전 칸]: 한 칸 뒤로 (첫 칸이면 그대로). */
+  back(): void {
+    if (this.index === 0) return;
+    this.stop();
+    this.scan = { wrapped: false, done: false };
+    this.waiting = undefined;
+    this.hintPresses = 0;
+    this.pasteAsk = false;
+    this.index -= 1;
+    this.tries = 0;
+    this.onProgress(this.index);
+    if (!this.ensureLevel()) this.seek();
+  }
+
+  private advance(): void {
+    this.stop();
+    this.scan = { wrapped: false, done: false };
+    this.waiting = undefined;
+    this.hintPresses = 0;
+    this.pasteAsk = false;
+    this.index += 1;
+    this.tries = 0;
+    this.onProgress(this.index);
+    this.seek();
+  }
+
+  private seek(): void {
+    this.detach?.();
+    this.detach = null;
+    const item = this.steps[this.index];
+    const dialog = openDialog(this.doc);
+    const hit = item && this.languageOk ? locateWith(dialog ?? this.doc, item.entry.find) : null;
+    // 창 안에 없고 창 밖(가려진 곳)에 진짜 칸이 있으면: 창을 먼저 마쳐야 한다
+    // (창 안의 '다음' 같은 준비 버튼이 보여도, 진짜 칸이 창 뒤에 있으면 그 버튼을 누르지 않는다)
+    const realInside = Boolean(hit && !item?.entry.find[hit.index]?.say);
+    this.behindDialog = Boolean(item && dialog && !realInside && locateWith(this.doc, item.entry.find.filter((f) => !f.say)));
+    this.target = hit?.el ?? null;
+    this.matched = hit?.index ?? 0;
+    const isHint = hit ? Boolean(item!.entry.find[hit.index]?.say) : false;
+    if (this.target && item && item.entry.done === "value" && !isHint) {
+      const el = this.target;
+      const onChange = () => this.advance();
+      // 'change'는 입력을 마쳤을 때(칸을 떠나거나 고름) 한 번 온다. 글자 하나마다 오는 'input'으로 넘기지 않는다.
+      el.addEventListener("change", onChange, { once: true });
+      this.detach = () => el.removeEventListener("change", onChange);
+    }
+    if (!this.target && item && this.languageOk && this.retryMs > 0 && this.tries < MAX_TRIES) {
+      this.timer = setTimeout(() => this.retryNow(), this.retryMs);
+    }
+  }
+}

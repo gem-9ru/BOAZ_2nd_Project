@@ -1,0 +1,9 @@
+@import "tailwindcss";
+
+/* 색·글꼴·글자 크기는 design-system/tokens.json 에서 만든 tokens.css 에 있다 (node design-system/build.cjs) */
+@import "./tokens.css";
+
+body { background: var(--color-cream); color: var(--color-ink); word-break: keep-all; }
+@keyframes shimmer { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+.skeleton { animation: shimmer 1.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }

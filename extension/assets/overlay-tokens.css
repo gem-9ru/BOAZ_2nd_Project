@@ -1,0 +1,51 @@
+/* 자동 생성 파일: 직접 고치지 마세요. 광고 관리자 위 오버레이 변수.
+ * 원천: design-system/tokens.json → 저장소 최상위에서 `node design-system/build.cjs` */
+:host {
+  --coach-ring: #5B3FD9;
+  --coach-scrim: #16213A;
+  --coach-bubble-bg: #EFEBFF;
+  --coach-bubble-fg: #16213A;
+  --coach-bubble-border: #5B3FD9;
+  --coach-shadow: 0 6px 20px rgb(69 40 176 / 0.18);
+  --coach-count-fg: #4528B0;
+  --coach-note-fg: #4A5568;
+  --coach-button-bg: #FFFFFF;
+  --coach-button-fg: #4528B0;
+  --coach-button-border: #B3A5F0;
+  --coach-primary-bg: #5B3FD9;
+  --coach-primary-fg: #FFFFFF;
+  --coach-primary-hover-bg: #4528B0;
+  --coach-focus: #5B3FD9;
+  --coach-radius: 16px;
+  --coach-ring-radius: 12px;
+  --coach-button-radius: 9999px;
+  --coach-width: 340px;
+  --coach-padding-y: 12px;
+  --coach-padding-x: 14px;
+  --coach-font-size: 14px;
+  --coach-small-font-size: 12px;
+  --coach-button-font-size: 13px;
+  --coach-gap: 10px;
+  --coach-ring-width: 4px;
+  --coach-focus-width: 2px;
+  --coach-focus-offset: 2px;
+  --coach-font-family: "Pretendard", "Noto Sans KR", system-ui, sans-serif;
+  --coach-line-height: 1.5;
+  --coach-move-duration: 350ms;
+  --coach-walk-duration: 500ms;
+  --coach-easing: ease;
+  --character-body: #5B3FD9;
+  --character-belly: #F7B77A;
+  --character-eye: #FFFFFF;
+  --character-beak: #A8481A;
+  --character-pupil: #16213A;
+  --character-limb: #4528B0;
+  --character-size: 120px;
+  --character-home-size: 40px;
+  --character-walk-speed: 170;
+  --character-run-speed: 380;
+  --character-run-distance: 520;
+  --character-light-sky: #FFFFFF;
+  --character-light-ground: #EFEBFF;
+  --character-light-key: #FFFFFF;
+}
