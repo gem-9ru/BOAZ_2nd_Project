@@ -1,708 +1,766 @@
 [
-  {
-    "id": "meta.campaign.objective",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "트래픽"
-      },
-      {
-        "role": "button",
-        "text": "만들기",
-        "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요"
-      }
-    ],
-    "say": "'{value}'을(를) 고르고 '계속'을 누르세요",
-    "done": "value",
-    "fallback": {
-      "image": "guide/meta.campaign.objective.png",
-      "text": "화면에서 '캠페인 목표' 칸을 찾아 주세요"
-    }
+ {
+  "id": "meta.campaign.objective",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.campaign.special_category",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "카테고리"
-      },
-      {
-        "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
-        "labelText": "수동 트래픽 캠페인"
-      },
-      {
-        "role": "button",
-        "text": "계속",
-        "say": "'계속'을 누르세요"
-      }
-    ],
-    "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 '했어요'를 누르세요 ({value})",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.campaign.special_category.png",
-      "text": "화면에서 '특별 광고 카테고리' 칸을 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "트래픽"
+   },
+   {
+    "role": "button",
+    "text": "만들기",
+    "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요"
+   }
+  ],
+  "say": "'{value}'을(를) 고르고 '계속'을 누르세요",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.campaign.objective.png",
+   "text": "화면에서 '캠페인 목표' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.adset.conversion_location",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "웹사이트"
-      },
-      {
-        "role": "button",
-        "text": "다음",
-        "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
-      }
-    ],
-    "say": "전환 위치는 '웹사이트'를 고르세요 ({value})",
-    "done": "value",
-    "fallback": {
-      "image": "guide/meta.adset.conversion_location.png",
-      "text": "화면에서 '전환 위치' 칸을 찾아 주세요"
-    }
+  "auto": "click",
+  "level": "list"
+ },
+ {
+  "id": "meta.campaign.special_category",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.adset.end_date",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "종료 날짜 설정"
-      },
-      {
-        "heading": "예산 및 일정"
-      }
-    ],
-    "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '했어요'를 누르세요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.end_date.png",
-      "text": "화면에서 '종료 날짜' 칸을 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "카테고리"
+   },
+   {
+    "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
+    "labelText": "수동 트래픽 캠페인"
+   },
+   {
+    "role": "button",
+    "text": "계속",
+    "say": "'계속'을 누르세요"
+   }
+  ],
+  "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 '다음 칸'을 누르세요 ({value})",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.campaign.special_category.png",
+   "text": "화면에서 '특별 광고 카테고리' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.adset.location",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "textStarts": "위치"
-      },
-      {
-        "heading": "타겟"
-      }
-    ],
-    "say": "위치는 {value}(으)로 두세요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.location.png",
-      "text": "화면에서 '위치' 칸을 찾아 주세요"
-    }
+  "auto": "skip",
+  "level": "campaign"
+ },
+ {
+  "id": "meta.adset.conversion_location",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.adset.age_gender",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "textStarts": "연령"
-      },
-      {
-        "role": "button",
-        "text": "설정 표시",
-        "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
-      }
-    ],
-    "say": "연령과 바로 아래 성별을 {value}(으)로 맞추고 '했어요'를 누르세요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.age_gender.png",
-      "text": "화면에서 '연령' 칸을 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "웹사이트"
+   },
+   {
+    "role": "button",
+    "text": "다음",
+    "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
+   }
+  ],
+  "say": "전환 위치는 '웹사이트'를 고르세요 ({value})",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.adset.conversion_location.png",
+   "text": "화면에서 '전환 위치' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.pre.fb_page",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "heading": "대표 계정"
-      },
-      {
-        "role": "button",
-        "text": "다음",
-        "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
-      }
-    ],
-    "say": "가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기') — 고른 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.pre.fb_page.png",
-      "text": "화면에서 'Facebook 페이지' 칸을 찾아 주세요"
-    }
+  "auto": "click",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.end_date",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.pre.ig_account",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "Instagram 프로필"
-      },
-      {
-        "heading": "대표 계정"
-      }
-    ],
-    "say": "'Instagram 프로필'에서 가게 인스타그램 계정을 고르세요 ({value}). 페이스북 페이지를 먼저 고르면 나와요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.pre.ig_account.png",
-      "text": "'대표 계정' 구역의 'Instagram 프로필'에서 계정을 골라 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "종료 날짜 설정"
+   },
+   {
+    "heading": "예산 및 일정"
+   }
+  ],
+  "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '다음 칸'을 누르세요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "화면에서 '종료 날짜' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.ad.format",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "단일 이미지 또는 동영상"
-      },
-      {
-        "heading": "광고 설정"
-      }
-    ],
-    "say": "'{value}'을(를) 고르세요",
-    "done": "value",
-    "fallback": {
-      "image": "guide/meta.ad.format.png",
-      "text": "화면에서 '형식' 칸을 찾아 주세요"
-    }
+  "auto": "endDate",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.location",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.ad.media",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "text": "업로드",
-        "say": "계정 사진을 고르거나 '업로드'로 올린 뒤 '다음'을 누르세요"
-      },
-      {
-        "role": "button",
-        "textStarts": "크리에이티브 설정",
-        "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
-      }
-    ],
-    "say": "준비한 사진을 올리세요 ({value})",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.ad.media.png",
-      "text": "광고 화면의 '크리에이티브 설정' › '이미지 광고'에서 사진을 골라 주세요"
-    }
+  "find": [
+   {
+    "role": "button",
+    "textStarts": "위치"
+   },
+   {
+    "heading": "타겟"
+   }
+  ],
+  "say": "위치는 {value}(으)로 두세요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.location.png",
+   "text": "화면에서 '위치' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.creative.copy.text",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "aria": "간단하게 광고를 소개하세요"
-      },
-      {
-        "role": "button",
-        "text": "다음",
-        "say": "창 아래 '다음'을 눌러 '문구' 단계로 가세요"
-      },
-      {
-        "role": "button",
-        "textStarts": "크리에이티브 설정",
-        "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
-      }
-    ],
-    "say": "이 문구를 붙여 넣은 뒤 '했어요'를 누르세요: {value}",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.creative.copy.text.png",
-      "text": "화면에서 '기본 문구' 칸을 찾아 주세요"
-    }
+  "auto": "location",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.age_gender",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.creative.copy.headline",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "제목"
-      },
-      {
-        "placeholder": "간단한 제목을 입력하세요"
-      },
-      {
-        "role": "button",
-        "text": "다음",
-        "say": "창 아래 '다음'을 눌러 '문구' 단계로 가세요"
-      },
-      {
-        "role": "button",
-        "textStarts": "크리에이티브 설정",
-        "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
-      }
-    ],
-    "say": "이 제목을 붙여 넣으세요: {value}",
-    "done": "value",
-    "fallback": {
-      "image": "guide/meta.creative.copy.headline.png",
-      "text": "화면에서 '제목' 칸을 찾아 주세요"
-    }
+  "find": [
+   {
+    "role": "button",
+    "textPattern": "^연령\\d"
+   },
+   {
+    "role": "button",
+    "text": "설정 표시",
+    "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
+   }
+  ],
+  "say": "연령과 바로 아래 성별을 {value}(으)로 맞추고 '다음 칸'을 누르세요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.age_gender.png",
+   "text": "화면에서 '연령' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.ad.website_url",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "웹사이트 URL"
-      },
-      {
-        "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
-      }
-    ],
-    "say": "스토어 주소를 넣으세요: {value}",
-    "done": "value",
-    "fallback": {
-      "image": "guide/meta.ad.website_url.png",
-      "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
-    }
+  "auto": "ageGender",
+  "level": "adset"
+ },
+ {
+  "id": "meta.pre.fb_page",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.publish",
-    "mode": "create",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "text": "동의하고 게시"
-      },
-      {
-        "role": "button",
-        "text": "게시"
-      }
-    ],
-    "say": "여기서 '동의하고 게시'를 누르면 광고가 시작돼요. 확인하고 직접 눌러 주세요",
-    "done": "manual",
-    "publish": true,
-    "fallback": {
-      "image": "guide/meta.publish.png",
-      "text": "오른쪽 아래 '동의하고 게시' 버튼을 확인하고 직접 눌러 주세요"
-    }
+  "find": [
+   {
+    "heading": "대표 계정"
+   },
+   {
+    "role": "button",
+    "text": "다음",
+    "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
+   }
+  ],
+  "say": "가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기') — 고른 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.pre.fb_page.png",
+   "text": "화면에서 'Facebook 페이지' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.adset.placements",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "앱 및 사이트"
-      },
-      {
-        "role": "button",
-        "text": "설정 더 보기",
-        "say": "'노출 위치' 아래 '설정 더 보기'를 눌러 목록을 여세요"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "'앱 및 사이트'(Audience Network) 체크를 끄세요 — {value}",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.placements.edit.png",
-      "text": "광고 세트 수정 화면에서 '노출 위치' 칸을 찾아 주세요"
-    }
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "meta.pre.ig_account",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.adset.end_date",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelledBy": "종료 날짜 설정"
-      },
-      {
-        "heading": "예산 및 일정"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "종료 날짜를 {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.end_date.edit.png",
-      "text": "광고 세트 수정 화면에서 '종료 날짜' 칸을 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "Instagram 프로필"
+   },
+   {
+    "heading": "대표 계정"
+   }
+  ],
+  "say": "'Instagram 프로필'에서 가게 인스타그램 계정을 고르세요 ({value}). 페이스북 페이지를 먼저 고르면 나와요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.pre.ig_account.png",
+   "text": "'대표 계정' 구역의 'Instagram 프로필'에서 계정을 골라 주세요"
   },
-  {
-    "id": "meta.creative.copy",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "aria": "간단하게 광고를 소개하세요"
-      },
-      {
-        "role": "button",
-        "textStarts": "크리에이티브 설정",
-        "say": "'크리에이티브 설정'에서 '문구'를 열어 새 문구로 바꾸세요"
-      },
-      {
-        "role": "tab",
-        "text": "광고",
-        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "기본 문구를 새 문구로 바꾸고 '했어요'를 누르세요 ({value})",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.creative.copy.edit.png",
-      "text": "광고 수정 화면에서 '기본 문구' 칸을 찾아 주세요"
-    }
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "meta.ad.format",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.ad.creative_test",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "text": "테스트 설정"
-      },
-      {
-        "heading": "크리에이티브 테스트"
-      },
-      {
-        "role": "tab",
-        "text": "광고",
-        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "'테스트 설정'을 눌러 사진을 2~3개 넣으세요 ({value})",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.ad.creative_test.edit.png",
-      "text": "광고 수정 화면에서 '크리에이티브 테스트' 칸을 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "단일 이미지 또는 동영상"
+   },
+   {
+    "heading": "광고 설정"
+   }
+  ],
+  "say": "'{value}'을(를) 고르세요",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.ad.format.png",
+   "text": "화면에서 '형식' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.adset.age_gender",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "textStarts": "연령"
-      },
-      {
-        "role": "button",
-        "text": "설정 표시",
-        "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "연령·성별을 이렇게 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.age_gender.png",
-      "text": "광고 세트 수정 화면의 '타겟' › '설정 표시'에서 연령을 찾아 주세요"
-    }
+  "auto": "click",
+  "level": "ad"
+ },
+ {
+  "id": "meta.ad.media",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.adset.location",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "textStarts": "위치"
-      },
-      {
-        "heading": "타겟"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "위치를 이렇게 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.location.png",
-      "text": "광고 세트 수정 화면의 '타겟' › '위치'를 찾아 주세요"
-    }
+  "find": [
+   {
+    "role": "button",
+    "text": "업로드",
+    "say": "계정 사진을 고르거나 '업로드'로 올린 뒤 '다음'을 누르세요"
+   },
+   {
+    "role": "button",
+    "textStarts": "크리에이티브 설정",
+    "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
+   }
+  ],
+  "say": "준비한 사진을 올리세요 ({value})",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.ad.media.png",
+   "text": "광고 화면의 '크리에이티브 설정' › '이미지 광고'에서 사진을 골라 주세요"
   },
-  {
-    "id": "meta.adset.daily_budget",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "heading": "예산 및 일정"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "'예산 및 일정'에서 하루 예산을 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.end_date.edit.png",
-      "text": "광고 세트 수정 화면의 '예산 및 일정'을 찾아 주세요"
-    }
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "meta.creative.copy.text",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.adset.cost_goal",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "heading": "전환"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "'전환' 구역의 '성과 목표'를 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.conversion_location.png",
-      "text": "광고 세트 수정 화면의 '전환' › '성과 목표'를 찾아 주세요"
-    }
+  "find": [
+   {
+    "aria": "간단하게 광고를 소개하세요"
+   },
+   {
+    "role": "button",
+    "text": "문구",
+    "say": "창 위쪽 단계 표시에서 '문구'를 눌러 문구 칸으로 갈게요"
+   },
+   {
+    "role": "button",
+    "textStarts": "크리에이티브 설정",
+    "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
+   }
+  ],
+  "say": "② 문구 고르기에서 고르신 추천 문구(네이버 검색어로 만든 문구)를 넣을게요: {value}",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.creative.copy.text.png",
+   "text": "화면에서 '기본 문구' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.adset.value_rules",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "text": "규칙 세트 만들기"
-      },
-      {
-        "heading": "노출 위치"
-      },
-      {
-        "role": "tab",
-        "text": "광고 세트",
-        "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "'노출 위치 가치 조정' › '규칙 세트 만들기'에서 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.adset.placements.edit.png",
-      "text": "광고 세트 수정 화면의 '노출 위치 가치 조정'을 찾아 주세요"
-    }
+  "auto": "type",
+  "level": "ad"
+ },
+ {
+  "id": "meta.creative.copy.headline",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.campaign.bid_strategy",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "heading": "예산"
-      },
-      {
-        "role": "tab",
-        "text": "캠페인",
-        "say": "'캠페인' 탭에서 지난번 캠페인 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "캠페인의 '예산' 구역에서 입찰 전략을 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.campaign.special_category.png",
-      "text": "캠페인 수정 화면의 '예산' › '캠페인 입찰 전략'을 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "제목"
+   },
+   {
+    "placeholder": "간단한 제목을 입력하세요"
+   },
+   {
+    "role": "button",
+    "text": "문구",
+    "say": "창 위쪽 단계 표시에서 '문구'를 눌러 문구 칸으로 갈게요"
+   },
+   {
+    "role": "button",
+    "textStarts": "크리에이티브 설정",
+    "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
+   }
+  ],
+  "say": "고르신 추천 문구의 제목을 넣을게요: {value}",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.creative.copy.headline.png",
+   "text": "화면에서 '제목' 칸을 찾아 주세요"
   },
-  {
-    "id": "meta.ad.media",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "textStarts": "크리에이티브 설정",
-        "say": "'크리에이티브 설정' › '이미지 광고'에서 사진을 바꾸세요"
-      },
-      {
-        "heading": "광고 크리에이티브"
-      },
-      {
-        "role": "tab",
-        "text": "광고",
-        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "사진을 이렇게 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.ad.media.png",
-      "text": "광고 수정 화면의 '광고 크리에이티브'에서 미디어를 찾아 주세요"
-    }
+  "auto": "type",
+  "level": "ad"
+ },
+ {
+  "id": "meta.ad.website_url",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "meta.creative.cta",
-    "mode": "edit",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "labelText": "행동 유도"
-      },
-      {
-        "heading": "광고 크리에이티브"
-      },
-      {
-        "role": "tab",
-        "text": "광고",
-        "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
-      }
-    ],
-    "say": "'행동 유도' 버튼 문구를 바꾸세요: {value} — 바꾼 뒤 '했어요'",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/meta.creative.copy.headline.png",
-      "text": "광고 수정 화면의 '행동 유도'를 찾아 주세요"
-    }
+  "find": [
+   {
+    "labelledBy": "웹사이트 URL"
+   },
+   {
+    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
+   }
+  ],
+  "say": "② 세팅에서 알려 주신 스토어 주소를 넣을게요: {value}",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.ad.website_url.png",
+   "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
   },
-  {
-    "id": "export.open",
-    "mode": "export",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "tab",
-        "text": "광고 세트"
-      }
-    ],
-    "say": "'광고 세트' 탭을 누르세요. 광고 세트별로 받아야 두 광고를 비교할 수 있어요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/export.open.png",
-      "text": "광고 관리자 목록 위쪽의 '광고 세트' 탭을 눌러 주세요"
-    }
+  "auto": "type",
+  "level": "ad"
+ },
+ {
+  "id": "meta.publish",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
   },
-  {
-    "id": "export.breakdown",
-    "mode": "export",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "text": "분석 데이터"
-      }
-    ],
-    "say": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크하세요. 기간은 광고를 돌린 날이 들어가게 맞춰 주세요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/export.breakdown.png",
-      "text": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크해 주세요"
-    }
+  "find": [
+   {
+    "role": "button",
+    "text": "동의하고 게시"
+   },
+   {
+    "role": "button",
+    "text": "게시"
+   }
+  ],
+  "say": "여기서 '동의하고 게시'를 누르면 광고가 시작돼요. 확인하고 직접 눌러 주세요",
+  "done": "manual",
+  "publish": true,
+  "fallback": {
+   "image": "guide/meta.publish.png",
+   "text": "오른쪽 아래 '동의하고 게시' 버튼을 확인하고 직접 눌러 주세요"
   },
-  {
-    "id": "export.download",
-    "mode": "export",
-    "page": {
-      "urlIncludes": "adsmanager"
-    },
-    "find": [
-      {
-        "role": "button",
-        "text": "내보내기"
-      }
-    ],
-    "say": "'내보내기'를 누르면 결과 파일이 바로 받아져요. 받은 파일을 패널에서 올려 주세요",
-    "done": "manual",
-    "fallback": {
-      "image": "guide/export.download.png",
-      "text": "표 위 오른쪽의 '내보내기'(아래 화살표)를 눌러 파일을 받아 주세요"
-    }
-  }
+  "auto": "stop",
+  "level": "ad"
+ },
+ {
+  "id": "meta.adset.placements",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "labelledBy": "앱 및 사이트"
+   },
+   {
+    "role": "button",
+    "text": "설정 더 보기",
+    "say": "'노출 위치' 아래 '설정 더 보기'를 눌러 목록을 여세요"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "'앱 및 사이트'(Audience Network) 체크를 끄세요 — {value}",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.placements.edit.png",
+   "text": "광고 세트 수정 화면에서 '노출 위치' 칸을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.end_date",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "labelledBy": "종료 날짜 설정"
+   },
+   {
+    "heading": "예산 및 일정"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "종료 날짜를 {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.edit.png",
+   "text": "광고 세트 수정 화면에서 '종료 날짜' 칸을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.creative.copy",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "aria": "간단하게 광고를 소개하세요"
+   },
+   {
+    "role": "button",
+    "textStarts": "크리에이티브 설정",
+    "say": "'크리에이티브 설정'에서 '문구'를 열어 새 문구로 바꾸세요"
+   },
+   {
+    "role": "tab",
+    "text": "광고",
+    "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "기본 문구를 새 문구로 바꾸고 '다음 칸'을 누르세요 ({value})",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.creative.copy.edit.png",
+   "text": "광고 수정 화면에서 '기본 문구' 칸을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "meta.ad.creative_test",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "text": "테스트 설정"
+   },
+   {
+    "heading": "크리에이티브 테스트"
+   },
+   {
+    "role": "tab",
+    "text": "광고",
+    "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "'테스트 설정'을 눌러 사진을 2~3개 넣으세요 ({value})",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.ad.creative_test.edit.png",
+   "text": "광고 수정 화면에서 '크리에이티브 테스트' 칸을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "meta.adset.age_gender",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "textPattern": "^연령\\d"
+   },
+   {
+    "role": "button",
+    "text": "설정 표시",
+    "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "연령·성별을 이렇게 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.age_gender.png",
+   "text": "광고 세트 수정 화면의 '타겟' › '설정 표시'에서 연령을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.location",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "textStarts": "위치"
+   },
+   {
+    "heading": "타겟"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "위치를 이렇게 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.location.png",
+   "text": "광고 세트 수정 화면의 '타겟' › '위치'를 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.daily_budget",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산 및 일정"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "'예산 및 일정'에서 하루 예산을 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.edit.png",
+   "text": "광고 세트 수정 화면의 '예산 및 일정'을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.cost_goal",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "전환"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "'전환' 구역의 '성과 목표'를 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.conversion_location.png",
+   "text": "광고 세트 수정 화면의 '전환' › '성과 목표'를 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.value_rules",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "text": "규칙 세트 만들기"
+   },
+   {
+    "heading": "노출 위치"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭에서 지난번 광고 세트 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "'노출 위치 가치 조정' › '규칙 세트 만들기'에서 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.placements.edit.png",
+   "text": "광고 세트 수정 화면의 '노출 위치 가치 조정'을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
+ },
+ {
+  "id": "meta.campaign.bid_strategy",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산"
+   },
+   {
+    "role": "tab",
+    "text": "캠페인",
+    "say": "'캠페인' 탭에서 지난번 캠페인 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "캠페인의 '예산' 구역에서 입찰 전략을 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.campaign.special_category.png",
+   "text": "캠페인 수정 화면의 '예산' › '캠페인 입찰 전략'을 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "campaign"
+ },
+ {
+  "id": "meta.ad.media",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "textStarts": "크리에이티브 설정",
+    "say": "'크리에이티브 설정' › '이미지 광고'에서 사진을 바꾸세요"
+   },
+   {
+    "heading": "광고 크리에이티브"
+   },
+   {
+    "role": "tab",
+    "text": "광고",
+    "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "사진을 이렇게 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.ad.media.png",
+   "text": "광고 수정 화면의 '광고 크리에이티브'에서 미디어를 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "meta.creative.cta",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "labelText": "행동 유도"
+   },
+   {
+    "heading": "광고 크리에이티브"
+   },
+   {
+    "role": "tab",
+    "text": "광고",
+    "say": "'광고' 탭에서 지난번 광고 이름을 눌러 수정 화면을 여세요"
+   }
+  ],
+  "say": "'행동 유도' 버튼 문구를 바꾸세요: {value} — 바꾼 뒤 '다음 칸'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.creative.copy.headline.png",
+   "text": "광고 수정 화면의 '행동 유도'를 찾아 주세요"
+  },
+  "auto": "owner",
+  "level": "ad"
+ },
+ {
+  "id": "export.open",
+  "mode": "export",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "tab",
+    "text": "광고 세트"
+   }
+  ],
+  "say": "'광고 세트' 탭을 누르세요. 광고 세트별로 받아야 두 광고를 비교할 수 있어요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/export.open.png",
+   "text": "광고 관리자 목록 위쪽의 '광고 세트' 탭을 눌러 주세요"
+  },
+  "auto": "owner",
+  "level": "list"
+ },
+ {
+  "id": "export.breakdown",
+  "mode": "export",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "text": "분석 데이터"
+   }
+  ],
+  "say": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크하세요. 기간은 광고를 돌린 날이 들어가게 맞춰 주세요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/export.breakdown.png",
+   "text": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크해 주세요"
+  },
+  "auto": "owner",
+  "level": "list"
+ },
+ {
+  "id": "export.download",
+  "mode": "export",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "text": "내보내기"
+   }
+  ],
+  "say": "'내보내기'를 누르면 결과 파일이 바로 받아져요. 받은 파일을 패널에서 올려 주세요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/export.download.png",
+   "text": "표 위 오른쪽의 '내보내기'(아래 화살표)를 눌러 파일을 받아 주세요"
+  },
+  "auto": "owner",
+  "level": "list"
+ }
 ]

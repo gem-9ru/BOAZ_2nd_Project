@@ -70,6 +70,33 @@ describe("EX-01 ② 세팅", () => {
   });
 });
 
+describe("뭉치 부르기: 어느 탭으로, 못 받으면", () => {
+  it("prefers the Ads Manager tab the owner is looking at in this window", async () => {
+    await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage/a", active: false });
+    const mine = await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage/b", active: true });
+    const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } };
+    render(<GuideStep state={state} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
+    await waitFor(() => expect(send).toHaveBeenCalled());
+    expect(send.mock.calls[0]![0]).toBe(mine.id);
+  });
+
+  it("a tab opened before the extension was reloaded gets refreshed, then 뭉치 is called again", async () => {
+    const tab = await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage/a", active: true });
+    const reload = vi.spyOn(fakeBrowser.tabs, "reload").mockResolvedValue(undefined);
+    let fixed = false;
+    reload.mockImplementation(async () => { fixed = true; });
+    const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockImplementation(async () => { if (!fixed) throw new Error("Receiving end does not exist"); });
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } };
+    render(<GuideStep state={state} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
+    await waitFor(() => expect(reload).toHaveBeenCalledWith(tab.id));
+    await waitFor(() => expect(send.mock.calls.length).toBeGreaterThan(1));
+    expect(screen.queryByText(/캐릭터를 부르지 못했어요/)).toBeNull();
+  });
+});
+
 describe("EX-02 ③ 분석 탭", () => {
   it("tells the export setting (일 · 노출 위치), points at 내보내기, and opens the page in a new window", async () => {
     const dispatch = vi.fn();

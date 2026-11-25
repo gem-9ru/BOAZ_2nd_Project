@@ -10,7 +10,22 @@ interface Props {
   dispatch: (ev: FlowEvent) => void;
 }
 
-const ADS_MANAGER_MATCH = ["https://adsmanager.facebook.com/*", "https://business.facebook.com/*"];
+const isAds = (url?: string) => /^https:\/\/(adsmanager|business)\.facebook\.com\//.test(url ?? "");
+
+/** 뭉치를 보낼 광고 관리자 탭: 지금 창에서 보고 있는 탭 → 다른 광고 관리자 탭 (반쯤 채운 초안을 떠나지 않게). */
+async function findAdsTab() {
+  const [active] = await browser.tabs.query({ active: true, currentWindow: true }).catch(() => []);
+  if (active && isAds(active.url)) return active;
+  const all = (await browser.tabs.query({})).filter((t) => isAds(t.url));
+  return all.find((t) => t.active) ?? all[0];
+}
+
+async function adsTab() {
+  const found = await findAdsTab();
+  if (!found) return browser.tabs.create({ url: ADS_MANAGER_URL });
+  if (found.id && !found.active) await browser.tabs.update(found.id, { active: true });
+  return found;
+}
 
 /** ② 안내 / ③ 바꾸기 / 결과 내보내기: 광고 관리자 탭에 캐릭터를 부른다. 진행은 배경 스크립트가 저장소에 쓰고 패널이 따라간다. */
 export default function GuideStep({ state, dispatch }: Props) {
@@ -25,18 +40,23 @@ export default function GuideStep({ state, dispatch }: Props) {
   async function open() {
     setBusy(true);
     setError(null);
-    // 이미 열린 광고 관리자 탭이 있으면 그 탭으로 (반쯤 채운 초안을 떠나지 않게)
-    const [existing] = await browser.tabs.query({ url: ADS_MANAGER_MATCH });
-    const tab = existing ?? (await browser.tabs.create({ url: ADS_MANAGER_URL }));
-    if (existing?.id) await browser.tabs.update(existing.id, { active: true });
-    const ok = await sendWithRetry(() => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index }));
+    dispatch({ type: "guideOpened" });   // 뭉치가 집을 나선다
+    const tab = await adsTab();
+    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index });
+    let ok = await sendWithRetry(send, 2, 800);
+    if (!ok && tab.id) {
+      // 확장을 다시 불러오기 전에 열린 탭은 뭉치 스크립트가 없다 → 새로고침해서 넣고 다시 부른다
+      let reloaded = false;
+      try { await browser.tabs.reload(tab.id); reloaded = true; } catch { /* 새로고침 못 함 → 아래 ▲ 안내 */ }
+      if (reloaded) ok = await sendWithRetry(send);
+    }
     setBusy(false);
     if (!ok) setError("캐릭터를 부르지 못했어요. 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
   }
 
   // [이전 칸] [다음 칸]: 광고 관리자 탭의 캐릭터를 움직인다 (진행은 배경 스크립트가 저장소에 쓴다).
   async function move(delta: 1 | -1) {
-    const tab = (await browser.tabs.query({})).find((t) => /^https:\/\/(adsmanager|business)\.facebook\.com\//.test(t.url ?? ""));
+    const tab = await findAdsTab();
     if (!tab?.id) { setError("광고 관리자 탭이 없어요. '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
     await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta }).catch(() => setError("캐릭터를 부르지 못했어요. 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }

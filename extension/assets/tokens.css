@@ -56,4 +56,18 @@
   --focus-offset: 2px;
   --motion-expand: 250ms;
   --motion-easing: ease;
+  --character-body: #5B3FD9;
+  --character-belly: #F7B77A;
+  --character-eye: #FFFFFF;
+  --character-beak: #A8481A;
+  --character-pupil: #16213A;
+  --character-limb: #4528B0;
+  --character-size: 120px;
+  --character-home-size: 40px;
+  --character-walk-speed: 170;
+  --character-run-speed: 380;
+  --character-run-distance: 520;
+  --character-light-sky: #FFFFFF;
+  --character-light-ground: #EFEBFF;
+  --character-light-key: #FFFFFF;
 }

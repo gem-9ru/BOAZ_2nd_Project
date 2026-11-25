@@ -10,6 +10,7 @@ import QuestionStep from "./steps/QuestionStep";
 import CodeStep from "./steps/CodeStep";
 import PlanStep from "./steps/PlanStep";
 import { ErrorLine } from "./ui/Coach";
+import { HomeSeat } from "./ui/HomeSeat";
 
 const STAGES: { label: string; steps: Step[] }[] = [
   { label: "찾기", steps: ["find"] },
@@ -60,7 +61,10 @@ export default function App() {
   return (
     <main className="min-h-screen p-4 flex flex-col gap-6">
       <header className="flex items-center justify-between">
-        <h1 className="text-lead font-bold"><span aria-hidden className="text-accent">✦</span> 광고 어시스턴트</h1>
+        <div className="flex items-center gap-1.5">
+          <HomeSeat away={Boolean(state.guide?.away)} />
+          <h1 className="text-lead font-bold">광고 어시스턴트</h1>
+        </div>
         <ol className="flex gap-3 text-caption" aria-label="진행 단계">
           {STAGES.map((st, i) => (
             <li

@@ -115,6 +115,9 @@ function buildExtensionTheme() {
     `  --focus-offset: ${resolve("component.focus.offset")};`,
     `  --motion-expand: ${resolve("semantic.motion.expand")};`,
     `  --motion-easing: ${resolve("semantic.motion.easing")};`,
+    // 패널 제목 왼쪽 '캐릭터 집'도 광고 관리자 위 캐릭터와 같은 값으로 그린다
+    ...Object.keys(tokens.component.character).filter((k) => !k.startsWith("$"))
+      .map((k) => `  --character-${k}: ${resolve(`component.character.${k}`)};`),
   ];
   return (
     HEADER("확장 프로그램 Tailwind 테마 (색·글자·움직임).") +

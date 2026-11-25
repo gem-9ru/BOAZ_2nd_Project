@@ -37,9 +37,15 @@ export default defineContentScript({
       root.render(
         <Character
           view={guide.view()}
-          onDone={() => { guide?.markDone(); render(); }}
+          onDone={() => { guide?.apply(); render(); }}
           onBack={() => { guide?.back(); render(); }}
-          onClose={() => { stopGuide(); ui.remove(); }}
+          onToggleAuto={() => { guide?.setAuto(!guide.view().auto); render(); }}
+          onClose={() => {
+            // 집에 도착: 패널 제목 왼쪽 집에 다시 앉힌다 (배경 스크립트가 저장 → 패널이 따라감)
+            void browser.runtime.sendMessage({ type: "guide:closed" }).catch(() => {});
+            stopGuide();
+            ui.remove();
+          }}
         />,
       );
     }
@@ -47,7 +53,7 @@ export default defineContentScript({
     browser.runtime.onMessage.addListener((msg: { type?: string; steps?: GuideStepItem[]; startIndex?: number; delta?: number }) => {
       // 패널의 [이전 칸] [다음 칸]
       if (msg.type === "guide:move" && guide) {
-        if ((msg.delta ?? 0) < 0) guide.back(); else guide.markDone();
+        if ((msg.delta ?? 0) < 0) guide.back(); else guide.apply();
         render();
         return;
       }
@@ -59,13 +65,16 @@ export default defineContentScript({
         void browser.runtime.sendMessage({ type: "guide:progress", index, total }).catch(() => {});
         render();
       });
+      guide.setAuto(true);   // 기본: 뭉치가 알아서 창을 넘기고 칸을 채운다 (직접 맞출 칸·게시 앞에서 멈춤)
       render();
-      // 광고 관리자는 화면을 다시 그리거나 다음 화면으로 넘어간다 → 1초마다 칸을 다시 찾고 다시 그린다.
+      // 광고 관리자는 화면을 다시 그리거나 다음 화면으로 넘어간다 → 0.5초마다 칸을 다시 찾고, 자동 진행 한 걸음, 다시 그린다.
       timer = window.setInterval(() => {
         guide?.tick();
+        guide?.autoStep(performance.now());
         render();
-      }, 1000);
-      return true;
+      }, 500);
+      // 바로 '받았어요'로 답한다 (true를 돌려주면 패널이 답을 끝없이 기다려 '잠시만요…'에 멈춘다)
+      return Promise.resolve({ started: true });
     });
   },
 });
