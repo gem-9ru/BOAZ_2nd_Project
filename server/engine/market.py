@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 import pandas as pd
 
-from . import naver_api as api
+from . import naver_api as api, specs
 
 DEFAULT_CATEGORY = "50000006"  # 쇼핑 인사이트 분야: 식품
 HUB = "/shopping/v1/category"
@@ -19,16 +19,16 @@ MIN_AGE_SHARE = 0.25           # 헤드라인에 쓸 연령은 비중이 이 이
 HIGH_INDEX = 1.2               # 이 배수 이상일 때만 "분야 평균의 N배"라고 말함
 SEASON_PEAK = 1.2              # 최고 달이 평균의 이 배수 이상이면 "N월에 가장 많이"라고 말함
 
-# ── 분류 낱말 ──────────────────────────────────────────────────────────────
-MAKING_WORDS = ("만들기", "만드는", "레시피", "키트", "베이킹", "클래스", "원데이", "반죽", "밀키트", "diy", "DIY", "창업", "장사", "재료", "도매", "납품", "학원")
-PLACE_WORDS = ("맛집", "근처", "가볼만", "카페", "빵집", "베이커리", "매장", "지점", "주변", "핫플", "데이트", "여행",
-               "서울", "부산", "대구", "인천", "광주", "대전", "울산", "세종", "제주", "수원", "성남", "성수", "강남",
-               "홍대", "송도", "분당", "일산", "경기", "강원", "전주", "경주", "속초", "여수", "판교", "잠실")
-GIFT_WORDS = ("선물", "답례", "기프트", "감사", "축하", "집들이", "상견례", "돌잔치", "하객", "생일", "기념일")
-SEASON_WORDS = ("크리스마스", "발렌타인", "밸런타인", "화이트데이", "빼빼로", "할로윈", "핼러윈", "추석", "설날", "명절",
-                "어버이날", "스승의날", "어린이날", "연말", "수능", "새해", "시즌", "설선물", "설연휴")
-PRODUCT_WORDS = ("쿠키", "휘낭시에", "마들렌", "구움과자", "디저트", "케이크", "스콘", "까눌레", "타르트", "브라우니",
-                 "파운드", "마카롱", "테린느", "샌드위치쿠키")
+# ── 분류 낱말: 분야에 묶이지 않는 공통 낱말만 사양(rules.yaml find:)에서 읽는다. 상품 낱말은 사장님이 입력한 말 ──
+_FIND = specs.find()
+CATEGORIES: List[dict] = [dict(c) for c in _FIND["categories"]]
+MAKING_WORDS = tuple(_FIND["common"]["making"])
+PLACE_WORDS = tuple(_FIND["common"]["place"])
+GIFT_WORDS = tuple(_FIND["common"]["gift"])
+SEASON_WORDS = tuple(_FIND["common"]["season"])
+MODIFIER_GROUPS = {g: tuple(w) for g, w in _FIND["modifier_groups"].items()}
+MODIFIER_SKIP = tuple(_FIND["modifier_skip"])
+GUESS_MIN_POINTS = 6           # 분야 추정: 지난 12개월 중 이 달 수 이상 자료가 있어야 함
 BUYABLE = ("선물·답례", "시즌", "상품")
 EXCLUDED = ("제외: 만들기", "제외: 매장·지역")
 
@@ -124,12 +124,29 @@ def is_variant(keyword: str, cores: List[str]) -> bool:
     return False
 
 
+def product_words(product: str, seeds: List[str]) -> List[str]:
+    """사장님이 입력한 낱말: 상품 이름(띄어쓰기 없앰), 띄어쓰기로 나눈 2글자 이상 조각, seeds(띄어쓰기 없앰). 중복 없음."""
+    words = [product.replace(" ", "")] + [p for p in product.split() if len(p) >= 2] + [s.replace(" ", "") for s in seeds]
+    return [w for w in dict.fromkeys(words) if w]
+
+
 def has_product(keyword: str, seeds: List[str]) -> bool:
-    """상품 낱말(쿠키·휘낭시에 …)이나 내가 입력한 말(오타·변형 포함)이 들어 있는가."""
+    """내가 입력한 낱말(seeds)이나 그 오타·변형이 들어 있는가. 분야별 상품 낱말 목록은 쓰지 않는다."""
     k = keyword.replace(" ", "")
     clean = [s.replace(" ", "") for s in seeds if s]
-    return (any(w in k for w in PRODUCT_WORDS) or any(s in k or k in s for s in clean)
-            or is_variant(k, clean + list(PRODUCT_WORDS)))
+    return any(s in k or k in s for s in clean) or is_variant(k, clean)
+
+
+def guess_category(product: str, online: bool = True) -> Optional[str]:
+    """상품 이름(띄어쓰기 없앰)으로 분야 12개를 모두 조회해 달별 자료가 가장 많은 분야 code.
+    최댓값이 6 이상이고 1위가 혼자일 때만, 아니면 None(사장님께 묻는다)."""
+    name = product.replace(" ", "")
+    if not name:
+        return None
+    points = {c["code"]: api.category_keyword_points(c["code"], name, online) or 0 for c in CATEGORIES}
+    top = max(points.values())
+    leaders = [code for code, n in points.items() if n == top]
+    return leaders[0] if top >= GUESS_MIN_POINTS and len(leaders) == 1 else None
 
 
 def classify(df: pd.DataFrame, seeds: List[str]) -> pd.DataFrame:
@@ -312,8 +329,9 @@ def build(seeds: List[str], online: bool = True) -> Optional[MarketReport]:
     table = keyword_table(seeds, online)
     if table is None:
         return None
-    kw = classify(table, seeds)
-    rec = recommend(kw, seeds=seeds)
+    words = product_words(seeds[0] if seeds else "", seeds)   # 사장님이 입력한 낱말(첫 seed가 상품 이름)
+    kw = classify(table, words)
+    rec = recommend(kw, seeds=words)
     auds = {}
     for k in audience_targets(kw, rec):
         a = audience(k, online=online)

@@ -52,6 +52,12 @@ def loop() -> Dict:
 
 
 @lru_cache(maxsize=None)
+def find() -> Dict:
+    """찾기·문구 되묻기: 분야 12개와 공통 낱말(선물·시즌·지역·만들기), 꾸밈말 묶음. 분야별 상품 낱말은 없음."""
+    return _load("rules.yaml")["find"]
+
+
+@lru_cache(maxsize=None)
 def assumptions() -> Dict:
     return _load("assumptions.yaml")
 

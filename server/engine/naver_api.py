@@ -337,6 +337,21 @@ def shopping_insight(path: str, category: str, keyword: Optional[str] = None, on
     return _guarded("hub", key, online and hub_available(), lambda: hub_raw(path, body))
 
 
+def category_keyword_points(category: str, keyword: str, online: bool = True) -> Optional[int]:
+    """쇼핑인사이트 분야+낱말 하나의 달별 자료 수 (지난 12개월 중 몇 달에 값이 있나). 분야 추정에 씀. 못 받으면 None.
+    저장본 키는 shopping_insight와 같은 규칙: (경로, 분야, 낱말, month)."""
+    path = "/shopping/v1/category/keywords"
+    key = f"{path}|{category}|{keyword}|month"
+    body = {"startDate": _default_start(), "endDate": _default_end(), "timeUnit": "month",
+            "category": category, "keyword": [{"name": keyword, "param": [keyword]}]}
+    _set_error(None)
+    data = _guarded("hub", key, online and hub_available(), lambda: hub_raw(path, body))
+    try:
+        return len(data["results"][0]["data"])
+    except (TypeError, KeyError, IndexError):
+        return None
+
+
 def _default_end() -> str:
     t = time.localtime(_now())
     y, m = (t.tm_year, t.tm_mon - 1) if t.tm_mon > 1 else (t.tm_year - 1, 12)
