@@ -325,6 +325,13 @@ from fastapi.staticfiles import StaticFiles  # noqa: E402
 WEB_DIST = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "dist")
 
 
+@app.get("/", include_in_schema=False)
+def root():
+    """주소만 열면(ad-assistant.gem-9ru.com) 분석 페이지로."""
+    from fastapi.responses import RedirectResponse
+    return RedirectResponse("/analysis")
+
+
 @app.get("/analysis")
 def analysis_page():
     index = os.path.join(WEB_DIST, "index.html")

@@ -84,7 +84,7 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
     if "reach" in daily.columns and float(daily["reach"].sum()) > 0:
         freq = float(daily["impressions"].sum()) / float(daily["reach"].sum())
         if freq > cfg["frequency_max"]:
-            out.append(_a("warn", "high_frequency", f"한 사람이 평균 {freq:.1f}번 봤어요 → 소재를 바꿀 때예요.", "새 소재를 준비하거나 타깃을 넓혀 보세요.", "AN-02"))
+            out.append(_a("warn", "high_frequency", f"한 사람이 평균 {cfg['frequency_max']:g}번 넘게 봤어요 ({freq:.1f}번) → 소재를 바꿀 때예요.", "새 소재를 준비하거나 타깃을 넓혀 보세요.", "AN-02"))
 
     # ● 참고: 메타 추천 ≠ 실측 (메타는 자동 노출 위치를 권장)
     auto = [a for a in arms if "자동" in a["name"]]
