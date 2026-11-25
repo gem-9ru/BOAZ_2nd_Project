@@ -352,6 +352,21 @@ def category_keyword_points(category: str, keyword: str, online: bool = True) ->
         return None
 
 
+SEARCH_TREND = "/search-trend/v1/search"
+
+
+def search_trend(groups: Dict[str, List[str]], online: bool = True,
+                 start: Optional[str] = None, end: Optional[str] = None) -> Optional[dict]:
+    """데이터랩 검색어 트렌드: 그룹(이름 → 낱말 목록)마다 낱말 앞 5개씩, 달 단위. 키가 없거나 못 받으면 None.
+    저장본 키는 (그룹·낱말 묶음)만 쓰고 기간은 넣지 않음 (shopping_insight와 같은 규칙)."""
+    group_list = [{"groupName": g, "keywords": kws[:5]} for g, kws in list(groups.items())[:5]]
+    key = "|".join(f"{g}:{','.join(sorted(k[:5]))}" for g, k in groups.items())
+    body = {"startDate": start or _default_start(), "endDate": end or _default_end(), "timeUnit": "month",
+            "keywordGroups": group_list}
+    _set_error(None)
+    return _guarded("trend", key, online and hub_available(), lambda: hub_raw(SEARCH_TREND, body))
+
+
 def _default_end() -> str:
     t = time.localtime(_now())
     y, m = (t.tm_year, t.tm_mon - 1) if t.tm_mon > 1 else (t.tm_year - 1, 12)
