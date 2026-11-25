@@ -10,6 +10,22 @@ interface Props {
   dispatch: (ev: FlowEvent) => void;
 }
 
+/** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */
+export const META_DAILY_MIN = 1336;
+/** 게시 직전에 비어 있으면 안 되는 칸 */
+const REQUIRED = ["meta.creative.copy.text", "meta.creative.copy.headline", "meta.ad.website_url"];
+const won = (n: number) => `${Math.round(n).toLocaleString()}원`;
+
+/** 종료 날짜까지 며칠 (오늘 포함). 날짜가 아니면 null. */
+export function daysUntil(end: string | undefined, today: Date = new Date()): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(end ?? "");
+  if (!m) return null;
+  const a = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
+  const b = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  const d = Math.round((b - a) / 86400000) + 1;
+  return d > 0 ? d : null;
+}
+
 const isAds = (url?: string) => /^https:\/\/(adsmanager|business)\.facebook\.com\//.test(url ?? "");
 
 /** 뭉치를 보낼 광고 관리자 탭: 지금 창에서 보고 있는 탭 → 다른 광고 관리자 탭 (반쯤 채운 초안을 떠나지 않게). */
@@ -118,10 +134,13 @@ export default function GuideStep({ state, dispatch }: Props) {
               className={`text-caption flex gap-2 rounded-button px-2 py-1 ${now ? "bg-accent-soft font-semibold text-ink" : done ? "text-soft line-through" : "text-soft"}`}
             >
               <span className="w-5 text-right">{done ? "✓" : n + 1}</span>
-              <span>
-                {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
-                {s.value ? ` · ${s.value}` : ""}
-                {next && now && !s.entry.publish && <span className="ml-1 rounded-badge bg-accent px-1.5 text-small text-on-accent no-underline">지금</span>}
+              <span className="flex flex-col gap-1">
+                <span>
+                  {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
+                  {s.value ? ` · ${s.value}` : ""}
+                  {next && now && !s.entry.publish && <span className="ml-1 rounded-badge bg-accent px-1.5 text-small text-on-accent">지금</span>}
+                </span>
+                {mode === "create" && !done && <InlineNotice id={s.entry.id} publish={Boolean(s.entry.publish)} state={state} />}
               </span>
             </li>
           );
@@ -137,4 +156,31 @@ export default function GuideStep({ state, dispatch }: Props) {
       </div>
     </section>
   );
+}
+
+/** EX-01 ④ 세팅 중 알림 (인라인, v4.2): 이유 → 할 일, 금액은 '원'.
+ *  - 종료 날짜: 총예산이 '하루 최소 × 기간'보다 적으면 광고가 안 나갈 수 있어요 (오븐로그 11/17)
+ *  - 게시 직전 확인: 꼭 채워야 할 칸이 비어 있으면 ▲ */
+function InlineNotice({ id, publish, state }: { id: string; publish: boolean; state: FlowState }) {
+  if (id === "meta.adset.end_date") {
+    const days = daysUntil(state.settings.find((x) => x.fieldId === id)?.value);
+    if (!days) return null;
+    return (
+      <span className="flex gap-1.5 rounded-button bg-info-bg px-2 py-1 text-ink">
+        <span aria-hidden="true" className="font-bold text-info">●</span><span className="sr-only">참고</span>
+        <span>총예산이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(Math.ceil((META_DAILY_MIN * days) / 100) * 100)}'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로 넣어 주세요.</span>
+      </span>
+    );
+  }
+  if (publish) {
+    const empty = REQUIRED.map((f) => state.settings.find((x) => x.fieldId === f)).filter((x) => x && !x.value.trim());
+    if (!empty.length) return null;
+    return (
+      <span role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-warn">
+        <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
+        <span>{empty.map((x) => x!.label).join(" · ")} 칸이 비어 있어요 → 채운 뒤 게시해 주세요.</span>
+      </span>
+    );
+  }
+  return null;
 }

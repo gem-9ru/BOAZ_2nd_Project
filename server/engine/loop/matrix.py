@@ -38,6 +38,10 @@ _NAME_HINTS = [
 ]
 
 
+NAME_LABELS = {"meta.adset.placements": "노출 위치", "meta.adset.age_gender": "연령·성별", "meta.creative.copy": "문구",
+               "meta.ad.media": "소재", "meta.adset.daily_budget": "예산"}
+
+
 def tested_field(names: List[str]) -> Optional[str]:
     """세트 이름으로 무엇을 비교했는지 추정 (세팅값이 오면 그쪽이 우선)."""
     joined = " ".join(names)
@@ -166,8 +170,18 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
         rows.append(_row("3", "페이지 도착", f"누른 100명 중 {vr * 100:.0f}명이 들어왔어요 → 괜찮아요" if vr is not None else "도착 자료가 없어요",
                          "ok" if vr is not None else "skip"))
 
-    # 4 들어온 뒤 행동 (구매·알림 신청 열이 있을 때만)
-    rows.append(_row("4", "행동", "구매·알림 신청 같은 행동 숫자가 파일에 없거나 적어요 → 아직 몰라요", "skip"))
+    # 4 들어온 뒤 행동 (알림 신청 등, 파일에 있을 때만)
+    acts = [a.get("actions") for a in arms]
+    act_label = summary.get("action_label") or "행동"
+    if acts and all(x is not None for x in acts):
+        n = sum(acts)
+        counts = " · ".join(f"{'AB'[i] if len(arms) > 1 else ''} {int(x)}건".strip() for i, x in enumerate(acts))
+        if n < _loop()["alerts"]["min_actions"]:
+            rows.append(_row("4", "행동", f"{act_label} {counts} → 아직 몰라요", "skip"))
+        else:
+            rows.append(_row("4", "행동", f"{act_label} {counts}", "ok"))
+    else:
+        rows.append(_row("4", "행동", "구매·알림 신청 같은 행동 숫자가 파일에 없어요 → 아직 몰라요", "skip"))
 
     # 5 노출 위치 집중 → 그 자리에 맞는 소재 (돌려 본 적 없는 선택지라 '테스트 제안')
     places = summary.get("placements") or []
@@ -218,7 +232,9 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
 
     if verdict and verdict["badge"]["level"] != "채택":
         mb = (verdict.get("min_budget") or {}).get("per_group")
-        why = (f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요" if "small_sample" in kinds
+        ss = next((a for a in alerts if a["kind"] == "small_sample"), None)
+        why = (f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요" if ss and ss.get("actions") is not None
+               else f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요" if ss
                else f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요")
         watch.insert(0, {"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"], "title": "기간 · 예산",
                          "text": why, "need_per_set": mb})

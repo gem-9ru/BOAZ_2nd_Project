@@ -1,7 +1,7 @@
 // 서버(server/app.py)의 /analysis·/simulate 응답 모양. 같은 서버가 이 페이지를 띄우므로 주소는 같은 출처.
 export interface Arm {
   name: string; spend: number; impressions: number; link_clicks: number; landing_page_views: number;
-  cpm: number | null; ctr: number | null; cpc: number | null; click_to_visit: number | null; visits_per_1000won: number | null; cost_per_visit?: number | null;
+  cpm: number | null; ctr: number | null; cpc: number | null; click_to_visit: number | null; visits_per_1000won: number | null; cost_per_visit?: number | null; actions?: number | null;
 }
 export type Word = "확실해요" | "A 쪽이에요" | "B 쪽이에요" | "아직 몰라요";
 export interface Metric { key: string; label: string; higher_is_better: boolean; prob_b_better: number; a_interval: [number, number]; b_interval: [number, number]; overlap: boolean; better: "A" | "B"; word: Word }
@@ -43,7 +43,7 @@ export interface Result {
   funnel: { arms: { name: string; stages: Stage[] }[]; hint: string | null };
   summary: { arms: Arm[]; placements: { placement: string; label: string; spend: number; share: number }[] };
   verdict: Verdict | null;
-  replay: { date: string; prob: number }[];
+  replay: { date: string; prob: number; min_visits?: number; word?: string }[];
   diagnosis: { status: string; finding: { title: string; message: string } };
   next: { action: string; change: Change; summary: string[] };
 }

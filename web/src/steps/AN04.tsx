@@ -113,7 +113,7 @@ function Days({ r }: { r: Result }) {
   const days = r.replay;
   if (!days.length) return null;
   const last = days[days.length - 1]!;
-  const lastWord = wordOf(last.prob);
+  const lastWord = last.word ?? wordOf(last.prob);
   const steady = days.length >= 2 && days.every((d, i) => i === 0 || d.prob >= days[i - 1]!.prob);
   const side = last.prob >= 0.5 ? "B" : "A";
   return (
@@ -126,7 +126,7 @@ function Days({ r }: { r: Result }) {
             <span className="flex flex-col items-center gap-1 rounded-button bg-bg px-3 py-2">
               <span className="text-caption text-soft">{md(d.date)}</span>
               <b className="text-lead tabular-nums">{pct(d.prob)}</b>
-              <VerdictBadge word={wordOf(d.prob)} small />
+              <VerdictBadge word={d.word ?? wordOf(d.prob)} small />
             </span>
           </li>
         ))}

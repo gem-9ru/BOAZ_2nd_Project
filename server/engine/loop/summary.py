@@ -26,6 +26,11 @@ def run(bundle) -> Dict:
     cols = [c for c in COUNTS if c in daily.columns]
     sums = daily.groupby("adset")[cols].sum()
     arms = [arm(str(n), *(float(sums.loc[n].get(c, 0.0)) for c in COUNTS)) for n in sorted(sums.index)]
+    # 들어온 뒤 행동 (알림 신청 등): 파일에 있을 때만 숫자, 없으면 None
+    has_actions = "actions" in daily.columns
+    acts = daily.groupby("adset")["actions"].sum() if has_actions else None
+    for a in arms:
+        a["actions"] = float(acts.get(a["name"], 0.0)) if acts is not None else None
     # AN-05 기간 토글: 하루에 가장 많이 써 본 돈 (그보다 많이 하루에 쓰면 '가설')
     if "spend" in daily.columns and "date" in daily.columns:
         per_day = daily.groupby(["adset", "date"])["spend"].sum().groupby(level=0).max()
@@ -50,4 +55,5 @@ def run(bundle) -> Dict:
                                "spend": float(r["spend"]), "share": float(r["spend"]) / (float(set_total[aset]) or 1.0),
                                "impressions": float(r["impressions"]), "link_clicks": float(r["link_clicks"]),
                                "ctr": _div(r["link_clicks"], r["impressions"])})
-    return {"arms": arms, "placements": placements, "placements_by_set": by_set}
+    return {"arms": arms, "placements": placements, "placements_by_set": by_set,
+            "action_label": "알림 신청" if has_actions else None}

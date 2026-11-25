@@ -104,7 +104,13 @@ describe("7단계 결과 (v4.2)", () => {
     expect(screen.getByText(/같은 돈으로 손님 A 10명 · B 14명/)).toBeTruthy();
     expect(screen.getByText("B 쪽이에요")).toBeTruthy();
     expect(screen.getByText(/광고비 10,616원 · 보여진 횟수 1,822번 · 클릭 30번/)).toBeTruthy();
+    expect(screen.getByText(/알림 신청이 1건뿐이라 아직 몰라요/)).toBeTruthy();   // 지켜보기 이유 (설계서 그대로)
+    expect(screen.getByText(/분석 · 오븐로그_메타AB_20261117-20261120\.csv/)).toBeTruthy();   // 머리에 파일 이름
     ownerTextOk();
+    // 작은 카드를 누르면 AN-03 내 세팅 카드의 그 행으로
+    fireEvent.click(screen.getByRole("button", { name: /지켜보기/ }));
+    expect(screen.getByRole("heading", { level: 1, name: "내 다른 설정은 괜찮나요?" })).toBeTruthy();
+    expect(screen.getByText(/선택한 칸: 예산/)).toBeTruthy();
   });
 
   it("alert bar puts this step's warning first, counts by name, and opens all", async () => {
@@ -125,7 +131,8 @@ describe("7단계 결과 (v4.2)", () => {
     expect(screen.getByText(/B\(수동\)가 15% 싸요/)).toBeTruthy();
     expect(screen.getByText(/1,000명이 보면 A 약 16명 · B 약 17명 → 괜찮아요/)).toBeTruthy();
     expect(screen.getByText(/누른 100명 중 A 77명 · B 82명 → 괜찮아요/)).toBeTruthy();
-    expect(within(screen.getByRole("region", { name: "알림" })).getByText(/클릭이 적어서 아직 몰라요/)).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "알림" })).getByText(/알림 신청이 1건뿐이라 ④단계는 아직 몰라요/)).toBeTruthy();
+    expect(screen.getByText(/알림 신청 A 0건 · B 1건/)).toBeTruthy();
     ownerTextOk();
     await next("내 세팅 보기 ▶");
     expect(screen.getByRole("heading", { level: 1, name: "내 다른 설정은 괜찮나요?" })).toBeTruthy();
@@ -164,6 +171,8 @@ describe("7단계 결과 (v4.2)", () => {
     ownerTextOk();
     fireEvent.click(screen.getByRole("tab", { name: "날짜별" }));
     expect(screen.getByText("79%")).toBeTruthy();
+    const days = screen.getByText("26%").closest("ol")!;   // 설계서: 11/18 26% 아직 몰라요 → 11/19 65% 아직 몰라요 → 11/20 79% B 쪽이에요
+    expect([...days.querySelectorAll("li")].map((li) => li.textContent!.replace(/^→/, "").replace(/[○◐●]/, ""))).toEqual(["11/1826%아직 몰라요", "11/1965%아직 몰라요", "11/2079%B 쪽이에요"]);
     fireEvent.click(screen.getByRole("tab", { name: "노출 위치별" }));
     expect(screen.getAllByText("참고만").length).toBeGreaterThan(0);
     expect(screen.getAllByText("참고만")[0]!.closest("span")!.className).toContain("bg-reference");
@@ -213,6 +222,9 @@ describe("7단계 결과 (v4.2)", () => {
     expect(screen.getByText("두 세트는 같은 날 같이 시작")).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/ALT-\d/);
     expect(within(screen.getByRole("region", { name: "알림" })).getByText(/주의 2건은 다음 테스트 체크리스트에 넣었어요/)).toBeTruthy();
+    const print = vi.fn(); vi.stubGlobal("print", print);
+    fireEvent.click(screen.getByRole("button", { name: "결과 PDF" }));
+    expect(print).toHaveBeenCalled();   // 브라우저 인쇄 → 'PDF로 저장'
     fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기" }));
     await waitFor(() => expect(screen.getByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy());
     expect(writeText).toHaveBeenCalledWith(oven.code);

@@ -15,9 +15,10 @@
    "level": "warn",
    "mark": "▲",
    "kind": "small_sample",
-   "text": "클릭이 적어서 아직 몰라요 (A 13번 · B 17번) · 클릭이 30번 넘게 모이면 알 수 있어요.",
-   "todo": "그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요. 세트마다 클릭이 30번 넘게 모일 때까지 그대로 두세요.",
-   "screen": "AN-02"
+   "text": "알림 신청이 1건뿐이라 ④단계는 아직 몰라요.",
+   "todo": "알림 신청이 5건 넘게 모이면 알 수 있어요. 그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요.",
+   "screen": "AN-02",
+   "actions": 1.0
   },
   {
    "level": "info",
@@ -90,7 +91,7 @@
    {
     "row": "4",
     "stage": "행동",
-    "signal": "구매·알림 신청 같은 행동 숫자가 파일에 없거나 적어요 → 아직 몰라요",
+    "signal": "알림 신청 A 0건 · B 1건 → 아직 몰라요",
     "status": "skip",
     "field_id": null,
     "path": "",
@@ -163,7 +164,7 @@
     "field_id": "meta.adset.daily_budget",
     "path": "광고 세트 › 예산",
     "title": "기간 · 예산",
-    "text": "클릭이 30번이 안 모여서 아직 몰라요",
+    "text": "알림 신청이 1건뿐이라 아직 몰라요",
     "need_per_set": 151000
    },
    {
@@ -297,7 +298,9 @@
     "cpc": 408.3076923076923,
     "click_to_visit": 0.7692307692307693,
     "visits_per_1000won": 1.8839487565938207,
-    "cost_per_visit": 530.8
+    "cost_per_visit": 530.8,
+    "actions": 0.0,
+    "daily_max": 2511.0
    },
    {
     "name": "B_피드만노출(AN제외)",
@@ -310,7 +313,9 @@
     "cpc": 312.2352941176471,
     "click_to_visit": 0.8235294117647058,
     "visits_per_1000won": 2.637528259231349,
-    "cost_per_visit": 379.14285714285717
+    "cost_per_visit": 379.14285714285717,
+    "actions": 1.0,
+    "daily_max": 2643.0
    }
   ],
   "placements": [
@@ -489,7 +494,8 @@
     "link_clicks": 0.0,
     "ctr": 0.0
    }
-  ]
+  ],
+  "action_label": "알림 신청"
  },
  "intervals": {
   "A_자동노출위치": {
@@ -916,15 +922,21 @@
  "replay": [
   {
    "date": "2026-11-18",
-   "prob": 0.26128
+   "prob": 0.26128,
+   "min_visits": 3.0,
+   "word": "아직 몰라요"
   },
   {
    "date": "2026-11-19",
-   "prob": 0.6487
+   "prob": 0.6487,
+   "min_visits": 9.0,
+   "word": "아직 몰라요"
   },
   {
    "date": "2026-11-20",
-   "prob": 0.78972
+   "prob": 0.78972,
+   "min_visits": 10.0,
+   "word": "B 쪽이에요"
   }
  ],
  "diagnosis": {

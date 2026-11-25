@@ -22,6 +22,8 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [fileName, setFileName] = useState<string | null>(null);
+  const [focusField, setFocusField] = useState<string | null>(null);   // AN-01 작은 카드 → AN-03 그 행
   // 확장 프로그램이 넘긴 세팅값 키: 주소 뒤 #s=… (# 뒤는 서버로 가지 않음, 값 자체는 서버에만 있음)
   const [settingsKey] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("s"));
   const [received, setReceived] = useState<number | null>(null);
@@ -56,7 +58,8 @@ export default function App() {
   if (!result) {
     return (
       <main className="mx-auto max-w-page px-4 py-section flex flex-col gap-group">
-        <Start onFile={(f) => load(() => analyzeFile(f, received !== null ? { settingsKey } : { settings }))} onExample={() => load(() => example(received !== null ? settingsKey : null))}
+        <Start onFile={(f) => { setFileName(f.name); void load(() => analyzeFile(f, received !== null ? { settingsKey } : { settings })); }}
+          onExample={() => { setFileName(EXAMPLE_FILE); void load(() => example(received !== null ? settingsKey : null)); }}
           busy={busy} error={error} received={received} settings={settings} onSettings={setSettings} />
         <Toast text={toast} />
       </main>
@@ -69,10 +72,10 @@ export default function App() {
     <div className="mx-auto max-w-page-wide px-4 py-6 flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft">분석</span></p>
+          <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft">분석{fileName ? ` · ${fileName}` : ""}</span></p>
           <p className="text-caption text-soft">궁금한 건 크롬 오른쪽 광고 어시스턴트(확장 프로그램 패널)에 물어보세요. 이 단계에 맞춰 설명해 드려요.</p>
         </div>
-        <nav aria-label="단계">
+        <nav aria-label="단계" className="print:hidden">
           <ol className="flex flex-wrap gap-1.5">
             {STEPS.map((x, i) => {
               const can = i <= reached || i === STEPS.length - 1;
@@ -87,7 +90,7 @@ export default function App() {
             })}
           </ol>
         </nav>
-        <Button kind="secondary" onClick={() => setResult(null)}>다른 파일 올리기</Button>
+        <span className="print:hidden"><Button kind="secondary" onClick={() => setResult(null)}>다른 파일 올리기</Button></span>
       </header>
 
       <AlertBar r={result} step={s.id} />
@@ -96,13 +99,13 @@ export default function App() {
         <main className="flex min-w-0 flex-col gap-4">
           <p role="status" className="sr-only">결과를 다 계산했어요</p>
           <h1 ref={title} tabIndex={-1} className="text-hero-sm font-bold leading-tight focus:outline-none">{s.title}</h1>
-          {step === 0 && <AN01 r={result} onApply={() => go(5)} />}
+          {step === 0 && <AN01 r={result} onApply={() => go(5)} onOpenSetting={(id) => { setFocusField(id); go(2); }} />}
           {step === 1 && <AN02 r={result} />}
-          {step === 2 && <AN03 r={result} />}
+          {step === 2 && <AN03 r={result} focus={focusField} />}
           {step === 3 && <AN04 r={result} />}
           {step === 4 && <AN05 r={result} />}
           {step === 5 && <AN06 r={result} onCopied={showToast} onSend={sendToExtension} />}
-          <nav aria-label="이전 다음" className="flex items-center justify-between gap-3 pt-2">
+          <nav aria-label="이전 다음" className="flex items-center justify-between gap-3 pt-2 print:hidden">
             {step > 0 ? <Button kind="secondary" onClick={() => go(step - 1)}>◀ {STEPS[step - 1]!.short}</Button> : <span />}
             {!last && <Button onClick={() => go(step + 1)} disabled={result.blocked}>{s.next} ▶</Button>}
             {last && <Button kind="secondary" onClick={() => go(0)}>처음으로 ▶</Button>}
@@ -115,6 +118,7 @@ export default function App() {
   );
 }
 
+const EXAMPLE_FILE = "오븐로그_메타AB_20261117-20261120.csv";
 const ORDER = STEPS.map((x) => x.id as string);
 const NAME = { block: "차단", warn: "주의", info: "참고" } as const;
 

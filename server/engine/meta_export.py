@@ -18,7 +18,8 @@ from .ingest import Bundle, clean
 OBJECTIVE = "트래픽"
 LONG_COLUMNS = {"section", "ad_set", "metric", "value"}
 NEED_CLICKS = "링크 클릭 열이 없어요. 광고 관리자에서 열에 '링크 클릭'을 넣어 다시 내보내 주세요."
-METRIC_NAMES = {"지출(원)": "spend", "노출": "impressions", "링크 클릭": "link_clicks", "랜딩 페이지 조회": "landing_page_views"}
+METRIC_NAMES = {"지출(원)": "spend", "노출": "impressions", "링크 클릭": "link_clicks", "랜딩 페이지 조회": "landing_page_views",
+                "오픈 알림(Lead)": "actions"}   # 들어온 뒤 행동 (알림 신청)
 PLATFORM_NAMES = {"facebook": "Facebook", "instagram": "Instagram", "audience_network": "Audience Network", "messenger": "Messenger"}
 SUMMABLE = ["spend", "impressions", "link_clicks", "landing_page_views"]
 
@@ -102,7 +103,7 @@ def _from_export(df: pd.DataFrame) -> Bundle:
         daily.df = daily.df[daily.df["adset"].notna()].reset_index(drop=True)
     if daily is not None and len(daily.df):
         if has_placement:   # 일×노출 위치 → 날짜·광고 세트로 더함 (비율·도달은 다시 계산하거나 뺀다)
-            keep = ["date", "adset", "campaign_objective"] + [c for c in SUMMABLE if c in daily.df.columns]
+            keep = ["date", "adset", "campaign_objective"] + [c for c in SUMMABLE + ["actions"] if c in daily.df.columns]
             daily.df = daily.df[keep].groupby(["date", "adset", "campaign_objective"], as_index=False).sum()
         b.tables["meta_daily"] = daily
     return b

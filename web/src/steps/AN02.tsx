@@ -37,8 +37,9 @@ export function AN02({ r }: { r: Result }) {
       meaning: `1,000명이 보면 ${both((a) => people(a.ctr))} → ${ok("2") ? "괜찮아요" : "기준보다 적어요"}` },
     { n: "③", stage: "누른 뒤 페이지에 들어오는 정도", suspect: ok("3") ? "—" : "웹사이트 URL · 페이지 속도", kind: ok("3") ? "ok" : "low",
       meaning: `누른 100명 중 ${both((a) => `${Math.round((a.click_to_visit ?? 0) * 100)}명`)} → ${ok("3") ? "괜찮아요" : "적어요"}` },
-    { n: "④", stage: "들어온 뒤 행동", suspect: "—", kind: "unknown",
-      meaning: <>구매·알림 신청 같은 행동 숫자가 파일에 없어요 <VerdictBadge word="아직 몰라요" small /></> },
+    { n: "④", stage: "들어온 뒤 행동", suspect: "—", kind: row("4")?.status === "ok" ? "ok" : "unknown",
+      meaning: row("4")?.status === "ok" ? (row("4")?.signal ?? "")
+        : <>{(row("4")?.signal ?? "행동 숫자가 파일에 없어요").replace(/ → 아직 몰라요$/, "")} → <VerdictBadge word="아직 몰라요" small /></> },
   ];
   const blocked = lines.find((l) => l.kind === "low");
   const lead = blocked ? `'${blocked.stage}'에서 처음 막혔어요`

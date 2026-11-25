@@ -64,11 +64,18 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
         if shares[-1] - shares[0] > cfg["spend_gap_pp"]:
             out.append(_a("warn", "spend_gap", f"한쪽에 돈이 몰렸어요 ({shares[0]:.0%} : {shares[-1]:.0%}) → 비교 결과를 조심해서 보세요.",
                           "그래서 판정을 한 단계 낮춰 보여 드려요. 다음엔 두 세트 예산을 똑같이 나눠 주세요.", "AN-04"))
-    low = [a for a in arms if a["link_clicks"] < cfg["min_clicks"]]
-    if low:
-        names = " · ".join(f"{'AB'[i] if i < 2 else a['name']} {int(a['link_clicks'])}번" for i, a in enumerate(arms) if a in low)
+    # ALT-14 표본 부족: 링크 클릭 < 30 (세트 합) 또는 행동(알림 신청 등) < 5 (세트 합, 파일에 있을 때)
+    clicks = sum(a["link_clicks"] for a in arms)
+    acts = [a.get("actions") for a in arms]
+    actions = sum(acts) if acts and all(x is not None for x in acts) else None
+    if clicks < cfg["min_clicks"]:
+        names = " · ".join(f"{'AB'[i] if i < 2 else a['name']} {int(a['link_clicks'])}번" for i, a in enumerate(arms))
         out.append(_a("warn", "small_sample", f"클릭이 적어서 아직 몰라요 ({names}) · 클릭이 {cfg['min_clicks']}번 넘게 모이면 알 수 있어요.",
-                      f"그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요. 세트마다 클릭이 {cfg['min_clicks']}번 넘게 모일 때까지 그대로 두세요.", "AN-02"))
+                      f"그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요. 클릭이 {cfg['min_clicks']}번 넘게 모일 때까지 그대로 두세요.", "AN-02"))
+    elif actions is not None and actions < cfg["min_actions"]:
+        label = summary.get("action_label") or "행동"
+        out.append(_a("warn", "small_sample", f"{label}이 {int(actions)}건뿐이라 ④단계는 아직 몰라요.",
+                      f"{label}이 {cfg['min_actions']}건 넘게 모이면 알 수 있어요. 그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요.", "AN-02", actions=actions))
     for a in arms:
         r = a.get("click_to_visit")
         if r is not None and a["link_clicks"] > 0 and r < cfg["visit_rate_min"]:
@@ -86,6 +93,19 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
         pct = 1 - manual[0]["cpm"] / auto[0]["cpm"]
         out.append(_a("info", "meta_vs_measured", f"메타는 '노출 위치 자동'을 권하지만, 우리가 돌려 본 결과에선 '직접 고르기(수동)'가 광고비가 {pct:.0%} 쌌어요.",
                       "지금은 수동을 유지하세요. 메타 추천은 참고로만 봐요.", "AN-03", saving=pct))
+
+    # ● 참고: 여러 칸이 함께 다름 (ALT-23) — 세트 이름으로 보면 두 칸 이상이 다르게 설정됨
+    if len(arms) >= 2:
+        from .matrix import NAME_LABELS, _NAME_HINTS, _suffix
+        names = [_suffix(a["name"]) for a in arms[:2]]
+        differ = []
+        for words, field in _NAME_HINTS:
+            hit = [frozenset(w for w in words if w in n) for n in names]
+            if any(hit) and hit[0] != hit[1]:
+                differ.append(NAME_LABELS.get(field, field))
+        if len(differ) >= 2:
+            out.append(_a("info", "many_fields", f"{' · '.join(differ[:3])}이 같이 달라서 어느 칸 덕인지는 몰라요.",
+                          "다음엔 칸 1개만 다르게 두 세트를 만들어 주세요.", "AN-04", fields=differ))
 
     # ● 참고: 써 본 적 없는 금액 (AN-05 예산 슬라이더) — 그보다 큰 금액은 가설
     if arms and spend > 0:

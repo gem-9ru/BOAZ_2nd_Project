@@ -6,7 +6,7 @@ import { armName, Lead, sameMoney } from "./shared";
 
 /** AN-01 확인 + 결론 (v4.2): 첫 화면에 '테스트할 칸 1개'. 돌려 본 적 없는 선택지는 예상하지 않고
  *  '두 세트로 직접 비교'를 제안(테스트 제안 태그, 판정 배지 없음). 판정 배지는 실측이 있는 카드(유지)에만. */
-export function AN01({ r, onApply }: { r: Result; onApply: () => void }) {
+export function AN01({ r, onApply, onOpenSetting }: { r: Result; onApply: () => void; onOpenSetting?: (fieldId: string) => void }) {
   const m = r.matrix;
   const c = m.change ?? r.next.change;
   const read = r.check.read;
@@ -38,12 +38,12 @@ export function AN01({ r, onApply }: { r: Result; onApply: () => void }) {
         <div><button type="button" onClick={onApply} className="h-button rounded-button bg-button px-5 text-body font-semibold text-button-fg hover:bg-button-hover">이 테스트 바로 준비 →</button></div>
       </section>
       <ul className="grid gap-3 sm:grid-cols-3" aria-label="나머지 칸">
-        <Mini tag="유지" title={keep ? `${keep.path.split(" › ").pop()} = ${keep.value}` : "바꿀 이유가 없는 칸"}>
+        <Mini tag="유지" field={keep?.field_id} onOpen={onOpenSetting} title={keep ? `${keep.path.split(" › ").pop()} = ${keep.value}` : "바꿀 이유가 없는 칸"}>
           {keep && same && badge
             ? <><span>같은 돈으로 손님 A {same.counts[0]}명 · B {same.counts[1]}명</span> <VerdictBadge word={badge.word} small /></>
             : keep ? keep.reason : "이번 결과로는 없어요"}
         </Mini>
-        <Mini tag="지켜보기" title={watch ? watch.title ?? watch.path.split(" › ").pop()! : "없어요"}>{watch?.text ?? "이번엔 없어요"}</Mini>
+        <Mini tag="지켜보기" field={watch?.field_id} onOpen={onOpenSetting} title={watch ? watch.title ?? watch.path.split(" › ").pop()! : "없어요"}>{watch?.text ?? "이번엔 없어요"}</Mini>
         <Mini tag="하지 말기" title={dont ? dont.split(" — ")[0]! : "없어요"}>{dont?.split(" — ")[1] ?? ""}</Mini>
       </ul>
       <p className="flex flex-wrap items-center gap-2 text-caption text-soft">
@@ -63,12 +63,21 @@ export function AN01({ r, onApply }: { r: Result; onApply: () => void }) {
   );
 }
 
-function Mini({ tag, title, children }: { tag: string; title: string; children: ReactNode }) {
-  return (
-    <li className="flex flex-col gap-1 rounded-button border border-line bg-surface px-4 py-3">
+/** 유지 · 지켜보기 · 하지 말기 작은 카드. 칸이 있는 카드는 누르면 AN-03 내 세팅 카드의 그 행으로 간다. */
+function Mini({ tag, title, children, field, onOpen }: { tag: string; title: string; children: ReactNode; field?: string; onOpen?: (fieldId: string) => void }) {
+  const body = (
+    <>
       <span className="text-caption font-semibold text-soft">{tag}</span>
       <h3 className="text-body font-bold">{title}</h3>
-      <p className="flex flex-wrap items-center gap-1.5 text-caption">{children}</p>
+      <span className="flex flex-wrap items-center gap-1.5 text-caption">{children}</span>
+      {field && onOpen && <span className="text-caption text-accent-ink">내 세팅 카드에서 보기 →</span>}
+    </>
+  );
+  return (
+    <li className="flex">
+      {field && onOpen ? (
+        <button type="button" onClick={() => onOpen(field)} className="flex w-full flex-col items-start gap-1 rounded-button border border-line bg-surface px-4 py-3 text-left hover:border-accent">{body}</button>
+      ) : <div className="flex w-full flex-col gap-1 rounded-button border border-line bg-surface px-4 py-3">{body}</div>}
     </li>
   );
 }

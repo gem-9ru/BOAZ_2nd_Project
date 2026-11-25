@@ -52,9 +52,10 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
       </Card>
       <Card title="확장 프로그램으로 보내기" summary="누르면 오른쪽 광고 어시스턴트가 테스트안을 받아, 광고 관리자에서 이 칸만 짚어 드려요. 게시는 사장님이 직접 해요">
         <p className="text-body text-soft">패널이 안 열려 있으면 확장 프로그램 ③ 분석에 이 코드를 넣어도 돼요: <b className="text-title tracking-[0.3em] tabular-nums text-ink">{r.code}</b></p>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-3 print:hidden">
           <Button onClick={send}>확장 프로그램으로 보내기</Button>
           <Button kind="secondary" onClick={download}>계획 파일 내려받기</Button>
+          <Button kind="secondary" onClick={() => window.print()}>결과 PDF</Button>
         </div>
       </Card>
       <Card title="근거" summary="이 결론이 어디서 나왔는지예요. 근거 탭은 확실 / 유력 / 보류로 적어요">

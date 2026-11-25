@@ -34,6 +34,7 @@ tables:
       ctr_link: {type: ratio, aliases: [CTR(링크), CTR(링크 클릭률), CTR (link click-through rate)], required: false}
       cpc_link: {type: ratio, aliases: [CPC(원), CPC(링크 클릭당 비용), CPC (cost per link click)], required: false}
       landing_page_views: {type: float, aliases: [랜딩 페이지 조회, Landing page views], required: false}
+      actions: {type: float, aliases: [오픈 알림(Lead), 리드, 잠재 고객, Leads], required: false}   # 들어온 뒤 행동 (v4.2 AN-02 ④ · ALT-14)
 
   meta_placement:
     sheet: 메타_노출위치

@@ -9,7 +9,7 @@ type Item = { field_id: string; path: string; kind: Kind; text: string; value?: 
 
 /** AN-03 내 세팅 카드 (v4.2): 광고 관리자 순서(캠페인 → 광고 세트 → 광고) 표 + 상태 탭(전체/테스트/다시 보기/그대로).
  *  테스트 행 = 바이올렛 왼쪽 테두리, 선택 행 = 연보라. 근거는 사장님 말로, 증감은 ↑↓. 행을 누르면 아래에 상세. */
-export function AN03({ r }: { r: Result }) {
+export function AN03({ r, focus }: { r: Result; focus?: string | null }) {
   const m = r.matrix;
   const full = m.settings ?? [];
   const items: Item[] = full.map((x) => ({ field_id: x.field_id, path: x.path, kind: x.kind, text: x.note, value: x.value }));
@@ -20,7 +20,7 @@ export function AN03({ r }: { r: Result }) {
   }
   items.sort((a, b) => ORDER.indexOf(a.path.split(" › ")[0]!) - ORDER.indexOf(b.path.split(" › ")[0]!));
   const [tab, setTab] = useState<"전체" | Kind>("전체");
-  const [sel, setSel] = useState<string | null>(m.keep[0]?.field_id ?? null);
+  const [sel, setSel] = useState<string | null>(focus ?? m.keep[0]?.field_id ?? null);
   const n = (k: Kind) => items.filter((x) => x.kind === k).length;
   const shown = tab === "전체" ? items : items.filter((x) => x.kind === tab);
   const meta = r.alerts.find((a) => a.kind === "meta_vs_measured");
@@ -67,9 +67,9 @@ export function AN03({ r }: { r: Result }) {
       {picked && (
         <section aria-label="선택한 칸" className="flex flex-col gap-1 rounded-button bg-accent-soft px-4 py-3 text-body">
           <p><b>선택한 칸: {picked.path.split(" › ").pop()}</b> · 상태 {picked.kind}</p>
-          {picked.field_id === "meta.adset.placements" && meta ? (
-            <p>메타 추천: 자동 (Advantage+) · 우리가 돌려 본 결과: {meta.text.split("결과에선 ")[1] ?? meta.text} · 권장: 수동 그대로</p>
-          ) : <p>{picked.text}</p>}
+          {picked.field_id === "meta.adset.placements" && meta && <p>메타 추천: 자동 (Advantage+)</p>}
+          <p>우리가 돌려 본 결과: {picked.field_id === "meta.adset.placements" && meta ? (meta.text.split("결과에선 ")[1] ?? meta.text) : picked.text === "—" ? "이번 결과로는 바꿀 이유가 없었어요" : picked.text}</p>
+          <p>권장: {picked.kind === "테스트" ? `${m.change?.new_short ?? m.change?.new ?? "바꿔서"} 테스트` : picked.kind === "다시 보기" ? "다음 결과에서 다시 보기" : "그대로"}</p>
         </section>
       )}
     </>

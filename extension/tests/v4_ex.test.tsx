@@ -243,3 +243,31 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(steps.all.at(-2)!.entry.id).toBe("meta.adset.placements");
   });
 });
+
+describe("EX-01 ④ 세팅 중 알림 · EX-02 ④ 세팅 요약 (v4.2)", () => {
+  const base = SETTING_ORDER.map((id) => ({ fieldId: id, label: `칸 ${id}`, value: "v" }));
+
+  it("end date row says the total budget must beat 'daily minimum × days' (원, 이유 → 할 일)", async () => {
+    const { daysUntil } = await import("../entrypoints/sidepanel/steps/GuideStep");
+    expect(daysUntil("2026-11-30", new Date(2026, 10, 24))).toBe(7);
+    const end = new Date(); end.setDate(end.getDate() + 6);
+    const iso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
+    const settings = base.map((x) => (x.fieldId === "meta.adset.end_date" ? { ...x, value: iso } : x));
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
+    expect(screen.getByText(/하루 최소 약 1,336원 × 7일 = 약 9,400원'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로/)).toBeTruthy();
+  });
+
+  it("publish check warns when a required field is empty", () => {
+    const settings = base.map((x) => (x.fieldId === "meta.creative.copy.headline" ? { ...x, value: "" } : x));
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
+    expect(screen.getByText(/칸 meta.creative.copy.headline 칸이 비어 있어요 → 채운 뒤 게시해 주세요/)).toBeTruthy();
+  });
+
+  it("③ 분석 shows this ad's settings that go along to the analysis page", () => {
+    const settings = base.map((x) => ({ ...x, value: { "meta.campaign.objective": "트래픽", "meta.adset.age_gender": "30–39세 · 여성", "meta.ad.media": "정사각 이미지" }[x.fieldId] ?? "" }));
+    render(<CodeStep state={{ ...initialState(), step: "upload", settings }} dispatch={() => {}} />);
+    const card = screen.getByRole("region", { name: "이번 광고 세팅" });
+    expect(within(card).getByText("트래픽 · 30–39세 · 여성")).toBeTruthy();
+    expect(within(card).getByText("소재: 정사각 이미지")).toBeTruthy();
+  });
+});
