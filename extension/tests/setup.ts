@@ -9,3 +9,4 @@ globalThis.ResizeObserver ??= class {
   unobserve() {}
   disconnect() {}
 } as unknown as typeof ResizeObserver;
+(globalThis as { __AD_COACH_QUIET__?: boolean }).__AD_COACH_QUIET__ = true;   // 진단 줄([ad-coach])은 테스트 출력에 안 보이게

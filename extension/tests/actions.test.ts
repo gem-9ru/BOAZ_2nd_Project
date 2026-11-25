@@ -51,6 +51,21 @@ describe("연령·성별", () => {
   });
 });
 
+describe("연령·성별: 실제로 바뀌었는지 확인", () => {
+  it("returns false when the page ignores the option click (values stay 18 / 65+), so the guide does not move on", async () => {
+    document.body.innerHTML = `<span id="amin">최소 연령</span><div role="combobox" aria-labelledby="amin" id="min">18</div>
+      <span id="amax">최대 연령</span><div role="combobox" aria-labelledby="amax" id="max">65+</div>
+      <span id="g3">여성</span><input type="radio" name="g" aria-labelledby="g3">`;
+    for (const c of Array.from(document.querySelectorAll<HTMLElement>("[role=combobox]"))) {
+      c.addEventListener("click", () => {
+        document.querySelectorAll("[role=listbox]").forEach((x) => x.remove());
+        document.body.insertAdjacentHTML("beforeend", `<div role="listbox">${["18", "30", "39", "65+"].map((v) => `<div role="option">${v}</div>`).join("")}</div>`);
+      });
+    }
+    expect(await setAgeGender(document, "30–39세 · 여성", fast)).toBe(false);
+  });
+});
+
 describe("위치", () => {
   it("전국 + already 대한민국 → nothing to do; a neighborhood needs the owner", () => {
     document.body.innerHTML = `<div role="button" id="loc">위치포함된 위치:대한민국</div>`;

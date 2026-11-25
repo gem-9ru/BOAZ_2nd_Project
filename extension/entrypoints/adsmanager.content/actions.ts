@@ -4,6 +4,11 @@
 import { typeInto } from "./locate";
 
 export interface Pace { wait: (ms: number) => Promise<void> }
+
+/** 콘솔에 남기는 진단 줄 (광고 관리자 탭의 개발자 도구에서 '[ad-coach]'로 찾는다). 값·키는 넣지 않는다. */
+function note(...parts: unknown[]): void {
+  if (typeof console !== "undefined" && !(globalThis as { __AD_COACH_QUIET__?: boolean }).__AD_COACH_QUIET__) console.debug("[ad-coach]", ...parts);
+}
 const real: Pace = { wait: (ms) => new Promise((r) => setTimeout(r, ms)) };
 
 function text(e: Element | null): string {
@@ -65,9 +70,12 @@ async function pickOption(doc: Document, name: string, want: string, pace: Pace)
     await pace.wait(120);
     hit = find();
   }
-  if (!hit) { box.click(); return false; }   // 못 찾으면 목록을 닫고 사장님께
+  if (!hit) { box.click(); note("age option not found", name, want); return false; }   // 못 찾으면 목록을 닫고 사장님께
   hit.click();
   await pace.wait(500);
+  // 메타가 다시 그렸을 수 있으니 칸을 새로 찾아, 정말 그 값이 됐는지 본다
+  const now = text(byLabel(doc, "[role=combobox]", name));
+  if (now !== want) { note("age pick did not stick", name, want, now); return false; }
   return true;
 }
 
@@ -80,6 +88,7 @@ export async function setAgeGender(doc: Document, value: string, pace: Pace = re
     if (show) { show.click(); await pace.wait(1000); }
     const age = button(doc, (t) => /^연령\d/.test(t));
     if (age) { age.click(); await pace.wait(1000); }
+    note("age opened", { show: Boolean(show), age: Boolean(age), boxes: Boolean(byLabel(doc, "[role=combobox]", "최소 연령")) });
   }
   if (!(await pickOption(doc, "최소 연령", want.min, pace))) return false;
   if (!(await pickOption(doc, "최대 연령", want.max, pace))) return false;
@@ -89,10 +98,13 @@ export async function setAgeGender(doc: Document, value: string, pace: Pace = re
     if (g) { g.click(); await pace.wait(800); }
     radio = byLabel(doc, "input[type=radio], [role=radio]", want.gender);
   }
-  if (!radio) return false;
+  if (!radio) { note("gender radio not found", want.gender); return false; }
   const on = radio instanceof HTMLInputElement ? radio.checked : radio.getAttribute("aria-checked") === "true";
   if (!on) radio.click();
   await pace.wait(400);
+  const checked = radio instanceof HTMLInputElement ? radio.checked : radio.getAttribute("aria-checked") === "true";
+  if (!checked) { note("gender radio did not stick", want.gender); return false; }
+  note("age/gender set", want.min, want.max, want.gender);
   return true;
 }
 
