@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { analyzeFile, example, receivedSettings, type Result } from "./api";
 import type { Settings } from "./blocks/MySettings";
-import { Assistant } from "./assistant/Assistant";
 import { Start } from "./blocks/Start";
 import { AN01 } from "./steps/AN01";
 import { AN02 } from "./steps/AN02";
@@ -12,7 +11,9 @@ import { AN06 } from "./steps/AN06";
 import { AlertLine, STEPS } from "./steps/shared";
 import { AlertMark, Button, Toast } from "./ui";
 
-/** 분석 페이지 (v4.2): [다음]으로 넘기는 7단계. 왼쪽 = 단계별 분석, 오른쪽 = 광고 어시스턴트 고정.
+/** 분석 페이지 (v4.2): [다음]으로 넘기는 7단계. 이 페이지는 크롬 탭에 펼쳐 두고, 오른쪽 광고 어시스턴트는
+ *  크롬 확장 프로그램 사이드 패널이 맡는다 (페이지 안에 따로 띄우지 않음). 페이지는 주소 # 뒤에 코드·단계를 적어
+ *  패널이 이 단계에 맞춰 설명하게 한다 (#s=세팅값키&code=AB12&step=AN-02).
  *  경고 먼저(알림 바 맨 위) → 결론(AN-01) → 이유는 다음 화면에서 하나씩. 건너뛰기는 [이 테스트 바로 준비]와 단계 ⑥만. */
 export default function App() {
   const [result, setResult] = useState<Result | null>(null);
@@ -21,7 +22,6 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
-  const [panel, setPanel] = useState(false);
   // 확장 프로그램이 넘긴 세팅값 키: 주소 뒤 #s=… (# 뒤는 서버로 가지 않음, 값 자체는 서버에만 있음)
   const [settingsKey] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("s"));
   const [received, setReceived] = useState<number | null>(null);
@@ -38,7 +38,20 @@ export default function App() {
     try { setResult(await get()); setStep(0); setReached(0); window.scrollTo({ top: 0 }); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   function go(i: number) { setStep(i); setReached((r) => Math.max(r, i)); window.scrollTo({ top: 0 }); }
-  function showToast(t: string) { setToast(t); setTimeout(() => setToast(null), 2500); }
+  function showToast(t: string) { setToast(t); setTimeout(() => setToast(null), 3500); }
+  // 옆의 광고 어시스턴트(확장 프로그램)가 읽는 자리: 주소 # 뒤 (서버로 가지 않음)
+  useEffect(() => {
+    const q = new URLSearchParams(settingsKey ? { s: settingsKey } : {});
+    if (result) { q.set("code", result.code); q.set("step", (STEPS[step] ?? STEPS[0]).id); }
+    const next = `#${q.toString()}`;
+    if (window.location.hash !== next) window.history.replaceState(null, "", next === "#" ? window.location.pathname : next);
+  }, [result, step, settingsKey]);
+  /** AN-06 [확장 프로그램으로 보내기]: 옆 패널이 주소의 send를 보고 테스트안을 받는다. */
+  function sendToExtension() {
+    const q = new URLSearchParams(window.location.hash.slice(1));
+    q.set("send", String(Date.now()));
+    window.history.replaceState(null, "", `#${q.toString()}`);
+  }
 
   if (!result) {
     return (
@@ -53,9 +66,12 @@ export default function App() {
   const s = STEPS[step] ?? STEPS[0];
   const last = step === STEPS.length - 1;
   return (
-    <div className="mx-auto max-w-[1280px] px-4 py-6 flex flex-col gap-4">
+    <div className="mx-auto max-w-[1040px] px-4 py-6 flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft">분석</span></p>
+        <div>
+          <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft">분석</span></p>
+          <p className="text-caption text-soft">궁금한 건 크롬 오른쪽 광고 어시스턴트(확장 프로그램 패널)에 물어보세요. 이 단계에 맞춰 설명해 드려요.</p>
+        </div>
         <nav aria-label="단계">
           <ol className="flex flex-wrap gap-1.5">
             {STEPS.map((x, i) => {
@@ -76,7 +92,7 @@ export default function App() {
 
       <AlertBar r={result} step={s.id} />
 
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+      <div>
         <main className="flex min-w-0 flex-col gap-4">
           <p role="status" className="sr-only">결과를 다 계산했어요</p>
           <h1 ref={title} tabIndex={-1} className="text-hero-sm font-bold leading-tight focus:outline-none">{s.title}</h1>
@@ -85,7 +101,7 @@ export default function App() {
           {step === 2 && <AN03 r={result} />}
           {step === 3 && <AN04 r={result} />}
           {step === 4 && <AN05 r={result} />}
-          {step === 5 && <AN06 r={result} onCopied={showToast} />}
+          {step === 5 && <AN06 r={result} onCopied={showToast} onSend={sendToExtension} />}
           <nav aria-label="이전 다음" className="flex items-center justify-between gap-3 pt-2">
             {step > 0 ? <Button kind="secondary" onClick={() => go(step - 1)}>◀ {STEPS[step - 1]!.short}</Button> : <span />}
             {!last && <Button onClick={() => go(step + 1)} disabled={result.blocked}>{s.next} ▶</Button>}
@@ -93,13 +109,7 @@ export default function App() {
           </nav>
           {result.blocked && <p className="text-body text-block-ink">■ 차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요.</p>}
         </main>
-        <div className={panel ? "fixed inset-x-0 bottom-0 z-20 max-h-[85vh] overflow-y-auto p-2 shadow-2xl lg:static lg:z-auto lg:p-0 lg:shadow-none lg:sticky lg:top-4" : "lg:sticky lg:top-4"}>
-          <Assistant code={result.code} step={s.id} open={panel} onToggle={() => setPanel((p) => !p)} />
-        </div>
       </div>
-      {!panel && (
-        <button type="button" onClick={() => setPanel(true)} className="fixed bottom-4 right-4 rounded-badge bg-accent px-4 py-3 text-body font-bold text-on-action shadow-lg lg:hidden">✦ 광고 어시스턴트</button>
-      )}
       <Toast text={toast} />
     </div>
   );

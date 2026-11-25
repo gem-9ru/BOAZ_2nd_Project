@@ -51,7 +51,6 @@ export interface Band { median: number; lo: number; hi: number }
 export interface Simulation { budget: number; runs: number; arm: string; impressions: Band; link_clicks: Band; visits: Band; histogram: { lo: number; hi: number; count: number }[]; limits: string;
   tried?: boolean; days?: number | null; daily?: number | null; daily_max?: number | null; daily_tried?: boolean;
   daily_min?: number | null; below_daily_min?: boolean; next_test?: { total: number; per_set_lo: number; per_set_hi: number; share_lo: number; share_hi: number; source: string } }
-export interface AssistantReply { message: string; suggestions?: string[]; alerts?: Alert[]; source?: "llm" | "rules" }
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   let r: Response;
@@ -77,6 +76,4 @@ export const example = (settingsKey?: string | null) =>
   call<Result>(`/analysis/example${settingsKey ? `?settings_key=${encodeURIComponent(settingsKey)}` : ""}`);
 export const simulate = (code: string, arm: string, budget: number, total = 100000, days?: number) =>
   call<Simulation>("/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, budget, total, days }) });
-export const askAssistant = (code: string, step: string, question?: string) =>
-  call<AssistantReply>("/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, step, question }) });
 export const receivedSettings = (key: string) => call<{ count: number }>(`/settings/${encodeURIComponent(key)}`);

@@ -47,7 +47,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
             <button type="button" onClick={async () => { await browser.tabs.create({ url: await analysisPageUrl(settings) }); }}
               className="mt-2 block rounded-button border border-accent bg-paper px-4 py-2 font-semibold text-accent-ink">분석 페이지 열기 (새 창)</button>
           </span></li>
-        <li className="flex gap-2"><span className="font-bold text-accent-ink">3</span><span>다 계산하면 나오는 코드 4자리를 아래에 넣기</span></li>
+        <li className="flex gap-2"><span className="font-bold text-accent-ink">3</span><span>분석 페이지를 보는 동안 이 패널이 옆에서 단계마다 설명해 드려요. 마지막에 [확장 프로그램으로 보내기]를 누르면 테스트안이 바로 와요. (안 되면 코드 4자리를 아래에 넣기)</span></li>
       </ol>
       <form className="flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void load(); }}>
         <label htmlFor="plan-code" className="text-caption text-soft">분석 페이지의 코드 4자리</label>

@@ -1,7 +1,9 @@
 import { useEffect, useReducer, useRef, useState } from "react";
 import { fields as fetchFields, type Field, type PresetField } from "../../lib/api";
 import { initialState, reduce, type FlowEvent, type FlowState, type Step } from "../../lib/flow";
+import { useAnalysisTab } from "../../lib/analysisTab";
 import { loadState, saveState } from "../../lib/storage";
+import AnalysisAssistant from "./steps/AnalysisAssistant";
 import CopyStep from "./steps/CopyStep";
 import FindStep from "./steps/FindStep";
 import GuideStep from "./steps/GuideStep";
@@ -56,7 +58,9 @@ export default function App() {
     if (state.step === "questions" && !spec) void loadSpec();
   }, [state.step]);
 
-  const current = STAGES.findIndex((st) => st.steps.includes(state.step));
+  // 분석 페이지 탭을 보고 있으면 이 패널은 그 페이지 옆 광고 어시스턴트가 된다 (v4.2 AN-COM ④)
+  const analysis = useAnalysisTab();
+  const current = analysis ? 2 : STAGES.findIndex((st) => st.steps.includes(state.step));
 
   return (
     <main className="min-h-screen p-4 flex flex-col gap-6">
@@ -82,6 +86,8 @@ export default function App() {
           </button>
         )}
       </header>
+      {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} />}
+      {!analysis && <>
       {state.guide && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
@@ -95,6 +101,7 @@ export default function App() {
         <p role="status" className="text-caption text-soft">질문을 불러오는 중이에요…</p>
       )}
       {state.step === "questions" && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
+      </>}
     </main>
   );
 }

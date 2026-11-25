@@ -214,29 +214,33 @@ describe("7단계 결과 (v4.2)", () => {
     expect(document.body.textContent).not.toMatch(/ALT-\d/);
     expect(within(screen.getByRole("region", { name: "알림" })).getByText(/주의 2건은 다음 테스트 체크리스트에 넣었어요/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기" }));
-    await waitFor(() => expect(screen.getByText(/코드를 복사했어요/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy());
     expect(writeText).toHaveBeenCalledWith(oven.code);
+    expect(new URLSearchParams(window.location.hash.slice(1)).get("send")).toBeTruthy();   // 옆 패널이 이걸 보고 테스트안을 받음
   });
 });
 
-describe("광고 어시스턴트 (오른쪽 고정)", () => {
-  it("greets each step once with two suggestions and the alert bubble for that screen", async () => {
+describe("광고 어시스턴트 = 크롬 확장 프로그램 사이드 패널 (v4.2 AN-COM ④)", () => {
+  afterEach(() => { window.history.replaceState(null, "", "/"); });
+
+  it("the page has no built-in assistant; it writes code and step after # for the side panel", async () => {
     showExample();
-    const panel = await screen.findByRole("complementary", { name: "광고 어시스턴트" });
-    await waitFor(() => expect(within(panel).getByText("AN-01 첫 말")).toBeTruthy());
-    expect(within(panel).getByRole("button", { name: "질문 하나" })).toBeTruthy();
-    const log = panel.querySelector("[aria-live]")!;
-    expect(log.children[0]!.textContent).toContain("11/17");   // v4.2: 알림 말풍선이 먼저, 그다음 이 단계 요약
-    expect(log.children[1]!.textContent).toBe("AN-01 첫 말");
+    await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
+    expect(screen.queryByRole("complementary", { name: "광고 어시스턴트" })).toBeNull();
+    expect(screen.getByText(/크롬 오른쪽 광고 어시스턴트\(확장 프로그램 패널\)에 물어보세요/)).toBeTruthy();
+    expect(new URLSearchParams(window.location.hash.slice(1)).get("code")).toBe(oven.code);
+    expect(new URLSearchParams(window.location.hash.slice(1)).get("step")).toBe("AN-01");
     await next("왜 그런지 보기 ▶");
-    await waitFor(() => expect(within(panel).getByText("AN-02 첫 말")).toBeTruthy());
+    await waitFor(() => expect(new URLSearchParams(window.location.hash.slice(1)).get("step")).toBe("AN-02"));
   });
 
-  it("a suggested question gets an answer", async () => {
+  it("keeps the settings key from the extension in the hash", async () => {
+    window.history.replaceState(null, "", "/#s=K3yK3yK3yK3yK3y");
     showExample();
-    const panel = await screen.findByRole("complementary", { name: "광고 어시스턴트" });
-    fireEvent.click(await within(panel).findByRole("button", { name: "질문 하나" }));
-    await waitFor(() => expect(within(panel).getByText("답: 질문 하나")).toBeTruthy());
+    await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
+    const q = new URLSearchParams(window.location.hash.slice(1));
+    expect(q.get("s")).toBe("K3yK3yK3yK3yK3y");
+    expect(q.get("code")).toBe(oven.code);
   });
 });
 
@@ -278,6 +282,7 @@ describe("세팅값 받기 (v4 8장 입력 ②)", () => {
   });
 
   it("without the extension: 5 questions (목표·예산·연령·노출 위치·소재 형식) go with the upload", async () => {
+    window.history.replaceState(null, "", "/");   // 앞 테스트의 늦게 끝난 화면이 남긴 # 지우기
     const f = vi.fn((_url: string, _init?: RequestInit) => ok(oven));
     vi.stubGlobal("fetch", f);
     render(<App />);

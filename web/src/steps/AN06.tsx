@@ -8,14 +8,17 @@ const EVIDENCE = ["메타 공식 신호", "우리 실측 2건", "논문", "가�
 
 /** AN-06 보내기 + 근거 (v4.2): '이 테스트를 준비' · 지금 세트(그대로) → 새 세트(바꿀 값) · 체크리스트 4개(ALT 번호 숨김)
  *  · 확장 프로그램으로 보내기 · 근거 탭(근거 탭만 확실 / 유력 / 보류 표기). */
-export function AN06({ r, onCopied }: { r: Result; onCopied: (msg: string) => void }) {
+export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: string) => void; onSend?: () => void }) {
   const c = r.matrix.change ?? r.next.change;
   const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
   const [tab, setTab] = useState<(typeof EVIDENCE)[number]>("메타 공식 신호");
   const what = c.unknown?.split("가 손님을")[0] ?? c.label;
   const days = r.check.read.days;
+  // 옆 광고 어시스턴트(확장 프로그램 패널)로 바로 보낸다. 패널이 안 열려 있을 때를 위해 코드도 복사해 둔다.
   function send() {
-    navigator.clipboard.writeText(r.code).then(() => onCopied("코드를 복사했어요. 확장 프로그램 ③ 분석에 붙여 넣으세요"), () => onCopied("복사하지 못했어요. 코드를 직접 적어 주세요"));
+    onSend?.();
+    const done = `오른쪽 광고 어시스턴트로 보냈어요. 패널이 안 열려 있으면 확장 프로그램 ③ 분석에 코드 ${r.code}를 넣어 주세요`;
+    navigator.clipboard.writeText(r.code).then(() => onCopied(`${done} (코드 복사됨)`), () => onCopied(done));
   }
   function download() {
     const blob = new Blob([JSON.stringify({ code: r.code, change: c, keep: r.matrix.keep, dont: r.matrix.dont, checklist }, null, 2)], { type: "application/json" });
@@ -47,8 +50,8 @@ export function AN06({ r, onCopied }: { r: Result; onCopied: (msg: string) => vo
           ))}
         </ul>
       </Card>
-      <Card title="확장 프로그램으로 보내기" summary="확장 프로그램 ③ 분석에 이 코드를 넣으면, 광고 관리자에서 이 칸만 짚어 드려요. 게시는 사장님이 직접 해요">
-        <p className="text-hero font-bold tracking-[0.3em] tabular-nums">{r.code}</p>
+      <Card title="확장 프로그램으로 보내기" summary="누르면 오른쪽 광고 어시스턴트가 테스트안을 받아, 광고 관리자에서 이 칸만 짚어 드려요. 게시는 사장님이 직접 해요">
+        <p className="text-body text-soft">패널이 안 열려 있으면 확장 프로그램 ③ 분석에 이 코드를 넣어도 돼요: <b className="text-title tracking-[0.3em] tabular-nums text-ink">{r.code}</b></p>
         <div className="flex flex-wrap gap-3">
           <Button onClick={send}>확장 프로그램으로 보내기</Button>
           <Button kind="secondary" onClick={download}>계획 파일 내려받기</Button>
