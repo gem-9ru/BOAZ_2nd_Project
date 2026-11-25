@@ -21,10 +21,23 @@ export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "endDate" 
 /** 칸이 있는 화면: list = 캠페인 목록(만들기 창), 나머지는 편집 화면 왼쪽 목록의 세 줄 */
 export type Level = "list" | "campaign" | "adset" | "ad";
 
+/** 한 칸 안의 하위 단계 (예: 사진 = ① '크리에이티브 설정' 열기 ② '이미지 광고' 누르기 ③ 사진 고르기).
+ *  화면에 나타난 가장 뒤 단계가 지금 단계다. 다음 단계의 요소가 나타나면 그게 '넘어가는 신호'. */
+export interface GuideStage {
+  /** 이 단계에서 짚을 것 (앞에서부터 처음 찾은 것). 방법에 say가 있으면 그 말을 한다 */
+  find: FindStrategy[];
+  say: string;
+  /** buddy = 뭉치가 대신 누름, owner = 사장님이 직접 (뭉치는 짚고 기다림) */
+  by: "buddy" | "owner";
+  /** 열린 창 안에서만 찾는다 (창 밖의 같은 이름 버튼을 잡지 않게) */
+  inDialog?: true;
+}
+
 export interface GuideEntry {
   id: string;
   mode: "create" | "edit" | "export";
   page: { urlIncludes?: string; titleText?: string };
+  /** stages가 있으면 find는 첫 단계와 같게 둔다 (칸 위치 지도·검사용) */
   find: FindStrategy[];
   say: string;
   done: "value" | "page" | "manual";
@@ -32,6 +45,9 @@ export interface GuideEntry {
   publish?: true;
   auto?: AutoKind;
   level?: Level;
+  stages?: GuideStage[];
+  /** 이게 화면에 나타나면 이 칸은 끝 → 바로 다음 칸 (예: 사진을 넣어야 생기는 '기본 문구' 칸) */
+  doneWhen?: FindStrategy[];
 }
 
 export interface GuideStepItem {
@@ -51,6 +67,15 @@ export function validateGuide(entries: GuideEntry[], settingIds: string[]): stri
       }
     }
     if (!e.say.trim() || !e.fallback.text.trim()) problems.push(`${e.id}: 말풍선·대체 문장이 비어 있음`);
+    (e.stages ?? []).forEach((s, i) => {
+      if (s.find.length === 0 || !s.say.trim()) problems.push(`${e.id}: ${i + 1}단계의 찾는 방법·말이 비어 있음`);
+      for (const f of s.find) {
+        const words = Object.values(f).map(String);
+        if (words.some((v) => v.trim().startsWith("."))) problems.push(`${e.id}: ${i + 1}단계에 클래스 이름은 쓰지 않음`);
+        // 뭉치가 대신 누르는 단계는 게시와 관련된 버튼을 짚으면 안 된다 ('동의하고 게시'는 절대 누르지 않음)
+        if (s.by === "buddy" && words.some((v) => /게시|publish/i.test(v))) problems.push(`${e.id}: ${i + 1}단계가 게시 버튼을 누르려 함`);
+      }
+    });
   }
   return problems;
 }

@@ -231,23 +231,77 @@
   "find": [
    {
     "role": "button",
-    "text": "업로드",
-    "say": "계정 사진을 고르거나 '업로드'로 올린 뒤 '다음'을 누르세요"
-   },
-   {
-    "role": "button",
-    "textStarts": "크리에이티브 설정",
-    "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
+    "textStarts": "크리에이티브 설정"
    }
   ],
-  "say": "준비한 사진을 올리세요 ({value})",
+  "say": "사진을 고르세요 ({value})",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.ad.media.png",
    "text": "광고 화면의 '크리에이티브 설정' › '이미지 광고'에서 사진을 골라 주세요"
   },
   "auto": "owner",
-  "level": "ad"
+  "level": "ad",
+  "stages": [
+   {
+    "by": "buddy",
+    "find": [
+     {
+      "role": "button",
+      "textStarts": "크리에이티브 설정"
+     }
+    ],
+    "say": "'크리에이티브 설정'을 열게요"
+   },
+   {
+    "by": "buddy",
+    "find": [
+     {
+      "role": "menuitem",
+      "textStarts": "이미지 광고"
+     },
+     {
+      "role": "menuitemradio",
+      "textStarts": "이미지 광고"
+     },
+     {
+      "role": "option",
+      "textStarts": "이미지 광고"
+     },
+     {
+      "role": "button",
+      "textStarts": "이미지 광고"
+     }
+    ],
+    "say": "'이미지 광고'를 누를게요"
+   },
+   {
+    "by": "owner",
+    "inDialog": true,
+    "find": [
+     {
+      "role": "button",
+      "text": "업로드"
+     },
+     {
+      "role": "button",
+      "text": "다음",
+      "say": "사진을 골랐으면 오른쪽 아래 '다음'을 누르세요"
+     },
+     {
+      "role": "button",
+      "text": "완료",
+      "say": "'완료'를 누르세요"
+     }
+    ],
+    "say": "사진을 고르거나 '업로드'로 올리세요 ({value})"
+   }
+  ],
+  "doneWhen": [
+   {
+    "aria": "간단하게 광고를 소개하세요"
+   }
+  ]
  },
  {
   "id": "meta.creative.copy.text",
