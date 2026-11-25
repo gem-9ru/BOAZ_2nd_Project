@@ -1,6 +1,6 @@
 """광고 문구 쓰기 (T07): 사장님이 알려 준 장점으로 메타·네이버 문구를 만든다.
 
-- ANTHROPIC_API_KEY가 있으면 Claude(claude-opus-5-5)가 쓰고, 없거나 실패하면 문장 틀을 쓴다.
+- ANTHROPIC_API_KEY가 있으면 Claude(claude-sonnet-5-5)가 쓰고, 없거나 실패하면 문장 틀을 쓴다.
 - 사장님이 고른 장점과 손님이 찾는 검색어는 따로 보낸다: 검색어는 손님 말투로만 쓰고 상품의 사실로 쓰지 않는다.
 - 어느 쪽이든 같은 검사를 거친다: 글자 수(네이버 제목 15자·설명 20~45자), 근거 없는 말 금지, 특수문자 정리.
 - 키 값은 출력·로그·예외 문구 어디에도 넣지 않는다.
@@ -12,7 +12,7 @@ import re
 from typing import Dict, List, Optional, Sequence, Union
 
 log = logging.getLogger("coach.copy")
-MODEL = os.environ.get("COACH_COPY_MODEL", "claude-opus-5-5")
+MODEL = os.environ.get("COACH_COPY_MODEL", "claude-sonnet-5-5")
 MAX_TOKENS = 16000   # 생각(thinking)이 먼저 토큰을 쓰므로 넉넉히: 1024에서는 답이 중간에 잘려 문장 틀로 떨어졌다
 KEY_NAME = "ANTHROPIC_API_KEY"
 
