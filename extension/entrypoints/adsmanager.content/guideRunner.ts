@@ -444,9 +444,11 @@ export class Guide {
     let found: { at: number; el: HTMLElement; matched: number } | null = null;
     for (let at = stages.length - 1; at >= 0 && !found; at -= 1) {
       const st = stages[at]!;
-      if (st.inDialog && !dialog) continue;
+      if ((st.where === "dialog" && !dialog) || (st.where === "page" && dialog)) continue;
       const hit = locateWith(root, st.find);
-      if (hit) found = { at, el: hit.el, matched: hit.index };
+      // 새 단계로는 그 단계의 첫 방법으로 찾았을 때만 들어간다: 메타 사진 창은 '다음'이 먼저 뜨고 '업로드'가 0.7초 뒤에 떠서,
+      // '다음'으로 들어가면 뭉치가 '다음'에 갔다가 '업로드'로 다시 걸어간다
+      if (hit && (at <= this.stage || hit.index === 0)) found = { at, el: hit.el, matched: hit.index };
     }
     if (found && found.at >= this.stage) {
       if (found.at > this.stage) this.enterStage(found.at);
