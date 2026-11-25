@@ -76,7 +76,7 @@ def test_defaults_lists_fields_not_asked():
 
 def test_research_failure_explains_naver_error(monkeypatch):
     from server.engine import market, naver_api
-    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)   # 네트워크 금지
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, []))   # 네트워크 금지
     monkeypatch.setattr(market, "build", lambda seeds, online=True, **kw: None)
     monkeypatch.setattr(naver_api, "last_error", lambda: "네이버 키가 없어요.")
     body = TestClient(app).post("/research", json={"product": "아무거나"}).json()
@@ -98,7 +98,7 @@ def test_research_calls_do_not_overlap(monkeypatch):
         active[0] -= 1
         return None
 
-    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)   # 네트워크 금지
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, []))   # 네트워크 금지
     monkeypatch.setattr(market, "build", slow_build)
     client = TestClient(app)
     threads = [threading.Thread(target=lambda: client.post("/research", json={"product": "x"})) for _ in range(4)]
@@ -196,7 +196,7 @@ def _fake_report():
 
 def test_research_unknown_category_returns_no_segments(monkeypatch):
     from server.engine import market
-    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, []))
     monkeypatch.setattr(market, "build", lambda seeds, online=True, **kw: _fake_report())
     b = TestClient(app).post("/research", json={"product": "zz상품"}).json()
     assert b["category"] is None and b["segments"] == [] and len(b["categories"]) == 12
@@ -214,7 +214,7 @@ def test_research_passes_category_and_keywords(monkeypatch):
         seen.update(seeds=seeds, category=category, keep=keep, product=kw.get("product"))
         return _fake_report()
 
-    monkeypatch.setattr(market, "guess_category", guess)
+    monkeypatch.setattr(market, "category_guess", guess)
     monkeypatch.setattr(market, "build", build)
     b = TestClient(app).post("/research", json={"product": "수제 립밤", "seeds": ["립밤"],
                                                 "category": "50000002", "keywords": ["립밤"]}).json()
@@ -225,10 +225,18 @@ def test_research_passes_category_and_keywords(monkeypatch):
 
 def test_research_returns_category_candidates_when_unknown(monkeypatch):
     from server.engine import market
-    monkeypatch.setattr(market, "guess_category", lambda product, online=True: None)
-    monkeypatch.setattr(market, "category_candidates", lambda product, online=True: ["50000006", "50000008"])
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, ["50000006", "50000008"]))
     monkeypatch.setattr(market, "build", lambda *a, **k: _fake_report())
     b = TestClient(app).post("/research", json={"product": "캠핑의자"}).json()
     assert [c["code"] for c in b["category_candidates"]] == ["50000006", "50000008"] and all(c["name"] for c in b["category_candidates"])
-    monkeypatch.setattr(market, "guess_category", lambda product, online=True: "50000006")
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: ("50000006", ["50000006"]))
     assert TestClient(app).post("/research", json={"product": "캠핑의자"}).json()["category_candidates"] == []
+
+
+def test_research_counts_category_points_calls_once_even_when_all_fail(monkeypatch):
+    from server.engine import market, naver_api
+    calls = []
+    monkeypatch.setattr(naver_api, "category_keyword_points", lambda c, k, online=True: calls.append(c))   # 전부 실패(None)
+    monkeypatch.setattr(market, "build", lambda *a, **k: None)
+    TestClient(app).post("/research", json={"product": "캠핑의자"})
+    assert 0 < len(calls) <= 12

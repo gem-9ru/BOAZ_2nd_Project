@@ -5,7 +5,7 @@
 - 네트워크가 안 되거나 키가 없으면 저장본(cache_examples)으로, 그것도 없으면 None. 앱을 멈추지 않는다.
 """
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
@@ -29,7 +29,6 @@ SEASON_WORDS = tuple(_FIND["common"]["season"])
 MODIFIER_GROUPS = {g: tuple(w) for g, w in _FIND["modifier_groups"].items()}
 MODIFIER_SKIP = tuple(_FIND["modifier_skip"])
 MODIFIER_SKIP_EXACT = tuple(_FIND.get("modifier_skip_exact", []))
-MODIFIER_STANDALONE_RATIO = float(_FIND.get("modifier_standalone_ratio", 0.5))
 GUESS_MIN_POINTS = 6           # 분야 추정: 지난 12개월 중 이 달 수 이상 자료가 있어야 함
 BUYABLE = ("선물·답례", "시즌", "상품")
 EXCLUDED = ("제외: 만들기", "제외: 매장·지역")
@@ -147,22 +146,27 @@ def _category_points(product: str, online: bool) -> Dict[str, int]:
     return {c["code"]: api.category_keyword_points(c["code"], name, online) or 0 for c in CATEGORIES}
 
 
-def guess_category(product: str, online: bool = True) -> Optional[str]:
-    """상품 이름(띄어쓰기 없앰)으로 분야 12개를 모두 조회해 달별 자료가 가장 많은 분야 code.
-    최댓값이 6 이상이고 1위가 혼자일 때만, 아니면 None(사장님께 묻는다)."""
+def category_guess(product: str, online: bool = True) -> Tuple[Optional[str], List[str]]:
+    """분야 12개를 한 번만 조회해 (추정 code, 후보 code들)를 함께 돌려줌.
+    추정: 달별 자료가 가장 많고 6 이상이며 1위가 혼자일 때만, 아니면 None(사장님께 묻는다).
+    후보: 6 이상인 분야를 많은 순으로 (동점이면 분야 목록 순서)."""
     points = _category_points(product, online)
     if not points:
-        return None
+        return None, []
     top = max(points.values())
     leaders = [code for code, n in points.items() if n == top]
-    return leaders[0] if top >= GUESS_MIN_POINTS and len(leaders) == 1 else None
+    code = leaders[0] if top >= GUESS_MIN_POINTS and len(leaders) == 1 else None
+    order = {c["code"]: i for i, c in enumerate(CATEGORIES)}
+    cands = sorted((c for c, n in points.items() if n >= GUESS_MIN_POINTS), key=lambda c: (-points[c], order[c]))
+    return code, cands
+
+
+def guess_category(product: str, online: bool = True) -> Optional[str]:
+    return category_guess(product, online)[0]
 
 
 def category_candidates(product: str, online: bool = True) -> List[str]:
-    """달별 자료가 6개월 이상인 분야 code를 많은 순으로 (동점이면 분야 목록 순서). 사장님께 '이 중 어디예요?'라고 물을 때 씀."""
-    points = _category_points(product, online)
-    order = {c["code"]: i for i, c in enumerate(CATEGORIES)}
-    return sorted((code for code, n in points.items() if n >= GUESS_MIN_POINTS), key=lambda code: (-points[code], order[code]))
+    return category_guess(product, online)[1]
 
 
 def classify(df: pd.DataFrame, seeds: List[str]) -> pd.DataFrame:
@@ -189,14 +193,10 @@ def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15) -> List[dict]
     """손님이 상품과 함께 검색하는 꾸밈말(좋은 점 후보). 뜻이 '상품'인 키워드만 보고, 같은 꾸밈말은 검색수를 더해
     검색수 순 limit개. 각 항목: word, group(포장|맛·재료|배송|양|그 밖), total_qc, examples(최대 3)."""
     found: Dict[str, dict] = {}
-    alone = {str(k).replace(" ", ""): int(q) for k, q in zip(kw["keyword"], kw["total_qc"])}   # 그 말 하나만 검색하는 양
-    mine = max([alone.get(s.replace(" ", ""), 0) for s in seeds] or [0])
     for row in kw[kw["intent"] == "상품"].sort_values("total_qc", ascending=False).itertuples():
         word = _modifier_of(row.keyword, seeds)
         if word is None:
             continue
-        if mine and alone.get(word, 0) >= mine * MODIFIER_STANDALONE_RATIO:
-            continue   # 따로 크게 검색되는 말은 좋은 점이 아니라 다른 상품·브랜드
         item = found.setdefault(word, {"word": word, "total_qc": 0, "examples": []})
         item["total_qc"] += int(row.total_qc)
         if len(item["examples"]) < 3:

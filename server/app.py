@@ -53,8 +53,9 @@ def _category_out(code: Optional[str], guessed: bool) -> Optional[dict]:
 def research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
-        code = body.category or market.guess_category(body.product, _online())
-        cands = [] if code else market.category_candidates(body.product, _online())
+        code, cands = (body.category, []) if body.category else market.category_guess(body.product, _online())
+        if code:
+            cands = []
         report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
         why = naver_api.last_error()
     wide = {"category": _category_out(code, not body.category), "categories": [dict(c) for c in market.CATEGORIES],
@@ -230,6 +231,7 @@ class SimulateIn(BaseModel):
     arm: str
     budget: float
     total: float = 100_000   # Test & Roll용 전체 광고 예산
+    days: Optional[int] = None   # AN-05 기간 토글 (4일/7일): 하루 금액이 써 본 적 있는지
 
 
 @app.post("/simulate")
@@ -241,7 +243,8 @@ def simulate(body: SimulateIn):
     budget = max(body.budget, 0.0)
     out = loop_simulate.run(arm, budget)
     # 써 본 적 없는 금액은 '가설' (화면에서 점선). Test & Roll은 따로 받은 전체 예산 기준.
-    return {**out, "tried": budget <= arm["spend"], "next_test": loop_simulate.next_test_budget(max(body.total, 0.0))}
+    return {**out, **loop_simulate.tried(arm, budget, body.days if body.days and body.days > 0 else None),
+            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0))}
 
 
 @app.get("/plan/{code}")
