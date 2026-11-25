@@ -52,3 +52,9 @@ def test_bare_packaging_skipped_but_compound_kept():
 
 def test_shopping_mall_keyword_is_not_excluded_as_place():
     assert market.intent_of("쿠키쇼핑몰", market.product_words("쿠키", [])) != "제외: 매장·지역"
+
+
+def test_custom_order_modifier_kept_in_delivery_group_but_bare_order_skipped():
+    kw = market.classify(_table(["주문제작쿠키", "쿠키주문"], [800, 600]), ["쿠키"])
+    out = market.modifiers(kw, ["쿠키"])
+    assert [(m["word"], m["group"]) for m in out] == [("주문제작", "배송")]
