@@ -48,3 +48,7 @@ def test_cached_real_data_has_no_noise_chips(classified):  # noqa: F811
 def test_bare_packaging_skipped_but_compound_kept():
     kw = market.classify(_table(["쿠키포장", "개별포장쿠키", "선물포장쿠키"], [900, 500, 400]), ["쿠키"])
     assert {m["word"] for m in market.modifiers(kw, ["쿠키"])} == {"개별포장"}
+
+
+def test_shopping_mall_keyword_is_not_excluded_as_place():
+    assert market.intent_of("쿠키쇼핑몰", market.product_words("쿠키", [])) != "제외: 매장·지역"
