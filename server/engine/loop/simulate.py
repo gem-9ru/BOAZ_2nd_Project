@@ -4,7 +4,7 @@
 지표마다 2 보정의 범위에서 하나씩 뽑아 계산하고, 가운데 80%를 보여 준다.
 한계: 예산을 크게 늘릴 때 단가 상승·학습 기간은 반영하지 않는다 (Jin 외 2017의 포화 구조는 미반영).
 """
-from typing import Dict
+from typing import Dict, Optional
 
 import numpy as np
 
@@ -33,6 +33,20 @@ def run(arm: Dict, budget: float, runs: int = RUNS, seed: int = 0) -> Dict:
         "histogram": [{"lo": float(lo), "hi": float(hi), "count": int(k)} for lo, hi, k in zip(edges[:-1], edges[1:], counts)],
         "limits": "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만, 이 계산에는 반영하지 않았어요.",
     }
+
+
+def tried(arm: Dict, budget: float, days: Optional[int] = None) -> Dict:
+    """써 본 적 있는 금액인지 (AN-05 · ALT-24): 세트당 총액이 실제로 쓴 돈 이하이고,
+    기간을 주면 하루 금액(총액 ÷ 기간)도 하루에 가장 많이 써 본 돈 이하여야 '써 본 금액'.
+    기간은 손님 수 범위를 바꾸지 않는다(총액 기준 계산) — 바뀌는 건 하루 금액과 '가설' 여부."""
+    total_ok = budget <= arm["spend"]
+    daily = budget / days if days else None
+    daily_ok = daily is None or not arm.get("daily_max") or daily <= arm["daily_max"] + 0.5
+    floor = _loop().get("meta_daily_min")
+    return {"tried": bool(total_ok and daily_ok), "days": days, "daily": daily,
+            "daily_max": arm.get("daily_max"), "daily_tried": bool(daily_ok),
+            # 하루 금액이 메타 하루 최소보다 적으면 광고가 안 나갈 수 있어요 (총예산 < 하루 최소 × 기간)
+            "daily_min": floor, "below_daily_min": bool(daily is not None and floor and daily < floor)}
 
 
 def next_test_budget(total: float) -> Dict:

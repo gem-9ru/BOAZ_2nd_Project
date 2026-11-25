@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { simulate, type Result, type Simulation } from "../api";
 import { Lead } from "../steps/shared";
-import { band, Card, HowCalculated, won } from "../ui";
+import { AlertMark, band, Card, HowCalculated, won } from "../ui";
 
-/** AN-05 예상 범위 (v4.2): 예산(세트당 총액)을 움직이면 '보통 ○명 (적게 ○명 ~ 많이 ○명)'.
+/** AN-05 예상 범위 (v4.2): 예산(세트당 총액)과 기간(4일/7일)을 고르면 '보통 ○명 (적게 ○명 ~ 많이 ○명)'.
+ *  손님 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
+ *  메타 하루 최소보다 적으면 ▲ (광고가 안 나갈 수 있어요).
  *  10번 중 8번은 이 안에 들어요(10~90%). 써 본 적 없는 금액은 점선 + '가설'. 보통 값은 진한 보라 점(주황은 주의 색). */
 export function Simulator({ r }: { r: Result }) {
   const arms = r.summary.arms;
@@ -12,6 +14,7 @@ export function Simulator({ r }: { r: Result }) {
   const start = r.matrix.change?.per_set ?? 5000;
   const [budget, setBudget] = useState(start);
   const [total, setTotal] = useState(100000);
+  const [days, setDays] = useState(r.check.read.days === 7 ? 7 : 4);
   const [sims, setSims] = useState<Simulation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const budgets = [budget, budget * 2, budget * 4];
@@ -21,11 +24,11 @@ export function Simulator({ r }: { r: Result }) {
   useEffect(() => {
     if (!arm) return;
     const t = setTimeout(() => {
-      Promise.all([budget, budget * 2, budget * 4].map((b) => simulate(r.code, arm.name, b, total)))
+      Promise.all([budget, budget * 2, budget * 4].map((b) => simulate(r.code, arm.name, b, total, days)))
         .then((s) => { setSims(s); setError(null); }, (e: Error) => setError(e.message));
     }, 250);
     return () => clearTimeout(t);
-  }, [r.code, arm, budget, total]);
+  }, [r.code, arm, budget, total, days]);
 
   if (!arm) return null;
   const first = sims[0];
@@ -35,7 +38,7 @@ export function Simulator({ r }: { r: Result }) {
   return (
     <>
       <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.unknown ? ` · ${c.unknown.split("가 손님을")[0]} 효과는 아직 재 본 적 없어요` : ""}`}>
-        {first ? `지금 세팅으로 ${won(budget)}을 쓰면 ${band(first.visits)} 와요` : "계산하는 중…"}
+        {first ? `지금 세팅으로 세트당 총 ${won(budget)}을 ${days}일 동안 쓰면 ${band(first.visits)} 와요` : "계산하는 중…"}
       </Lead>
       <Card title="예상 손님 수" summary="10번 중 8번은 이 안에 들어요">
         <label htmlFor="budget" className="flex flex-wrap items-baseline justify-between gap-2 text-body">
@@ -43,10 +46,26 @@ export function Simulator({ r }: { r: Result }) {
         </label>
         <input id="budget" type="range" min={5000} max={100000} step={5000} value={budget} aria-label="예산"
           onChange={(e) => setBudget(Number(e.target.value))} className="w-full accent-action" />
+        <div className="flex flex-wrap items-center gap-2">
+          <div role="radiogroup" aria-label="기간" className="flex gap-2">
+            {[4, 7].map((d) => (
+              <label key={d} className={`cursor-pointer rounded-badge border px-3 py-1 text-body has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${days === d ? "border-accent bg-accent text-on-accent font-semibold" : "border-line bg-surface"}`}>
+                <input type="radio" name="days" className="sr-only" checked={days === d} onChange={() => setDays(d)} />{d}일
+              </label>
+            ))}
+          </div>
+          <span className="text-body text-soft">하루 약 {won(Math.round(budget / days / 10) * 10)}</span>
+        </div>
+        {first?.below_daily_min && (
+          <p role="status" className="flex items-start gap-2 rounded-button bg-warn-bg px-3 py-2 text-body text-warn">
+            <AlertMark level="warn" />
+            <span>하루 {won(Math.round(budget / days / 10) * 10)}은 메타 하루 최소(약 {won(first.daily_min)})보다 적어요 → 광고가 안 나갈 수 있어요. 기간을 줄이거나 총예산을 늘려 주세요.</span>
+          </p>
+        )}
         <ul className="flex flex-col gap-3" aria-live="polite">
           {budgets.map((b, i) => {
             const s = sims[i];
-            const tried = b <= spent;
+            const tried = s?.tried ?? b <= spent;   // 서버가 총액·하루 금액(기간)을 같이 봐요
             const at = (x: number) => `${(x / max) * 100}%`;
             return (
               <li key={b} className="flex flex-col gap-1">
@@ -67,11 +86,16 @@ export function Simulator({ r }: { r: Result }) {
           })}
         </ul>
         <p className="text-caption text-soft">실선 = 써 본 금액 · 점선 = 써 본 적 없는 금액 · 진한 보라 점 = 보통 값</p>
-        {!first?.tried && first && <p className="text-caption text-soft">이 금액은 써 본 적 없어서 범위가 넓어요 (세트당 {won(spent)}까지만 써 봤어요).</p>}
+        {!first?.tried && first && <p className="text-caption text-soft">
+          {first.daily_tried === false
+            ? `하루 ${won(first.daily)}은 써 본 적 없어서 가설이에요 (하루 최대 ${won(first.daily_max)}까지 써 봤어요).`
+            : `이 금액은 써 본 적 없어서 범위가 넓어요 (세트당 ${won(spent)}까지만 써 봤어요).`}
+        </p>}
+        <p className="text-caption text-soft">손님 수 범위는 세트당 총액으로 계산해요. 기간을 바꾸면 하루 금액과 '가설' 여부가 바뀌어요.</p>
         {error && <p role="alert" className="text-body text-warn">{error}</p>}
       </Card>
       {nt && (
-        <Card title="다음 테스트에 쓸 돈 (Test & Roll)" summary={`이번처럼 세트당 ${won(start)}이면 적당해요`}>
+        <Card title="다음 테스트에 쓸 돈 (Test & Roll)" summary={`이번처럼 세트당 총 ${won(start)}이면 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
               className="w-32 rounded-button border border-line bg-surface px-2 py-1 tabular-nums" />원

@@ -26,6 +26,11 @@ def run(bundle) -> Dict:
     cols = [c for c in COUNTS if c in daily.columns]
     sums = daily.groupby("adset")[cols].sum()
     arms = [arm(str(n), *(float(sums.loc[n].get(c, 0.0)) for c in COUNTS)) for n in sorted(sums.index)]
+    # AN-05 기간 토글: 하루에 가장 많이 써 본 돈 (그보다 많이 하루에 쓰면 '가설')
+    if "spend" in daily.columns and "date" in daily.columns:
+        per_day = daily.groupby(["adset", "date"])["spend"].sum().groupby(level=0).max()
+        for a in arms:
+            a["daily_max"] = float(per_day.get(a["name"], 0.0))
 
     placements, by_set = [], []
     if "meta_placement" in bundle.tables:

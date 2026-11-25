@@ -13,7 +13,12 @@ afterEach(() => vi.unstubAllGlobals());
 function showExample() {
   const f = vi.fn((url: string, init?: RequestInit) => {
     const u = String(url);
-    if (u.includes("/simulate")) return ok({ ...sim, tried: JSON.parse(init!.body as string).budget <= 5308, next_test: { total: 20000, per_set_lo: 1000, per_set_hi: 2000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
+    if (u.includes("/simulate")) {
+      const b = JSON.parse(init!.body as string);
+      const daily = b.days ? b.budget / b.days : null;
+      return ok({ ...sim, tried: b.budget <= 5308 && (daily == null || daily <= 2643), days: b.days, daily, daily_max: 2643, daily_tried: daily == null || daily <= 2643,
+        daily_min: 1336, below_daily_min: daily != null && daily < 1336, next_test: { total: 20000, per_set_lo: 1000, per_set_hi: 2000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
+    }
     if (u.includes("/assistant")) {
       const b = JSON.parse(init!.body as string);
       return ok(b.question ? { message: `답: ${b.question}`, source: "llm" }
@@ -180,6 +185,21 @@ describe("7단계 결과 (v4.2)", () => {
     expect(screen.getByText("예측이 맞았나? (검증)")).toBeTruthy();
     expect(within(screen.getByRole("region", { name: "알림" })).getByText("주의 2 · 참고 2")).toBeTruthy();
     ownerTextOk();
+  });
+
+  it("AN-05 period toggle 4일/7일 changes the daily amount and warns under Meta's daily minimum (오븐로그 11/17과 같은 경우)", async () => {
+    const f = showExample();
+    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "바꾸면 어떻게 돼요? ▶"]) await next(n);
+    expect((screen.getByRole("radio", { name: "4일" }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("하루 약 1,250원")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/세트당 총 5,000원을 4일 동안 쓰면/)).toBeTruthy());
+    await waitFor(() => expect(screen.getByText(/메타 하루 최소\(약 1,336원\)보다 적어요 → 광고가 안 나갈 수 있어요/)).toBeTruthy());
+    fireEvent.change(screen.getByLabelText("예산"), { target: { value: "10000" } });
+    fireEvent.click(screen.getByRole("radio", { name: "7일" }));
+    expect(screen.getByText("하루 약 1,430원")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText(/세트당 총 1만 원을 7일 동안 쓰면/)).toBeTruthy());
+    await waitFor(() => expect(screen.queryByText(/메타 하루 최소/)).toBeNull());
+    expect(f.mock.calls.some(([u, o]) => String(u).includes("/simulate") && JSON.parse((o as RequestInit).body as string).days === 7)).toBe(true);
   });
 
   it("AN-06 prepares the test: 지금 세트/새 세트, 4-item checklist without ALT numbers, send with a toast", async () => {

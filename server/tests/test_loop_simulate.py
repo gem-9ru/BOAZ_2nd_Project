@@ -18,3 +18,14 @@ def test_budget_to_clicks_and_visits_with_80pct_band():
 def test_more_money_more_clicks():
     _, b = summary.run(read_export(OVEN))["arms"]
     assert simulate.run(b, 60000)["link_clicks"]["median"] > simulate.run(b, 30000)["link_clicks"]["median"]
+
+
+def test_period_changes_daily_amount_and_hypothesis_not_the_range():
+    """AN-05 기간 토글 (v4.2): 범위는 총액 기준 그대로, 하루 금액이 써 본 적 없거나 메타 하루 최소보다 적으면 표시."""
+    from server.engine.loop import simulate as sim
+    arm = {"spend": 5308.0, "daily_max": 2643.0}
+    four, seven = sim.tried(arm, 5000, 4), sim.tried(arm, 5000, 7)
+    assert four["tried"] and four["daily"] == 1250 and seven["daily"] < 1000
+    assert seven["below_daily_min"] and not sim.tried(arm, 6000, 4)["below_daily_min"]
+    assert not sim.tried(arm, 5000, 1)["daily_tried"]          # 하루에 5,000원은 써 본 적 없음 → 가설
+    assert sim.tried(arm, 5000)["tried"] and sim.tried(arm, 5000)["daily"] is None
