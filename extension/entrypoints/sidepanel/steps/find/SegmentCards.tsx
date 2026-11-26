@@ -14,6 +14,12 @@ function who(seg: Segment): string {
   return `${ageSpanLabel(ageSpan(seg.audience.ages).groups)}${g === "all" ? " 남녀" : ` ${GENDER_LABEL[g]}`}`;
 }
 
+/** 무리 크기: 전체 검색 중 몇 %인지 (무리 검색 수 합 기준). */
+function shareOf(seg: Segment, all: Segment[]): number {
+  const total = all.reduce((n, s) => n + s.total_qc, 0);
+  return total > 0 ? Math.round((seg.total_qc / total) * 100) : 0;
+}
+
 export default function SegmentCards({ segments, selected, dropped, onPick, onResearch, selectedDetail }: {
   segments: Segment[];
   selected?: Segment;
@@ -53,6 +59,14 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                   <span className="text-small text-soft">
                     {seg.trend.seasonal ? `${seg.trend.peak_month}월에 가장 많이 찾아요` : "달마다 비슷하게 찾아요"}
                     {seg.trend_source ? ` (${TREND_SOURCE[seg.trend_source]} 기준)` : ""}
+                  </span>
+                )}
+                {segments.length > 1 && (
+                  <span className="flex items-center gap-2">
+                    <span aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-badge bg-sunk">
+                      <span className={`block h-full ${on ? "bg-accent" : "bg-line"}`} style={{ width: `${shareOf(seg, segments)}%` }} />
+                    </span>
+                    <span className="shrink-0 text-small text-soft">전체 검색의 {shareOf(seg, segments)}%</span>
                   </span>
                 )}
                 <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}회</span>

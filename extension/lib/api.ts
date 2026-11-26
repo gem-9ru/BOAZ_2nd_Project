@@ -29,7 +29,8 @@ export interface ProductStats {
   total_qc: number;
   /** 모바일 비중 0~1 */
   mobile: number | null;
-  audience: { female: number; ages: Record<string, number>; top_age: string } | null;
+  /** index: 같은 분야 평균 대비 배수 (female·male·나이대) */
+  audience: { female: number; ages: Record<string, number>; top_age: string; index?: Record<string, number> } | null;
   /** 몇 월에 많이 찾나 (쇼핑인사이트 클릭, 가장 많은 달 = 100) */
   trend?: { monthly: Record<string, number>; peak_month: number | null; seasonal: boolean } | null;
 }

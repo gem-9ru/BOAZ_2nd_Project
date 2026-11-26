@@ -173,10 +173,18 @@ export default function FindStep({ state, dispatch }: Props) {
 }
 
 /** 결과 자리 스켈레톤: 결과 카드와 같은 모양. */
+const SEARCH_STEPS = ["네이버에서 검색 수를 보는 중이에요…", "누가 찾는지 보는 중이에요…", "손님을 무리로 나누는 중이에요…", "좋은 점 낱말을 고르는 중이에요…"];
+
 function ResultSkeleton() {
+  // 실제 진행을 받지 않으니 시간으로만 넘긴다 (마지막 단계에서 멈춤)
+  const [stepAt, setStepAt] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStepAt((i) => Math.min(i + 1, SEARCH_STEPS.length - 1)), 1200);
+    return () => clearInterval(t);
+  }, []);
   return (
     <div className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
-      <p role="status" className="text-caption text-soft">네이버에서 찾는 중이에요…</p>
+      <p role="status" className="text-caption text-soft">{SEARCH_STEPS[stepAt]}</p>
       <div aria-hidden className="skeleton flex flex-col gap-4">
         <div className="h-7 w-32 rounded-button bg-sunk" />
         <div className="flex h-24 items-end gap-2">

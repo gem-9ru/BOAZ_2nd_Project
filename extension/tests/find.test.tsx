@@ -117,7 +117,7 @@ describe("FindStep", () => {
     render(<FindStep state={initialState()} dispatch={() => {}} />);
     fireEvent.change(screen.getByLabelText("파는 상품"), { target: { value: "수제 쿠키" } });
     fireEvent.click(screen.getByRole("button", { name: "찾아보기" }));
-    expect(screen.getByRole("status").textContent).toContain("네이버에서 찾는 중");
+    expect(screen.getByRole("status").textContent).toContain("네이버에서 검색 수를 보는 중");
   });
 
   it("says the result is for the old product when the box was changed", () => {
@@ -506,5 +506,43 @@ describe("무리 하나 · 다시 찾아볼 말 · 짧은 출처 · 최근 상�
     fireEvent.click(screen.getByRole("button", { name: "립밤" }));
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "researched", product: "립밤" })));
     expect(JSON.parse(localStorage.getItem("ad-coach.recent-products")!)[0]).toBe("립밤");
+  });
+});
+
+describe("지금 시기 · 무리 크기 · 휴대폰 · 단계 안내 · 분야 평균", () => {
+  it("says whether now is a busy month (this month or last year's same month)", async () => {
+    const { nowLine } = await import("../entrypoints/sidepanel/steps/find/when");
+    const monthly = { "2025-11": 30, "2025-12": 100, "2026-05": 50, "2026-10": 60 };
+    expect(nowLine(monthly, new Date(2026, 10, 26))).toBe("곧 많이 찾는 때예요 (12월). 지금(11월)은 가장 많은 달의 30% 정도예요.");
+    expect(nowLine({ "2025-12": 100, "2026-05": 40 }, new Date(2026, 11, 3))).toBe("지금(12월)은 많이 찾는 때예요.");
+    expect(nowLine({ "2025-12": 100, "2026-05": 40 }, new Date(2026, 4, 3))).toBe("지금(5월)은 가장 많은 달의 40% 정도예요.");
+    expect(nowLine({ "2026-05": 40 }, new Date(2026, 0, 3))).toBeNull();
+  });
+
+  it("each customer group shows its share of all searches", () => {
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={() => {}} />);
+    const total = segs.reduce((n, s) => n + s.total_qc, 0);
+    expect(screen.getByText(`전체 검색의 ${Math.round((segs[0]!.total_qc / total) * 100)}%`)).toBeTruthy();
+  });
+
+  it("product card: mobile hint and comparison with the category average", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const stats = { keyword: "텀블러", total_qc: 128900, mobile: 0.7,
+      audience: { female: 0.66, ages: { "30": 0.2, "40": 0.4, "50": 0.25 }, top_age: "40", index: { female: 1.36, "40": 1.25 } } };
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
+    expect(screen.getByText("휴대폰으로 많이 찾아요 (70%) → 세로(9:16) 사진·영상이 잘 맞아요.")).toBeTruthy();
+    expect(screen.getByText("같은 분야 평균보다 40대가 1.3배, 여성이 1.4배 많이 찾아요.")).toBeTruthy();
+  });
+
+  it("search waiting message moves through steps", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise(() => {})));
+    render(<FindStep state={initialState()} dispatch={() => {}} />);
+    fireEvent.change(screen.getByLabelText("파는 상품"), { target: { value: "쿠키" } });
+    fireEvent.click(screen.getByRole("button", { name: "찾아보기" }));
+    expect(screen.getByRole("status").textContent).toContain("검색 수를 보는 중");
+    await vi.advanceTimersByTimeAsync(2500);
+    expect(screen.getByRole("status").textContent).toContain("손님을 무리로 나누는 중");
+    vi.useRealTimers();
   });
 });
