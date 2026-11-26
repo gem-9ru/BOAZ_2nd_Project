@@ -31,7 +31,7 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
   return (
     <div className="flex flex-col gap-2.5">
       <span className="text-caption font-semibold text-soft">손님 무리</span>
-      <p className="-mt-1 text-small text-soft">이 말들을 찾는 손님을 무리로 나눠 봤어요. 광고를 보여 줄 무리를 하나 골라 주세요.</p>
+      <p className="-mt-1 text-small text-soft">같은 목적으로 찾는 손님끼리 묶었어요 (선물로 / 시즌에 / 상품 자체로). 광고를 보여 줄 무리를 하나 골라 주세요.</p>
       <div role="radiogroup" aria-label="광고를 보여 줄 손님" className="flex flex-col gap-2.5">
         {segments.map((seg) => {
           const on = selected?.intent === seg.intent;
@@ -69,7 +69,7 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                     <span className="shrink-0 text-small text-soft">전체 검색의 {shareOf(seg, segments)}%</span>
                   </span>
                 )}
-                <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}회</span>
+                <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}번</span>
                 {words.length > 1 && <span className="text-small text-soft">이렇게도 찾아요: {words.filter((w) => w !== seg.lead).join(" · ")}</span>}
               </label>
               {leadOff && (

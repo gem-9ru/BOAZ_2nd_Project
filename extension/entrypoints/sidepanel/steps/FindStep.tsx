@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { research as fetchResearch, type Research, type Segment } from "../../../lib/api";
-import type { FlowEvent, FlowState } from "../../../lib/flow";
+import type { FlowEvent, FlowState, Target } from "../../../lib/flow";
 import { compact } from "../../../lib/format";
 import { ageGroupToRange, ageSpan, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
@@ -228,7 +228,7 @@ function KeywordChips({ research: r, dropped, kept, title, hint, dispatch }: {
                 {off ? "" : "✓"}
               </span>
               <span className={off ? "line-through" : "font-medium"}>{k.keyword}</span>
-              <span className="text-small text-soft tabular-nums">월 {compact(k.total_qc)}회</span>
+              <span className="text-small text-soft tabular-nums">한 달 {compact(k.total_qc)}번</span>
             </button>
           );
         })}
@@ -311,6 +311,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
 }) {
   const dropped = state.dropped ?? [];
   const kept = r.keywords.map((k) => k.keyword).filter((k) => !dropped.includes(k));
+  const topWord = [...r.keywords].sort((x, y) => y.total_qc - x.total_qc)[0];
   const selected = segments.find((s) => s.intent === state.segment?.intent);
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<"" | "all" | "female" | "male">("");
@@ -388,6 +389,11 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         <CategoryPick product={product} category={r.category} categories={r.categories} candidates={r.category_candidates} onPick={onPickCategory} />
       )}
       {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
+      {!r.product_stats && topWord && (
+        <p className="rounded-card border border-line bg-paper px-4 py-3 text-caption">
+          '{product}' 이름 그대로는 찾는 사람이 적어요. 손님은 <span className="font-semibold">'{topWord.keyword}'</span>{euro(topWord.keyword)} 가장 많이 찾아요 (한 달 {compact(topWord.total_qc)}번).
+        </p>
+      )}
       {!r.category ? (
         <div className="flex flex-col gap-2.5">
           <span className="text-caption font-semibold text-soft">손님 무리</span>
@@ -403,6 +409,15 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         </>
       ) : (
         <>
+          {dropped.length > 0 && !segments.some((g) => dropped.includes(g.lead)) && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-button bg-sunk px-3 py-2">
+              <span className="text-caption">검색어 {dropped.length}개를 뺐어요. 남긴 말로 손님을 다시 볼 수 있어요.</span>
+              <button type="button" onClick={onResearch}
+                className="shrink-0 rounded-button border border-accent bg-paper px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                뺀 말을 빼고 손님 다시 보기
+              </button>
+            </div>
+          )}
           <SegmentCards segments={segments} selected={selected} dropped={dropped}
             onPick={(segment) => dispatch({ type: "pickSegment", segment })} onResearch={onResearch}
             selectedDetail={detail} />
@@ -427,6 +442,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
           </div>
         </>
       )}
+      {segments.length > 0 && <CopySummary product={product} research={r} selected={selected} target={target} kept={kept} />}
       <SourceLine research={r} />
     </div>
   );
@@ -508,4 +524,42 @@ function Choice({ legend, name, options, value, onChange }: {
 function dayLabel(iso: string): string {
   const [, m, d] = iso.split("-").map(Number);
   return m && d ? `${m}월 ${d}일` : iso;
+}
+
+/** '로/으로': 받침이 있으면(ㄹ 받침 빼고) '으로' */
+function euro(word: string): string {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  if (c < 0 || c > 11171) return "(으)로";
+  const jong = c % 28;
+  return jong === 0 || jong === 8 ? "로" : "으로";
+}
+
+/** [결과 복사]: 찾은 결과를 짧은 글로 (메모·동료에게 보내기용). */
+function CopySummary({ product, research: r, selected, target, kept }: {
+  product: string; research: Research; selected?: Segment; target: Target | null; kept: string[];
+}) {
+  const [done, setDone] = useState<"" | "ok" | "fail">("");
+  const st = r.product_stats;
+  const lines = [
+    `상품: ${product}${r.category ? ` (${r.category.name})` : ""}`,
+    st ? `한 달에 찾는 횟수: ${st.total_qc.toLocaleString()}번` : null,
+    st?.trend?.peak_month ? `가장 많이 찾는 달: ${st.trend.peak_month}월` : null,
+    selected ? `고른 손님: ${selected.label}${selected.line ? ` — ${selected.line}` : ""}` : null,
+    target ? `광고 대상: ${targetLine(target)}` : null,
+    kept.length ? `문구에 넣을 검색어: ${kept.join(", ")}` : null,
+    `자료: 네이버 검색광고·데이터랩 (${r.fetched || "오늘"})`,
+  ].filter(Boolean).join("\n");
+  async function copy() {
+    try { await navigator.clipboard.writeText(lines); setDone("ok"); } catch { setDone("fail"); }
+    setTimeout(() => setDone(""), 2000);
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => void copy()}
+        className="rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        결과 복사
+      </button>
+      {done && <span role="status" className="text-small text-soft">{done === "ok" ? "찾은 결과를 복사했어요." : "복사하지 못했어요."}</span>}
+    </div>
+  );
 }

@@ -249,7 +249,7 @@ describe("FindStep — 분야·손님 무리", () => {
     fireEvent.click(within(group).getAllByRole("radio")[1]!);
     expect(dispatch).toHaveBeenCalledWith({ type: "pickSegment", segment: segs[1] });
     rerender(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={dispatch} />);
-    expect(screen.getByText(/주로 찾는 말: 답례품쿠키 · 이 무리 전체 한 달 5,400회/)).toBeTruthy();
+    expect(screen.getByText(/주로 찾는 말: 답례품쿠키 · 이 무리 전체 한 달 5,400번/)).toBeTruthy();
     expect(screen.getByText(/네이버 쇼핑 클릭 기준/)).toBeTruthy();
     expect(screen.queryByText(/대표 검색어|달별 자료|쇼핑인사이트/)).toBeNull();   // 개발자 말 없음
     fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
@@ -359,7 +359,7 @@ describe("FindStep — 이 상품 검색 카드", () => {
   it("shows the product's monthly searches, device split and who searches it", () => {
     render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "수제 쿠키" }} dispatch={() => {}} />);
     expect(screen.getByText("'수제쿠키' 검색")).toBeTruthy();
-    expect(screen.getByText("9,320회")).toBeTruthy();
+    expect(screen.getByText("9,320번")).toBeTruthy();
     expect(screen.getByText("모바일 53% · PC 47%")).toBeTruthy();
     expect(screen.getByRole("img", { name: /30대 45%/ })).toBeTruthy();
   });
@@ -367,7 +367,7 @@ describe("FindStep — 이 상품 검색 카드", () => {
   it("without a category shows the count and asks for the category", () => {
     const r: Research = { ...withSegs, category: null, segments: [], product_stats: { ...stats, audience: null } };
     render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키" }} dispatch={() => {}} />);
-    expect(screen.getByText("9,320회")).toBeTruthy();
+    expect(screen.getByText("9,320번")).toBeTruthy();
     expect(screen.getByText("분야를 고르면 누가 찾는지도 보여 드릴게요.")).toBeTruthy();
   });
 });
@@ -425,7 +425,7 @@ describe("타깃 확인·고치기", () => {
       audience: { female: 0.7, ages: { "30": 0.25, "40": 0.3, "50": 0.25 }, top_age: "40" },
       trend: { monthly: { "2026-12": 100 }, peak_month: 12, seasonal: true } };
     render(<FindStep state={{ ...state(), research: { ...withSegs, product_stats: stats } }} dispatch={() => {}} />);
-    expect(screen.getByText("한 달 13만회 · 12월에 가장 많이 · 30~50대 여성이 많이 찾아요")).toBeTruthy();
+    expect(screen.getByText("한 달 13만번 · 12월에 가장 많이 · 30~50대 여성이 많이 찾아요")).toBeTruthy();
     expect(screen.getByText("자세히 ▾")).toBeTruthy();
   });
 
@@ -544,5 +544,38 @@ describe("지금 시기 · 무리 크기 · 휴대폰 · 단계 안내 · 분야
     await vi.advanceTimersByTimeAsync(2500);
     expect(screen.getByRole("status").textContent).toContain("손님을 무리로 나누는 중");
     vi.useRealTimers();
+  });
+});
+
+describe("이름 그대로 자료 없음 · 뺀 말로 다시 · 무리 설명 · 결과 복사", () => {
+  it("no exact-name data: says which word customers use most", () => {
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: null }, product: "수제 버터 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/이름 그대로는 찾는 사람이 적어요/).textContent).toContain("'수제쿠키'로 가장 많이 찾아요 (한 달 1.2만번)");
+  });
+
+  it("after dropping a word, offers to look at the groups again", () => {
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify(withSegs), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", dropped: ["르뱅쿠키"] }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "뺀 말을 빼고 손님 다시 보기" }));
+    expect(f).toHaveBeenCalled();
+    expect(JSON.parse((f.mock.calls[0]![1] as RequestInit).body as string).keywords).not.toContain("르뱅쿠키");
+  });
+
+  it("explains what a customer group is", () => {
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/같은 목적으로 찾는 손님끼리 묶었어요/)).toBeTruthy();
+  });
+
+  it("copies a short summary of the result", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const write = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: write }, configurable: true });
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "결과 복사" }));
+    await waitFor(() => expect(screen.getByText("찾은 결과를 복사했어요.")).toBeTruthy());
+    const text = write.mock.calls[0]![0] as string;
+    expect(text).toContain("상품: 수제 쿠키 (식품)");
+    expect(text).toContain("광고 대상: 30–49세 · 여성만");
   });
 });

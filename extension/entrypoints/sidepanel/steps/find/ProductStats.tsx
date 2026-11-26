@@ -25,7 +25,7 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
   const who = stats.audience
     ? `${ageSpanLabel(ageSpan(stats.audience.ages).groups)}${(() => { const g = genderFrom(stats.audience!.female); return g === "all" ? "" : ` ${GENDER_LABEL[g]}`; })()}`
     : null;
-  const line = [`한 달 ${compact(stats.total_qc)}회`, trend?.peak_month ? `${trend.peak_month}월에 가장 많이` : null, who ? `${who}${who.endsWith("대") ? "가" : "이"} 많이 찾아요` : null]
+  const line = [`한 달 ${compact(stats.total_qc)}번`, trend?.peak_month ? `${trend.peak_month}월에 가장 많이` : null, who ? `${who}${who.endsWith("대") ? "가" : "이"} 많이 찾아요` : null]
     .filter(Boolean).join(" · ");
   return (
     <details className="group flex flex-col gap-2.5 rounded-card border border-line bg-paper p-4">
@@ -41,9 +41,9 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
       <div className="mt-3 flex flex-col gap-2.5">
       <div className="flex items-end justify-between gap-3 rounded-card border border-line bg-paper p-4">
         <span className="flex flex-col gap-0.5">
-          <span className="text-caption text-soft">한 달 검색 수</span>
+          <span className="text-caption text-soft">한 달에 찾는 횟수</span>
           <strong className="text-number font-bold leading-tight tracking-tight tabular-nums">
-            {stats.total_qc.toLocaleString()}회
+            {stats.total_qc.toLocaleString()}번
           </strong>
         </span>
         {stats.mobile != null && (

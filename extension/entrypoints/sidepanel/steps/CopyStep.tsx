@@ -92,7 +92,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               on ? "border-accent bg-accent-soft text-ink" : "border-line bg-paper text-soft"}`}>
             <span>{on ? "✓ " : ""}{m.word}</span>
-            <span className="text-small text-soft">월 {compact(m.total_qc)}</span>
+            <span className="text-small text-soft">{compact(m.total_qc)}번</span>
           </button>
         );
       })}
