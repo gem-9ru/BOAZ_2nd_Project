@@ -89,3 +89,16 @@ def test_claude_gets_strengths_and_search_words_apart_with_room_to_answer():
     assert sent["장점"] == ["가벼움"] and sent["검색어"] == ["노트북대여", "가성비노트북"]
     assert seen["max_tokens"] >= 8000 and seen["output_config"]["format"]["type"] == "json_schema"
     assert used and cs[0]["headline"] == "가볍게 들고 다니는 노트북" and len(cs) == 3
+
+
+def test_basis_catches_changed_word_endings_and_claude_paraphrase():
+    c = {"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북이라 하나씩 따로 포장해 드려요."}
+    assert copywriter.basis(c, ["가벼움", "개별포장", "버터 듬뿍"], None) == ["가벼움"]
+    c2 = {**c, "basis": ["개별포장", "버터 듬뿍"]}   # Claude가 썼다고 한 말: 조각이라도 보이면 믿고, 안 보이면 안 믿음
+    assert copywriter.basis(c2, ["가벼움", "개별포장", "버터 듬뿍"], {"label": "선물로 찾는 손님"}) == ["가벼움", "개별포장", "선물로 찾는 손님"]
+
+
+def test_claude_copies_keep_their_basis_list():
+    body = {"copies": [{"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북, 프로필 링크에서 만나 보세요.", "basis": ["가벼움"]}]}
+    out = copywriter._parse(json.dumps(body, ensure_ascii=False))
+    assert out[0]["basis"] == ["가벼움"]
