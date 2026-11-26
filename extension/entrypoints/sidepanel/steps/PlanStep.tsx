@@ -68,9 +68,9 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
       <Coach>
         {c.reason ?? c.note} 지난 세트는 그대로 두고, 복제한 세트에서 이 칸만 바꾸세요.
       </Coach>
-      <section aria-label="다음 테스트 돈·기간" className="flex flex-col gap-1 rounded-card border border-line bg-paper px-3 py-2 text-caption">
-        <p className="font-semibold">다음 테스트 돈·기간</p>
-        <p className="text-body font-bold">
+      <section aria-label="다음 테스트 돈·기간" className="flex flex-col gap-1 rounded-card border border-line bg-paper px-3 py-2 text-body">
+        <p className="text-caption font-semibold text-soft">다음 테스트 돈·기간</p>
+        <p className="font-bold">
           {m.amount ? `두 세트 × 세트당 ${won(m.amount)} = 합계 ${won(m.amount * 2)}` : m.budget ? `두 세트 × 세트당 ${m.budget}` : "세트당 금액은 ② 세팅에서 정해요"}
         </p>
         {m.want && m.amount! > m.want && (
@@ -79,6 +79,11 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
         <p>{day(m.startDate)} ~ {day(m.endDate)} ({m.days}일) · 내일 시작, 지난번과 같은 길이</p>
         <p>지난 광고는 끝났어요. 지난 세트를 복제해 두 세트를 새로 같이 돌려요: 하나는 지난번 그대로, 하나는 이 칸만 바꿔서. 두 세트 모두 이 금액·날짜로 맞춰야 정한 돈만 나가요.</p>
       </section>
+      <PrimaryButton onClick={() => dispatch({ type: "startNextTest", fieldId: c.field_id, label: c.label, value: c.what ?? c.new_short ?? c.new,
+        startDate: m.startDate, endDate: m.endDate, budget: m.budget })}>
+        다음 테스트 세팅 ▶
+      </PrimaryButton>
+      <p className="-mt-2 text-caption text-soft">② 세팅 목록으로 가요. 뭉치가 바꿀 칸 · 금액 · 날짜 · 게시 전 돈 확인만 짚어요. 게시는 직접 해 주세요.</p>
       {(p.keep?.length ?? 0) > 0 && (
         <ul className="flex flex-col gap-1.5 text-caption">
           {p.keep!.map((k) => (
@@ -89,28 +94,23 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
       {(c.checklist?.length ?? 0) > 0 && (
         <div className="flex flex-col gap-1.5">
           <p className="text-caption font-semibold text-soft">다음 테스트 체크리스트</p>
-          <ul className="flex flex-col gap-1 text-caption">
+          <ul className="flex flex-col text-body">
             {c.checklist!.map((t, i) => (
-              <li key={t}><label className="flex items-start gap-2">
-                <input type="checkbox" className="mt-0.5 accent-accent" checked={ticked.includes(i)} onChange={() => dispatch({ type: "toggleCheck", key: checkKey, index: i })} />{t}
+              <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3">
+                <input type="checkbox" className="size-5 shrink-0 accent-accent" checked={ticked.includes(i)} onChange={() => dispatch({ type: "toggleCheck", key: checkKey, index: i })} />{t}
               </label></li>
             ))}
           </ul>
         </div>
       )}
       {cautions.length > 0 && (
-        <details className="rounded-button bg-paper px-3 py-2 text-caption">
-          <summary className="cursor-pointer font-semibold text-accent-ink">하지 말 것 · 지켜볼 것 ({cautions.length})</summary>
+        <details className="rounded-button bg-paper px-3 py-2 text-body">
+          <summary className="flex min-h-11 cursor-pointer items-center text-label font-semibold text-accent-ink">하지 말 것 · 지켜볼 것 ({cautions.length})</summary>
           <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">{cautions.map((t) => <li key={t}>{t}</li>)}</ul>
         </details>
       )}
       <Chat code={p.code} step="EX-03" greet={false} />
-      <PrimaryButton onClick={() => dispatch({ type: "startNextTest", fieldId: c.field_id, label: c.label, value: c.what ?? c.new_short ?? c.new,
-        startDate: m.startDate, endDate: m.endDate, budget: m.budget })}>
-        다음 테스트 세팅 ▶
-      </PrimaryButton>
-      <p className="-mt-2 text-caption text-soft">② 세팅 목록으로 가요. 뭉치가 바꿀 칸 · 금액 · 날짜 · 게시 전 돈 확인만 짚어요. 게시는 직접 해 주세요.</p>
-      <button type="button" onClick={() => dispatch({ type: "startUpload" })} className="self-start text-caption text-soft underline">
+      <button type="button" onClick={() => dispatch({ type: "startUpload" })} className="flex min-h-11 items-center self-start text-label text-soft underline">
         다른 코드 넣기
       </button>
     </section>

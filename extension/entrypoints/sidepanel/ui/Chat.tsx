@@ -5,7 +5,7 @@ export interface Bubble { from: "assistant" | "me"; text: string; alert?: Assist
 
 /** 사장님 말풍선(오른쪽)·어시스턴트 말풍선(왼쪽) 모양 */
 export function bubbleClass(from: Bubble["from"]): string {
-  return from === "me" ? "self-end max-w-[85%] rounded-button bg-accent px-3 py-2 text-caption text-on-accent" : "max-w-[95%] rounded-button bg-paper px-3 py-2 text-caption";
+  return from === "me" ? "self-end max-w-[85%] rounded-button bg-accent px-3 py-2 text-body text-on-accent" : "max-w-[95%] rounded-button bg-paper px-3 py-2 text-body";
 }
 
 /** 질문 보내기: 내 말풍선 → 생각하는 중 → 답(또는 오류) 말풍선. 확장 EX-03과 분석 페이지 옆 어시스턴트가 같이 쓴다. */
@@ -35,15 +35,15 @@ export function AskForm({ id, label, suggestions, busy, onAsk }: { id: string; l
       {suggestions.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {suggestions.map((s) => (
-            <button key={s} type="button" onClick={() => send(s)} className="rounded-badge border border-accent bg-paper px-2.5 py-1 text-caption text-accent-ink">{s}</button>
+            <button key={s} type="button" onClick={() => send(s)} className="min-h-11 rounded-badge border border-accent bg-paper px-3 text-label text-accent-ink">{s}</button>
           ))}
         </div>
       )}
       <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) send(text); }}>
         <label htmlFor={id} className="sr-only">{label}</label>
         <input id={id} value={text} onChange={(e) => setText(e.target.value)} placeholder="궁금한 걸 물어보세요 (예: CPM이 뭐예요?)"
-          className="min-w-0 flex-1 rounded-button border border-field-line bg-paper px-3 py-2 text-caption" />
-        <button type="submit" disabled={!text.trim() || busy} className="rounded-button bg-accent px-3 text-caption font-semibold text-on-accent disabled:opacity-(--state-disabled-opacity)">묻기</button>
+          className="min-h-11 min-w-0 flex-1 rounded-button border border-field-line bg-paper px-3 text-body" />
+        <button type="submit" disabled={!text.trim() || busy} className="min-h-11 rounded-button bg-accent px-4 text-label font-semibold text-on-accent disabled:opacity-(--state-disabled-opacity)">묻기</button>
       </form>
     </>
   );

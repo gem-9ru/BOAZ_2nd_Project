@@ -71,7 +71,7 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
       <p className="text-caption font-semibold text-accent-ink">분석 페이지 · {step ? ANALYSIS_STEPS[step] : ""}</p>
       <div className="flex flex-col gap-2" aria-live="polite">
         {bubbles.map((b, i) => b.alert ? (
-          <p key={i} className={`flex gap-2 rounded-button px-3 py-2 text-caption ${SHAPE[b.alert.level].box}`}>
+          <p key={i} className={`flex gap-2 rounded-button px-3 py-2 text-body ${SHAPE[b.alert.level].box}`}>
             <span aria-hidden="true" className="font-bold">{SHAPE[b.alert.level].mark}</span>
             <span><span className="sr-only">{SHAPE[b.alert.level].name} </span>{b.text}</span>
           </p>
