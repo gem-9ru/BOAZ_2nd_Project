@@ -564,7 +564,7 @@ describe("이름 그대로 자료 없음 · 뺀 말로 다시 · 무리 설명 �
 
   it("explains what a customer group is", () => {
     render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={() => {}} />);
-    expect(screen.getByText(/같은 목적으로 찾는 손님끼리 묶었어요/)).toBeTruthy();
+    expect(screen.getByText(/검색어에 든 낱말\(선물·시즌 등\)로 손님을 묶었어요/)).toBeTruthy();
   });
 
   it("copies a short summary of the result", async () => {

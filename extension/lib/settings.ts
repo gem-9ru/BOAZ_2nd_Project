@@ -5,7 +5,7 @@ import type { Setting, Target } from "./flow";
 const META_MIN_AGE = 18;
 const META_MAX_AGE = 65;
 
-/** 네이버 연령대("30") → 메타 연령 범위 (메타는 18~65세). */
+/** 네이버 연령대("30") → 메타 연령 범위. 18세부터는 이 도구 선택 (메타는 한국에서 만 14세부터 광고 가능, 18세 미만은 상세 타게팅 불가 — 메타 도움말 229435355723442, 2026-11-26 확인). 65는 메타의 '65세 이상'. */
 export function ageGroupToRange(group: string): { ageMin: number; ageMax: number } {
   const start = Number(group);
   return { ageMin: Math.max(start, META_MIN_AGE), ageMax: Math.min(start + 9, META_MAX_AGE) };

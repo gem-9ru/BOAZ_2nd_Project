@@ -76,7 +76,7 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
           </strong>
           {now && <p className="text-caption">{now}</p>}
           <MonthBars monthly={trend.monthly} />
-          <span className="text-small text-soft">'{stats.keyword}' 한 단어 · 지난 12달 {stats.trend_source === "shopping" ? "네이버 쇼핑 클릭" : "네이버 검색"} 기준 · 가장 많은 달을 100으로 본 비율. 손님 무리 카드는 무리의 검색어를 묶어 봐서 달이 다를 수 있어요.</span>
+          <span className="text-small text-soft">'{stats.keyword}' 한 단어 · 지난 12달 {stats.trend_source === "shopping" ? "네이버 쇼핑 클릭" : "네이버 검색"} 기준 · 가장 많은 달을 100으로 본 비율. 가장 많은 달이 평균의 1.2배 이상이면 철이 있다고 봐요 (이 도구 기준). 손님 무리 카드는 무리의 검색어를 묶어 봐서 달이 다를 수 있어요.</span>
         </div>
       )}
       </div>

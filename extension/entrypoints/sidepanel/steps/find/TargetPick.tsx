@@ -8,7 +8,7 @@ export const GENDER_WORD: Record<Target["gender"], string> = { female: "여성�
 /** {from:'30', to:'50'} → '30~50대' */
 const ageWord = (r: { from: string; to: string }) => (r.from === r.to ? `${r.from}대` : `${r.from}~${r.to}대`);
 
-/** 나이대 묶음 + 성별 → 광고 관리자에 넣을 타깃 (10대는 18세부터, 60대는 65세 이상까지). */
+/** 나이대 묶음 + 성별 → 광고 관리자에 넣을 타깃 (10대는 18세부터 — 이 도구 선택, 60대는 65세 이상까지). */
 export function toTarget(from: string, to: string, gender: Target["gender"]): Target {
   return { ageMin: ageGroupToRange(from).ageMin, ageMax: ageGroupToRange(to).ageMax, gender };
 }
@@ -68,6 +68,7 @@ export default function TargetPick({ from, to, gender, rec, female, recShare, on
               </select>
               <span>까지</span>
             </div>
+            {from === "10" && <p className="text-caption text-soft">10대는 18세부터 넣어요 (이 도구 선택). 메타는 한국에서 만 14세부터 광고할 수 있어요 (메타 도움말).</p>}
           </fieldset>
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-2 text-caption font-semibold text-soft">성별</legend>

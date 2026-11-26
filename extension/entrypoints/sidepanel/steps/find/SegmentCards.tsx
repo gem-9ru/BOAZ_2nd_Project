@@ -39,7 +39,7 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
   return (
     <div className="flex flex-col gap-2.5">
       <span className="text-caption font-semibold text-soft">손님 무리</span>
-      <p className="-mt-1 text-small text-soft">같은 목적으로 찾는 손님끼리 묶었어요 (선물로 / 시즌에 / 상품 자체로). 광고를 보여 줄 무리를 하나 골라 주세요.</p>
+      <p className="-mt-1 text-small text-soft">검색어에 든 낱말(선물·시즌 등)로 손님을 묶었어요 (선물로 / 시즌에 / 상품 자체로 · 이 도구 기준). 광고를 보여 줄 무리를 하나 골라 주세요.</p>
       <div role="radiogroup" aria-label="광고를 보여 줄 손님" className="flex flex-col gap-2.5">
         {segments.map((seg) => {
           const on = selected?.intent === seg.intent;

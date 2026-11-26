@@ -43,7 +43,7 @@ export default function FeedPreview({ name, headline, text, photo, kind = "fb" }
     return (
       <div aria-hidden className="overflow-hidden rounded-card border border-line bg-paper">
         {head}
-        {picture("aspect-square")}
+        {picture("aspect-[4/5]")}
         <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
           <span className="flex min-w-0 flex-col">
             <span className="truncate text-caption font-semibold text-ink">{headline || "제목"}</span>
@@ -61,7 +61,7 @@ export default function FeedPreview({ name, headline, text, photo, kind = "fb" }
     <div aria-hidden className="overflow-hidden rounded-card border border-line bg-paper">
       {head}
       <p className="line-clamp-3 px-3 pb-2 text-caption text-ink">{text || "본문"}</p>
-      {picture("aspect-square")}
+      {picture("aspect-[4/5]")}
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <span className="min-w-0 truncate text-caption font-semibold text-ink">{headline || "제목"}</span>
         {cta}
