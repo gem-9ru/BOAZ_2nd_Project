@@ -441,7 +441,7 @@ function Preview({ name, draft, photo, setPhoto, view, setView }: {
           </label>
         ))}
       </div>
-      {view !== "fb" && <p className="text-caption text-soft">{view === "ig" ? "인스타 피드에서는 제목이 거의 안 보여요. 본문 첫 줄이 중요해요." : "스토리에서는 제목이 안 보이고 본문도 한 줄만 보여요."}</p>}
+      {view !== "fb" && <p className="text-caption text-soft">{view === "ig" ? "인스타 피드는 제목 40자, 본문 125자가 권장돼요 (메타 광고 가이드)." : "스토리에서는 제목이 안 보이고 본문도 한 줄만 보여요."}</p>}
       <FeedPreview name={name} headline={draft.headline} text={draft.text} photo={photo} kind={view} />
       <div className="flex items-center justify-between gap-2">
         <label className="inline-flex min-h-11 cursor-pointer items-center text-caption font-semibold text-accent-ink underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
