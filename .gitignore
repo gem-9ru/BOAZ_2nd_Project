@@ -24,3 +24,6 @@ v2/data/cache/
 .claude/
 .superpowers/
 logs/
+
+# 웹 스토어에 올릴 zip (빌드 결과물)
+store/*.zip

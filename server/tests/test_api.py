@@ -312,3 +312,10 @@ def test_no_data_suggests_other_words(monkeypatch):
     monkeypatch.setattr(market, "build", lambda *a, **k: None)
     monkeypatch.setattr(naver_api, "last_error", lambda: None)
     assert TestClient(app).post("/research", json={"product": "수제 버터 쿠키"}).json()["suggestions"] == ["버터 쿠키", "쿠키"]
+
+
+def test_privacy_policy_page_for_the_web_store():
+    """크롬 웹 스토어 등록에 쓰는 개인정보 처리방침 (공개 주소/privacy). 비밀번호·결제 정보는 받지 않는다고 적혀 있어야 한다."""
+    r = TestClient(app).get("/privacy")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "개인정보 처리방침" in r.text and "비밀번호" in r.text and "Anthropic" in r.text

@@ -29,7 +29,8 @@ export function parseAnalysisUrl(url: string | undefined, page = ANALYSIS_PAGE):
 }
 
 // 개발 중에 쓰는 내 컴퓨터 주소 (서버를 다른 포트로 띄워도 알아보게)
-const LOCAL_PAGES = ["http://localhost:8000/analysis", "http://127.0.0.1:8000/analysis", "http://localhost:8010/analysis"];
+const LOCAL_PAGES = ["http://localhost:8000/analysis", "http://127.0.0.1:8000/analysis", "http://localhost:8010/analysis",
+  "https://ad-report.gem-9ru.com/analysis"];   // 분석 페이지 전용 공개 주소 (같은 서버)
 
 /** 지금 창에서 보고 있는 탭이 분석 페이지인지 따라간다 (탭 바꾸기 · 주소 # 바뀜). */
 export function useAnalysisTab(): AnalysisTab | null {

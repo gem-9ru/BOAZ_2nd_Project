@@ -11,9 +11,7 @@ export default defineConfig({
     host_permissions: [
       "https://adsmanager.facebook.com/*",
       "https://business.facebook.com/*",
-      "http://localhost:8000/*",
-      "https://boaz-ad-assistant.gem-9ru.com/*",
-    ],
+    ],   // 우리 서버는 CORS로 확장을 허용해서 따로 권한이 필요 없다 (스토어 심사에 필요한 권한만)
     action: { default_title: "Ad assistant 열기" },
     web_accessible_resources: [
       { resources: ["guide/*"], matches: ["https://adsmanager.facebook.com/*", "https://business.facebook.com/*"] },

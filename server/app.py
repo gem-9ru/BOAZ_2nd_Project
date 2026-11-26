@@ -381,6 +381,12 @@ def root():
     return RedirectResponse("/analysis")
 
 
+@app.get("/privacy", include_in_schema=False)
+def privacy():
+    """크롬 웹 스토어 등록용 개인정보 처리방침 (ad-assistant.gem-9ru.com/privacy)."""
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy.html"), media_type="text/html")
+
+
 @app.get("/analysis")
 def analysis_page():
     index = os.path.join(WEB_DIST, "index.html")
