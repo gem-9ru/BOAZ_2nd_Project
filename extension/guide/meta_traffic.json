@@ -10,19 +10,36 @@
     "labelledBy": "트래픽"
    },
    {
+    "labelText": "수동 트래픽 캠페인",
+    "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
+    "inDialog": true
+   },
+   {
+    "role": "button",
+    "text": "계속",
+    "say": "'계속'을 누르세요",
+    "inDialog": true
+   },
+   {
     "role": "button",
     "text": "만들기",
-    "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요"
+    "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요",
+    "pageOnly": true
    }
   ],
   "say": "'{value}'을(를) 고르고 '계속'을 누르세요",
-  "done": "value",
+  "done": "manual",
   "fallback": {
    "image": "guide/meta.campaign.objective.png",
    "text": "화면에서 '캠페인 목표' 칸을 찾아 주세요"
   },
   "auto": "click",
-  "level": "list"
+  "level": "list",
+  "doneWhen": [
+   {
+    "labelledBy": "카테고리"
+   }
+  ]
  },
  {
   "id": "meta.campaign.special_category",
@@ -33,15 +50,6 @@
   "find": [
    {
     "labelledBy": "카테고리"
-   },
-   {
-    "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
-    "labelText": "수동 트래픽 캠페인"
-   },
-   {
-    "role": "button",
-    "text": "계속",
-    "say": "'계속'을 누르세요"
    }
   ],
   "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 넘어가요 ({value})",

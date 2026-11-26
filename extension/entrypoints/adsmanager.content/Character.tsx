@@ -127,6 +127,13 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
     return () => cancelAnimationFrame(raf);
   }, [key]);
 
+  // 사장님 차례로 기다리는 중이면 가리키기 대신 손을 흔들며 기다린다 (테두리가 칸을 보여 준다). 뭉치가 다시 할 차례면 가리키기
+  const waitOwner = view.waiting === "owner";
+  useEffect(() => {
+    if (mode === "point" && waitOwner) setMode("wave");
+    else if (mode === "wave" && !waitOwner && rect) setMode("point");
+  }, [mode, waitOwner, rect !== null]);
+
   // 도착 신호: 지금 칸 옆에 서서 가리키는 중일 때만 그 칸을 알린다 (걷는 중·다른 칸 상자면 null)
   useEffect(() => {
     const here = mode === "point" && rect && view.target && rectFor.current === view.target ? view.target : null;

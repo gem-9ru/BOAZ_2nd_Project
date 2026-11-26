@@ -404,7 +404,7 @@ export class Guide {
     if (hint) {
       // 이미 고른 준비 선택지('수동 트래픽 캠페인' ✓)면 그 뒤의 준비 버튼('계속')을 누른다
       if (isChoice(el) && isChecked(el)) {
-        const later = locateWith(this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
+        const later = locateWith(openDialog(this.doc) ?? this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
         if (later && !isPublishLike(later.el)) later.el.click();
         this.timer = setTimeout(() => this.recheck(), 600);
         return;
@@ -434,6 +434,16 @@ export class Guide {
       return;
     }
     if (isChoice(el)) {
+      if (item.entry.doneWhen) {
+        // 끝 신호가 따로 있는 칸(캠페인 만들기 창): 고른 뒤 넘어가지 않고 창의 다음 준비 버튼('계속')을 누른다 → 끝 신호가 보이면 다음 칸
+        if (!isChecked(el)) el.click();
+        else {
+          const later = locateWith(openDialog(this.doc) ?? this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
+          if (later && !isPublishLike(later.el)) later.el.click();
+        }
+        this.timer = setTimeout(() => this.recheck(), 600);
+        return;
+      }
       if (!isChecked(el)) el.click();
       return next();
     }
@@ -546,6 +556,8 @@ export class Guide {
       if (!this.target && this.stage < 0 && this.retryMs > 0 && this.tries < MAX_TRIES) this.timer = setTimeout(() => this.retryNow(), this.retryMs);
       return;
     }
+    // 끝 신호(doneWhen)가 보이면 이 칸은 끝 (예: 캠페인 만들기 창을 다 지나 '카테고리' 칸이 뜸)
+    if (item?.entry.doneWhen && this.languageOk && locateWith(this.doc, item.entry.doneWhen)) return this.advance();
     const dialog = openDialog(this.doc);
     // 창 밖 칸(웹사이트 URL)은 창 안의 같은 칸에 넣지 않는다: 창 안에 넣은 값은 [완료] 뒤 광고 화면 칸에 남지 않았다 (2026-11-26 실제 화면)
     const hit = item && this.languageOk && !(dialog && item.entry.outsideDialog) ? locateWith(dialog ?? this.doc, item.entry.find) : null;

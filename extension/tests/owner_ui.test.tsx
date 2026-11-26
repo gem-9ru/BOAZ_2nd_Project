@@ -83,3 +83,24 @@ describe("패널 안내 목록", () => {
     expect(screen.queryByRole("button", { name: "처음부터" })).toBeNull();
   });
 });
+
+describe("사장님 차례면 뭉치는 가리키기 대신 손을 흔들며 기다린다", () => {
+  function field() {
+    document.body.innerHTML = `<input id="f">`;
+    const f = document.getElementById("f")!;
+    f.getClientRects = () => [{ width: 200, height: 40 }] as unknown as DOMRectList;
+    f.getBoundingClientRect = () => ({ left: 100, top: 300, right: 300, bottom: 340, width: 200, height: 40 }) as DOMRect;
+    f.scrollIntoView = vi.fn();
+    return f;
+  }
+  const reduce = () => vi.stubGlobal("matchMedia", (q: string) => ({ matches: q.includes("reduce"), addEventListener: noop, removeEventListener: noop }));
+  it("기다리는 중(owner)이면 wave, 아니면 point", () => {
+    reduce();
+    const f = field();
+    const { container, rerender } = render(<Character view={{ ...base, found: true, target: f, owner: true, waiting: "owner" }} onDone={noop} onBack={noop} onClose={noop} />);
+    expect(container.ownerDocument.querySelector(".coach-mungchi")!.getAttribute("data-mode")).toBe("wave");
+    rerender(<Character view={{ ...base, found: true, target: f }} onDone={noop} onBack={noop} onClose={noop} />);
+    expect(container.ownerDocument.querySelector(".coach-mungchi")!.getAttribute("data-mode")).toBe("point");
+    vi.unstubAllGlobals();
+  });
+});

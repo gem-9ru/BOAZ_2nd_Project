@@ -242,3 +242,40 @@ describe("슬라이드: 사진·제목은 사장님이 직접", () => {
     expect(g.view().waiting).toBe("owner");
   });
 });
+
+// 2026-11-26 실제 화면: '수동 트래픽 캠페인'을 고르는 동안 말풍선 번호가 이미 '2/18'이었다 → 만들기 창은 끝까지 1번 칸
+describe("캠페인 만들기 창은 1번 칸", () => {
+  it("트래픽 → 계속 → 수동 트래픽 캠페인 → 계속까지 1번, 캠페인 화면이 뜨면 2번 ('+ 만들기'는 한 번만)", () => {
+    document.documentElement.lang = "ko";
+    document.body.innerHTML = `<div role="button" id="make">만들기</div>`;
+    let makes = 0;
+    const page1 = `<div role="dialog" id="d"><span id="t">트래픽</span><input type="radio" aria-labelledby="t" id="traffic"><div role="button" id="go1">계속</div></div>`;
+    const page2 = `<div role="dialog" id="d"><div><div><label><input type="radio" id="manual">수동 트래픽 캠페인</label></div></div><div role="button" id="go2">계속</div></div>`;
+    document.getElementById("make")!.addEventListener("click", () => {
+      makes += 1;
+      document.body.insertAdjacentHTML("beforeend", page1);
+      document.getElementById("go1")!.addEventListener("click", () => {
+        if (!(document.getElementById("traffic") as HTMLInputElement).checked) return;
+        document.getElementById("d")!.outerHTML = page2;
+        document.getElementById("go2")!.addEventListener("click", () => {
+          if (!(document.getElementById("manual") as HTMLInputElement).checked) return;
+          document.getElementById("d")!.remove();
+          document.body.insertAdjacentHTML("beforeend", `<span id="c">카테고리</span><div role="combobox" aria-labelledby="c"></div>`);
+        });
+      });
+    });
+    const objective = create.find((e) => e.id === "meta.campaign.objective")!;
+    const special = create.find((e) => e.id === "meta.campaign.special_category")!;
+    const seen: number[] = [];
+    const g = new Guide(document, [{ entry: objective, value: "트래픽" }, { entry: special, value: "아니요" }], 0, (i) => seen.push(i), 0);
+    g.skipSurvey();
+    g.setAuto(true);
+    const counts: number[] = [];
+    for (let i = 1; i <= 60 && !seen.length; i++) { g.tick(); g.autoStep(i * 5000); counts.push(g.view().index); }
+    expect(makes).toBe(1);
+    expect(document.querySelector("[role=combobox]")).not.toBeNull();   // 창을 다 지나 캠페인 화면('카테고리')이 뜬 뒤에야 2번
+    expect(seen).toEqual([1]);
+    expect(counts.slice(0, -1).every((n) => n === 0)).toBe(true);
+    expect(special.find.some((f) => f.say)).toBe(false);   // 2번 칸엔 만들기 창 안내가 없다
+  });
+});

@@ -78,6 +78,18 @@ describe("말풍선 자리", () => {
     const b = bubbleSpot({ x: 300, y: 100 }, size, bubble, { width: 1280, height: 800 }, { left: 60, top: 120, right: 290, bottom: 160, width: 230, height: 40 });
     expect(b.x).toBe(300 + size + 4);
   });
+
+  // 2026-11-26 실제 화면 (창 1124px): 뭉치가 작은 제목('예산 및 일정')을 가리킬 때 말풍선이 제목은 피했지만
+  // 바로 아래 금액 칸을 덮었다 → 가리킨 곳 바로 아래·오른쪽(메타가 실제 칸을 두는 곳)도 비워 둔다
+  it("작은 제목을 가리키면 그 아래 칸 자리도 덮지 않는다", () => {
+    const vp = { width: 1124, height: 800 };
+    const heading = { left: 300, top: 380, right: 400, bottom: 400, width: 100, height: 20 };
+    const amount = { left: 300, top: 420, right: 680, bottom: 460 };   // 제목 아래 금액 칸
+    const at = { x: 410, y: 330 };
+    const b = bubbleSpot(at, size, bubble, vp, heading);
+    const overlap = b.x < amount.right && b.x + bubble.width > amount.left && b.y < amount.bottom && b.y + bubble.height > amount.top;
+    expect(overlap).toBe(false);
+  });
 });
 
 import { angleDiff, blendPose, headingYaw, pose as poseAt, REST, travelAt, travelDuration } from "../lib/character3d/motion";
