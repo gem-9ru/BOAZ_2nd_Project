@@ -127,3 +127,24 @@ describe("9. 묻기 칸 이름이 보인다", () => {
     expect(label.className).not.toContain("sr-only");
   });
 });
+
+describe("화면 확인(2026-11-26, 400px)에서 본 것", () => {
+  it("the ask box hint is short enough to show whole in a narrow panel", () => {
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
+    expect((document.getElementById("ex-ask") as HTMLInputElement).placeholder).toBe("예: CPM이 뭐예요?");
+  });
+
+  it("the change card does not stick to the top while scrolling (it hid a fifth of the panel)", () => {
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
+    expect(screen.getByRole("region", { name: "바꿀 칸" }).className).not.toContain("sticky");
+  });
+
+  it("this ad's settings show the end date as '11월 20일', like the other screens", () => {
+    render(<CodeStep state={{ ...initialState(), step: "upload", settings: [
+      { fieldId: "meta.campaign.objective", label: "목표", value: "트래픽" },
+      { fieldId: "meta.adset.end_date", label: "종료 날짜", value: "2026-11-20 09:00" }] }} dispatch={() => {}} />);
+    const box = screen.getByRole("region", { name: "이번 광고 세팅" });
+    expect(box.textContent).toContain("종료 날짜: 11월 20일");
+    expect(box.textContent).not.toContain("2026-11-20");
+  });
+});

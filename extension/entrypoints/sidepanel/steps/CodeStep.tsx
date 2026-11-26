@@ -37,7 +37,8 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   const pick = (id: string) => state.settings.find((x) => x.fieldId === id)?.value;
   const summary = [pick("meta.campaign.objective"), pick("meta.adset.age_gender"), pick("meta.adset.location")].filter(Boolean).join(" · ");
   const media = [pick("meta.ad.format"), pick("meta.ad.media")].filter(Boolean).join(" · ");
-  const end = pick("meta.adset.end_date");
+  const endIso = pick("meta.adset.end_date")?.slice(0, 10);
+  const end = endIso && /^\d{4}-\d{2}-\d{2}$/.test(endIso) ? `${Number(endIso.slice(5, 7))}월 ${Number(endIso.slice(8))}일` : endIso;   // 다른 화면처럼 '11월 20일'
   const budget = pick("meta.adset.lifetime_budget");
   return (
     <section className="flex flex-col gap-4">

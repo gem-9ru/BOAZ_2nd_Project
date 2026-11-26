@@ -54,7 +54,7 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
   const look = word ? (word.endsWith("쪽이에요") ? LOOK.쪽이에요 : LOOK[word as "확실해요" | "아직 몰라요"] ?? LOOK["아직 몰라요"]) : null;
   return (
     <section className="flex flex-col gap-4">
-      <section aria-label="바꿀 칸" className="sticky top-0 z-10 flex flex-col gap-2 rounded-card border-2 border-accent bg-paper px-4 py-3 shadow-raised">
+      <section aria-label="바꿀 칸" className="flex flex-col gap-2 rounded-card border-2 border-accent bg-paper px-4 py-3 shadow-raised">
         <p className="text-caption text-soft">분석 페이지에서 도착</p>
         <p className="text-caption font-semibold text-accent-ink">{c.path ?? c.label}</p>
         <p className="text-body font-bold">{c.now ? `${c.now} → ` : ""}{c.new_short ?? c.new}</p>

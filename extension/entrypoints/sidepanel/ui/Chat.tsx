@@ -41,7 +41,7 @@ export function AskForm({ id, label, suggestions, busy, onAsk }: { id: string; l
       )}
       <label htmlFor={id} className="text-caption font-semibold text-soft">{label}</label>
       <form className="-mt-1 flex gap-2" onSubmit={(e) => { e.preventDefault(); if (text.trim() && !busy) send(text); }}>
-        <input id={id} value={text} onChange={(e) => setText(e.target.value)} placeholder="궁금한 걸 물어보세요 (예: CPM이 뭐예요?)"
+        <input id={id} value={text} onChange={(e) => setText(e.target.value)} placeholder="예: CPM이 뭐예요?"
           className="min-h-11 min-w-0 flex-1 rounded-button border border-field-line bg-paper px-3 text-body" />
         <button type="submit" disabled={!text.trim() || busy} className="min-h-11 rounded-button bg-accent px-4 text-label font-semibold text-on-accent disabled:opacity-(--state-disabled-opacity)">묻기</button>
       </form>
