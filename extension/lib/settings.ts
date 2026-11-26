@@ -109,8 +109,9 @@ export const META_DAILY_MIN = 1336;
 /** '3만 원' · '25,000원' · '10000' → 원. 못 읽으면 null. */
 export function parseWon(text: string | undefined): number | null {
   const t = (text ?? "").replace(/[,\s원]/g, "");
+  if (!/^\d+(\.\d+)?만?$/.test(t)) return null;   // 숫자·쉼표·'만'·'원' 모양만 ('1e3'·'0x10' 같은 건 받지 않음, 감사 18)
   const n = t.endsWith("만") ? Number(t.slice(0, -1)) * 10000 : Number(t);
-  return t && Number.isFinite(n) && n > 0 ? n : null;
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
 }
 
 /** 광고 기간 일수 (시작일·종료일 모두 셈). */

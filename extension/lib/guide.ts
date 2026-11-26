@@ -166,3 +166,8 @@ export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldI
 export function shownDates(text: string): string {
   return text.replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, (_, m: string, d: string) => `${Number(m)}월 ${Number(d)}일`);
 }
+
+/** 안내 묶음 표시 (칸 id 순서). 같은 안내를 다시 받은 건지(자동 진행 이어 가기) 새 안내인지 가린다 (감사 12) */
+export function guideSignature(steps: { entry: { id: string } }[]): string {
+  return steps.map((s) => s.entry.id).join("|");
+}

@@ -14,6 +14,9 @@ export async function loadState(): Promise<FlowState> {
   return { ...initialState(), ...rest, step } as FlowState;
 }
 
+/** 저장. 저장소에 더 새 차례(rev)가 있으면 그건 배경 스크립트가 쓴 뭉치 진행이다 → 진행(guide·step)은 저장소 것을 지키고 나머지는 이 상태로 */
 export async function saveState(s: FlowState): Promise<void> {
-  await browser.storage.local.set({ [KEY]: s });
+  const got = (await browser.storage.local.get(KEY))[KEY] as FlowState | undefined;
+  const merged = got && (got.rev ?? 0) > (s.rev ?? 0) ? { ...s, guide: got.guide, step: got.step, rev: got.rev } : s;
+  await browser.storage.local.set({ [KEY]: merged });
 }

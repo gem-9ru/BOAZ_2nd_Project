@@ -103,8 +103,17 @@ export async function setEndDate(doc: Document, value: string, pace: Pace = real
   typeInto(box, date);
   box.blur();
   await pace.wait(600);
+  // 시작 날짜처럼 정말 들어갔는지 다시 읽는다 (안 들어가면 총예산의 메타 기본값 '30일 뒤'가 남는다, 감사 8)
+  const got = dateOf(endBox(doc, sw)?.value ?? "");
+  if (got !== date) { note("end date did not stick"); return false; }
   const time = value.match(/\b\d{2}:\d{2}\b/)?.[0];
   return time ? setTimeAfter(doc, box, time, pace) : true;
+}
+
+/** 날짜 칸 글자('2026년 12월 3일' · '2026-12-03') → '2026-12-03'. 못 읽으면 null */
+export function dateOf(text: string): string | null {
+  const m = text.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  return m ? `${m[1]}-${m[2]!.padStart(2, "0")}-${m[3]!.padStart(2, "0")}` : null;
 }
 
 /** '30–39세 · 여성' → 메타 목록 값. 65 이상은 '65+'. 성별 '전체'는 메타의 '전체'. */
@@ -228,7 +237,7 @@ export function readBudget(doc: Document): { found: boolean; mode: "daily" | "li
   const mode = /총\s?예산/.test(t) ? "lifetime" : /일일\s?예산/.test(t) ? "daily" : null;
   const input = Array.from(doc.querySelectorAll<HTMLInputElement>(AMOUNT))
     .find((i) => combo.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING) ?? null;
-  const n = Number((input?.value ?? "").replace(/[^\d]/g, ""));
+  const n = Number((input?.value ?? "").split(".")[0]!.replace(/[^\d]/g, ""));   // '30,000.00' → 30000 (소수점 뒤는 버림, 감사 18)
   return { found: true, mode, amount: n > 0 ? n : null, combo, input };
 }
 
@@ -322,7 +331,9 @@ export async function moneyProblems(doc: Document, value: string, pace: Pace = r
     else if (want && b.amount !== want) out.push(`금액이 ${won(b.amount!)}이에요 → ${won(want)}으로 넣어 주세요`);
   }
   const end = endAnchor(doc);
-  if (!end || !end.on || !endBox(doc, end.anchor)?.value.trim()) out.push("종료 날짜가 없어요 → '종료 날짜 설정'을 켜고 날짜를 넣어 주세요 (없으면 끌 때까지 계속 나가요)");
+  const endValue = end && end.on ? endBox(doc, end.anchor)?.value.trim() : "";
+  if (!endValue) out.push("종료 날짜가 없어요 → '종료 날짜 설정'을 켜고 날짜를 넣어 주세요 (없으면 끌 때까지 계속 나가요)");
+  else if ((dateOf(endValue) ?? "9999") < isoDate(new Date())) out.push("종료 날짜가 이미 지났어요 → 오늘 이후 날짜로 바꿔 주세요");
   // 메타 자체 경고: '예산은 ₩40,080.00 이상이어야 하며, 그렇지 않으면 광고가 게재되지 않을 수 있습니다' (하루 최소 × 기간보다 적을 때)
   const low = Array.from(doc.querySelectorAll<HTMLElement>("body *")).map((e) => (e.children.length ? "" : textOf(e)))
     .map((t) => t.match(/예산은 ₩([\d,]+)(?:\.\d+)? 이상이어야/)).find(Boolean);

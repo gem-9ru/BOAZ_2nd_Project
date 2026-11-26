@@ -37,7 +37,7 @@ export function AN02({ r }: { r: Result }) {
     { n: "②", stage: "본 사람이 누르는 정도", suspect: ok("2") ? "—" : "소재 · 문구 · 형식", kind: ok("2") ? "ok" : "low",
       meaning: `1,000번 보이면 ${both((a) => people(a.ctr, 1000, "번"))} 눌려요 → ${ok("2") ? "괜찮아요" : "기준보다 적어요"}` },
     { n: "③", stage: "누른 뒤 페이지에 들어오는 정도", suspect: ok("3") ? "—" : "웹사이트 URL · 페이지 속도", kind: ok("3") ? "ok" : "low",
-      meaning: `누른 100명 중 ${both((a) => `${Math.round((a.click_to_visit ?? 0) * 100)}명`)} → ${ok("3") ? "괜찮아요" : "적어요"}` },
+      meaning: `누른 100명 중 ${both((a) => (a.click_to_visit == null ? "–" : `${Math.round(Math.min(a.click_to_visit, 1) * 100)}명`))} → ${ok("3") ? "괜찮아요" : "적어요"}` },
     { n: "④", stage: "들어온 뒤 행동", suspect: "—", kind: row("4")?.status === "ok" ? "ok" : "unknown",
       meaning: row("4")?.status === "ok" ? (row("4")?.signal ?? "")
         : <>{(row("4")?.signal ?? "행동 숫자가 파일에 없어요").replace(/ → 아직 몰라요$/, "")} → <VerdictBadge word="아직 몰라요" small /></> },

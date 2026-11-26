@@ -9,6 +9,7 @@
 캠페인 목표 열이 없으면 이번 범위(트래픽)로 채운다.
 """
 import io
+import zipfile
 from pathlib import Path
 from typing import Optional, Union
 
@@ -31,6 +32,9 @@ Source = Union[str, Path, io.IOBase, bytes]
 def _read_csv(src: Source) -> pd.DataFrame:
     raw = src if isinstance(src, bytes) else (src.read() if hasattr(src, "read") else Path(src).read_bytes())
     if raw[:2] == b"PK":   # 엑셀(.xlsx)은 zip이라 'PK'로 시작 (화면설계서 v4.2 AN-00: .csv / .xlsx 허용)
+        # 압축은 작아도 풀면 아주 큰 파일(압축 폭탄)로 메모리를 다 쓰지 않게, 풀린 크기를 먼저 본다 (감사 4)
+        if sum(i.file_size for i in zipfile.ZipFile(io.BytesIO(raw)).infolist()) > MAX_XLSX_UNZIPPED:
+            raise TooBig()
         return pd.read_excel(io.BytesIO(raw))
     for enc in ("utf-8-sig", "cp949"):
         try:
@@ -198,11 +202,22 @@ def _budget(raw: pd.DataFrame, daily: pd.DataFrame) -> Optional[dict]:
     return None
 
 
+MAX_XLSX_UNZIPPED = 50 * 1024 * 1024
+
+
+class TooBig(Exception):
+    pass
+
+
 def read_export(src: Source) -> Bundle:
     try:
         df = _read_csv(src)
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         return Bundle(problems=["파일이 비어 있거나 CSV가 아니에요. 광고 관리자에서 CSV로 내보내 주세요."])
+    except TooBig:
+        return Bundle(problems=["엑셀 파일이 너무 커요. 광고 관리자에서 비교할 광고 세트만 골라 CSV로 다시 내보내 주세요."])
+    except Exception:  # noqa: BLE001 (망가진 엑셀·알 수 없는 형식 → 500 대신 안내)
+        return Bundle(problems=["파일을 읽지 못했어요. 광고 관리자에서 CSV로 다시 내보내 주세요."])
     if df.empty or df.iloc[:, 0].astype(str).str.contains("No data available", case=False).all():
         return Bundle(problems=[NO_DATA])
     if LONG_COLUMNS <= set(df.columns):

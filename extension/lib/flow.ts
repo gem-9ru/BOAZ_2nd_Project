@@ -54,6 +54,8 @@ export interface FlowState {
   beforeNext?: { settings: Setting[]; startDate?: string; endDate?: string };
   /** 시작 전 준비물에서 아직 안 된 꼭 필요한 것 (이름). 하나라도 있으면 [광고 관리자 열기]를 막는다 */
   prepMissing?: string[];
+  /** 저장 차례: 배경 스크립트가 뭉치 진행을 쓸 때마다 1씩 올린다 (패널이 옛 상태로 진행을 덮어쓰지 않게, 감사 7) */
+  rev?: number;
 }
 
 export type FlowEvent =

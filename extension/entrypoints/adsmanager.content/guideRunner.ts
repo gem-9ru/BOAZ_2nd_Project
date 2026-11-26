@@ -78,6 +78,8 @@ export class Guide {
   private behindDialog = false;
   /** 돈 확인을 통과한 광고 세트 id (다음 테스트의 두 세트가 같은 세트를 두 번 읽지 않게) */
   private checkedSets: string[] = [];
+  /** kill() 뒤: 어떤 동작도 하지 않는다 */
+  private dead = false;
   private dialogWait = false;   // 칸이 창 뒤라서 기다리는 중 (창이 닫히면 저절로 풀린다)
   /** 창 밖 칸(웹사이트 URL)인데 창이 열려 있음 → 뭉치가 누를 창 마무리 단추('다음'·'완료') */
   private finishBtn: HTMLElement | null = null;
@@ -159,6 +161,7 @@ export class Guide {
 
   /** 자동 진행 한 걸음 (콘텐츠 스크립트가 tick 뒤에 부른다). now = ms */
   autoStep(now: number): void {
+    if (this.dead) return;
     // 준비 단계에서 기다리다가 진짜 칸이 나타났다 → 사장님 [다 했어요] 없이 이어서 넣는다
     if (this.hintWait && this.waiting === "owner" && this.target && !this.steps[this.index]?.entry.find[this.matched]?.say) {
       this.hintWait = false;
@@ -274,6 +277,7 @@ export class Guide {
     if (start === "list") return this.map;
     const NAMES: Record<string, string> = { campaign: "캠페인", adset: "광고 세트", ad: "광고" };
     for (const level of ["campaign", "adset", "ad"] as const) {
+      if (this.dead) break;
       const items = this.steps.filter((s) => s.entry.level === level && !s.entry.publish);
       if (!items.length || !goToLevel(this.doc, level)) continue;
       this.surveyedLevels.add(level);
@@ -517,6 +521,13 @@ export class Guide {
     if (this.timer) clearTimeout(this.timer);
   }
 
+  /** 뭉치를 다시 부를 때 예전 뭉치를 끝낸다: 하던 일(총예산 넣기·둘러보기)이 나중에 끝나도 칸을 넘기거나 진행을 저장하지 않게 (감사 6) */
+  kill(): void {
+    this.dead = true;
+    this.auto = false;
+    this.stop();
+  }
+
   /** [이전 칸]: 한 칸 뒤로 (첫 칸이면 그대로). */
   back(): void {
     if (this.index === 0) return;
@@ -525,6 +536,7 @@ export class Guide {
   }
 
   private advance(): void {
+    if (this.dead) return;
     this.moveTo(this.index + 1);
     this.seek();
   }

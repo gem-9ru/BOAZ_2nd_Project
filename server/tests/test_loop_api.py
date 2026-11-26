@@ -99,7 +99,7 @@ def test_simulate_marks_untried_budget_as_hypothesis_and_gives_test_and_roll():
     big = c.post("/simulate", json={"code": code, "arm": "A_자동노출위치", "budget": 20000}).json()
     assert small["tried"] is True and big["tried"] is False
     # Test & Roll은 슬라이더(테스트 금액)가 아니라 전체 예산 기준 (기본 ₩100,000 → 세트당 ₩4,000~10,000)
-    assert (small["next_test"]["per_set_lo"], small["next_test"]["per_set_hi"]) == (4000, 10000)
+    assert (small["next_test"]["per_set_lo"], small["next_test"]["per_set_hi"]) == (6000, 10000)   # 하루 최소 × 4일 이상 (감사 9)
     t = c.post("/simulate", json={"code": code, "arm": "A_자동노출위치", "budget": 5000, "total": 300000}).json()
     assert t["next_test"]["total"] == 300000
 

@@ -1,5 +1,5 @@
 import ReactDOM from "react-dom/client";
-import type { GuideMsg } from "../../lib/guide";
+import { guideSignature, type GuideMsg } from "../../lib/guide";
 import { Character } from "./Character";
 import { Guide } from "./guideRunner";
 import "./overlay.css";
@@ -9,12 +9,13 @@ export default defineContentScript({
   cssInjectionMode: "ui",
   async main(ctx) {
     let guide: Guide | null = null;
+    let lastSig = "";   // 지금 뭉치가 받은 안내 묶음 (guideSignature)
     let root: ReactDOM.Root | null = null;
     let timer: number | null = null;
     let focus = false;   // EX-03 다음 테스트: 바꿀 칸(첫 칸)만 밝게, 나머지는 흐리게
 
     function stopGuide() {
-      guide?.stop();
+      guide?.kill();
       guide = null;
       if (timer !== null) window.clearInterval(timer);
       timer = null;
@@ -63,7 +64,9 @@ export default defineContentScript({
       if (msg.type !== "guide:start" || !msg.steps) return;
       // 뭉치가 도는 중에 '시작'이 한 번 더 오면(2026-11-26 실제 콘솔 'start 0 (restart)') 새 뭉치는 자동 진행이 꺼진 채 시작했다
       // → 사장님이 켜 둔 자동 진행은 이어 간다
-      const wasAuto = Boolean(guide?.view().auto);
+      const sig = guideSignature(msg.steps);
+      const wasAuto = Boolean(guide?.view().auto) && sig === lastSig;   // 같은 안내를 다시 받을 때만 (새 안내는 [자동 진행]을 눌러야 시작)
+      lastSig = sig;
       console.debug("[ad-coach] start", msg.startIndex ?? 0, guide ? `(restart, auto ${wasAuto})` : "");
       stopGuide();
       focus = Boolean(msg.focus);

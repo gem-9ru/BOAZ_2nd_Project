@@ -12,12 +12,13 @@ export async function handleProgress(msg: ProgressMessage): Promise<void> {
     msg.index >= msg.total
       ? reduce(s, s.guide.mode === "export" ? { type: "startUpload" } : { type: "guideDone" })
       : reduce(s, { type: "guideProgress", index: msg.index });
-  await saveState(next);
+  await saveState({ ...next, rev: (s.rev ?? 0) + 1 });
 }
 
 /** 광고 관리자 위 [닫기]: 뭉치가 집(패널 제목 왼쪽)으로 돌아온다. 진행 칸은 그대로 둔다. */
 export async function handleClosed(): Promise<void> {
-  await saveState(reduce(await loadState(), { type: "guideClosed" }));
+  const s = await loadState();
+  await saveState({ ...reduce(s, { type: "guideClosed" }), rev: (s.rev ?? 0) + 1 });
 }
 
 /** 광고 관리자는 늦게 뜨고 주소를 바꾸기도 해서, 캐릭터에게 보내는 첫 메시지를 몇 번 다시 보낸다. */

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Placement, Result } from "../api";
 import { sentence } from "../blocks/sentence";
 import { MetricRow, ProbBar } from "../blocks/Trust";
-import { band, Card, HowCalculated, md, pct, people, betterProb, ReferenceBadge, Tabs, VerdictBadge, won, wordOf } from "../ui";
+import { band, Card, HowCalculated, md, pct, people, betterProb, probText, ReferenceBadge, Tabs, VerdictBadge, won, wordOf } from "../ui";
 import { armName, Lead, sameMoney } from "./shared";
 
 /** AN-04 ★ 세팅 값별 비교 (v4.2): 맨 앞에 '방문 1명당 비용' (사장님이 궁금한 숫자) + B가 나을 확률,
@@ -66,7 +66,7 @@ function CostPerCustomer({ r }: { r: Result }) {
       </ul>
       {same && <p className="text-body">같은 돈({won(same.base)})으로 온 방문자 <b>A {same.counts[0]}명 · B {same.counts[1]}명</b></p>}
       {/* 이긴 쪽 기준으로 말한다 (A가 이기면 'A가 나을 확률 95%') */}
-      <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{pct(betterProb(v.badge.better, m.prob_b_better))}</b> <VerdictBadge word={v.badge.word} small /></p>
+      <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{probText(betterProb(v.badge.better, m.prob_b_better))}</b> <VerdictBadge word={v.badge.word} small /></p>
       <ProbBar p={betterProb(v.badge.better, m.prob_b_better)} />
       <p className="text-caption text-soft">점선: 70% 넘으면 '{v.badge.better} 쪽이에요' · 90% 넘으면 '확실해요'{v.badge.capped ? " · 클릭이 적거나 돈이 한쪽에 몰리면 한 단계 낮춰 보여 드려요" : ""}</p>
     </Card>

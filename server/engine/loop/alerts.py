@@ -87,14 +87,16 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
         if spend / expected < cfg["spend_used_min"]:
             out.append(_a("warn", "underspent", f"예산의 절반도 못 썼어요 (쓴 돈 {_won(spend)} / 설정 {_won(expected)}) → 타깃 범위가 너무 좁을 수 있어요.",
                           "타깃을 넓히거나 총예산을 '하루 최소 × 기간'보다 넉넉하게 잡아 주세요.", "AN-01"))
-    if len(arms) >= 2 and spend > 0:
-        shares = sorted(a["spend"] / spend for a in arms)
+    pair = arms[:2]   # 판정은 A·B 두 세트만 비교한다 → 쏠림·표본도 두 세트로 본다 (세트가 3개면 셋째가 섞였다, 감사 15)
+    pair_spend = sum(a["spend"] for a in pair)
+    if len(pair) >= 2 and pair_spend > 0:
+        shares = sorted(a["spend"] / pair_spend for a in pair)
         if shares[-1] - shares[0] > cfg["spend_gap_pp"]:
             out.append(_a("warn", "spend_gap", f"한쪽에 돈이 몰렸어요 ({shares[0]:.0%} : {shares[-1]:.0%}) → 비교 결과를 조심해서 보세요.",
                           "그래서 판정을 한 단계 낮춰 보여 드려요. 다음엔 두 세트 예산을 똑같이 나눠 주세요.", "AN-04"))
     # ALT-14 표본 부족: 링크 클릭 < 30 (세트 합) 또는 행동(알림 신청 등) < 5 (세트 합, 파일에 있을 때)
-    clicks = sum(a["link_clicks"] for a in arms)
-    acts = [a.get("actions") for a in arms]
+    clicks = sum(a["link_clicks"] for a in pair)
+    acts = [a.get("actions") for a in pair]
     actions = sum(acts) if acts and all(x is not None for x in acts) else None
     if clicks < cfg["min_clicks"]:
         names = " · ".join(f"{'AB'[i] if i < 2 else a['name']} {int(a['link_clicks'])}번" for i, a in enumerate(arms))

@@ -125,7 +125,13 @@ export function isTextField(el: HTMLElement): boolean {
 
 /** 게시와 관련된 버튼은 어떤 경우에도 누르지 않는다. */
 export function isPublishLike(el: HTMLElement): boolean {
-  return /게시|publish/i.test(el.textContent ?? "") || /게시|publish/i.test(el.getAttribute("aria-label") ?? "");
+  const re = /게시|publish/i;
+  // 누르면 실제로 눌리는 건 가장 가까운 버튼이다 (게시 버튼 안의 아이콘을 눌러도 게시) → 그 버튼의 글자·이름표·title까지 본다 (감사 13)
+  const btn = (el.closest("button,[role=button],a,input[type=submit]") as HTMLElement | null) ?? el;
+  const doc = el.ownerDocument;
+  const labelled = (btn.getAttribute("aria-labelledby") ?? "").split(/\s+/).map((id) => doc.getElementById(id)?.textContent ?? "").join(" ");
+  return [el.textContent, btn.textContent, btn.getAttribute("aria-label"), el.getAttribute("aria-label"), btn.getAttribute("title"),
+    labelled, (btn as HTMLInputElement).value].some((t) => re.test(t ?? ""));
 }
 
 /** React가 알아채게 값 넣기: 원래 value setter로 넣고 input·change 이벤트.

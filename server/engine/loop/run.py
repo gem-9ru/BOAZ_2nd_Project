@@ -11,7 +11,9 @@ def run(bundle, seed: int = 0, settings: Optional[Dict] = None) -> Dict:
     arms = s["arms"]
     v = None
     replay = []
-    if len(arms) >= 2:
+    # 한 세트가 한 번도 안 나갔으면(지출·노출 0, 예: 심사 거절) 판정하지 않는다 — 노출 0인 세트가 '확실히 낫다'로 나오고
+    # 다음 세팅 표가 빈 CPM으로 나누다 500이 났다 (감사 5)
+    if len(arms) >= 2 and all(x["spend"] > 0 and x["impressions"] > 0 for x in arms[:2]):
         a, b = arms[0], arms[1]
         v = verdict.compare(a, b, seed=seed)
         v["min_budget"] = verdict.min_budget(a, seed=seed)

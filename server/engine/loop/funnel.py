@@ -25,10 +25,10 @@ def _per100(rate: float, key: str) -> str:
     """비율을 사람 수로 (v4.2): 누르는 정도는 100명 기준으로 차이가 안 보여서 1,000명 기준."""
     if key == "link_clicks":   # 노출은 사람 수가 아니라 보여진 횟수
         n = rate * 1000
-        return f"1,000번 보이면 약 {n:.0f}번 눌려요" if n >= 1 else f"1,000번 보이면 약 {n:.1f}번 눌려요"
+        return f"1,000번 보이면 약 {int(n + 0.5)}번 눌려요" if n >= 1 else f"1,000번 보이면 약 {n:.1f}번 눌려요"
     base = 100
     n = rate * base
-    shown = f"약 {n:.0f}명" if n >= 1 else f"약 {n:.1f}명"
+    shown = f"약 {int(n + 0.5)}명" if n >= 1 else f"약 {n:.1f}명"
     return f"{base:,}명이 {'보면' if key == 'link_clicks' else '누르면'} {shown}이 {VERB[key]}"
 
 
@@ -40,7 +40,7 @@ def run(arms: List[Dict]) -> Dict:
             count = float(a.get(key, 0.0))
             st = {"key": key, "label": label, "count": count}
             if prev is not None and prev > 0:
-                rate = count / prev
+                rate = min(count / prev, 1.0)   # 클릭보다 도착이 많게 잡히는 경우가 있다 (메타 집계) → 100명 중 133명처럼 보이지 않게 (감사 20)
                 st.update({"rate": rate, "range": _range(count, prev), "per100": _per100(rate, key), "unknown": prev < FEW})
             stages.append(st)
             prev = count

@@ -12,7 +12,7 @@ def won(x: Optional[float]) -> str:
     """6,342원 · 10만 원 ('₩' 대신 '원'). 만 원 단위로 딱 떨어지면 '10만 원'."""
     if x is None:
         return "?"
-    n = int(round(x))
+    n = int(x + 0.5)   # 0.5는 올림 (분석 페이지 화면의 Math.round와 같게, 감사 19)
     if n >= 10_000 and n % 10_000 == 0:
         return f"{n // 10_000:,}만 원"
     return f"{n:,}원"
@@ -34,7 +34,7 @@ def per_people(rate: Optional[float], base: int = 1000, unit: str = "명") -> st
     if rate is None:
         return "?"
     n = rate * base
-    return f"약 {n:.0f}{unit}" if n >= 1 else f"약 {n:.1f}{unit}"
+    return f"약 {int(n + 0.5)}{unit}" if n >= 1 else f"약 {n:.1f}{unit}"
 
 
 def josa(word: str, pair: str = "이가") -> str:

@@ -52,6 +52,11 @@ export function VerdictBadge({ word, small }: { word: Word | string; small?: boo
 
 /** 나은 쪽 확률 → 판정 3단어 (90% 이상 / 70~90% / 70% 미만). 기준은 서버 verdict.py와 같다. */
 /** 'B가 나을 확률'을 나은 쪽 기준 확률로 (B가 낫다 → p, A가 낫다 → 1 − p). */
+/** 나을 확률 글자: 100%라고 단정하지 않는다 (표본으로 구한 값이라 99.5% 넘으면 '99% 넘게', 감사 20) */
+export function probText(p: number): string {
+  return p >= 0.995 ? "99% 넘게" : pct(p);
+}
+
 export function betterProb(better: "A" | "B" | string, probB: number): number {
   return better === "B" ? probB : 1 - probB;
 }

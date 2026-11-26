@@ -49,10 +49,18 @@ def tried(arm: Dict, budget: float, days: Optional[int] = None) -> Dict:
             "daily_min": floor, "below_daily_min": bool(daily is not None and floor and daily < floor)}
 
 
-def next_test_budget(total: float) -> Dict:
-    """Test & Roll: 다음 테스트에 쓸 몫 = 전체 예산의 약 7.6~20% (Feit & Berman 2019, 오븐로그 실측 기준). 두 세트로 나눈다."""
+def _thousand(x: float) -> int:
+    """천 원 단위 반올림 (0.5는 올림 — 파이썬 round는 2,500 → 2,000)."""
+    return int(x / 1000 + 0.5) * 1000
+
+
+def next_test_budget(total: float, days: int = 4) -> Dict:
+    """Test & Roll: 다음 테스트에 쓸 몫 = 전체 예산의 약 7.6~20% (Feit & Berman 2019, 오븐로그 실측 기준). 두 세트로 나눈다.
+    세트마다 적어도 '메타 하루 최소 × 기간' (그보다 적으면 광고가 안 나가요 — 같은 화면의 경고와 맞춤, 감사 9)."""
     t = _loop()["test_and_roll"]
     lo, hi = total * t["share_lo"], total * t["share_hi"]
+    least = -(-int((_loop().get("meta_daily_min") or 0) * days) // 1000) * 1000
+    per_lo = max(_thousand(lo / 2), least)
     return {"total": float(total), "share_lo": t["share_lo"], "share_hi": t["share_hi"],
-            "per_set_lo": int(round(lo / 2, -3)), "per_set_hi": int(round(hi / 2, -3)),
+            "per_set_lo": per_lo, "per_set_hi": max(_thousand(hi / 2), per_lo), "per_set_least": least,
             "source": "Feit & Berman 2019 Test & Roll (오븐로그 실측으로 맞춘 몫)"}

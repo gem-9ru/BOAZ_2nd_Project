@@ -265,7 +265,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
         per_set = max(5000, int(tot["spend"] / max(1, len(arms)) // 1000 * 1000)) if arms else 5000
         per_set = max(per_set, -(-int(floor * test_days) // 1000) * 1000)
         what = p.get("what", f"{label} 변경")
-        _tr = next_test_budget(100000)
+        _tr = next_test_budget(100000, test_days)
         change = {"row": pick, "field_id": p["field_id"], "path": PATH[p["field_id"]], "label": label,
                   "now": settings.get(p["field_id"]), "new": p["new"], "new_short": p["short"], "reason": p["reason"],
                   # v4.2: 결론은 돌려 본 적 없는 선택지 → 판정 배지 대신 '테스트 제안' (효과는 아직 몰라요)

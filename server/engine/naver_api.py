@@ -175,6 +175,9 @@ def _stale(payload: dict) -> bool:
     return _now() - got > MAX_AGE_DAYS * 86_400
 
 
+MAX_CACHE_FILES = 2000
+
+
 def save(kind: str, key: str, response, directory: Optional[Path] = None) -> None:
     """응답만 저장 (요청 키·헤더는 저장하지 않음)."""
     base = directory or CACHE_DIR
@@ -182,6 +185,10 @@ def save(kind: str, key: str, response, directory: Optional[Path] = None) -> Non
         base.mkdir(parents=True, exist_ok=True)
         payload = {"key": key, "fetched_at": time.strftime("%Y-%m-%d %H:%M:%S"), "response": response}
         (base / cache_name(kind, key)).write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
+        files = list(base.glob("*.json"))
+        if len(files) > MAX_CACHE_FILES:   # 상품 이름마다 파일이 생겨 끝없이 쌓이지 않게 오래된 것부터 지운다 (감사 11)
+            for f in sorted(files, key=lambda f: f.stat().st_mtime)[: len(files) - MAX_CACHE_FILES]:
+                f.unlink(missing_ok=True)
     except OSError:
         pass  # 저장 실패는 조용히 넘김 (다음에 다시 받으면 됨)
 

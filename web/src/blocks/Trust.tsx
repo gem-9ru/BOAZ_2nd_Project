@@ -1,5 +1,5 @@
 import type { Metric } from "../api";
-import { betterProb, pct, seriesBg, VerdictBadge, won } from "../ui";
+import { betterProb, pct, probText, seriesBg, VerdictBadge, won } from "../ui";
 
 /** 지표 하나의 'B가 나을 확률' 막대 (70·90% 점선) + 두 세트 범위. AN-04의 🔎 안에서 CPC·CTR에 쓴다 (v4.2). */
 export function MetricRow({ m }: { m: Metric }) {
@@ -11,7 +11,7 @@ export function MetricRow({ m }: { m: Metric }) {
   const tone = (k: "A" | "B") => seriesBg(k === m.better);
   return (
     <li className="flex flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-2 text-body"><b>{m.label}</b><VerdictBadge word={m.word} small /><span className="text-soft">{m.better}가 나을 확률 {pct(betterProb(m.better, p))}</span></div>
+      <div className="flex flex-wrap items-center gap-2 text-body"><b>{m.label}</b><VerdictBadge word={m.word} small /><span className="text-soft">{m.better}가 나을 확률 {probText(betterProb(m.better, p))}</span></div>
       <ProbBar p={betterProb(m.better, p)} />
       <div className="grid grid-cols-[2rem_1fr] gap-x-2 gap-y-1 text-caption text-soft">
         {(["A", "B"] as const).map((k) => {

@@ -9,10 +9,12 @@ import logging
 import os
 import threading
 import time
-from typing import List, Optional
+from contextlib import contextmanager
+from typing import Annotated, Dict, List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -42,8 +44,52 @@ log = logging.getLogger("coach.api")
 MAX_KEYWORDS = 10
 MAX_MODIFIERS = 15   # 좋은 점 칩 (브랜드·가게 이름을 거른 뒤)
 _NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
+NAVER_WAIT = 20   # 앞 요청을 이만큼(초)까지만 기다린다. 몰리면 끝없이 줄 서지 않고 '잠시 뒤'로 답한다 (감사 11)
 
-app = FastAPI(title="광고 코치 v3")
+
+@contextmanager
+def _naver_turn():
+    if not _NAVER_LOCK.acquire(timeout=NAVER_WAIT):
+        raise HTTPException(status_code=503, detail="지금 찾는 사람이 많아요. 잠시 뒤에 다시 해 주세요.")
+    try:
+        yield
+    finally:
+        _NAVER_LOCK.release()
+
+app = FastAPI(title="광고 코치 v3", docs_url=None, redoc_url=None, openapi_url=None)   # 공개 주소라 경로 지도는 내보내지 않음
+
+# ── 공개 주소 보호 (감사 3·4, 2026-11-26): 터널로 온 요청은 주소마다 분당 횟수 제한, 본문 크기는 누구든 제한 ──
+RATE_PER_MIN = 30          # Claude·네이버를 부르는 경로, 공개 주소 하나당 1분에
+RATE_PATHS = {"/research", "/copies", "/assistant", "/audience/split", "/simulate", "/analysis"}
+MAX_BODY = 64 * 1024       # 파일 올리기 말고는 작은 JSON뿐
+_HITS: Dict[str, List[float]] = {}   # shortcut: 서버 하나 메모리에만 센다, 서버를 여러 대 띄우면 공유 저장소로
+
+
+@app.middleware("http")
+async def _guard(request, call_next):
+    size = int(request.headers.get("content-length") or 0)
+    limit = MAX_UPLOAD_BYTES + 64 * 1024 if request.url.path == "/analysis" else MAX_BODY
+    if request.method == "POST" and size > limit:
+        return JSONResponse(status_code=413, content={"error": "보낸 내용이 너무 커요."})
+    ip = request.headers.get("cf-connecting-ip")   # Cloudflare 터널로 온 요청만 (내 컴퓨터에서 바로 부르면 없음)
+    counted = (request.method == "POST" and request.url.path in RATE_PATHS) or request.url.path.startswith("/plan/")   # 코드 맞히기도 센다
+    if ip and counted:
+        now = time.time()
+        hits = [t for t in _HITS.get(ip, []) if now - t < 60]
+        if len(hits) >= RATE_PER_MIN:
+            return JSONResponse(status_code=429, content={"error": "요청이 너무 많아요. 1분 뒤에 다시 해 주세요."})
+        _HITS[ip] = hits + [now]
+        if len(_HITS) > 10_000:
+            _HITS.clear()   # 주소가 너무 많이 쌓이면 비운다 (메모리 상한)
+    return await call_next(request)
+
+
+@app.exception_handler(RequestValidationError)
+async def _bad_input(request, exc):
+    # 기본 422는 받은 값을 그대로 돌려주다 Infinity·NaN을 JSON으로 못 바꿔 500이 났다 → 받은 값은 돌려주지 않는다
+    return JSONResponse(status_code=422, content={"error": "보낸 값이 올바르지 않아요.", "fields": [".".join(map(str, e["loc"])) for e in exc.errors()]})
+
+
 app.add_middleware(CORSMiddleware, allow_origin_regex=r"chrome-extension://.*",
                    allow_methods=["*"], allow_headers=["*"])
 
@@ -57,11 +103,14 @@ def health() -> dict:
     return {"ok": True}
 
 
+Word = Annotated[str, Field(max_length=40)]   # 낱말 하나 (검색어·좋은 점)
+
+
 class ResearchIn(BaseModel):
-    product: str
-    seeds: Optional[List[str]] = None   # 비우면 상품 이름 하나로 찾음
-    category: Optional[str] = None      # 쇼핑인사이트 분야 code. 비우면 서버가 추정
-    keywords: Optional[List[str]] = None   # 사장님이 고른 검색어 (손님 무리를 이 안에서만 묶음)
+    product: str = Field(max_length=60)
+    seeds: Optional[List[Word]] = Field(None, max_length=10)   # 비우면 상품 이름 하나로 찾음
+    category: Optional[str] = Field(None, max_length=20)      # 쇼핑인사이트 분야 code. 비우면 서버가 추정
+    keywords: Optional[List[Word]] = Field(None, max_length=30)   # 사장님이 고른 검색어 (손님 무리를 이 안에서만 묶음)
 
 
 def _category_out(code: Optional[str], guessed: bool) -> Optional[dict]:
@@ -112,7 +161,7 @@ def _similar_words(product: str, kw) -> List[str]:
 
 def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
-    with _NAVER_LOCK:
+    with _naver_turn():
         given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
         code, cands = (given, []) if given else market.category_guess(body.product, _online())
         if code:   # 정해진 분야는 빼고, 남은 가까운 후보는 [바꾸기]에서 먼저 보여 준다
@@ -153,9 +202,9 @@ def _research(body: ResearchIn) -> dict:
 
 
 class SplitIn(BaseModel):
-    keyword: str
-    category: str
-    ages: dict = {}   # 나이대 → 비중 (/research가 준 audience.ages). 적게 찾는 나이대는 묻지 않음
+    keyword: str = Field(max_length=40)
+    category: str = Field(max_length=20)
+    ages: Dict[str, float] = Field(default_factory=dict, max_length=6)   # 나이대 → 비중 (/research가 준 audience.ages). 적게 찾는 나이대는 묻지 않음
 
 
 @app.post("/audience/split")
@@ -164,7 +213,7 @@ def audience_split(body: SplitIn) -> dict:
     if body.category not in {c["code"] for c in market.CATEGORIES}:
         return {"female_by_age": {}}
     ages = {str(k): float(v) for k, v in body.ages.items() if str(k) in market.AGE_GROUPS}
-    with _NAVER_LOCK:
+    with _naver_turn():
         out = market.female_by_age(body.keyword.replace(" ", ""), body.category, ages, _online())
     log.info("audience split keyword=%s ages=%d", body.keyword, len(out))
     return {"female_by_age": out}
@@ -175,18 +224,18 @@ SET_KINDS = ("default", "auto", "next_cycle")
 
 
 class SegmentIn(BaseModel):
-    intent: str
-    label: str
+    intent: str = Field(max_length=20)
+    label: str = Field(max_length=40)
     peak_month: Optional[int] = Field(None, ge=1, le=12)   # 시즌일 때만 옴 (1~12월)
 
 
 class CopiesIn(BaseModel):
-    product: str
-    strengths: List[str] = []
-    keywords: List[str] = []
-    avoid: List[str] = []      # ① 찾기의 뺄 말: 문구에 넣지 않는다
+    product: str = Field(max_length=60)
+    strengths: List[Word] = Field(default_factory=list, max_length=10)
+    keywords: List[Word] = Field(default_factory=list, max_length=30)
+    avoid: List[Word] = Field(default_factory=list, max_length=50)      # ① 찾기의 뺄 말: 문구에 넣지 않는다
     segment: Optional[SegmentIn] = None   # ① 찾기에서 고른 손님 무리
-    tone: Optional[str] = None            # 문구 말투: 친근하게 | 깔끔하게 | 감성적으로 (모르는 값은 무시)
+    tone: Optional[str] = Field(None, max_length=20)            # 문구 말투: 친근하게 | 깔끔하게 | 감성적으로 (모르는 값은 무시)
 
 
 @app.post("/copies")
@@ -265,6 +314,13 @@ def _store(result: dict) -> dict:
     return {**result, "code": code}
 
 
+_EXAMPLE_PLANS: Dict[str, dict] = {}   # 예시 결과: 정해진 코드로 따로 둔다 (예시를 여러 번 눌러도 사장님 결과가 밀려 지워지지 않게, 감사 10)
+
+
+def _plan(code: str) -> Optional[dict]:
+    return _PLANS.get(code.upper()) or _EXAMPLE_PLANS.get(code.upper())
+
+
 def _loop(bundle, settings=None):
     if "meta_daily" not in bundle.tables:
         msg = " ".join(bundle.problems) or "메타 결과를 읽지 못했어요. 광고 관리자에서 일·노출 위치 기준으로 내보내 주세요."
@@ -297,7 +353,13 @@ async def analysis_upload(file: UploadFile = File(...), settings: Optional[str] 
 def analysis_example(settings_key: Optional[str] = None, name: str = "ovenlog"):
     if name not in EXAMPLES:
         return JSONResponse(status_code=404, content={"error": "그런 예시는 없어요."})
-    return _loop(read_export(EXAMPLES[name]), _SETTINGS.get(settings_key or ""))
+    given = _SETTINGS.get(settings_key or "")
+    if given:   # 사장님 세팅값을 넣은 예시는 결과가 사람마다 달라 따로 보관
+        return _loop(read_export(EXAMPLES[name]), given)
+    code = "EX" + str(sorted(EXAMPLES).index(name) + 1).zfill(2)   # EX01, EX02 (보통 코드에 없는 모양: 숫자 0·1은 안 씀)
+    if code not in _EXAMPLE_PLANS:
+        _EXAMPLE_PLANS[code] = loop_run.run(read_export(EXAMPLES[name]), settings=None)
+    return {**_EXAMPLE_PLANS[code], "code": code}
 
 
 # ── 세팅값 넘기기 (v4 8장): 확장 프로그램 → 분석 페이지. 값은 URL에 넣지 않고, 서버가 보관하고 키만 넘긴다 ──
@@ -310,6 +372,8 @@ class SettingsIn(BaseModel):
 
 @app.post("/settings")
 def keep_settings(body: SettingsIn):
+    if len(body.settings) > 60 or any(len(str(k)) > 80 or len(str(v)) > 300 for k, v in body.settings.items()):
+        return JSONResponse(status_code=400, content={"error": "세팅값이 너무 많거나 길어요."})
     key = secrets.token_urlsafe(12)
     _SETTINGS[key] = {str(k): str(v) for k, v in body.settings.items() if v not in (None, "")}
     while len(_SETTINGS) > MAX_PLANS:
@@ -326,16 +390,16 @@ def read_settings(key: str):
 
 
 class SimulateIn(BaseModel):
-    code: str
-    arm: str
-    budget: float
-    total: float = 100_000   # Test & Roll용 전체 광고 예산
-    days: Optional[int] = None   # AN-05 기간 토글 (4일/7일): 하루 금액이 써 본 적 있는지
+    code: str = Field(max_length=8)
+    arm: str = Field(max_length=120)
+    budget: float = Field(ge=0, le=1e9, allow_inf_nan=False)
+    total: float = Field(100_000, ge=0, le=1e10, allow_inf_nan=False)   # Test & Roll용 전체 광고 예산
+    days: Optional[int] = Field(None, ge=1, le=365)   # AN-05 기간 토글 (4일/7일): 하루 금액이 써 본 적 있는지
 
 
 @app.post("/simulate")
 def simulate(body: SimulateIn):
-    plan = _PLANS.get(body.code.upper())
+    plan = _plan(body.code)
     arm = next((a for a in (plan or {}).get("summary", {}).get("arms", []) if a["name"] == body.arm), None)
     if arm is None:
         raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
@@ -343,12 +407,12 @@ def simulate(body: SimulateIn):
     out = loop_simulate.run(arm, budget)
     # 써 본 적 없는 금액은 '가설' (화면에서 점선). Test & Roll은 따로 받은 전체 예산 기준.
     return {**out, **loop_simulate.tried(arm, budget, body.days if body.days and body.days > 0 else None),
-            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0))}
+            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0), body.days or 4)}
 
 
 @app.get("/plan/{code}")
 def plan(code: str):
-    p = _PLANS.get(code.upper())
+    p = _plan(code)
     if p is None:
         raise HTTPException(status_code=404, detail="코드를 찾지 못했어요. 분석 페이지의 코드를 다시 확인해 주세요.")
     m = p.get("matrix") or {}
@@ -357,16 +421,16 @@ def plan(code: str):
 
 
 class AssistantIn(BaseModel):
-    code: str
-    step: str
-    question: Optional[str] = None
+    code: str = Field(max_length=8)
+    step: str = Field(max_length=20)
+    question: Optional[str] = Field(None, max_length=300)
 
 
 @app.post("/assistant")
 def assistant_reply(body: AssistantIn):
     """분석 페이지 오른쪽 어시스턴트: 질문이 없으면 그 단계 첫 말풍선, 있으면 그 단계 결과 JSON으로 설명."""
     from server.engine.loop import assistant
-    p = _PLANS.get(body.code.upper())
+    p = _plan(body.code)
     if p is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾지 못했어요. 파일을 다시 올려 주세요.")
     if not body.question:

@@ -106,6 +106,11 @@ export default function GuideStep({ state, dispatch }: Props) {
 
   // [이전 칸] [다음 칸]: 광고 관리자 탭의 캐릭터를 움직인다 (진행은 배경 스크립트가 저장소에 쓴다).
   async function move(delta: 1 | -1) {
+    // 게시 칸에서 [다음 칸]은 게시하지 않았는데 '끝남'으로 넘어간다 → 막는다 (감사 14)
+    if (delta > 0 && steps[index]?.entry.publish) {
+      setError("게시는 사장님이 직접 '동의하고 게시'를 누른 뒤, 뭉치 말풍선의 [게시했어요]를 눌러 주세요.");
+      return;
+    }
     const tab = await findAdsTab();
     if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
     await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
