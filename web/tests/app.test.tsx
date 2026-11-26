@@ -34,6 +34,20 @@ function showExample() {
   return f;
 }
 
+describe("AN-02 메타 관련성 진단 (보조 신호)", () => {
+  it("shows the below-average rankings as a reference list under the funnel table", async () => {
+    const text = "메타 품질 순위: A(자동) 평균 이하 — 같은 손님을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식";
+    const withRank = { ...oven, matrix: { ...oven.matrix, rankings: true, meta_signals: [{ row: "1", key: "quality", text }] } };
+    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/assistant") ? { message: "m", suggestions: [] } : withRank)));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
+    await next("왜 그런지 보기 ▶");
+    const box = await screen.findByRole("region", { name: "메타 진단" });
+    expect(within(box).getByText(`① ${text}`)).toBeTruthy();
+    expect(screen.getByText(/신호등과 결론은 우리 숫자로만 정해요/)).toBeTruthy();
+  });
+});
+
 describe("화면 0 시작", () => {
   it("offers upload, example and test-prep with one promise line", () => {
     render(<App />);
@@ -135,6 +149,8 @@ describe("7단계 결과 (v4.2)", () => {
     expect(screen.getByText(/누른 100명 중 A 77명 · B 82명 → 괜찮아요/)).toBeTruthy();
     expect(within(screen.getByRole("region", { name: "알림" })).getByText(/알림 신청이 1건뿐이라 ④단계는 아직 몰라요/)).toBeTruthy();
     expect(screen.getByText(/알림 신청 A 0건 · B 1건/)).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "메타 진단" })).toBeNull();   // 오븐로그 파일엔 관련성 진단 열이 없음 → 건너뜀
+    expect(screen.getByText(/파일에 없거나 노출이 적어 비어 있어서 건너뛰었어요/)).toBeTruthy();
     ownerTextOk();
     await next("내 세팅 보기 ▶");
     expect(screen.getByRole("heading", { level: 1, name: "내 다른 설정은 괜찮나요?" })).toBeTruthy();

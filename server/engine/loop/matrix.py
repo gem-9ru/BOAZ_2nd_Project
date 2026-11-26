@@ -265,8 +265,35 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     if learning:
         dont.append("자주 고치기 — 큰 수정은 메타가 처음부터 다시 배우게 해요.")
 
+    meta_signals = _meta_signals(arms, rows)
     return {"rows": rows, "change": change, "keep": keep, "watch": watch, "dont": dont, "tested_field": field,
+            "meta_signals": meta_signals, "rankings": any(a.get("rankings") for a in arms),
             "settings": setting_rows(settings, change, keep, watch)}
+
+
+# 메타 관련성 진단 → 퍼널 단계 (v4 2장·3장: 보조 신호. 결론은 바꾸지 않고 '메타 진단도 이렇게 봤어요'로 덧붙임)
+RANK_ROWS = {
+    "quality": ("1", "품질 순위", "같은 손님을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식"),
+    "engagement": ("2", "참여율 순위", "다른 광고보다 누르거나 반응하는 사람이 적어요 → 소재 · 문구"),
+    "conversion": ("4", "전환율 순위", "들어온 뒤 행동이 다른 광고보다 적어요 → 랜딩 페이지 · 버튼 문구"),
+}
+RANK_WORD = {"above": "평균 이상", "average": "평균", "below": "평균 이하"}
+
+
+def _meta_signals(arms: List[Dict], rows: List[Dict]) -> List[Dict]:
+    """세트마다 '평균 이하'인 순위만 알림 줄로. 그 단계 행의 detail에도 덧붙인다. 순위 열이 없으면 빈 목록."""
+    out: List[Dict] = []
+    for key, (row, name, means) in RANK_ROWS.items():
+        low = [arm_short(a["name"], i) for i, a in enumerate(arms) if (a.get("rankings") or {}).get(key) == "below"]
+        if not low:
+            continue
+        who = " · ".join(low) if len(arms) > 1 else ""
+        text = f"메타 {name}: {who + ' ' if who else ''}평균 이하 — {means}"
+        out.append({"row": row, "key": key, "text": text})
+        r = next((x for x in rows if x["row"] == row), None)
+        if r is not None:
+            r["detail"] = (r["detail"] + " · " if r["detail"] else "") + text
+    return out
 
 
 def _spec_id(field_id: str) -> Optional[str]:

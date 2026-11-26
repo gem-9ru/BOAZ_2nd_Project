@@ -111,7 +111,47 @@ def _from_export(df: pd.DataFrame) -> Bundle:
             daily.df = daily.df[keep].groupby(["date", "adset", "campaign_objective"], as_index=False).sum()
         b.tables["meta_daily"] = daily
         b.budget = _budget(df, daily.df)
+        b.rankings = _rankings(df)
     return b
+
+
+# 메타 광고 관련성 진단 (광고 관리자 열: 품질 순위 · 참여율 순위 · 전환율 순위). 같은 타깃을 두고 경쟁하는 광고 대비 순위.
+# 노출이 적으면 '-'로 비어 있다 → 건너뛴다 (v4 2장: 있으면 퍼널 진단의 보조 신호, 없으면 건너뜀)
+RANKING_COLUMNS = {"quality": ["품질 순위", "Quality ranking"],
+                   "engagement": ["참여율 순위", "Engagement rate ranking"],
+                   "conversion": ["전환율 순위", "Conversion rate ranking"]}
+
+
+def _rank(text) -> Optional[str]:
+    """'평균 이하 - 하위 35%' → below, '평균 이상' → above, '평균' → average. '-'·빈칸·모르는 글자 → None."""
+    t = str(text).strip().lower()
+    if not t or t in ("-", "nan", "none") or "알 수 없" in t or "unknown" in t:
+        return None
+    if "이하" in t or "below" in t:
+        return "below"
+    if "이상" in t or "above" in t:
+        return "above"
+    if "평균" in t or "average" in t:
+        return "average"
+    return None
+
+
+def _rankings(raw: pd.DataFrame) -> dict:
+    """광고 세트마다 순위 3개 (그 세트 줄에서 가장 많이 나온 값). 열이 없거나 다 비었으면 빈 dict."""
+    set_col = next((c for c in ("광고 세트 이름", "광고 세트", "Ad set name") if c in raw.columns), None)
+    if not set_col:
+        return {}
+    out: dict = {}
+    for key, names in RANKING_COLUMNS.items():
+        col = next((c for c in names if c in raw.columns), None)
+        if not col:
+            continue
+        rows = raw[[set_col, col]].dropna(subset=[set_col])
+        for aset, vals in rows.groupby(set_col)[col]:
+            got = [r for r in map(_rank, vals) if r]
+            if got:
+                out.setdefault(_short(aset), {})[key] = max(set(got), key=got.count)
+    return out
 
 
 BUDGET_COLUMNS = [("광고 세트 예산", "광고 세트 예산 유형", "adset"), ("Ad set budget", "Ad set budget type", "adset"),

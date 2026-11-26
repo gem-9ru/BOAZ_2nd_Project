@@ -69,6 +69,14 @@ export function AN02({ r }: { r: Result }) {
           </table>
         </div>
         <p className="text-caption text-soft">✓ 괜찮음 · ↓ 비교 대상보다 나쁨 · ▲ 기준 미달 · – 아직 몰라요</p>
+        {(r.matrix.meta_signals?.length ?? 0) > 0 && (
+          <section aria-label="메타 진단" className="flex flex-col gap-1 border-t border-line pt-3 text-body">
+            <p className="text-caption font-semibold text-soft">메타 관련성 진단도 같이 봤어요 (참고)</p>
+            <ul className="flex flex-col gap-1">
+              {r.matrix.meta_signals!.map((m) => <li key={m.key}>{"①②③④"[Number(m.row) - 1] ?? ""} {m.text}</li>)}
+            </ul>
+          </section>
+        )}
       </Card>
       <Card title="의심할 칸" summary="처음 막힌 단계에 연결된 칸이 의심할 칸이에요">
         <ul className="grid gap-1 text-body sm:grid-cols-2">
@@ -84,6 +92,9 @@ export function AN02({ r }: { r: Result }) {
         )}
         <p>본 사람 중 누른 비율 (CTR): {both((a) => `${((a.ctr ?? 0) * 100).toFixed(2)}%`)}</p>
         <p>신호 기준값: 누르는 정도 1,000명 중 10명(1%) 미만 · 페이지 도착 누른 100명 중 60명 미만이면 ▲</p>
+        <p>메타 관련성 진단(품질·참여율·전환율 순위): {r.matrix.rankings
+          ? "파일에 있어서 '평균 이하'인 것만 참고로 보여 드려요. 신호등과 결론은 우리 숫자로만 정해요."
+          : "파일에 없거나 노출이 적어 비어 있어서 건너뛰었어요. 광고 관리자 열에 '품질 순위·참여율 순위·전환율 순위'를 넣어 내보내면 같이 봐요."}</p>
         <KeyNumbers r={r} />
         <Funnel r={r} />
       </HowCalculated>
