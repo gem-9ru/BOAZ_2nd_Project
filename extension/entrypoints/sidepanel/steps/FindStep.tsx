@@ -8,6 +8,7 @@ import AgeFigure from "./find/AgeFigure";
 import CategoryPick, { CategoryAsk } from "./find/CategoryPick";
 import ProductStats from "./find/ProductStats";
 import SegmentCards from "./find/SegmentCards";
+import TargetPick, { targetLine, toTarget } from "./find/TargetPick";
 
 interface Props {
   state: FlowState;
@@ -261,6 +262,12 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<"" | "all" | "female" | "male">("");
   const product = state.product ?? "";
+  // 추천 타깃(많이 찾는 나이대 + 성별)과 사장님이 고친 값. 무리를 바꾸면 추천으로 돌아간다.
+  const rec = selected?.audience
+    ? (() => { const g = ageSpan(selected.audience.ages).groups; return { from: g[0]!, to: g[g.length - 1]!, gender: genderFrom(selected.audience.female) }; })()
+    : null;
+  const [custom, setCustom] = useState<{ intent: string; from: string; to: string; gender: "all" | "female" | "male" } | null>(null);
+  const pick = rec ? (custom && custom.intent === selected?.intent ? custom : rec) : null;
 
   // 무리가 하나뿐이면 미리 골라 둔다 (이 결과마다 한 번)
   const preselected = useRef<Research | null>(null);
@@ -275,16 +282,22 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const manualMissing = manual && (!age || !gender);
   const ready = !!selected && kept.length > 0 && !manualMissing;
 
+  const target = pick ? toTarget(pick.from, pick.to, pick.gender)
+    : age && gender ? { ...ageGroupToRange(age), gender: gender as "all" | "female" | "male" } : null;
+
   function confirm() {
-    if (!selected) return;
-    const target = selected.audience
-      ? (() => { const { ageMin, ageMax } = ageSpan(selected.audience.ages); return { ageMin, ageMax, gender: genderFrom(selected.audience.female) }; })()
-      : { ...ageGroupToRange(age), gender: gender as "all" | "female" | "male" };
+    if (!selected || !target) return;
     dispatch({ type: "confirmTarget", target, keywords: kept, segment: selected });
   }
 
-  const detail = selected?.audience
-    ? <AgeFigure audience={selected.audience} split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
+  const detail = selected?.audience && pick && rec
+    ? (
+      <div className="flex flex-col gap-3">
+        <AgeFigure audience={selected.audience} split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
+        <TargetPick from={pick.from} to={pick.to} gender={pick.gender} rec={rec} female={selected.audience.female}
+          onChange={(v) => setCustom({ intent: selected.intent, ...v })} />
+      </div>
+    )
     : (
       <div className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
         <Choice legend="보여 줄 나이" name="segment-age"
@@ -321,6 +334,11 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
             {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
             {!selected && <p className="text-caption text-warn">▲ 광고를 보여 줄 손님을 하나 골라 주세요.</p>}
             {manualMissing && <p className="text-caption text-warn">▲ 보여 줄 나이와 성별을 골라 주세요.</p>}
+            {ready && target && (
+              <p className="rounded-button bg-sunk px-3 py-2 text-caption">
+                광고 관리자에 <span className="font-semibold">{targetLine(target)} · 검색어 {kept.length}개</span>로 넣을게요.
+              </p>
+            )}
             <PrimaryButton onClick={confirm} disabled={!ready}>이 손님들로 할게요</PrimaryButton>
           </div>
         </>

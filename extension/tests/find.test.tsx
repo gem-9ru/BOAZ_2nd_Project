@@ -393,3 +393,38 @@ describe("나이대마다 여성·남성 · 몇 월에 많이 찾나", () => {
     expect(screen.getByText("5월에 가장 많이 찾아요")).toBeTruthy();
   });
 });
+
+describe("타깃 확인·고치기", () => {
+  const state = () => ({ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] });
+
+  it("shows what goes into Ads Manager above the button", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={state()} dispatch={() => {}} />);
+    expect(screen.getByText(/30–49세 · 여성만 · 검색어 5개/)).toBeTruthy();
+  });
+
+  it("the owner can change ages and gender; the confirm sends the changed target", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const dispatch = vi.fn();
+    render(<FindStep state={state()} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "나이·성별 바꾸기" }));
+    expect(screen.getByText(/남성 19%에게는 광고가 안 보여요/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("나이 까지"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("radio", { name: /남녀 모두/ }));
+    expect(screen.getByText(/30–39세 · 남녀 모두 · 검색어 5개/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
+    expect(dispatch.mock.calls.at(-1)![0].target).toEqual({ ageMin: 30, ageMax: 39, gender: "all" });
+    fireEvent.click(screen.getByRole("button", { name: "추천대로 되돌리기" }));
+    expect(screen.getByText(/30–49세 · 여성만 · 검색어 5개/)).toBeTruthy();
+  });
+
+  it("the product card is one line, details folded", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const stats = { keyword: "수제쿠키", total_qc: 129000, mobile: 0.5,
+      audience: { female: 0.7, ages: { "30": 0.25, "40": 0.3, "50": 0.25 }, top_age: "40" },
+      trend: { monthly: { "2026-12": 100 }, peak_month: 12, seasonal: true } };
+    render(<FindStep state={{ ...state(), research: { ...withSegs, product_stats: stats } }} dispatch={() => {}} />);
+    expect(screen.getByText("한 달 13만회 · 12월에 가장 많이 · 30~50대 여성이 많이 찾아요")).toBeTruthy();
+    expect(screen.getByText("자세히 ▾")).toBeTruthy();
+  });
+});
