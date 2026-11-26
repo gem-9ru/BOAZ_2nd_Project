@@ -17,6 +17,7 @@ PATH = {
     "meta.adset.age_gender": "광고 세트 › 연령·성별",
     "meta.adset.location": "광고 세트 › 위치",
     "meta.adset.daily_budget": "광고 세트 › 예산",
+    "meta.adset.lifetime_budget": "광고 세트 › 예산",
     "meta.adset.end_date": "광고 세트 › 시작·종료 날짜",
     "meta.adset.start_date": "광고 세트 › 시작·종료 날짜",
     "meta.ad.media": "광고 › 형식·미디어",

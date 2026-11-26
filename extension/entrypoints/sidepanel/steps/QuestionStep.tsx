@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Field, OptionHelp, PresetField } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { askedFields, buildSettings, isoDate, scheduleFrom } from "../../../lib/settings";
+import { askedFields, buildSettings, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
@@ -107,6 +107,10 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
   const [picked, setPicked] = useState<string | null>(null);     // 이어 받을 주소가 있는 답을 골랐을 때 (예: 스토어 상품 페이지)
   const [dates, setDates] = useState(false);                      // [날짜 직접 정하기]를 눌렀을 때
   const [areaFor, setAreaFor] = useState<string | null>(null);    // 가게·배달을 골랐을 때 (가게 주소·반경)
+  const [money, setMoney] = useState(false);                      // [금액 직접 넣기]를 눌렀을 때
+  // 총예산 질문: 앞에서 고른 기간으로 '세트마다 적어도 ○원'을 알려 주고, 그보다 적은 금액엔 ▲ (EX-01 ④)
+  const days = field.custom === "won" ? scheduleDays(scheduleFrom(answers["meta.adset.end_date"] ?? "14일")) : 0;
+  const least = days > 0 ? minBudget(days) : 0;
   const [url, setUrl] = useState("");
   const then = picked ? field.then_ask : undefined;
   /** 이 답을 고르면 주소를 이어 받을 칸 (없으면 바로 넘어감) */
@@ -148,8 +152,11 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
         <h2 className="text-lead font-semibold">{field.ask}</h2>
         {field.why && <p className="text-caption text-soft mt-1">{field.why}</p>}
         {note && <p className="text-caption text-ink mt-1">{note}</p>}
+        {least > 0 && <p className="text-caption text-ink mt-1">광고 기간이 {days}일이라 세트마다 적어도 약 {least.toLocaleString()}원 (하루 최소 약 1,336원 × {days}일)은 넣어야 광고가 나가요.</p>}
       </Coach>
-      {areaFor ? (
+      {money ? (
+        <WonInput least={least} onBack={() => setMoney(false)} onDone={(v) => onAnswer(v)} />
+      ) : areaFor ? (
         <ShopArea way={areaFor} onBack={() => setAreaFor(null)} onDone={(v) => onAnswer(v)} />
       ) : dates ? (
         <DateRange onBack={() => setDates(false)} onDone={(v) => onAnswer(v)} />
@@ -186,17 +193,26 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
         </div>
       ) : field.options ? (
         <div className="flex flex-col gap-2">
-          {field.options.map((o) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => pick(o)}
-              className={`rounded-button border px-4 py-3 text-left text-body ${o === recommended ? "border-ink bg-paper font-semibold" : "border-line"}`}
-            >
-              {o}
-              {o === recommended && <span className="block text-caption font-normal text-soft">권장</span>}
+          {field.options.map((o) => {
+            const short = least > 0 && (parseWon(o) ?? Infinity) < least;   // 이 기간엔 광고가 안 나갈 수 있는 금액
+            return (
+              <button
+                key={o}
+                type="button"
+                onClick={() => pick(o)}
+                className={`rounded-button border px-4 py-3 text-left text-body ${o === recommended ? "border-ink bg-paper font-semibold" : "border-line"}`}
+              >
+                {o}
+                {o === recommended && !short && <span className="block text-caption font-normal text-soft">권장</span>}
+                {short && <span className="block text-caption font-normal text-warn"><span aria-hidden="true">▲ </span><span className="sr-only">주의 </span>{days}일 동안 쓰기엔 적어요</span>}
+              </button>
+            );
+          })}
+          {field.custom === "won" && (
+            <button type="button" onClick={() => setMoney(true)} className="rounded-button border border-line px-4 py-3 text-left text-body">
+              금액 직접 넣기
             </button>
-          ))}
+          )}
           {field.custom === "dates" && (
             <button type="button" onClick={() => setDates(true)} className="rounded-button border border-line px-4 py-3 text-left text-body">
               날짜 직접 정하기
@@ -320,6 +336,30 @@ function DateRange({ onBack, onDone }: { onBack: () => void; onDone: (value: str
       <p className="text-caption text-soft">시각은 비워 두면 광고 관리자에 정해진 시각 그대로 둬요.</p>
       {ok && <p className="text-body">{monthDay(start, startTime)}부터 {monthDay(end, endTime)}까지, {days}일 동안 광고해요.</p>}
       <PrimaryButton onClick={() => (ok ? onDone(value) : setTried(true))} disabled={!start || !end}>다음</PrimaryButton>
+      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+    </div>
+  );
+}
+
+/** 총예산 직접 넣기 (원). 하루 최소 × 기간보다 적으면 ▲로 알려 주되 막지는 않는다 (사장님이 정함). 답: '25,000원' */
+function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void; onDone: (value: string) => void }) {
+  const [raw, setRaw] = useState("");
+  const n = parseWon(raw);
+  const short = n !== null && least > 0 && n < least;
+  return (
+    <div className="flex flex-col gap-2">
+      <label htmlFor="budget-won" className="text-caption text-soft">광고 세트마다 총예산 (원)</label>
+      <input id="budget-won" value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="numeric" autoComplete="off"
+        placeholder="예: 25000" aria-describedby={short ? "budget-short" : undefined}
+        className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
+      {n !== null && <p className="text-caption text-ink">{n.toLocaleString()}원</p>}
+      {short && (
+        <p id="budget-short" role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-caption text-warn">
+          <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
+          <span>약 {least.toLocaleString()}원보다 적어서 광고가 안 나갈 수 있어요 → 금액을 늘리거나 기간을 줄여 주세요.</span>
+        </p>
+      )}
+      <PrimaryButton onClick={() => n !== null && onDone(`${n.toLocaleString()}원`)} disabled={n === null}>다음</PrimaryButton>
       <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
     </div>
   );

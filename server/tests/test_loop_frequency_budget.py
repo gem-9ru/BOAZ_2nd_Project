@@ -94,3 +94,16 @@ def test_file_budget_wins_over_settings():
     # 파일: 하루 4,000원 × 4일 × 2세트 = 32,000원 (다 씀) · 세팅값 10,000원이면 절반도 못 쓴 셈 → 파일을 믿는다
     out = _alerts(read_export(_csv(days=4, budget="4000", budget_kind="일일")), settings={"meta.adset.daily_budget": "10000"})
     assert "underspent" not in [a["kind"] for a in out]
+
+
+def test_extension_lifetime_budget_answer_is_per_set_total():
+    # 확장 ② 세팅 답 '3만 원' = 세트마다 기간 총예산 → 2세트 6만 원 설정 · 쓴 돈 2,000 × 2자리 × 4일 × 2세트 = 32,000원 (53%) → 알림 없음
+    b = read_export(_csv(days=4))
+    assert "underspent" not in [a["kind"] for a in _alerts(b, settings={"meta.adset.lifetime_budget": "3만 원"})]
+    # '10만 원'이면 20만 원 중 32,000원 → 절반도 못 씀
+    us = next(a for a in _alerts(b, settings={"meta.adset.lifetime_budget": "10만 원"}) if a["kind"] == "underspent")
+    assert "20만 원" in us["text"]
+
+
+def test_parse_won():
+    assert alerts.parse_won("3만 원") == 30000 and alerts.parse_won("25,000원") == 25000 and alerts.parse_won("x") == 0

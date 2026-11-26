@@ -40,13 +40,13 @@ describe("EX-01 ② 세팅", () => {
     expect(g.view().index).toBe(0);
   });
 
-  it("panel shows progress like 8/15 with a bar", () => {
+  it("panel shows progress like 8/18 with a bar", () => {
     const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 7 } };
     render(<GuideStep state={state} dispatch={() => {}} />);
-    expect(screen.getByText("8 / 15")).toBeTruthy();
+    expect(screen.getByText("8 / 18")).toBeTruthy();
     const bar = screen.getByRole("progressbar");
     expect(bar.getAttribute("aria-valuenow")).toBe("7");
-    expect(bar.getAttribute("aria-valuemax")).toBe("15");
+    expect(bar.getAttribute("aria-valuemax")).toBe("18");
   });
 
   it("panel has [이전 칸] [다음 칸] that move the character on the Ads Manager tab", async () => {
@@ -222,24 +222,24 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
       { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(15);
+    expect(items).toHaveLength(18);
     const now = items.filter((li) => li.getAttribute("aria-current") === "step");
     expect(now).toHaveLength(1);
     expect(now[0]!.textContent).toContain("+ 세로(9:16) 1개");
     expect(now[0]!.textContent).toContain("지금");
-    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(13);   // 나머지 13칸은 끝난 칸, 게시 확인만 남음
+    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(15);   // 나머지 15칸은 끝난 칸, 돈 확인·게시 확인만 남음
     expect(screen.getByText(/복제한 세트에서 '칸 meta.ad.media' 칸만 바꾸면 돼요/)).toBeTruthy();
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     const msg = send.mock.calls[0]![1] as { steps: { entry: { id: string } }[] };
-    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.publish"]);
+    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.money_check", "meta.publish"]);
   });
 
   it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
     const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
-    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.publish"]);
+    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.money_check", "meta.publish"]);
     expect(steps.all.at(-2)!.entry.id).toBe("meta.adset.placements");
   });
 });

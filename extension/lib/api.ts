@@ -79,7 +79,7 @@ export interface Field {
   note_if?: Record<string, Record<string, string>> | null;
   /** 선택지 밖 직접 정하기. dates: 시작일·종료일 (답 'yyyy-mm-dd~yyyy-mm-dd'),
    *  area: custom_for 답을 고르면 가게 주소·반경 (답 '가게 주변 5km · 서울 마포구 망원동') */
-  custom?: "dates" | "area" | null;
+  custom?: "dates" | "area" | "won" | null;
   /** custom 칸을 여는 답 (area). 없으면 [날짜 직접 정하기]처럼 따로 버튼 */
   custom_for?: string[] | null;
   /** 고른 답 대신 세팅에 넣을 값 (예: 택배로 보내요 → 전국 (택배)) */

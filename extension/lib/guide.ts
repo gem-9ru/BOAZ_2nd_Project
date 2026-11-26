@@ -16,7 +16,11 @@ export type FindStrategy = (
 ) & { say?: string };
 
 /** 자동 진행에서 이 칸을 어떻게 할지: 고르기·넣기는 대신 하고, 날짜·지역·사진처럼 복잡한 칸은 사장님을 기다리고, 게시 앞에선 멈춘다. */
-export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "startDate" | "endDate" | "ageGender" | "location";
+/** 돈이 걸린 칸 (2026-11-26 사장님: "돈이 설정한 대로 잘 나가는지, 추가 지출은 없는지가 제일 중요"):
+ *  campaignBudget = 캠페인 '예산 전략'을 광고 세트 예산으로, lifetimeBudget = 광고 세트 총예산 금액,
+ *  moneyCheck = 게시 앞 돈 확인. 셋 다 화면에서 다시 읽어 맞을 때만 다음 칸 ([다 했어요]로도 건너뛰지 못함) */
+export type MoneyKind = "campaignBudget" | "lifetimeBudget" | "moneyCheck";
+export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "startDate" | "endDate" | "ageGender" | "location" | MoneyKind;
 
 /** 칸이 있는 화면: list = 캠페인 목록(만들기 창), 나머지는 편집 화면 왼쪽 목록의 세 줄 */
 export type Level = "list" | "campaign" | "adset" | "ad";
@@ -120,6 +124,7 @@ export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldI
     }
   }
   const publish = all.find((s) => s.entry.publish);
-  const send = [target, publish].filter((x): x is GuideStepItem => Boolean(x));
+  const money = all.find((s) => s.entry.auto === "moneyCheck");   // 게시 앞 돈 확인은 다음 테스트에도 늘 거친다
+  const send = [target, money, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
   return { all, send };
 }

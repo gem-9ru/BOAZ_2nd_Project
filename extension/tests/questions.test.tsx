@@ -12,9 +12,9 @@ describe("buildSettings", () => {
   const answers = Object.fromEntries(FIELDS.map((x) => [x.id, x.default ?? ""]));
   const s = buildSettings(FIELDS, { ...answers, "meta.ad.website_url": "https://smartstore.naver.com/ovenlog" }, target, copy, { start: "2026-11-29", end: "2026-12-06" });
 
-  it("returns 14 settings in screen order, campaign objective 트래픽 first, start date right before end date", () => {
+  it("returns 17 settings in screen order, campaign objective 트래픽 first, start date right before end date", () => {
     expect(s.map((x) => x.fieldId)).toEqual(SETTING_ORDER);
-    expect(s).toHaveLength(14);
+    expect(s).toHaveLength(17);
     const at = s.findIndex((x) => x.fieldId === "meta.adset.start_date");
     expect(s[at]).toEqual({ fieldId: "meta.adset.start_date", label: "시작 날짜", value: "2026-11-29" });
     expect(s[at + 1]!.fieldId).toBe("meta.adset.end_date");
@@ -62,14 +62,14 @@ describe("questions", () => {
     expect(dispatch).toHaveBeenCalledWith({ type: "answer", id: "meta.pre.fb_page", value: "있어요" });
   });
 
-  it("finishing the last question dispatches questionsDone with 14 settings and the picked dates", () => {
+  it("finishing the last question dispatches questionsDone with 17 settings and the picked dates", () => {
     const dispatch = vi.fn();
     const answers = Object.fromEntries(askedFields(FIELDS).slice(0, -1).map((x) => [x.id, x.default || "x"]));
     const state: FlowState = { ...initialState(), step: "questions", target, copy, answers };
     render(<QuestionStep state={state} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
     fireEvent.click(screen.getByRole("button", { name: /^정사각형 사진/ }));
     const done = dispatch.mock.calls.map((c) => c[0]).find((e) => e.type === "questionsDone");
-    expect(done.settings).toHaveLength(14);
+    expect(done.settings).toHaveLength(17);
   });
 
   it("a picked range goes to questionsDone as startDate and endDate", () => {

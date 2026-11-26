@@ -38,6 +38,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   const summary = [pick("meta.campaign.objective"), pick("meta.adset.age_gender"), pick("meta.adset.location")].filter(Boolean).join(" · ");
   const media = [pick("meta.ad.format"), pick("meta.ad.media")].filter(Boolean).join(" · ");
   const end = pick("meta.adset.end_date");
+  const budget = pick("meta.adset.lifetime_budget");
   return (
     <section className="flex flex-col gap-4">
       <Coach>광고가 끝났으면 결과 파일을 받아서 다음에 바꿀 칸을 찾아볼까요? 분석 기준은 꼭 <b>일 · 노출 위치</b>로 골라 주세요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</Coach>
@@ -59,7 +60,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
           <p className="font-semibold">이번 광고 세팅</p>
           {summary && <p>{summary}</p>}
           {media && <p>소재: {media}</p>}
-          {end && <p>종료 날짜: {end} · 예산은 '세트당 총 ○원'으로 넣은 값 그대로예요</p>}
+          {end && <p>종료 날짜: {end}{budget ? ` · 세트당 총 ${budget}` : " · 예산은 광고 관리자에 넣은 값 그대로예요"}</p>}
           <p className="text-soft">광고가 끝난 뒤 받아야 기간 합계가 맞아요</p>
         </section>
       )}

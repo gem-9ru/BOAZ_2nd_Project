@@ -246,6 +246,16 @@ fields:
     next_cycle: [rule.awareness_freq_low]
     why: 종료 날짜는 기본으로 비어 있어서, 끄지 않으면 계속 돈이 나가요. 소액이면 짧고 굵게(7~14일)가 사람들에게 더 기억돼요.
 
+  - id: meta.adset.lifetime_budget
+    stage: 광고 세트
+    label: 총예산 (광고 세트마다)
+    kind: question
+    ask: 광고 세트마다 총 얼마 쓸까요?
+    options: [1만 원, 3만 원, 5만 원]
+    custom: won               # [금액 직접 넣기] → 원 단위 (답: 25,000원)
+    default: 3만 원
+    why: 기간 전체에 쓸 돈이에요 (하루 예산 아님). 메타는 하루에 약 1,336원보다 적게 받으면 광고를 거의 안 내보내요. 분석 페이지는 이 금액으로 '예산을 반도 못 썼는지' 봐요.
+
   - id: meta.adset.location
     stage: 광고 세트
     label: 타겟 – 위치

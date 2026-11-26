@@ -12,7 +12,7 @@ describe("GuideStep", () => {
     const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 2 } };
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(15);
+    expect(items).toHaveLength(18);
     expect(items[2]!.getAttribute("aria-current")).toBe("step");
     expect(screen.getByRole("button", { name: "광고 관리자 열기" })).toBeTruthy();
   });
