@@ -105,7 +105,7 @@ def _meta_templates(product: str, strengths: List[str]) -> List[Copy]:
         elif shape == 1:
             head, body = f"{s}", f"{s}. {product} 지금 만나 보세요."
         else:
-            head, body = f"{product} 소개", f"{product} 어떠세요? {s}. 후기도 함께 확인해 보세요."
+            head, body = f"{product} 소개", f"{product} 어떠세요? {s}. 자세한 내용은 스토어에서 확인해 보세요."   # 사장님이 말하지 않은 후기는 쓰지 않음
         out.append({"headline": _clip(tidy(head, 0), META_HEADLINE_MAX),
                     "text": _clip(tidy(body), META_TEXT_MAX)})
     return out
@@ -184,9 +184,11 @@ def reply_text(resp) -> str:
 
 
 def _system_prompt(n: int) -> str:
-    spec = (f"제목(headline)은 {META_HEADLINE_MAX}자 이하, 본문(text)은 50~{META_TEXT_MAX}자. "
+    # 27자 권장: 메타 광고 가이드 '이미지·페이스북 피드·트래픽' (2026-11-26 확인). 40자 상한은 근거 미확인이라 막는 선으로만 둠
+    spec = (f"제목(headline)은 27자 이내 권장(넘어도 {META_HEADLINE_MAX}자 이하), 본문(text)은 50~{META_TEXT_MAX}자. "
             "인스타그램·페이스북 피드에서 스크롤하다 멈추게 하는 광고다. 본문은 "
-            "① 손님이 공감할 상황이나 질문 한 문장 → ② 이 상품의 장점을 구체적으로 → ③ 부담 없는 행동 권유(예: 프로필 링크에서 보기) 순서로 쓴다. "
+            "① 손님이 공감할 상황이나 질문 한 문장 → ② 이 상품의 장점을 구체적으로 → ③ 부담 없는 행동 권유(예: '아래 버튼을 눌러 확인해 보세요') 순서로 쓴다. "
+            "광고는 누르면 바로 스토어나 프로필로 가니 '프로필 링크에서' 같은 게시물 말투는 쓰지 않는다. "
             "제목은 본문을 반복하지 말고 장점 하나를 짧고 또렷하게.")
     return ("너는 광고를 처음 하는 1인 가게 사장님을 돕는 한국어 광고 카피라이터야. 쉬운 말, 존댓말(해요체)로 쓴다.\n"
             f"{spec}\n"

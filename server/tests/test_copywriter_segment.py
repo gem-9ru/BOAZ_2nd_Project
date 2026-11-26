@@ -116,3 +116,11 @@ def test_tone_goes_to_claude_only_when_known():
     copywriter.meta_copies_with_source("쿠키", ["버터"], n=3, client=client, tone="감성적으로")
     copywriter.meta_copies_with_source("쿠키", ["버터"], n=3, client=client, tone="이상한값")
     assert seen[0]["말투"].startswith("장면이 떠오르게") and "말투" not in seen[1]
+
+
+def test_prompt_and_templates_do_not_invent_facts_or_post_wording():
+    """광고는 누르면 바로 가는 곳이 있다: '프로필 링크' 말투 대신 버튼 권유. 틀 문장은 없는 후기를 말하지 않는다. 제목 27자 권장(메타)."""
+    p = copywriter._system_prompt(3)
+    assert "프로필 링크에서' 같은 게시물 말투는 쓰지 않는다" in p and "27자 이내 권장" in p
+    cs = copywriter.meta_copies("수제 쿠키", ["버터 듬뿍", "개별포장", "당일 구움"], n=9, client=False)
+    assert cs and not any("후기" in c["text"] for c in cs)
