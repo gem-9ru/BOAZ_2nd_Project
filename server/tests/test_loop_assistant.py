@@ -102,3 +102,10 @@ def test_no_llm_switch_stops_every_claude_client(monkeypatch):
     monkeypatch.setattr(copywriter, "_read_key", lambda: "sk-test")
     monkeypatch.setenv("COACH_NO_LLM", "1")
     assert copywriter.make_client() is None
+
+
+def test_an06_opening_says_what_the_owner_presses_after_sending():
+    # 보내기만으로는 광고 관리자에서 아무것도 안 가리킨다: 패널의 [다음 테스트 세팅] → [광고 관리자 열기]를 눌러야 뭉치가 짚는다
+    msg = assistant.opening(oven(), "AN-06")["message"]
+    assert "바로 가리켜" not in msg
+    assert "[다음 테스트 세팅]" in msg

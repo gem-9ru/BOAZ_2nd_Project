@@ -269,6 +269,9 @@ describe("7단계 결과 (v4.2)", () => {
     await waitFor(() => expect(screen.getByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy());
     expect(writeText).toHaveBeenCalledWith(oven.code);
     expect(new URLSearchParams(window.location.hash.slice(1)).get("send")).toBeTruthy();   // 옆 패널이 이걸 보고 테스트안을 받음
+    // 보내기만으로는 광고 관리자에서 짚지 않는다 → 패널의 [다음 테스트 세팅]을 누르라고 말한다
+    expect(document.body.textContent).not.toMatch(/광고 관리자에서 이 칸만 짚어 드려요/);
+    expect(document.body.textContent).toMatch(/패널의 \[다음 테스트 세팅\]/);
   });
 
   it("AN-06 근거 탭 '가상 케이스' shows the 6-case table and says it is not used for the verdict", async () => {

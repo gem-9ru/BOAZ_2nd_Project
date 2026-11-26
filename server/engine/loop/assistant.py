@@ -129,7 +129,7 @@ def opening(result: Dict, step: str) -> Dict:
         sug = ["세로 소재는 어떻게 만들어요?" if "세로" in c.get("new", "") else "이 칸을 왜 바꿔요?", "바꾸고 나서 언제 다시 봐요?"]
     else:
         n = len(c.get("checklist") or [])
-        msg = ("[확장 프로그램으로 보내기]를 누르면 확장 프로그램이 광고 관리자에서 그 칸을 바로 가리켜 드려요. "
+        msg = ("[확장 프로그램으로 보내기]를 누르면 옆 패널이 테스트안을 받아요. 패널의 [다음 테스트 세팅] → [광고 관리자 열기]를 누르면 그 칸을 짚어 드려요. "
                + (f"체크리스트 {n}개만 지키면 다음 결과로 {what} 효과를 잴 수 있어요." if n else ""))
         sug = ["지금 바로 준비해요?", "근거 더 보여줘요"]
     return {"step": step, "message": msg, "suggestions": sug, "alerts": alerts}
