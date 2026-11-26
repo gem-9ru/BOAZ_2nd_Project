@@ -95,6 +95,17 @@ describe("뭉치 안내 칸 · 세팅 중 알림", () => {
     expect(screen.getAllByText(/총예산 5,000원이 '하루 최소 약 1,336원 × 7일 = 약 9,400원'보다 적어요 → 광고가 안 나갈 수 있어요/).length).toBeGreaterThan(0);
   });
 
+  it("one ad set: the warning says the total, not '세트마다'", () => {
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings: withBudget("5,000원"), guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
+    expect(screen.getAllByText(/9,400원 이상으로 넣거나 기간을 줄여 주세요/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/세트마다/)).toBeNull();
+  });
+
+  it("next test (two ad sets): the warning keeps '세트마다'", () => {
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings: withBudget("5,000원"), guide: { mode: "create", index: 0, next: BUDGET } }} dispatch={() => {}} />);
+    expect(screen.getAllByText(/세트마다 9,400원 이상으로/).length).toBeGreaterThan(0);
+  });
+
   it("stays quiet when the budget is enough", () => {
     render(<GuideStep state={{ ...initialState(), step: "guide", settings: withBudget("3만 원"), guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
     expect(screen.queryByText(/하루 최소 약 1,336원/)).toBeNull();

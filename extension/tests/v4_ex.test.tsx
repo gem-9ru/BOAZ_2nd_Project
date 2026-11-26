@@ -287,7 +287,7 @@ describe("EX-01 ④ 세팅 중 알림 · EX-02 ④ 세팅 요약 (v4.2)", () => 
     const iso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
     const settings = base.map((x) => (x.fieldId === "meta.adset.end_date" ? { ...x, value: iso } : x));
     render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
-    expect(screen.getByText(/하루 최소 약 1,336원 × 7일 = 약 9,400원'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로/)).toBeTruthy();
+    expect(screen.getByText(/하루 최소 약 1,336원 × 7일 = 약 9,400원'보다 적으면 광고가 안 나갈 수 있어요 → 총예산을 그 이상으로/)).toBeTruthy();
   });
 
   it("publish check warns when a required field is empty", () => {

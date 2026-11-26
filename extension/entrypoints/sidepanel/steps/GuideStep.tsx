@@ -217,10 +217,11 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     const least = minBudget(days);
     if (budget !== null) {
       if (budget >= least) return null;
+    const each = state.guide?.next ? "세트마다 " : "총예산을 ";   // 다음 테스트는 세트 2개라 세트당 금액, 처음엔 세트 1개라 총액
       return (
         <span role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-warn">
           <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
-          <span>총예산 {won(budget)}이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적어요 → 광고가 안 나갈 수 있어요. 세트마다 {won(least)} 이상으로 넣거나 기간을 줄여 주세요.</span>
+          <span>총예산 {won(budget)}이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적어요 → 광고가 안 나갈 수 있어요. {each}{won(least)} 이상으로 넣거나 기간을 줄여 주세요.</span>
         </span>
       );
     }
@@ -228,7 +229,7 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     return (
       <span className="flex gap-1.5 rounded-button bg-info-bg px-2 py-1 text-ink">
         <span aria-hidden="true" className="font-bold text-info">●</span><span className="sr-only">참고</span>
-        <span>총예산이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로 넣어 주세요.</span>
+        <span>총예산이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적으면 광고가 안 나갈 수 있어요 → {each}그 이상으로 넣어 주세요.</span>
       </span>
     );
   }
