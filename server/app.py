@@ -237,6 +237,9 @@ import secrets  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 
 DEMO_CSV = os.path.join(os.path.dirname(__file__), "data", "demo", "오븐로그_메타AB_20261117-20261120.csv")
+# 예시 2: 희수 실험 (scripts/heesu_example.py 가 정리 엑셀에서 만든 파일 · 타깃과 노출 위치를 함께 바꾼 묶음 비교)
+EXAMPLES = {"ovenlog": DEMO_CSV,
+            "heesu": os.path.join(os.path.dirname(__file__), "data", "demo", "희수_메타AB_20261117-20261120.csv")}
 from collections import OrderedDict  # noqa: E402
 
 MAX_PLANS = 200          # 서버 메모리에 남기는 분석 결과 수 (넘으면 가장 오래된 것부터 지움)
@@ -284,8 +287,10 @@ async def analysis_upload(file: UploadFile = File(...), settings: Optional[str] 
 
 
 @app.get("/analysis/example")
-def analysis_example(settings_key: Optional[str] = None):
-    return _loop(read_export(DEMO_CSV), _SETTINGS.get(settings_key or ""))
+def analysis_example(settings_key: Optional[str] = None, name: str = "ovenlog"):
+    if name not in EXAMPLES:
+        return JSONResponse(status_code=404, content={"error": "그런 예시는 없어요."})
+    return _loop(read_export(EXAMPLES[name]), _SETTINGS.get(settings_key or ""))
 
 
 # ── 세팅값 넘기기 (v4 8장): 확장 프로그램 → 분석 페이지. 값은 URL에 넣지 않고, 서버가 보관하고 키만 넘긴다 ──

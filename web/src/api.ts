@@ -74,8 +74,13 @@ export const analyzeFile = (file: File, extra: { settingsKey?: string | null; se
   else if (extra.settingsKey) fd.append("settings_key", extra.settingsKey);
   return call<Result>("/analysis", { method: "POST", body: fd });
 };
-export const example = (settingsKey?: string | null) =>
-  call<Result>(`/analysis/example${settingsKey ? `?settings_key=${encodeURIComponent(settingsKey)}` : ""}`);
+/** 예시: ovenlog = 오븐로그 A/B 실측, heesu = 희수 실험 (타깃·노출 위치 묶음 비교) */
+export type ExampleName = "ovenlog" | "heesu";
+export const example = (settingsKey?: string | null, name: ExampleName = "ovenlog") => {
+  const q = new URLSearchParams(settingsKey ? { settings_key: settingsKey } : {});
+  if (name !== "ovenlog") q.set("name", name);
+  return call<Result>(`/analysis/example${q.toString() ? `?${q}` : ""}`);
+};
 export const simulate = (code: string, arm: string, budget: number, total = 100000, days?: number) =>
   call<Simulation>("/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, budget, total, days }) });
 export const receivedSettings = (key: string) => call<{ count: number }>(`/settings/${encodeURIComponent(key)}`);

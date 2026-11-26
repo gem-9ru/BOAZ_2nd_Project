@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { analyzeFile, example, receivedSettings, type Result } from "./api";
+import { analyzeFile, example, receivedSettings, type ExampleName, type Result } from "./api";
 import type { Settings } from "./blocks/MySettings";
 import { Start } from "./blocks/Start";
 import { AN01 } from "./steps/AN01";
@@ -59,7 +59,7 @@ export default function App() {
     return (
       <main className="mx-auto max-w-page px-4 py-section flex flex-col gap-group">
         <Start onFile={(f) => { setFileName(f.name); void load(() => analyzeFile(f, received !== null ? { settingsKey } : { settings })); }}
-          onExample={() => { setFileName(EXAMPLE_FILE); void load(() => example(received !== null ? settingsKey : null)); }}
+          onExample={(name: ExampleName = "ovenlog") => { setFileName(EXAMPLE_FILE[name]); void load(() => example(received !== null ? settingsKey : null, name)); }}
           busy={busy} error={error} received={received} settings={settings} onSettings={setSettings} />
         <Toast text={toast} />
       </main>
@@ -118,7 +118,7 @@ export default function App() {
   );
 }
 
-const EXAMPLE_FILE = "오븐로그_메타AB_20261117-20261120.csv";
+const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "오븐로그_메타AB_20261117-20261120.csv", heesu: "희수_메타AB_20261117-20261120.csv" };
 const ORDER = STEPS.map((x) => x.id as string);
 const NAME = { block: "차단", warn: "주의", info: "참고" } as const;
 

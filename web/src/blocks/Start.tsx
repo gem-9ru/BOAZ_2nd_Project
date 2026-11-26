@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ExampleName } from "../api";
 import { Button, Card, Grade } from "../ui";
 import { MySettings, type Settings } from "./MySettings";
 
@@ -11,7 +12,7 @@ const PREP = [
 
 /** 화면 0: 무엇을 해 주는지 한 줄 + 할 수 있는 일 셋 (올리기 · 예시 · 아직 안 돌림). */
 export function Start({ onFile, onExample, busy, error, received, settings, onSettings }: {
-  onFile: (f: File) => void; onExample: () => void; busy: boolean; error: string | null;
+  onFile: (f: File) => void; onExample: (name?: ExampleName) => void; busy: boolean; error: string | null;
   received: number | null; settings: Settings; onSettings: (s: Settings) => void;
 }) {
   const [prep, setPrep] = useState(false);
@@ -57,8 +58,12 @@ export function Start({ onFile, onExample, busy, error, received, settings, onSe
 
       <div className="grid gap-stack sm:grid-cols-2">
         <Card title="파일이 없나요?" summary="예시로 결과 화면을 먼저 볼 수 있어요">
-          <p className="text-body text-soft">팀이 직접 돌린 오븐로그 A/B 실측(11/17~20)으로 결과 화면을 먼저 볼 수 있어요. <Grade g="A" /></p>
-          <Button kind="secondary" onClick={onExample} busy={busy}>오븐로그 예시로 보기</Button>
+          <p className="text-body text-soft">팀이 직접 돌린 A/B 실측 2건(11/17~20)으로 결과 화면을 먼저 볼 수 있어요. <Grade g="A" /></p>
+          <div className="flex flex-wrap gap-2">
+            <Button kind="secondary" onClick={() => onExample("ovenlog")} busy={busy}>오븐로그 예시로 보기</Button>
+            <Button kind="secondary" onClick={() => onExample("heesu")} busy={busy}>희수 실험 예시로 보기</Button>
+          </div>
+          <p className="text-caption text-soft">오븐로그: 노출 위치만 바꾼 비교 · 희수 실험: 타깃과 노출 위치를 함께 바꾼 비교</p>
         </Card>
         <Card title="아직 광고를 안 돌려 봤다면" summary="5,000원씩 두 세트로 작게 돌리는 법을 알려 드려요">
           <Button kind="secondary" onClick={() => setPrep((v) => !v)}>아직 안 돌려 봤어요</Button>

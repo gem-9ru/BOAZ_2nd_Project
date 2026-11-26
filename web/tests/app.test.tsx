@@ -34,6 +34,19 @@ function showExample() {
   return f;
 }
 
+describe("AN-00 예시 2건", () => {
+  it("[희수 실험 예시로 보기] asks the server for the heesu example and shows its file name", async () => {
+    const f = vi.fn((url: string) => ok(String(url).includes("/assistant") ? { message: "m", suggestions: [] } : oven));
+    vi.stubGlobal("fetch", f);
+    render(<App />);
+    expect(screen.getByRole("button", { name: "오븐로그 예시로 보기" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "희수 실험 예시로 보기" }));
+    await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
+    expect(f.mock.calls.some(([u]) => String(u) === "/analysis/example?name=heesu")).toBe(true);
+    expect(screen.getByText(/희수_메타AB_20261117-20261120\.csv/)).toBeTruthy();
+  });
+});
+
 describe("AN-02 메타 관련성 진단 (보조 신호)", () => {
   it("shows the below-average rankings as a reference list under the funnel table", async () => {
     const text = "메타 품질 순위: A(자동) 평균 이하 — 같은 손님을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식";
