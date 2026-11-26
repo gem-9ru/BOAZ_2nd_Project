@@ -18,3 +18,13 @@ def test_click_destination_has_no_objective_jargon():
 def test_language_asks_about_facebook_not_ads_manager():
     ask = _field("meta.pre.language")["ask"]
     assert "광고 관리자" not in ask and "페이스북" in ask
+
+
+def test_payment_says_vat_may_be_added():
+    pay = _field("meta.pre.payment")
+    for text in (pay["why"], pay["help"]["아직이에요"]["say"]):
+        assert "부가세 10%" in text and "사업자등록번호" in text
+
+
+def test_budget_says_vat_is_extra():
+    assert "부가세 별도" in _field("meta.adset.lifetime_budget")["why"]
