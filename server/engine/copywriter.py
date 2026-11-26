@@ -194,7 +194,7 @@ def _system_prompt(n: int) -> str:
             "'검색어'는 손님이 네이버에서 찾는 말이다. 손님 말투를 맞추는 데만 쓰고, 상품의 사실로 쓰지 않는다 "
             "(예: 검색어에 '대여'·'할인'·'리퍼'가 있어도 장점에 없으면 '대여 가능'·'할인 중'이라고 쓰지 않는다). "
             "검색어는 자연스러울 때만 한두 개 넣고, 붙여 쓴 말은 띄어 쓴다(가성비노트북 → 가성비 노트북).\n"
-            "'손님'·'시기'가 있으면 그 손님의 상황에 맞춘다.\n"
+            "'손님'·'시기'가 있으면 그 손님의 상황에 맞춘다. '말투'가 있으면 그 말투로 쓴다.\n"
             "가게·브랜드 이름, 가격, 숫자, 후기, 수상처럼 주어지지 않은 사실은 지어내지 마. "
             "'최저가·1위·최고·국내 유일·100%·무조건' 같은 근거 없는 표현, 이모지, 해시태그, 특수문자 남발은 금지.\n"
             f"서로 다른 각도의 문구 {n}개를 쓴다 (예: 상황 공감 / 장점 강조 / 선물·시기).\n"
@@ -234,13 +234,19 @@ def _parse(text: str) -> List[Copy]:
     return out
 
 
+TONES = {"친근하게": "동네 단골에게 말하듯 친근하고 다정하게", "깔끔하게": "군더더기 없이 짧고 또렷하게",
+         "감성적으로": "장면이 떠오르게 감성적이고 따뜻하게"}
+
+
 def _ask_claude(client, product: str, strengths: List[str], n: int,
-                segment: Optional[dict] = None, keywords: Optional[List[str]] = None) -> List[Copy]:
+                segment: Optional[dict] = None, keywords: Optional[List[str]] = None, tone: Optional[str] = None) -> List[Copy]:
     """Claude에게 문구를 받음. 어떤 실패든 빈 목록 (오류 문구에 키가 섞이지 않게 내용은 버림)."""
     try:
         payload: Dict[str, object] = {"상품": product, "장점": strengths, "개수": n}
         if keywords:
             payload["검색어"] = keywords
+        if tone in TONES:   # 사장님이 고른 말투
+            payload["말투"] = TONES[tone]
         if segment and segment.get("label"):   # 낱말만: 손님 무리 이름과 시기. 네이버 숫자는 넣지 않는다
             payload["손님"] = segment["label"]
             if segment.get("peak_month"):
@@ -261,7 +267,7 @@ def _ask_claude(client, product: str, strengths: List[str], n: int,
 # ── 공개 함수 ─────────────────────────────────────────────
 
 def _copies_with_source(product: str, strengths: Strengths, n: int, client,
-                        segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None):
+                        segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None, tone: Optional[str] = None):
     """→ (문구 목록, Claude가 쓴 문구가 하나라도 들어갔는지)."""
     n = max(int(n), 0)
     if n == 0:
@@ -275,7 +281,7 @@ def _copies_with_source(product: str, strengths: Strengths, n: int, client,
         client = make_client()
     elif client is False:
         client = None
-    candidates: List[Copy] = _ask_claude(client, product, own, n, segment, kws) if client else []
+    candidates: List[Copy] = _ask_claude(client, product, own, n, segment, kws, tone) if client else []
     templates = _meta_templates(product, pieces)
     seg_tpl = _segment_template(product, pieces[0], segment)
     if seg_tpl:
@@ -299,7 +305,8 @@ def meta_copies(product: str, strengths: Strengths, n: int = 3, client=None,
 
 
 def meta_copies_with_source(product: str, strengths: Strengths, n: int = 3, client=None,
-                            segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None):
+                            segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None,
+                            tone: Optional[str] = None):
     """meta_copies와 같고, Claude 문구가 쓰였는지도 돌려준다 (화면의 출처 표시용).
-    keywords: 손님 검색어 (Claude에게는 장점과 따로 보냄)."""
-    return _copies_with_source(product, strengths, n, client, segment, keywords)
+    keywords: 손님 검색어 (Claude에게는 장점과 따로 보냄). tone: 친근하게 | 깔끔하게 | 감성적으로."""
+    return _copies_with_source(product, strengths, n, client, segment, keywords, tone)

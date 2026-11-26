@@ -102,3 +102,17 @@ def test_claude_copies_keep_their_basis_list():
     body = {"copies": [{"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북, 프로필 링크에서 만나 보세요.", "basis": ["가벼움"]}]}
     out = copywriter._parse(json.dumps(body, ensure_ascii=False))
     assert out[0]["basis"] == ["가벼움"]
+
+
+def test_tone_goes_to_claude_only_when_known():
+    seen = []
+
+    class Msgs:
+        def create(self, **kw):
+            seen.append(json.loads(kw["messages"][0]["content"]))
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text='{"copies": []}')], stop_reason="end_turn")
+
+    client = SimpleNamespace(messages=Msgs())
+    copywriter.meta_copies_with_source("쿠키", ["버터"], n=3, client=client, tone="감성적으로")
+    copywriter.meta_copies_with_source("쿠키", ["버터"], n=3, client=client, tone="이상한값")
+    assert seen[0]["말투"].startswith("장면이 떠오르게") and "말투" not in seen[1]

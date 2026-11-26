@@ -183,7 +183,7 @@ export function research(product: string, opts: { seeds?: string[]; category?: s
 }
 
 export function copies(body: { product: string; strengths: string[]; keywords: string[]; avoid: string[];
-  segment?: { intent: string; label: string; peak_month?: number | null } }): Promise<{ copies: Copy[]; source: string }> {
+  segment?: { intent: string; label: string; peak_month?: number | null }; tone?: string }): Promise<{ copies: Copy[]; source: string }> {
   return call("/copies", json(body));
 }
 

@@ -5,6 +5,10 @@ import { compact } from "../../../lib/format";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import FeedPreview from "./copy/FeedPreview";
+import { targetLine } from "./find/TargetPick";
+
+const TONES = ["친근하게", "깔끔하게", "감성적으로"] as const;
+const PICK_GOOD = 3;   // 칩은 1~3개가 알맞다 (많으면 문구가 길고 흐려짐)
 
 interface Props {
   state: FlowState;
@@ -20,6 +24,8 @@ type Choice = number | "own" | null;
 /** ② 문구: 좋은 점 고르기 → 문구 3안(피드 모양 미리 보기) → 하나 고르거나 직접 쓰기 → 고쳐서 정하기. */
 export default function CopyStep({ state, dispatch }: Props) {
   const [strengths, setStrengths] = useState("");
+  const [added, setAdded] = useState<string[]>([]);   // 직접 적어 엔터로 붙인 말 (칩)
+  const [tone, setTone] = useState<(typeof TONES)[number]>("친근하게");
   const [picked, setPicked] = useState<string[]>([]);
   const [rounds, setRounds] = useState<Copy[][]>([]);   // 써 달라고 할 때마다 한 묶음씩 쌓는다 (앞 문구도 남겨 비교)
   const list: Copy[] | null = rounds.length ? rounds.flat() : null;   // 번호(1안·2안…)는 쓴 순서대로
@@ -52,8 +58,13 @@ export default function CopyStep({ state, dispatch }: Props) {
   const peak = seg?.trend?.seasonal ? seg.trend.peak_month : null;   // 시즌일 때만 "N월에 많음"
   const others = mods.filter((m) => m.group === OTHER);
   const groups = [...new Set(mods.map((m) => m.group))].filter((g) => g !== OTHER);   // 많이 찾는 순(서버 순서)대로 처음 나온 묶음부터
-  const typed = strengths.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
-  const all = [...picked, ...typed];
+  const typed = strengths.split(/[,\n]/).map((x) => x.trim()).filter(Boolean);   // 아직 엔터를 안 친 말도 넣는다
+  const all = [...new Set([...picked, ...added, ...typed])];
+  function addTyped() {
+    if (!typed.length) return;
+    setAdded((a) => [...new Set([...a, ...typed])]);
+    setStrengths("");
+  }
   const blocked = hasMods && all.length === 0;
   const toggle = (w: string) => setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : [...p, w]));
 
@@ -80,6 +91,7 @@ export default function CopyStep({ state, dispatch }: Props) {
       const r = await fetchCopies({
         product: state.product ?? "", strengths: all, keywords: state.keywords, avoid: state.research?.negatives ?? [],
         ...(seg ? { segment: { intent: seg.intent, label: seg.label, ...(peak ? { peak_month: peak } : {}) } } : {}),
+        tone,
       });
       setRounds((rs) => [...rs, r.copies]);   // 뒤에 붙이니 이미 고른 문구 번호는 그대로
     } catch (e) {
@@ -117,14 +129,18 @@ export default function CopyStep({ state, dispatch }: Props) {
           ? `손님이 '${state.product ?? ""}' 찾을 때 함께 쓰는 말이에요. 사장님 상품에 해당하는 것을 눌러 주세요. 문구에 그대로 넣을게요.`
           : "상품의 좋은 점을 한두 마디로 알려 주세요. 찾은 키워드와 섞어 광고 문구 3개를 써 드릴게요."}
       </Coach>
-      {seg && (
-        <p className="flex flex-wrap items-center gap-1.5 text-caption">
-          <span>고른 손님: {seg.label}{peak ? ` · ${peak}월에 많음` : ""}</span>
+      {(seg || state.target) && (
+        <div className="flex items-start justify-between gap-3 rounded-card border border-line bg-paper px-4 py-3">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-caption text-soft">이 손님에게 쓰는 문구예요</span>
+            {seg && <span className="text-body font-semibold">{seg.label}{peak ? ` · ${peak}월에 많음` : ""}</span>}
+            {state.target && <span className="text-caption">{targetLine(state.target)}</span>}
+          </span>
           <button type="button" onClick={() => dispatch({ type: "editFind" })}
-            className="text-caption font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
-        </p>
+            className="shrink-0 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
+        </div>
       )}
-      {hasMods && <p className="-mt-2 text-small text-soft">칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요. 많이 찾는 순서로 놓았어요.</p>}
+      {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요. 칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
       {hasMods && groups.map((g) => {
         const items = mods.filter((m) => m.group === g);
         if (items.length === 0) return null;
@@ -148,13 +164,42 @@ export default function CopyStep({ state, dispatch }: Props) {
           id="strengths"
           value={strengths}
           onChange={(e) => setStrengths(e.target.value)}
-          placeholder={hasMods ? "예: 버터 듬뿍" : "예: 버터 듬뿍, 당일 구움"}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addTyped(); } }}
+          placeholder={hasMods ? "예: 버터 듬뿍 (적고 엔터)" : "예: 버터 듬뿍 (적고 엔터)"}
           className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
         />
+        {added.length > 0 && (
+          <ul aria-label="직접 적은 말" className="flex flex-wrap gap-2">
+            {added.map((w) => (
+              <li key={w} className="inline-flex items-center gap-1 rounded-badge border border-accent bg-accent-soft px-3 py-1.5 text-caption">
+                ✓ {w}
+                <button type="button" aria-label={`${w} 빼기`} onClick={() => setAdded((a) => a.filter((x) => x !== w))}
+                  className="ml-0.5 text-soft focus-visible:outline-2 focus-visible:outline-accent">×</button>
+              </li>
+            ))}
+          </ul>
+        )}
         {error && <ErrorLine message={error} onRetry={write} />}
       </div>
       {!list && choice !== "own" && (
         <div className="flex flex-col gap-2">
+          <fieldset className="flex flex-col gap-2">
+            <legend className="mb-2 text-caption font-semibold text-soft">문구 말투</legend>
+            <div className="flex flex-wrap gap-2">
+              {TONES.map((t) => (
+                <label key={t} className={`cursor-pointer rounded-badge border px-3 py-1.5 text-label has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+                  tone === t ? "border-accent bg-accent font-semibold text-on-accent" : "border-line"}`}>
+                  <input type="radio" name="tone" value={t} checked={tone === t} onChange={() => setTone(t)} className="sr-only" />
+                  {t}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          {all.length > 0 && (
+            <p className="text-small text-soft">
+              좋은 점 {all.length}개 골랐어요{all.length > PICK_GOOD ? " · 많이 고르면 문구가 길고 흐려질 수 있어요" : ""}
+            </p>
+          )}
           <PrimaryButton onClick={write} busy={busy} disabled={blocked}>문구 써 주세요</PrimaryButton>
           {blocked && <p className="text-small text-soft">▲ 하나 이상 고르거나 적어 주세요</p>}
           <button type="button" onClick={() => choose("own")}
@@ -215,6 +260,7 @@ export default function CopyStep({ state, dispatch }: Props) {
       {choice !== null && (
         <div className="flex flex-col gap-2">
           <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
+          <p className="text-small text-soft">다음: 광고 설정 질문 몇 개에 답하면, 광고 관리자에 넣을 값을 만들어 드려요.</p>
           {(!headOk || !textOk) && <p className="text-small text-soft">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요</p>}
         </div>
       )}

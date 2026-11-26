@@ -162,6 +162,7 @@ class CopiesIn(BaseModel):
     keywords: List[str] = []
     avoid: List[str] = []      # ① 찾기의 뺄 말: 문구에 넣지 않는다
     segment: Optional[SegmentIn] = None   # ① 찾기에서 고른 손님 무리
+    tone: Optional[str] = None            # 문구 말투: 친근하게 | 깔끔하게 | 감성적으로 (모르는 값은 무시)
 
 
 @app.post("/copies")
@@ -182,6 +183,7 @@ def _copies(body: CopiesIn) -> dict:
     words = list(body.strengths) + list(body.keywords)
     seg = body.segment.model_dump() if body.segment else None
     made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths), n=3, client=client or False,
+                                                           tone=body.tone,
                                                            segment=seg, keywords=list(body.keywords))
     made = clean(made)
     if len(made) < 3:   # 뺄 말이 들어간 문구를 버렸으면 문장 틀로 채운다
