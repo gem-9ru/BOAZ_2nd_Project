@@ -24,7 +24,12 @@ def test_payment_says_vat_may_be_added():
     pay = _field("meta.pre.payment")
     for text in (pay["why"], pay["help"]["아직이에요"]["say"]):
         assert "부가세 10%" in text and "사업자등록번호" in text
+        assert "납세자 번호" in text   # 결제 설정 화면의 실제 칸 이름 (2026-11-26 크롬에서 확인)
 
 
 def test_budget_says_vat_is_extra():
     assert "부가세 별도" in _field("meta.adset.lifetime_budget")["why"]
+
+
+def test_payment_says_tax_number_is_optional():
+    assert "없으면 비워 둬도 광고는 낼 수 있어요" in _field("meta.pre.payment")["why"]
