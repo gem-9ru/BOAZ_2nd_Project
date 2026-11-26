@@ -64,7 +64,9 @@ describe("AN-02 메타 관련성 진단 (보조 신호)", () => {
 describe("화면 0 시작", () => {
   it("offers upload, example and test-prep with one promise line", () => {
     render(<App />);
-    expect(screen.getByText(/20만 번 계산해/)).toBeTruthy();
+    // 점검 G: 계산 횟수 대신 하는 일 (화면설계서 v4.2 AN-00 '결과 파일과 광고 설정을 올리면 분석이 시작돼요')
+    expect(screen.getByText("결과 파일과 광고 설정을 올리면 다음에 바꿔 볼 칸 1개와 예상 손님 수를 알려 드려요.")).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/20만 번/);
     expect(screen.getByLabelText("광고 결과 파일 (CSV)")).toBeTruthy();
     expect(screen.getByRole("button", { name: "오븐로그 예시로 보기" })).toBeTruthy();
     expect(document.body.textContent).not.toContain("₩");
@@ -510,5 +512,18 @@ describe("점검 A·C·E·H", () => {
     for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶"]) await next(n);
     const table = screen.getByRole("table");
     expect(within(table).getAllByText("확장에서 넘기면 보여요").length).toBe(3);
+  });
+});
+
+describe("점검 B", () => {
+  it("AN-05 next-test money follows the spec wording and says why the classic amount is bigger", async () => {
+    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/simulate")
+      ? { ...sim, tried: true, next_test: { total: 100000, per_set_lo: 4000, per_set_hi: 10000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } } : oven)));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
+    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "바꾸면 어떻게 돼요? ▶"]) await next(n);
+    // 화면설계서 v4.2 AN-05 ④: '세트당 5,000원이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요'
+    expect(await screen.findByText("세트당 총 6,000원이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요")).toBeTruthy();
+    expect(screen.getByText(/작게 시험할 때는 '확실해요'까지 가지 않아도 돼요/)).toBeTruthy();
   });
 });

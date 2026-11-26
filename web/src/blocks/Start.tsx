@@ -23,7 +23,7 @@ export function Start({ onFile, onExample, busy, error, received, settings, onSe
       <header className="flex flex-col gap-3">
         <p className="text-caption font-semibold text-accent-ink">✦ 광고 어시스턴트 · 결과 분석</p>
         <h1 className="text-hero-sm sm:text-hero font-bold leading-tight">돌려 본 광고 결과를 올려 주세요</h1>
-        <p className="text-lead text-soft max-w-measure">결과 파일과 광고 설정을 올리면 20만 번 계산해 다음에 바꿔 볼 칸 1개와 예상 범위를 알려 드려요.</p>
+        <p className="text-lead text-soft max-w-measure">결과 파일과 광고 설정을 올리면 다음에 바꿔 볼 칸 1개와 예상 손님 수를 알려 드려요.</p>
       </header>
 
       <Card title="광고 결과 파일 (CSV)" summary="광고 관리자에서 받은 결과 파일을 올려 주세요">
@@ -50,7 +50,7 @@ export function Start({ onFile, onExample, busy, error, received, settings, onSe
           </ul>
           <p>'조회'는 랜딩 페이지 조회가 아니에요. '랜딩 페이지 조회'를 골라 주세요. (없으면 '들어온 사람'을 계산하지 못해요)</p>
         </div>
-        {busy && <p role="status" className="text-body text-soft">파일을 읽고 20만 번 계산하는 중이에요…</p>}
+        {busy && <p role="status" className="text-body text-soft">파일을 읽고 계산하는 중이에요…</p>}
         {error && <p id="csv-error" role="alert" className="text-body text-warn">{error}</p>}
       </Card>
 

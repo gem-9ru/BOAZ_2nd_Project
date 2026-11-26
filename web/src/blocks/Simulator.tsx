@@ -104,7 +104,7 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
       </Card>
       {nt && (
         <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
-          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `세트당 총 ${won(start)}이면 적당해요`
+          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `세트당 총 ${won(start)}이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요`
             : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
@@ -117,7 +117,7 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
         <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 손님. 골라 뽑지 않고 전체 분포를 써요.</p>
         <p>한계: {first?.limits ?? "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>
         {nt && <p>Test & Roll (Feit & Berman 2019): 실측으로 맞춘 몫 {(nt.share_lo * 100).toFixed(1)}~{Math.round(nt.share_hi * 100)}%.</p>}
-        {r.verdict?.min_budget.per_group && <p>고전적 표본 크기: 손님 1명당 비용이 20% 나은 걸 확실하게 고르려면 세트당 약 {won(r.verdict.min_budget.per_group)} (10번 중 8번).</p>}
+        {r.verdict?.min_budget.per_group && <p>고전적 표본 크기: 손님 1명당 비용이 20% 나은 걸 확실하게 고르려면 세트당 약 {won(r.verdict.min_budget.per_group)} (10번 중 8번). 작게 시험할 때는 '확실해요'까지 가지 않아도 돼요. 두 세트를 작게 비교해 나은 쪽을 고르고, 남은 돈은 그쪽에 써요 (Test & Roll).</p>}
       </HowCalculated>
     </>
   );
