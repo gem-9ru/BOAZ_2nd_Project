@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { research as fetchResearch, type Research, type Segment } from "../../../lib/api";
 import type { FlowEvent, FlowState, Target } from "../../../lib/flow";
-import { compact, times } from "../../../lib/format";
+import { compact, onlyLastWord, times } from "../../../lib/format";
 import { ageGroupToRange, ageSpan, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import AgeFigure from "./find/AgeFigure";
@@ -201,8 +201,8 @@ function ResultSkeleton() {
 }
 
 /** 2) 부르는 말: 켜고 끄는 칩. */
-function KeywordChips({ research: r, dropped, kept, title, hint, dispatch }: {
-  research: Research; dropped: string[]; kept: string[]; title: string; hint: string;
+function KeywordChips({ research: r, dropped, kept, title, hint, dispatch, product = "" }: {
+  research: Research; dropped: string[]; kept: string[]; title: string; hint: string; product?: string;
   dispatch: (ev: FlowEvent) => void;
 }) {
   return (
@@ -229,6 +229,9 @@ function KeywordChips({ research: r, dropped, kept, title, hint, dispatch }: {
               </span>
               <span className={off ? "line-through" : "font-medium"}>{k.keyword}</span>
               <span className="text-small text-soft tabular-nums">한 달 {times(k.total_qc, k.under)}</span>
+              {onlyLastWord(product, k.keyword) && (
+                <span className="rounded-badge border border-line bg-paper px-1.5 text-small text-soft">'{onlyLastWord(product, k.keyword)}'만 같아요</span>
+              )}
             </button>
           );
         })}
@@ -358,7 +361,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       </summary>
       <div className="mt-3 flex flex-col gap-4">
         <p className="text-small text-soft">이 말들은 ② 문구를 쓸 때 넣어요. 메타 광고는 검색어로 손님을 고르지 않아서, 손님은 위에서 고른 나이·성별로 정해요.</p>
-        <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
+        <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch} product={state.product ?? ""}
           title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
         <Negatives words={r.negatives} />
       </div>
@@ -426,7 +429,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
               </button>
             </div>
           )}
-          <SegmentCards segments={segments} selected={selected} dropped={dropped}
+          <SegmentCards segments={segments} selected={selected} dropped={dropped} product={product}
             onPick={(segment) => dispatch({ type: "pickSegment", segment })} onResearch={onResearch}
             selectedDetail={detail} />
           {segments.length === 1 && (

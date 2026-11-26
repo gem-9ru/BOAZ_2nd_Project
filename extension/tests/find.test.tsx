@@ -662,3 +662,21 @@ describe("달별 기준 표시", () => {
     expect(screen.getAllByText(/이 무리 검색어 \d개 묶음/).length).toBeGreaterThan(0);
   });
 });
+
+describe("끝 낱말만 같은 검색어 · 다른 말로 잡은 나이·성별", () => {
+  it("onlyLastWord marks words that share only the last piece", async () => {
+    const { onlyLastWord } = await import("../lib/format");
+    expect(onlyLastWord("강아지 간식", "다이어트간식")).toBe("간식");
+    expect(onlyLastWord("강아지 간식", "대용량강아지간식")).toBeNull();
+    expect(onlyLastWord("강아지 간식", "강아지간식")).toBeNull();
+    expect(onlyLastWord("텀블러", "대용량텀블러")).toBeNull();   // 한 낱말 상품은 표시 안 함
+  });
+
+  it("chips show the mark and the group card warns when its data comes from another word", () => {
+    const r = { ...withSegs, keywords: [{ keyword: "남성지갑", total_qc: 9000 }, { keyword: "가죽지갑", total_qc: 2000 }] };
+    const seg = { ...segs[1]!, lead: "남성지갑", keywords: ["남성지갑"] };
+    render(<FindStep state={{ ...initialState(), research: { ...r, segments: [seg] }, product: "가죽 지갑", dropped: ["가죽지갑"] }} dispatch={() => {}} />);
+    expect(screen.getByText("'지갑'만 같아요")).toBeTruthy();
+    expect(screen.getByText(/이 무리의 나이·성별은 '남성지갑'으로 클릭한 사람 자료예요/)).toBeTruthy();
+  });
+});

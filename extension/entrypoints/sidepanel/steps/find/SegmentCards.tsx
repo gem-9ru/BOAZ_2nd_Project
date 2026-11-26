@@ -14,14 +14,22 @@ function who(seg: Segment): string {
   return `${ageSpanLabel(ageSpan(seg.audience.ages).groups)}${g === "all" ? " 남녀" : ` ${GENDER_LABEL[g]}`}`;
 }
 
+/** '로/으로': 받침이 있으면(ㄹ 받침 빼고) '으로' */
+function euro(word: string): string {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  if (c < 0 || c > 11171) return "(으)로";
+  return c % 28 === 0 || c % 28 === 8 ? "로" : "으로";
+}
+
 /** 무리 크기: 전체 검색 중 몇 %인지 (무리 검색 수 합 기준). */
 function shareOf(seg: Segment, all: Segment[]): number {
   const total = all.reduce((n, s) => n + s.total_qc, 0);
   return total > 0 ? Math.round((seg.total_qc / total) * 100) : 0;
 }
 
-export default function SegmentCards({ segments, selected, dropped, onPick, onResearch, selectedDetail }: {
+export default function SegmentCards({ segments, selected, dropped, onPick, onResearch, selectedDetail, product = "" }: {
   segments: Segment[];
+  product?: string;
   selected?: Segment;
   dropped: string[];
   onPick: (seg: Segment) => void;
@@ -70,6 +78,11 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                   </span>
                 )}
                 <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}번</span>
+                {seg.audience && product && !seg.lead.replace(/\s/g, "").includes(product.replace(/\s/g, "")) && (
+                  <span className="text-caption text-warn">
+                    ▲ 이 무리의 나이·성별은 '{seg.lead}'{euro(seg.lead)} 클릭한 사람 자료예요. '{product}'를 찾는 손님과 다를 수 있어요.
+                  </span>
+                )}
                 {words.length > 1 && <span className="text-small text-soft">이렇게도 찾아요: {words.filter((w) => w !== seg.lead).join(" · ")}</span>}
               </label>
               {leadOff && (
