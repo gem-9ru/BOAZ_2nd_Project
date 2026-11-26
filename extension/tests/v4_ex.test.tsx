@@ -261,7 +261,7 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(now[0]!.textContent).toContain("'복제'");   // 첫 칸은 지난 세트 복제 (사장님이 직접), 그다음 바꿀 칸
     expect(now[0]!.textContent).toContain("지금");
     expect(items.find((li) => li.textContent!.includes("세로 소재"))!.className).not.toContain("line-through");
-    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(12);   // 나머지 12칸은 끝난 칸, 금액·날짜·돈 확인·게시 확인이 남음
+    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(11);   // 나머지 11칸은 끝난 칸, 예산 공유 끄기·금액·날짜·돈 확인·게시 확인이 남음
     const intro = screen.getByText(/다음 테스트 세팅이에요/).textContent!;
     expect(intro).toMatch(/지난 광고 세트를 복제해 새 세트 2개/);
     expect(intro).toContain("바꿀 세트에서 '칸 meta.ad.media' 칸만 바꿔요");
@@ -274,7 +274,7 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     const msg = send.mock.calls[0]![1] as { steps: { entry: { id: string } }[] };
-    expect(msg.steps.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.ad.media", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
+    expect(msg.steps.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.campaign.budget_strategy", "meta.ad.media", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
   });
 
   it("the '그대로' set gets the same amount and dates (owner sets it, then the money check reads that set too)", () => {
@@ -304,7 +304,7 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
 
   it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
     const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
-    expect(steps.send.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
+    expect(steps.send.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.campaign.budget_strategy", "meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
     expect(steps.all.at(-4)!.entry.id).toBe("meta.adset.placements");
   });
 });

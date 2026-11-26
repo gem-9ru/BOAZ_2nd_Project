@@ -1,7 +1,7 @@
 // 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
 import type { GuideStepItem } from "../../lib/guide";
-import { checkLocation, moneyProblems, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace } from "./actions";
-import type { Level, MoneyKind } from "../../lib/guide";
+import { checkLocation, moneyProblems, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace, currentAdsetId } from "./actions";
+import { shownDates, type Level, type MoneyKind } from "../../lib/guide";
 import { currentLevel, goToLevel, hasValue, openDialog, isChecked, isChoice, isKorean, isPublishLike, isTextField, locateWith, mainScroller, typeInto } from "./locate";
 
 export const MAX_TRIES = 3;
@@ -29,6 +29,8 @@ export interface GuideView {
   auto?: boolean;
   /** 자동 진행이 멈춰 기다리는 이유: owner = 사장님이 직접 맞출 칸, publish = 게시는 직접 */
   waiting?: "owner" | "publish";
+  /** 사장님 차례 (직접 할 칸·사장님 단계·뭉치가 못 해서 넘긴 칸): 말풍선 맨 위에 '직접 눌러 주세요' */
+  owner?: boolean;
 }
 
 // 사장님이 눈으로 따라올 수 있게 천천히 (2026-11-25 요청): 뭉치가 걸어가 가리키고, 말풍선을 읽을 시간을 둔다
@@ -74,6 +76,8 @@ export class Guide {
   private hintPresses = 0;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
   /** 찾는 칸이 열린 창 뒤에 가려져 있음 (창을 먼저 마쳐야 함) */
   private behindDialog = false;
+  /** 돈 확인을 통과한 광고 세트 id (다음 테스트의 두 세트가 같은 세트를 두 번 읽지 않게) */
+  private checkedSets: string[] = [];
   private dialogWait = false;   // 칸이 창 뒤라서 기다리는 중 (창이 닫히면 저절로 풀린다)
   /** 창 밖 칸(웹사이트 URL)인데 창이 열려 있음 → 뭉치가 누를 창 마무리 단추('다음'·'완료') */
   private finishBtn: HTMLElement | null = null;
@@ -110,7 +114,10 @@ export class Guide {
   }
 
   view(): GuideView {
-    const v = this.baseView();
+    const item = this.steps[this.index];
+    const ownerTurn = Boolean(item && !item.entry.publish && this.languageOk
+      && (item.entry.auto === "owner" || this.waiting === "owner" || (item.entry.stages && item.entry.stages[this.stage]?.by === "owner")));
+    const v = { ...this.baseView(), ...(ownerTurn ? { owner: true } : {}) };
     if (this.money && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
       text: `▲ 돈 확인: ${this.money}. 고친 뒤 '다 했어요'를 누르면 다시 확인할게요 (맞을 때만 넘어가요).` };
     if (this.pasteAsk && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
@@ -323,13 +330,13 @@ export class Guide {
     if (stages && this.stage >= 0) {
       const st = stages[this.stage]!;
       const say = (this.target ? st.find[this.matched]?.say : undefined) ?? st.say;
-      const text = `${this.stage + 1}/${stages.length} · ${say.replace("{value}", item.value ?? "").replace(" ()", "")}`;
+      const text = `${this.stage + 1}/${stages.length} · ${say.replace("{value}", shownDates(item.value ?? "")).replace(" ()", "")}`;
       return { index: this.index, total, found: Boolean(this.target), target: this.target ?? undefined, hint: st.by === "buddy", text };
     }
     if (this.target) {
       const hint = item.entry.find[this.matched]?.say;
       return { index: this.index, total, found: true, target: this.target, publish: item.entry.publish, hint: Boolean(hint),
-               text: (hint ?? item.entry.say).replace("{value}", item.value ?? ""), copy: hint ? undefined : item.value };
+               text: (hint ?? item.entry.say).replace("{value}", shownDates(item.value ?? "")), copy: hint ? undefined : item.value };
     }
     if (this.tries >= MAX_TRIES) {
       return { index: this.index, total, found: false, text: item.entry.fallback.text, image: item.entry.fallback.image, copy: item.value };
@@ -454,12 +461,15 @@ export class Guide {
     const at = this.index;
     this.busy = true;
     this.waiting = undefined;
-    const run: Promise<string[]> = kind === "moneyCheck" ? moneyProblems(this.doc, value)
+    const set = kind === "moneyCheck" ? currentAdsetId(this.doc) : null;
+    const run: Promise<string[]> = kind === "moneyCheck" && set && this.checkedSets.includes(set)
+      ? Promise.resolve(["아까 확인한 세트예요 → 복제한 다른 세트('그대로' 세트)를 열고 '다 했어요'를 눌러 주세요"])
+      : kind === "moneyCheck" ? moneyProblems(this.doc, value)
       : (kind === "campaignBudget" ? useAdsetBudget(this.doc) : setLifetimeBudget(this.doc, value)).then((ok) => (ok ? [] : [MONEY_FAIL[kind]]));
     void run.then((problems) => {
       this.busy = false;
       if (this.index !== at) return;
-      if (!problems.length) { this.money = null; return this.advance(); }
+      if (!problems.length) { if (set) this.checkedSets.push(set); this.money = null; return this.advance(); }
       this.money = problems.join(" · ");
       this.waiting = "owner";
     }, () => { this.busy = false; if (this.index === at) { this.money = MONEY_FAIL[kind]; this.waiting = "owner"; } });

@@ -139,6 +139,8 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
   const b = bubbleSpot(pos, size, bubble, vp(), rect, BUBBLE_GAP);
   const bubbleLeft = b.x, bubbleTop = b.y;
   const moving = mode === "walk" || mode === "run";
+  // 첫 칸에서 아직 자동 진행을 안 켰으면: [자동 진행] 안내 한 줄 + 단추 강조 (2026-11-26 사용자: 처음엔 멈춘 채 시작)
+  const firstAsk = Boolean(onToggleAuto) && view.index === 0 && !view.auto && view.waiting !== "publish";
 
   return (
     <div ref={host} className="coach-host">
@@ -158,10 +160,14 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
         <Character3D mode={mode} size={size} move={move} point={point} label="광고 어시스턴트 뭉치" />
       </div>
       {!leaving && (
-        <div ref={bubbleEl} className="coach-bubble-wrap" style={{ left: bubbleLeft, top: bubbleTop, opacity: moving ? 0.35 : 1 }}>
-          <div className="coach-bubble" role="status">
-            <p className="coach-count">{Math.min(view.index + 1, view.total)} / {view.total}</p>
-            <p className="coach-text">{view.text}</p>
+        <div ref={bubbleEl} className="coach-bubble-wrap" style={{ left: bubbleLeft, top: bubbleTop, opacity: moving ? "var(--coach-moving-opacity)" : 1 }}>
+          <div className="coach-bubble">
+            {/* 화면 읽기: 바뀌는 안내만 알림 영역 (단추까지 넣으면 0.5초마다 다시 읽힐 수 있다) */}
+            <div role="status">
+              {view.owner && <p className="coach-owner">직접 눌러 주세요</p>}
+              <p className="coach-count">{Math.min(view.index + 1, view.total)} / {view.total}</p>
+              <p className="coach-text">{view.text}</p>
+            </div>
             {view.image && !view.found && <img src={browser.runtime.getURL(`/${view.image}` as never)} alt="이 칸이 있는 화면" className="coach-shot" />}
             <div className="coach-actions">
               <button type="button" onClick={onBack} disabled={view.index === 0}>이전 칸</button>
@@ -171,10 +177,11 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
                 {view.waiting === "publish" || view.publish ? "게시했어요" : view.waiting === "owner" ? "다 했어요" : "다음 칸"}
               </button>
               {onToggleAuto && view.waiting !== "publish" && (
-                <button type="button" onClick={onToggleAuto} aria-pressed={Boolean(view.auto)}>{view.auto ? "멈추기" : "자동 진행"}</button>
+                <button type="button" onClick={onToggleAuto} aria-pressed={Boolean(view.auto)} className={firstAsk ? "coach-attn" : undefined}>{view.auto ? "멈추기" : "자동 진행"}</button>
               )}
               <button type="button" onClick={() => setLeaving(true)} aria-label="안내 닫기">닫기</button>
             </div>
+            {firstAsk && <p className="coach-note">[자동 진행]을 누르면 뭉치가 칸을 차례로 채워요. 게시는 하지 않아요.</p>}
             {view.publish && <p className="coach-note">캐릭터는 게시 버튼을 누르지 않아요.</p>}
             {keepOthers && <p className="coach-note">흐리게 보이는 나머지 칸은 지난번 그대로 두세요. 두 세트가 이 칸 하나만 달라야 비교할 수 있어요.</p>}
           </div>

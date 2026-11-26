@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { nextTestSteps, stepsFor, type GuideMsg } from "../../../lib/guide";
+import { nextTestSteps, stepsFor, type GuideMsg, type GuideStepItem, shownDates } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
 import { sendWithRetry } from "../../../lib/progress";
 import { Coach, PrimaryButton, WarnLine } from "../ui/Coach";
@@ -126,7 +126,7 @@ export default function GuideStep({ state, dispatch }: Props) {
     );
   }
 
-  const target = next?.send.find((s) => !s.entry.publish && !s.entry.id.startsWith("next."));   // 복제 칸 다음의 바꿀 칸
+  const target = next?.send.find((s) => s.entry.id === state.guide?.next);   // 바꿀 칸 (앞에 복제·예산 공유 끄기 칸이 올 수 있음)
   const targetLabel = target ? state.settings.find((x) => x.fieldId === target.entry.id)?.label ?? target.entry.fallback.text : "";
   const val = (id: string) => state.settings.find((x) => x.fieldId === id)?.value ?? "";
   const money = shownDates(`${val("meta.adset.lifetime_budget")} · ${val("meta.adset.start_date")} ~ ${val("meta.adset.end_date")}`);
@@ -172,6 +172,7 @@ export default function GuideStep({ state, dispatch }: Props) {
                   {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
                   {s.value ? ` · ${shownDates(s.value)}` : ""}
                   {next && now && !s.entry.publish && <span className="ml-1 rounded-badge bg-accent px-1.5 text-small text-on-accent">지금</span>}
+                  {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="ml-1 rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
                 </span>
                 {mode === "create" && !done && <InlineNotice id={s.entry.id} publish={Boolean(s.entry.publish)} state={state} />}
               </span>
@@ -204,13 +205,17 @@ export default function GuideStep({ state, dispatch }: Props) {
         <button type="button" onClick={() => void move(1)} disabled={index >= total}
           className="flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:opacity-(--state-disabled-opacity)">다음 칸</button>
       </div>
+      {index > 0 && (
+        // 초안을 지웠거나 다시 만들 때: 1번 칸으로 (뭉치는 [광고 관리자 열기]로 다시 부른다)
+        <button type="button" onClick={() => dispatch({ type: "guideProgress", index: 0 })} className="min-h-11 self-start text-label text-accent-ink underline">처음부터</button>
+      )}
     </section>
   );
 }
 
-/** 패널에 보이는 글자만 다른 화면처럼 '2026-11-27' → '11월 27일' (뭉치가 칸에 넣는 값은 그대로 yyyy-mm-dd) */
-function shownDates(text: string): string {
-  return text.replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, (_, m: string, d: string) => `${Number(m)}월 ${Number(d)}일`);
+/** 사장님이 직접 할 칸 (안내 목록에 '직접'): 사장님 칸, 하위 단계가 모두 사장님 차례인 칸 */
+function isOwnerStep(s: GuideStepItem): boolean {
+  return s.entry.auto === "owner" && (s.entry.stages ?? []).every((st) => st.by === "owner");
 }
 
 /** EX-01 ④ 세팅 중 알림 (인라인, v4.2): 이유 → 할 일, 금액은 '원'.

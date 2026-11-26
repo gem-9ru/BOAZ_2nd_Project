@@ -167,9 +167,9 @@
   --coach-width: 340px;
   --coach-padding-y: 12px;
   --coach-padding-x: 14px;
-  --coach-font-size: 14px;
-  --coach-small-font-size: 12px;
-  --coach-button-font-size: 13px;
+  --coach-font-size: 16px;
+  --coach-small-font-size: 13px;
+  --coach-button-font-size: 14px;
   --coach-gap: 10px;
   --coach-ring-width: 4px;
   --coach-focus-width: 2px;
@@ -179,6 +179,8 @@
   --coach-move-duration: 350ms;
   --coach-walk-duration: 500ms;
   --coach-easing: ease;
+  --coach-button-min-height: 44px;
+  --coach-moving-opacity: 0.85;
   --character-body: #5B3FD9;
   --character-belly: #F7B77A;
   --character-eye: #FFFFFF;

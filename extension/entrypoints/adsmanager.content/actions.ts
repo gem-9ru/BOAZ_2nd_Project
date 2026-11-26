@@ -251,7 +251,16 @@ export async function useAdsetBudget(doc: Document, pace: Pace = real): Promise<
     if (off) { off.click(); await pace.wait(1200); }
   }
   if (share()?.checked) { note("budget share did not turn off"); return false; }
-  return true;
+  // 칸을 못 찾으면 꺼졌는지 알 수 없다 (메타는 화면 밖 구역을 안 그린다) → '껐다'고 넘어가지 않고 사장님께
+  if (!share()) { reveal(now); await pace.wait(800); }
+  if (!share()) { note("budget share box not found"); return false; }
+  return !share()!.checked;
+}
+
+/** 지금 편집 중인 광고 세트 id (광고 관리자 주소의 selected_adset_ids). 두 세트 돈 확인이 같은 세트를 두 번 읽지 않게 쓴다 */
+export function currentAdsetId(doc: Document): string | null {
+  const ids = new URLSearchParams(doc.defaultView?.location.search ?? "").get("selected_adset_ids");
+  return ids ? ids.split(",")[0]! : null;
 }
 
 const SHARE = "예산 일부를 다른 광고 세트와 공유하기";

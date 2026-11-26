@@ -13,7 +13,7 @@
 .coach-text { margin: 0 0 var(--coach-gap); }
 .coach-shot { width: 100%; border-radius: 8px; margin-bottom: var(--coach-gap); }
 .coach-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-.coach-actions button { font: inherit; font-size: var(--coach-button-font-size); border-radius: var(--coach-button-radius); padding: 6px 12px; cursor: pointer;
+.coach-actions button { font: inherit; font-size: var(--coach-button-font-size); border-radius: var(--coach-button-radius); padding: 6px 12px; cursor: pointer; min-height: var(--coach-button-min-height);
   background: var(--coach-button-bg); color: var(--coach-button-fg); border: 1px solid var(--coach-button-border); }
 .coach-actions .coach-primary { background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-color: var(--coach-primary-bg); font-weight: 700; }
 .coach-actions .coach-primary:hover { background: var(--coach-primary-hover-bg); }
@@ -25,3 +25,8 @@
 .coach-ring-focus { box-shadow: 0 0 0 9999px color-mix(in srgb, var(--coach-scrim) 55%, transparent); }
 .coach-keep { position: fixed; z-index: 2147483646; margin: 0; pointer-events: none; font-family: var(--coach-font-family); font-size: var(--coach-small-font-size); font-weight: 700;
   background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-radius: var(--coach-button-radius); padding: 4px 10px; }
+/* 사장님 차례: 말풍선 맨 위 꼬리표 */
+.coach-owner { display: inline-block; margin: 0 0 6px; font-size: var(--coach-small-font-size); font-weight: 700; background: var(--coach-primary-bg); color: var(--coach-primary-fg);
+  border-radius: var(--coach-button-radius); padding: 2px 10px; }
+/* 첫 말풍선의 [자동 진행]: 테두리를 두껍게 */
+.coach-actions .coach-attn { border: var(--coach-focus-width) solid var(--coach-primary-bg); font-weight: 700; }

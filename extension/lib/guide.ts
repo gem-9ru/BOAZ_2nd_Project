@@ -156,6 +156,13 @@ export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldI
   if (duplicate) all.unshift(duplicate);
   const at = all.findIndex((s) => s.entry.publish);
   all.splice(at < 0 ? all.length : at, 0, ...[keep, keepMoney].filter((x): x is GuideStepItem => Boolean(x)));
-  const send = [duplicate, target, ...fresh, money, keep, keepMoney, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
+  // 두 세트가 한 캠페인에 있으니 '예산 공유'(한 세트가 다른 세트 예산을 끌어 씀)를 다시 끈다 (감사 1, 2026-11-26)
+  const share = all.find((s) => s.entry.auto === "campaignBudget");
+  const send = [duplicate, share, target, ...fresh, money, keep, keepMoney, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
   return { all, send };
+}
+
+/** 사장님께 보이는 글자만 다른 화면처럼 '2026-11-27' → '11월 27일' (뭉치가 칸에 넣는 값은 그대로 yyyy-mm-dd) */
+export function shownDates(text: string): string {
+  return text.replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, (_, m: string, d: string) => `${Number(m)}월 ${Number(d)}일`);
 }

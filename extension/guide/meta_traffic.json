@@ -44,7 +44,7 @@
     "say": "'계속'을 누르세요"
    }
   ],
-  "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 '다음 칸'을 누르세요 ({value})",
+  "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 넘어가요 ({value})",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.campaign.special_category.png",
@@ -89,7 +89,7 @@
     "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
    }
   ],
-  "say": "전환 위치는 '웹사이트'를 고르세요 ({value})",
+  "say": "전환 위치는 메타 화면의 '웹사이트'를 골라요. 손님은 {value} 주소로 가요 (주소는 광고 화면에서 넣어요)",
   "done": "value",
   "fallback": {
    "image": "guide/meta.adset.conversion_location.png",
@@ -227,7 +227,7 @@
     "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
    }
   ],
-  "say": "여기는 사장님이 직접 눌러 주세요: 가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기').",
+  "say": "여기는 사장님이 직접 눌러 주세요: 가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기'). 이미 골라져 있으면 맞는지만 보고 넘어가요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.pre.fb_page.png",
@@ -250,7 +250,7 @@
     "heading": "대표 계정"
    }
   ],
-  "say": "여기는 사장님이 직접 눌러 주세요: 'Instagram 프로필'에서 가게 인스타그램 계정({value})을 고르세요. 페이스북 페이지를 먼저 고르면 나와요.",
+  "say": "여기는 사장님이 직접 눌러 주세요: 'Instagram 프로필'에서 가게 인스타그램 계정({value})을 고르세요. 페이스북 페이지를 먼저 고르면 나와요. 이미 골라져 있으면 맞는지만 보고 넘어가요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.pre.ig_account.png",

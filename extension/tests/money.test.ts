@@ -226,3 +226,28 @@ describe("Guide runner: 돈 칸은 맞을 때만 넘어간다", () => {
     expect(g.view().text).toContain("끄지 못했어요 → 캠페인 화면 '예산'에서 직접 맞춰 주세요");
   });
 });
+
+describe("감사 1·2: 예산 공유 칸·두 세트 돈 확인 (2026-11-26)", () => {
+  it("예산 공유 칸을 못 찾으면 '껐다'고 넘어가지 않는다 (메타가 아직 안 그렸을 수 있음)", async () => {
+    campaign(false);
+    document.querySelector("input[type=checkbox]")!.remove();
+    expect(await useAdsetBudget(document, fast)).toBe(false);
+  });
+
+  it("두 세트 돈 확인: 두 번째 확인이 첫 번째와 같은 세트(주소의 광고 세트 id)면 통과하지 않는다", async () => {
+    lifetime({ amount: "30,000", end: "2026년 12월 26일" });
+    history.pushState({}, "", "/adsmanager/manage/adsets/edit?selected_adset_ids=111");
+    const money = { entry: { id: "meta.money_check", mode: "create", page: { urlIncludes: "" }, find: [{ heading: "예산 및 일정" }], say: "돈 확인",
+      done: "manual", fallback: { image: "", text: "" }, auto: "moneyCheck", level: "adset" }, value: "3만 원" } as GuideStepItem;
+    const g = new Guide(document, [money, { ...money }, { ...money, entry: { ...money.entry, id: "end", find: [{ aria: "없음" }] } }], 0, () => {}, 0);
+    const settle = () => new Promise((r) => setTimeout(r, 500));   // 돈 확인은 구역을 띄운 뒤 0.8초 기다려 읽는다
+    g.apply(); await settle(); await settle();
+    expect(g.view().index).toBe(1);   // 첫 세트 통과
+    g.apply(); await settle(); await settle();
+    expect(g.view().index).toBe(1);   // 같은 세트를 또 읽음 → 멈춤
+    expect(g.view().text).toMatch(/아까 확인한 세트/);
+    history.pushState({}, "", "/adsmanager/manage/adsets/edit?selected_adset_ids=222");   // '그대로' 세트를 엶
+    g.apply(); await settle(); await settle();
+    expect(g.view().index).toBe(2);
+  });
+});
