@@ -113,6 +113,18 @@ export default function FindStep({ state, dispatch }: Props) {
         )}
       </div>
 
+      {!r && !busy && !error && (
+        <div className="flex flex-col gap-2 rounded-card border border-dashed border-line px-4 py-3">
+          <span className="text-caption font-semibold text-soft">찾아보면 이렇게 알려 드려요</span>
+          <ul className="flex flex-col gap-1 text-caption text-soft">
+            <li>· 한 달에 몇 번 찾는지</li>
+            <li>· 누가 찾는지 (나이·성별)</li>
+            <li>· 언제 많이 찾는지 (달별)</li>
+            <li>· 손님이 어떤 말로 찾는지, 어떤 손님 무리가 있는지</li>
+          </ul>
+          <span className="text-small text-soft">네이버 검색광고·데이터랩 자료로 보여 드려요.</span>
+        </div>
+      )}
       {busy && <ResultSkeleton />}
       {!busy && stale && (
         <p className="rounded-button bg-sunk px-3 py-2 text-caption text-soft">
@@ -282,6 +294,27 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const manualMissing = manual && (!age || !gender);
   const ready = !!selected && kept.length > 0 && !manualMissing;
 
+  // 검색어 칩: 손님 무리 아래에 접어 둔다 (무리가 없을 때·뺀 말이 있을 때는 펼침)
+  const words = (
+    <details open={dropped.length > 0 || !r.category || segments.length === 0}
+      className="group flex flex-col gap-3 rounded-card border border-line bg-paper p-4">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+        <span className="flex flex-col gap-0.5">
+          <span className="text-caption font-semibold text-soft">광고에 넣을 검색어</span>
+          <span className="text-body">검색어 {kept.length}개를 넣어요{dropped.length ? ` (${dropped.length}개 뺌)` : ""}</span>
+        </span>
+        <span className="shrink-0 text-caption font-semibold text-soft">
+          <span className="group-open:hidden">살펴보기 ▾</span><span className="hidden group-open:inline">접기 ▴</span>
+        </span>
+      </summary>
+      <div className="mt-3 flex flex-col gap-4">
+        <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
+          title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
+        <Negatives words={r.negatives} />
+      </div>
+    </details>
+  );
+
   const target = pick ? toTarget(pick.from, pick.to, pick.gender)
     : age && gender ? { ...ageGroupToRange(age), gender: gender as "all" | "female" | "male" } : null;
 
@@ -313,23 +346,24 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         <CategoryPick product={product} category={r.category} categories={r.categories} onPick={onPickCategory} />
       )}
       {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
-      <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
-        title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
-      <Negatives words={r.negatives} />
-
       {!r.category ? (
         <div className="flex flex-col gap-2.5">
           <span className="text-caption font-semibold text-soft">손님 무리</span>
           <p className="text-caption">분야를 골라 주시면 손님을 찾아볼게요</p>
           <CategoryAsk categories={r.categories} candidates={r.category_candidates} onPick={onPickCategory} />
+          {words}
         </div>
       ) : segments.length === 0 ? (
-        <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch} />
+        <>
+          {words}
+          <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch} />
+        </>
       ) : (
         <>
           <SegmentCards segments={segments} selected={selected} dropped={dropped}
             onPick={(segment) => dispatch({ type: "pickSegment", segment })} onResearch={onResearch}
             selectedDetail={detail} />
+          {words}
           <div className="flex flex-col gap-2">
             {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
             {!selected && <p className="text-caption text-warn">▲ 광고를 보여 줄 손님을 하나 골라 주세요.</p>}

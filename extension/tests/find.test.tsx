@@ -249,8 +249,9 @@ describe("FindStep — 분야·손님 무리", () => {
     fireEvent.click(within(group).getAllByRole("radio")[1]!);
     expect(dispatch).toHaveBeenCalledWith({ type: "pickSegment", segment: segs[1] });
     rerender(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={dispatch} />);
-    expect(screen.getByText(/대표 검색어: 답례품쿠키 · 월 5,400회/)).toBeTruthy();
-    expect(screen.getByText(/쇼핑인사이트 클릭/)).toBeTruthy();
+    expect(screen.getByText(/주로 찾는 말: 답례품쿠키 · 이 무리 전체 한 달 5,400회/)).toBeTruthy();
+    expect(screen.getByText(/네이버 쇼핑 클릭 기준/)).toBeTruthy();
+    expect(screen.queryByText(/대표 검색어|달별 자료|쇼핑인사이트/)).toBeNull();   // 개발자 말 없음
     fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
     const ev = dispatch.mock.calls.at(-1)![0];
     expect(ev.type).toBe("confirmTarget");
@@ -426,5 +427,19 @@ describe("타깃 확인·고치기", () => {
     render(<FindStep state={{ ...state(), research: { ...withSegs, product_stats: stats } }} dispatch={() => {}} />);
     expect(screen.getByText("한 달 13만회 · 12월에 가장 많이 · 30~50대 여성이 많이 찾아요")).toBeTruthy();
     expect(screen.getByText("자세히 ▾")).toBeTruthy();
+  });
+
+  it("keyword chips sit below the customer groups, folded with a count", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const { container } = render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={() => {}} />);
+    expect(screen.getByText("검색어 5개를 넣어요")).toBeTruthy();
+    const order = [...container.querySelectorAll("[role=radiogroup], details")].map((e) => e.getAttribute("role") ?? "details");
+    expect(order.indexOf("radiogroup")).toBeLessThan(order.lastIndexOf("details"));
+  });
+
+  it("the empty screen says what the search will show", () => {
+    render(<FindStep state={initialState()} dispatch={() => {}} />);
+    expect(screen.getByText("찾아보면 이렇게 알려 드려요")).toBeTruthy();
+    expect(screen.getByText("· 누가 찾는지 (나이·성별)")).toBeTruthy();
   });
 });

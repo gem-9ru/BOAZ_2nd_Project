@@ -3,7 +3,7 @@ import type { Segment } from "../../../../lib/api";
 import { compact } from "../../../../lib/format";
 import MonthBars from "./MonthBars";
 
-const TREND_SOURCE: Record<"search" | "shopping", string> = { search: "검색어 트렌드", shopping: "쇼핑인사이트 클릭" };
+const TREND_SOURCE: Record<"search" | "shopping", string> = { search: "네이버 검색", shopping: "네이버 쇼핑 클릭" };
 
 /** 3) 손님 무리 카드: 하나를 고른다. 고른 카드 아래에 연령 그림(또는 직접 정하기)을 붙인다. */
 export default function SegmentCards({ segments, selected, dropped, onPick, onResearch, selectedDetail }: {
@@ -40,15 +40,18 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                   {seg.line || (seg.audience ? "" : "누가 찾는지 자료가 아직 없어요")}
                 </span>
                 {seg.trend && <MonthBars monthly={seg.trend.monthly} />}
-                <span className="text-small text-soft">대표 검색어: {seg.lead} · 월 {compact(seg.total_qc)}회</span>
-                {words.length > 0 && <span className="text-small text-soft">함께 찾는 말: {words.join(" · ")}</span>}
-                {seg.trend && seg.trend_source && (
-                  <span className="text-small text-soft">달별 자료: {TREND_SOURCE[seg.trend_source]}</span>
+                {seg.trend?.peak_month && (
+                  <span className="text-small text-soft">
+                    {seg.trend.seasonal ? `${seg.trend.peak_month}월에 가장 많이 찾아요` : "달마다 비슷하게 찾아요"}
+                    {seg.trend_source ? ` (${TREND_SOURCE[seg.trend_source]} 기준)` : ""}
+                  </span>
                 )}
+                <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}회</span>
+                {words.length > 1 && <span className="text-small text-soft">이렇게도 찾아요: {words.filter((w) => w !== seg.lead).join(" · ")}</span>}
               </label>
               {leadOff && (
                 <div className="flex flex-col gap-1.5">
-                  <p className="text-small text-soft">대표 검색어 '{seg.lead}'를 뺐어요. 남긴 말로 손님을 다시 찾을 수 있어요.</p>
+                  <p className="text-small text-soft">주로 찾는 말 '{seg.lead}'를 뺐어요. 남긴 말로 손님을 다시 찾을 수 있어요.</p>
                   <button type="button" onClick={onResearch}
                     className="self-start rounded-button border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                     이 말로 손님 다시 찾기
