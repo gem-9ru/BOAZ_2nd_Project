@@ -20,6 +20,8 @@ export interface Research {
   modifiers?: Modifier[];
   /** 상품 이름 그대로의 월 검색 수·찾는 사람 (분야를 모르면 audience 없음) */
   product_stats?: ProductStats | null;
+  /** 자료가 없을 때 대신 찾아볼 말 (연관 검색어 많은 순 또는 더 짧은 이름) */
+  suggestions?: string[];
 }
 
 export interface ProductStats {

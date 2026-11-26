@@ -16,6 +16,17 @@ interface Props {
 }
 
 const EXAMPLE = "수제 쿠키";
+const RECENT_KEY = "ad-coach.recent-products";   // 최근 찾은 상품 (이 브라우저에만, 편의용)
+
+function readRecent(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]").filter((x: unknown) => typeof x === "string").slice(0, 5); }
+  catch { return []; }
+}
+function saveRecent(word: string): string[] {
+  const next = [word, ...readRecent().filter((x) => x !== word)].slice(0, 5);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* 저장이 막혀도 화면은 그대로 */ }
+  return next;
+}
 
 /** ① 찾기: 상품 → 네이버로 누가·어떤 말로 찾는지 → 타겟 확인. */
 export default function FindStep({ state, dispatch }: Props) {
@@ -40,13 +51,17 @@ export default function FindStep({ state, dispatch }: Props) {
     }
   }
 
+  const [recent, setRecent] = useState<string[]>(readRecent);
+
   function search(word = product) {
     const q = word.trim();
     if (!q) return;
     void run(async () => {
       dispatch({ type: "researched", research: await fetchResearch(q), product: q });
+      setRecent(saveRecent(q));
     }, () => search(q));
   }
+  const tryWord = (w: string) => { setProduct(w); search(w); };
 
   // 다시 시도는 누른 그때의 상태(사장님이 그 사이 켜고 끈 말)를 읽어야 해서 ref로 둔다.
   const latest = useRef(state);
@@ -111,6 +126,17 @@ export default function FindStep({ state, dispatch }: Props) {
             {EXAMPLE}로 먼저 보기
           </button>
         )}
+        {!busy && recent.filter((w) => w !== product.trim()).length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-small text-soft">최근에 찾은 상품</span>
+            {recent.filter((w) => w !== product.trim()).slice(0, 3).map((w) => (
+              <button key={w} type="button" onClick={() => tryWord(w)}
+                className="rounded-badge border border-line bg-paper px-2.5 py-1 text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                {w}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {!r && !busy && !error && (
@@ -134,10 +160,11 @@ export default function FindStep({ state, dispatch }: Props) {
       {!busy && r && (
         <div className={stale ? "opacity-50 transition-opacity" : "transition-opacity"}>
           {r.notice
-            ? <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch} />
+            ? <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch}
+                suggestions={r.suggestions} onTry={tryWord} />
             : Array.isArray(r.segments)
               ? <SegmentResult research={r} segments={r.segments} state={state} dispatch={dispatch}
-                  onPickCategory={pickCategory} onResearch={() => rerun()} />
+                  onPickCategory={pickCategory} onResearch={() => rerun()} onTry={tryWord} />
               : <Result research={r} dropped={state.dropped ?? []} dispatch={dispatch} />}
         </div>
       )}
@@ -219,12 +246,17 @@ function Negatives({ words }: { words?: string[] }) {
 }
 
 function SourceLine({ research: r }: { research: Research }) {
+  const day = r.sources?.find((x) => x.part === "product")?.fetched ?? r.fetched;
+  const detail = r.sources?.length
+    ? `네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
+    : `네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`;
   return (
-    <p className="text-small leading-relaxed text-soft">
-      {r.sources?.length
-        ? `출처: 네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
-        : `출처: 네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`}
-    </p>
+    <details className="text-small leading-relaxed text-soft">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        네이버 자료{day ? ` · ${dayLabel(day)} 기준` : ""} <span aria-hidden>🔎</span>
+      </summary>
+      <p className="mt-1">출처: {detail}</p>
+    </details>
   );
 }
 
@@ -260,13 +292,14 @@ function Result({ research: r, dropped, dispatch }: {
 }
 
 /** 새 ① 흐름: 1) 분야 → 2) 부르는 말 → 3) 손님 무리 → [이 손님들로 할게요]. */
-function SegmentResult({ research: r, segments, state, dispatch, onPickCategory, onResearch }: {
+function SegmentResult({ research: r, segments, state, dispatch, onPickCategory, onResearch, onTry }: {
   research: Research;
   segments: Segment[];
   state: FlowState;
   dispatch: (ev: FlowEvent) => void;
   onPickCategory: (code: string) => void;
   onResearch: () => void;
+  onTry: (word: string) => void;
 }) {
   const dropped = state.dropped ?? [];
   const kept = r.keywords.map((k) => k.keyword).filter((k) => !dropped.includes(k));
@@ -357,13 +390,21 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       ) : segments.length === 0 ? (
         <>
           {words}
-          <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch} />
+          <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch}
+            suggestions={kept.filter((k) => k !== product.replace(/\s/g, "")).slice(0, 3)} onTry={onTry} />
         </>
       ) : (
         <>
           <SegmentCards segments={segments} selected={selected} dropped={dropped}
             onPick={(segment) => dispatch({ type: "pickSegment", segment })} onResearch={onResearch}
             selectedDetail={detail} />
+          {segments.length === 1 && (
+            <p className="-mt-2 text-small text-soft">
+              {segments[0]!.intent === "상품"
+                ? "선물·시즌으로 찾는 말이 적어서, 상품 자체로 찾는 손님 한 무리로 봤어요."
+                : "다른 목적으로 찾는 말이 적어서 이 한 무리로 봤어요."}
+            </p>
+          )}
           {words}
           <div className="flex flex-col gap-2">
             {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
@@ -389,8 +430,9 @@ const MANUAL_GENDERS: { id: "all" | "female" | "male"; label: string }[] = [
 ];
 
 /** 네이버 자료가 없을 때: 다른 말로 다시 찾거나, 사장님이 직접 정하고 넘어간다 (막다른 길을 만들지 않는다). */
-function NoData({ notice, product, keywords = [], dispatch }: {
+function NoData({ notice, product, keywords = [], dispatch, suggestions = [], onTry }: {
   notice: string; product: string; keywords?: string[]; dispatch: (ev: FlowEvent) => void;
+  suggestions?: string[]; onTry?: (word: string) => void;
 }) {
   const [manual, setManual] = useState(false);
   const [age, setAge] = useState("30");
@@ -399,6 +441,19 @@ function NoData({ notice, product, keywords = [], dispatch }: {
   return (
     <div className="flex flex-col gap-4">
       <Coach>{notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.</Coach>
+      {onTry && suggestions.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-caption font-semibold text-soft">이 말로 다시 찾아볼까요?</span>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((w) => (
+              <button key={w} type="button" onClick={() => onTry(w)}
+                className="rounded-badge border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                {w}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {!manual ? (
         <button type="button" onClick={() => setManual(true)} className="self-start rounded-button border border-accent bg-paper text-accent-ink px-4 py-2 text-label font-semibold focus-visible:outline-2 focus-visible:outline-accent">
           직접 정하고 계속할게요

@@ -468,3 +468,43 @@ describe("무리 카드 한 줄 · 검색어 쓰임 · 가까운 분야", () => 
     expect(screen.getAllByRole("radio", { name: /./ }).length).toBeGreaterThanOrEqual(12);
   });
 });
+
+describe("무리 하나 · 다시 찾아볼 말 · 짧은 출처 · 최근 상품", () => {
+  afterEach(() => { try { localStorage.clear(); } catch { /* */ } });
+
+  it("explains why there is only one customer group", () => {
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, segments: [segs[0]!] }, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/한 무리로 봤어요/)).toBeTruthy();
+  });
+
+  it("no data: offers other words and searches with one on click", async () => {
+    const empty: Research = { headline: "", keywords: [], audience: null, fetched: "", source: "cache",
+      notice: "추천할 만한 검색어를 찾지 못했어요.", suggestions: ["버터쿠키", "쿠키"] };
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify(withSegs), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const dispatch = vi.fn();
+    render(<FindStep state={{ ...initialState(), research: empty, product: "수제 버터 쿠키" }} dispatch={dispatch} />);
+    expect(screen.getByText("이 말로 다시 찾아볼까요?")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "버터쿠키" }));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "researched", product: "버터쿠키" })));
+  });
+
+  it("source line is short; details are folded", () => {
+    const r = { ...withSegs, sources: [{ part: "product" as const, label: "검색어·연령", fetched: "2026-11-15", today: false }] };
+    render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/네이버 자료 · 11월 15일 기준/)).toBeTruthy();
+    expect(screen.getByText(/출처: 네이버 검색광고·데이터랩 — 검색어·연령 11월 15일 저장본/)).toBeTruthy();   // 펼치면 보이는 자세한 줄
+  });
+
+  it("remembers recent products and searches again from a chip", async () => {
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify(withSegs), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    localStorage.setItem("ad-coach.recent-products", JSON.stringify(["텀블러", "립밤"]));
+    const dispatch = vi.fn();
+    render(<FindStep state={initialState()} dispatch={dispatch} />);
+    expect(screen.getByText("최근에 찾은 상품")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "립밤" }));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "researched", product: "립밤" })));
+    expect(JSON.parse(localStorage.getItem("ad-coach.recent-products")!)[0]).toBe("립밤");
+  });
+});

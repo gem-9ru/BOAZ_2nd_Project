@@ -293,3 +293,22 @@ def test_copies_rejects_peak_month_out_of_range(monkeypatch):
     assert r.status_code == 422
     assert TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 0}}).status_code == 422
     assert TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 12}}).status_code == 200
+
+
+def test_no_data_suggests_other_words(monkeypatch):
+    """자료가 없으면 막다른 길 대신 찾아볼 말: 연관 검색어(많은 순) 또는 더 짧은 이름."""
+    import pandas as pd
+    from server.engine import market, naver_api
+    from server.app import _shorter_names
+    assert _shorter_names("수제 버터 쿠키") == ["버터 쿠키", "쿠키"]
+    kw = pd.DataFrame([{"keyword": "수제버터쿠키", "total_qc": 50, "intent": "관련 낮음"},
+                       {"keyword": "버터쿠키", "total_qc": 900, "intent": "관련 낮음"},
+                       {"keyword": "쿠키만들기", "total_qc": 5000, "intent": "제외: 만들기"}])
+    rep = market.MarketReport(seeds=["x"], groups=pd.DataFrame(), keywords=kw, recommended=[], headline="", fetched="2026-11-26")
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, []))
+    monkeypatch.setattr(market, "build", lambda *a, **k: rep)
+    b = TestClient(app).post("/research", json={"product": "수제 버터 쿠키"}).json()
+    assert b["notice"] and b["suggestions"] == ["버터쿠키"]
+    monkeypatch.setattr(market, "build", lambda *a, **k: None)
+    monkeypatch.setattr(naver_api, "last_error", lambda: None)
+    assert TestClient(app).post("/research", json={"product": "수제 버터 쿠키"}).json()["suggestions"] == ["버터 쿠키", "쿠키"]

@@ -93,6 +93,23 @@ def _good_points(product: str, mods: List[dict]) -> List[dict]:
     return [{**m, "group": groups.get(m["word"], m["group"])} for m in kept]
 
 
+def _shorter_names(product: str) -> List[str]:
+    """자료가 없을 때 더 짧게 찾아볼 말: 뒤쪽 조각부터 ('수제 버터 쿠키' → '버터 쿠키', '쿠키'). 최대 3개."""
+    pieces = product.split()
+    return [" ".join(pieces[i:]) for i in range(1, len(pieces)) if len(" ".join(pieces[i:])) >= 2][:3]
+
+
+def _similar_words(product: str, kw) -> List[str]:
+    """추천할 말이 없을 때 대신 찾아볼 말: 네이버 연관 검색어 중 검색이 많은 것 3개 (상품 이름 그대로·만들기·매장 말 제외)."""
+    me = product.replace(" ", "")
+    try:
+        rows = kw[~kw["intent"].astype(str).str.startswith("제외")].sort_values("total_qc", ascending=False)
+        words = [k for k in rows["keyword"] if k.replace(" ", "") != me]
+    except (KeyError, AttributeError):
+        words = []
+    return (words or _shorter_names(product))[:3]
+
+
 def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
@@ -108,11 +125,13 @@ def _research(body: ResearchIn) -> dict:
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
         return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice,
-                **wide, "segments": [], "modifiers": [], "product_stats": None}
+                **wide, "segments": [], "modifiers": [], "product_stats": None,
+                "suggestions": [] if why else _shorter_names(body.product)}
     if not report.recommended:
         return {"headline": report.headline, "keywords": [], "audience": None, "fetched": report.fetched,
                 "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요.",
-                **wide, "segments": [], "modifiers": mods, "product_stats": report.product_stats}
+                **wide, "segments": [], "modifiers": mods, "product_stats": report.product_stats,
+                "suggestions": _similar_words(body.product, report.keywords)}
     kw = report.keywords.set_index("keyword")["total_qc"]
     keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
     audience = None
