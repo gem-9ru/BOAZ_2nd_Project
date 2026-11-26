@@ -221,6 +221,7 @@ describe("슬라이드: 사진·제목은 사장님이 직접", () => {
       expect(s.entry.find).toEqual([{ role: "button", text: "슬라이드 추가" }]);
       expect(s.entry.say).toMatch(/^여기는 사장님이 직접/);
     }
+    expect(items("여러 장 (슬라이드)")[0]!.entry.say).toContain("2장 이상");   // 메타: '슬라이드를 2개 이상 추가하세요' (2026-11-26 실제 화면)
   });
 
   it("단일 이미지면 지금 그대로", () => {
