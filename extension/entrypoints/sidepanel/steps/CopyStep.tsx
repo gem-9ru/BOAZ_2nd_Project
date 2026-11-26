@@ -132,8 +132,8 @@ export default function CopyStep({ state, dispatch }: Props) {
         {on
           ? <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           : <p className="line-clamp-2 text-caption text-soft">{c.primary_text}</p>}
-        {c.basis && c.basis.length > 0 && <p className="text-small text-soft">근거: {c.basis.join(" · ")}</p>}
-        {on && <Editor draft={draft} setDraft={setDraft} banned={banned} />}
+        {c.basis && c.basis.length > 0 && <p className="text-small text-soft">이 문구에 쓴 말: {c.basis.join(" · ")}</p>}
+        {on && <Editor draft={draft} setDraft={setDraft} banned={banned} original={{ headline: c.headline, text: c.primary_text }} />}
       </div>
     );
   }
@@ -213,7 +213,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           </fieldset>
           {all.length > 0 && (
             <p className="text-small text-soft">
-              좋은 점 {all.length}개 골랐어요{all.length > PICK_GOOD ? " · 많이 고르면 문구가 길고 흐려질 수 있어요" : ""}
+              <span className="text-ink">{all.join(" · ")}</span>{euro(all[all.length - 1]!)}, {tone} 써요 (좋은 점 {all.length}개){all.length > PICK_GOOD ? " · 많이 고르면 문구가 길고 흐려질 수 있어요" : ""}
             </p>
           )}
           <PrimaryButton onClick={write} busy={busy} disabled={blocked}>문구 써 주세요</PrimaryButton>
@@ -297,9 +297,33 @@ export default function CopyStep({ state, dispatch }: Props) {
 }
 
 /** 고른 문구 고치기: 제목·본문 + 글자 수 (메타 기준을 넘으면 경고색). */
-function Editor({ draft, setDraft, banned }: {
+/** '로/으로': 받침이 있으면(ㄹ 받침 빼고) '으로' */
+function euro(word: string): string {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  if (c < 0 || c > 11171) return "(으)로";
+  const jong = c % 28;
+  return jong === 0 || jong === 8 ? "로" : "으로";
+}
+
+/** 인스타 피드에서 '더 보기' 전에 바로 보이는 본문 길이 (두 줄쯤) */
+const FOLD = 40;
+
+function Editor({ draft, setDraft, banned, original }: {
   draft: { headline: string; text: string }; setDraft: (d: { headline: string; text: string }) => void; banned: string[];
+  /** 받은 문구 그대로 (직접 쓰기엔 없음): 고쳤으면 [원래 문구로] */
+  original?: { headline: string; text: string };
 }) {
+  const [copied, setCopied] = useState<"" | "ok" | "fail">("");
+  const edited = !!original && (original.headline !== draft.headline || original.text !== draft.text);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(`${draft.headline}\n${draft.text}`);
+      setCopied("ok");
+    } catch {
+      setCopied("fail");
+    }
+    setTimeout(() => setCopied(""), 2000);
+  }
   const count = (n: number, max: number) => (
     <span className={`text-small tabular-nums ${n > max ? "font-semibold text-warn" : "text-soft"}`}>{n}/{max}자</span>
   );
@@ -319,6 +343,22 @@ function Editor({ draft, setDraft, banned }: {
       <textarea id="copy-text" rows={4} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })}
         aria-invalid={draft.text.length > TEXT_MAX || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2 text-body" />
+      {draft.text.trim() && (
+        <p className="text-small text-soft">
+          피드에서 바로 보이는 부분 (약 {FOLD}자): <span className="font-semibold text-ink">{draft.text.slice(0, FOLD)}</span>
+          {draft.text.length > FOLD && <span> … 더 보기</span>}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-3">
+        <button type="button" onClick={() => void copy()} disabled={!draft.headline.trim() && !draft.text.trim()}
+          className="rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          복사
+        </button>
+        {edited && (
+          <button type="button" onClick={() => setDraft(original!)} className="text-caption text-soft underline">원래 문구로</button>
+        )}
+        {copied && <span role="status" className="text-small text-soft">{copied === "ok" ? "제목과 본문을 복사했어요." : "복사하지 못했어요. 직접 골라 복사해 주세요."}</span>}
+      </div>
       {banned.length > 0
         ? <p role="alert" className="text-caption text-warn">▲ {banned.map((b) => `'${b}'`).join(", ")} 같은 말은 근거를 댈 수 없는 말이라 광고에 쓸 수 없어요. 빼거나 바꿔 주세요.</p>
         : <p className="text-small text-soft">사실이 아닌 말(최저가, 1위 등)은 쓰지 마세요.</p>}

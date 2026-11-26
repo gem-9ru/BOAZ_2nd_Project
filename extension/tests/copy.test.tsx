@@ -76,7 +76,7 @@ describe("CopyStep", () => {
     render(<CopyStep state={withMods()} dispatch={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /개별포장/ }));
     fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
-    await waitFor(() => expect(screen.getAllByText("근거: 개별포장 · 선물로 찾는 손님")).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByText("이 문구에 쓴 말: 개별포장 · 선물로 찾는 손님")).toHaveLength(3));
   });
 
   it("change customer goes back to find", () => {
@@ -256,7 +256,7 @@ describe("② 문구 칩 수·직접 적기·말투·손님 카드·다음 안�
   it("counts picked chips and warns gently over three", () => {
     render(<CopyStep state={base()} dispatch={() => {}} />);
     for (const w of ["개별포장", "버터", "초코", "대용량"]) fireEvent.click(screen.getByRole("button", { name: new RegExp(w) }));
-    expect(screen.getByText(/좋은 점 4개 골랐어요 · 많이 고르면 문구가 길고 흐려질 수 있어요/)).toBeTruthy();
+    expect(screen.getByText(/좋은 점 4개\) · 많이 고르면 문구가 길고 흐려질 수 있어요/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "문구 써 주세요" }).hasAttribute("disabled")).toBe(false);   // 막지는 않음
   });
 
@@ -337,5 +337,46 @@ describe("② 문구 기억 · 자리별 미리 보기 · 틀 문장 알림", ()
     render(<CopyStep state={st()} dispatch={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
     await waitFor(() => expect(screen.getByText(/기본 문장 틀로 썼어요/)).toBeTruthy());
+  });
+});
+
+describe("② 문구 복사 · 되돌리기 · 바로 보이는 부분 · 요약 줄", () => {
+  const long = "가".repeat(30) + "나".repeat(30);
+  const three = [{ primary_text: long, headline: "제목 1" }, { primary_text: "본문 2", headline: "제목 2" }, { primary_text: "본문 3", headline: "제목 3" }];
+  const pickFirst = async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+  };
+
+  it("copies the headline and text", async () => {
+    const write = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText: write }, configurable: true });
+    await pickFirst();
+    fireEvent.click(screen.getByRole("button", { name: "복사" }));
+    await waitFor(() => expect(screen.getByText("제목과 본문을 복사했어요.")).toBeTruthy());
+    expect(write).toHaveBeenCalledWith(`제목 1\n${long}`);
+  });
+
+  it("an edited copy can go back to the original", async () => {
+    await pickFirst();
+    expect(screen.queryByRole("button", { name: "원래 문구로" })).toBeNull();
+    fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "망친 제목" } });
+    fireEvent.click(screen.getByRole("button", { name: "원래 문구로" }));
+    expect((screen.getByLabelText("제목 (고쳐도 돼요)") as HTMLInputElement).value).toBe("제목 1");
+  });
+
+  it("marks what the feed shows before '더 보기'", async () => {
+    await pickFirst();
+    expect(screen.getByText("가".repeat(30) + "나".repeat(10))).toBeTruthy();   // 앞 40자
+    expect(screen.getByText(/… 더 보기/)).toBeTruthy();
+  });
+
+  it("sums up the chosen words and tone above the write button", () => {
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.change(screen.getByLabelText("상품의 좋은 점"), { target: { value: "버터 듬뿍" } });
+    expect(screen.getByText("버터 듬뿍").parentElement!.textContent).toContain("버터 듬뿍으로, 친근하게 써요 (좋은 점 1개)");
   });
 });
