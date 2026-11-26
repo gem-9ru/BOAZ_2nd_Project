@@ -21,3 +21,7 @@
 .coach-note { margin: 8px 0 0; font-size: var(--coach-small-font-size); color: var(--coach-note-fg); }
 @media (prefers-reduced-motion: reduce) { .coach-ring, .coach-bubble-wrap { transition: none; } }
 .coach-actions button:disabled { opacity: .4; cursor: default; }
+/* EX-03 다음 테스트: 바꿀 칸만 밝게, 나머지 화면은 더 흐리게 + 그 칸 위 '유지' 꼬리표 */
+.coach-ring-focus { box-shadow: 0 0 0 9999px color-mix(in srgb, var(--coach-scrim) 55%, transparent); }
+.coach-keep { position: fixed; z-index: 2147483646; margin: 0; pointer-events: none; font-family: var(--coach-font-family); font-size: var(--coach-small-font-size); font-weight: 700;
+  background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-radius: var(--coach-button-radius); padding: 4px 10px; }

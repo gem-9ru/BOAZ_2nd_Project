@@ -10,6 +10,8 @@ interface Props {
   onBack: () => void;
   onClose: () => void;
   onToggleAuto?: () => void;
+  /** EX-03 다음 테스트의 바꿀 칸: 이 칸만 밝게 두고 나머지 화면은 흐리게, '나머지 칸은 그대로(유지)' 표시 */
+  keepOthers?: boolean;
   /** 뭉치가 칸 옆에 도착해 가리키면 그 칸, 다시 걷기 시작하면 null (자동 진행은 도착한 뒤에 누르고 넣는다) */
   onArrive?: (el: HTMLElement | null) => void;
 }
@@ -41,7 +43,7 @@ function num(el: Element | null, name: string, fallback: number): number {
 /** 광고 관리자 위의 뭉치(3D) + 말풍선.
  *  집(화면 오른쪽 위, 사이드 패널 쪽)에서 걸어 나와 칸 옆까지 걷거나(가까우면) 뛰어가서(멀면) 팔로 가리킨다.
  *  닫으면 집으로 돌아간 뒤 사라진다. 크기·속도·색은 design-system 토큰(--character-*). */
-export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArrive }: Props) {
+export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArrive, keepOthers }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const rectFor = useRef<HTMLElement | null>(null);   // rect가 어느 칸의 상자인지
   const host = useRef<HTMLDivElement>(null);
@@ -142,9 +144,14 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
     <div ref={host} className="coach-host">
       {rect && !leaving && (
         <div
-          className="coach-ring"
+          className={keepOthers ? "coach-ring coach-ring-focus" : "coach-ring"}
           style={{ left: rect.left - 6, top: rect.top - 6, width: rect.width + 12, height: rect.height + 12 }}
         />
+      )}
+      {rect && !leaving && keepOthers && (
+        <p className="coach-keep" style={{ left: rect.left - 6, top: Math.max(4, rect.top - 34) }}>
+          이 칸만 바꿔요 · 나머지 칸은 그대로 (유지)
+        </p>
       )}
       <div className="coach-mungchi" style={{ left: pos.x, top: pos.y, width: size, height: size }} data-mode={mode}>
         <Character3D mode={mode} size={size} move={move} point={point} label="광고 어시스턴트 뭉치" />
@@ -168,6 +175,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
               <button type="button" onClick={() => setLeaving(true)} aria-label="안내 닫기">닫기</button>
             </div>
             {view.publish && <p className="coach-note">캐릭터는 게시 버튼을 누르지 않아요.</p>}
+            {keepOthers && <p className="coach-note">흐리게 보이는 나머지 칸은 지난번 그대로 두세요. 두 세트가 이 칸 하나만 달라야 비교할 수 있어요.</p>}
           </div>
         </div>
       )}

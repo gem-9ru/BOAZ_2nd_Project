@@ -11,6 +11,7 @@ export default defineContentScript({
     let guide: Guide | null = null;
     let root: ReactDOM.Root | null = null;
     let timer: number | null = null;
+    let focus = false;   // EX-03 다음 테스트: 바꿀 칸(첫 칸)만 밝게, 나머지는 흐리게
 
     function stopGuide() {
       guide?.stop();
@@ -37,6 +38,7 @@ export default defineContentScript({
       root.render(
         <Character
           view={guide.view()}
+          keepOthers={focus && guide.view().index === 0}
           onDone={() => { guide?.apply(); render(); }}
           onBack={() => { guide?.back(); render(); }}
           onToggleAuto={() => { guide?.setAuto(!guide.view().auto); render(); }}
@@ -60,6 +62,7 @@ export default defineContentScript({
       }
       if (msg.type !== "guide:start" || !msg.steps) return;
       stopGuide();
+      focus = Boolean(msg.focus);
       ui.mount();
       const total = msg.steps.length;
       guide = new Guide(document, msg.steps, msg.startIndex ?? 0, (index) => {

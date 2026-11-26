@@ -62,7 +62,7 @@ export default function GuideStep({ state, dispatch }: Props) {
     setError(null);
     dispatch({ type: "guideOpened" });   // 뭉치가 집을 나선다
     const tab = await adsTab();
-    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index } satisfies GuideMsg);
+    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index, ...(next ? { focus: true } : {}) } satisfies GuideMsg);
     let ok = await sendWithRetry(send, 2, 800);
     if (!ok && tab.id) {
       // 확장을 다시 불러오기 전에 열린 탭은 뭉치 스크립트가 없다 → 새로고침해서 넣고 다시 부른다

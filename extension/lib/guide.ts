@@ -65,7 +65,9 @@ export interface GuideStepItem {
 
 /** 패널 ↔ 광고 관리자(캐릭터) ↔ 배경 스크립트가 주고받는 메시지. 이름을 틀리면 타입 검사에서 걸린다. */
 export type GuideMsg =
-  | { type: "guide:start"; steps: GuideStepItem[]; startIndex: number }   // 패널 → 캐릭터: 안내 시작
+  | { type: "guide:start"; steps: GuideStepItem[]; startIndex: number;   // 패널 → 캐릭터: 안내 시작
+      /** EX-03 다음 테스트: 첫 칸(바꿀 칸 1개)만 밝게, 나머지 화면은 흐리게 + '나머지는 그대로(유지)' */
+      focus?: boolean }
   | { type: "guide:move"; delta: number }                                  // 패널 → 캐릭터: [이전 칸]·[다음 칸]
   | { type: "guide:progress"; index: number; total: number }               // 캐릭터 → 배경: 몇 번째 칸까지 왔나
   | { type: "guide:closed" };                                              // 캐릭터 → 배경: 집에 돌아감
