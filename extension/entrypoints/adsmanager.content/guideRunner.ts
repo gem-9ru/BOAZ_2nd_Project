@@ -1,10 +1,17 @@
 // 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
 import type { GuideStepItem } from "../../lib/guide";
-import { checkLocation, setAgeGender, setEndDate, setStartDate, type Pace } from "./actions";
-import type { Level } from "../../lib/guide";
+import { checkLocation, moneyProblems, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace } from "./actions";
+import type { Level, MoneyKind } from "../../lib/guide";
 import { currentLevel, goToLevel, hasValue, openDialog, isChecked, isChoice, isKorean, isPublishLike, isTextField, locateWith, mainScroller, typeInto } from "./locate";
 
 export const MAX_TRIES = 3;
+const MONEY = new Set<string>(["campaignBudget", "lifetimeBudget", "moneyCheck"]);
+/** 돈 칸을 대신 못 했을 때 말풍선 (moneyCheck는 무엇이 다른지 하나씩) */
+const MONEY_FAIL: Record<MoneyKind, string> = {
+  campaignBudget: "'예산 전략'을 '광고 세트 예산'으로 바꾸고 '예산 일부를 다른 광고 세트와 공유하기'를 끄지 못했어요 → 캠페인 화면 '예산'에서 직접 맞춰 주세요",
+  lifetimeBudget: "총예산을 넣지 못했어요 → '예산 및 일정'에서 종류를 '총예산'으로 고르고 금액을 직접 넣어 주세요",
+  moneyCheck: "돈 설정을 확인하지 못했어요",
+};
 const LANGUAGE_TEXT = "화면 언어를 한국어로 바꿔 주세요. (메뉴 › 설정 › 언어) 바꾼 뒤 '다음 칸'을 눌러 주세요.";
 
 export interface GuideView {
@@ -77,6 +84,8 @@ export class Guide {
   private waitSince = 0;
   /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
   private pasteAsk = false;
+  /** 돈 칸: 화면에서 다시 읽었더니 다른 것 (있으면 다음 칸으로 가지 않는다) */
+  private money: string | null = null;
   /** 하위 단계가 있는 칸: 지금 하위 단계(-1 = 아직), 안 보인 횟수, 가리켜 보여 준 단계, 사장님이 되돌아갔는지 */
   private stage = -1;
   private stageMiss = 0;
@@ -96,6 +105,8 @@ export class Guide {
 
   view(): GuideView {
     const v = this.baseView();
+    if (this.money && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
+      text: `▲ 돈 확인: ${this.money}. 고친 뒤 '다 했어요'를 누르면 다시 확인할게요 (맞을 때만 넘어가요).` };
     if (this.pasteAsk && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
       text: "문구를 칸에 넣지 못했어요. 복사해 두었으니 칸을 누르고 붙여 넣어(⌘V) 주세요. 다 했으면 '다 했어요'." };
     if (this.behindDialog) return { ...v, auto: this.auto, waiting: this.waiting,
@@ -322,6 +333,11 @@ export class Guide {
     const item = this.steps[this.index];
     const el = this.target;
     if (this.behindDialog) { this.seek(); return; }   // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않고 창이 닫혔는지만 다시 본다
+    // 돈 칸: [다 했어요]·[다음 칸]도 화면에서 다시 읽어 맞을 때만 넘어간다 (칸이 다른 편집 화면이면 먼저 그 화면으로)
+    if (this.languageOk && item && MONEY.has(item.entry.auto ?? "")) {
+      if (!el && this.ensureLevel()) return;
+      return this.checkMoney(item.entry.auto as MoneyKind, item.value ?? "");
+    }
     const ownerDone = this.waiting === "owner";   // [다 했어요]: 사장님이 직접 맞췄다 → 다시 하지 않고 다음 칸
     this.waiting = undefined;
     if (this.languageOk && item?.entry.publish) return this.advance();   // [게시했어요]: 사장님이 직접 게시했다 → 다음 (게시 버튼은 누르지 않음)
@@ -394,6 +410,23 @@ export class Guide {
     next();
   }
 
+  /** 돈 칸 대신 하기 + 다시 읽기. 맞으면 다음 칸, 아니면 무엇이 다른지 말풍선에 두고 사장님을 기다린다. */
+  private checkMoney(kind: MoneyKind, value: string): void {
+    if (this.busy) return;
+    const at = this.index;
+    this.busy = true;
+    this.waiting = undefined;
+    const run: Promise<string[]> = kind === "moneyCheck" ? moneyProblems(this.doc, value)
+      : (kind === "campaignBudget" ? useAdsetBudget(this.doc) : setLifetimeBudget(this.doc, value)).then((ok) => (ok ? [] : [MONEY_FAIL[kind]]));
+    void run.then((problems) => {
+      this.busy = false;
+      if (this.index !== at) return;
+      if (!problems.length) { this.money = null; return this.advance(); }
+      this.money = problems.join(" · ");
+      this.waiting = "owner";
+    }, () => { this.busy = false; if (this.index === at) { this.money = MONEY_FAIL[kind]; this.waiting = "owner"; } });
+  }
+
   /** 준비 안내대로 눌렀으니 진짜 칸을 바로 다시 찾는다 (단계는 넘기지 않음). */
   recheck(): void {
     const tries = this.tries;
@@ -447,6 +480,7 @@ export class Guide {
     this.finishPresses = 0;
     this.dialogWait = false;
     this.pasteAsk = false;
+    this.money = null;
     this.resetStage();
     this.index = index;
     this.tries = 0;

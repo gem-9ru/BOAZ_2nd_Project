@@ -10,8 +10,9 @@ interface Props {
   dispatch: (ev: FlowEvent) => void;
 }
 
-/** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */
-export const META_DAILY_MIN = 1336;
+import { META_DAILY_MIN, minBudget, parseWon } from "../../../lib/settings";
+export { META_DAILY_MIN };
+const BUDGET = "meta.adset.lifetime_budget";
 /** 게시 직전에 비어 있으면 안 되는 칸 */
 const REQUIRED = ["meta.creative.copy.text", "meta.creative.copy.headline", "meta.ad.website_url"];
 const won = (n: number) => `${Math.round(n).toLocaleString()}원`;
@@ -162,16 +163,29 @@ export default function GuideStep({ state, dispatch }: Props) {
  *  - 종료 날짜: 총예산이 '하루 최소 × 기간'보다 적으면 광고가 안 나갈 수 있어요 (오븐로그 11/17)
  *  - 게시 직전 확인: 꼭 채워야 할 칸이 비어 있으면 ▲ */
 function InlineNotice({ id, publish, state }: { id: string; publish: boolean; state: FlowState }) {
-  if (id === "meta.adset.end_date") {
+  if (id === "meta.adset.end_date" || id === BUDGET) {
     // 기간은 시작일부터 (예약 광고면 시작일, 아니면 오늘)
     const start = /^(\d{4})-(\d{2})-(\d{2})$/.exec(state.startDate ?? "");
     const from = start ? new Date(Number(start[1]), Number(start[2]) - 1, Number(start[3])) : new Date();
-    const days = daysUntil(state.settings.find((x) => x.fieldId === id)?.value, from > new Date() ? from : new Date());
+    const days = daysUntil(state.settings.find((x) => x.fieldId === "meta.adset.end_date")?.value, from > new Date() ? from : new Date());
     if (!days) return null;
+    // 총예산을 ② 세팅에서 받았으면 실제로 견줘 본다: 모자라면 ▲, 넉넉하면 알림 없음. 못 받았으면 ● 참고 안내
+    const budget = parseWon(state.settings.find((x) => x.fieldId === BUDGET)?.value);
+    const least = minBudget(days);
+    if (budget !== null) {
+      if (budget >= least) return null;
+      return (
+        <span role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-warn">
+          <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
+          <span>총예산 {won(budget)}이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적어요 → 광고가 안 나갈 수 있어요. 세트마다 {won(least)} 이상으로 넣거나 기간을 줄여 주세요.</span>
+        </span>
+      );
+    }
+    if (id === BUDGET) return null;
     return (
       <span className="flex gap-1.5 rounded-button bg-info-bg px-2 py-1 text-ink">
         <span aria-hidden="true" className="font-bold text-info">●</span><span className="sr-only">참고</span>
-        <span>총예산이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(Math.ceil((META_DAILY_MIN * days) / 100) * 100)}'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로 넣어 주세요.</span>
+        <span>총예산이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로 넣어 주세요.</span>
       </span>
     );
   }

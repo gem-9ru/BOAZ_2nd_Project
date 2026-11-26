@@ -14,6 +14,15 @@ ORDER = {"block": 0, "warn": 1, "info": 2}
 REQUIRED = {"spend": "지출 금액", "impressions": "노출", "link_clicks": "링크 클릭", "landing_page_views": "랜딩 페이지 조회"}
 
 
+def parse_won(text) -> float:
+    """'3만 원' · '25,000원' · '10000' → 원. 못 읽으면 0."""
+    t = str(text or "").replace(",", "").replace(" ", "").replace("원", "")
+    try:
+        return float(t[:-1]) * 10000 if t.endswith("만") else float(t)
+    except ValueError:
+        return 0.0
+
+
 def _a(level: str, kind: str, text: str, todo: str, screen: str, **extra) -> Dict:
     return dict({"level": level, "mark": MARK[level], "kind": kind, "text": text, "todo": todo, "screen": screen}, **extra)
 
@@ -51,13 +60,13 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
     arms = summary["arms"]
     spend = sum(a["spend"] for a in arms)
     # ALT-12 예산 덜 씀: 설정 예산은 결과 파일의 예산 열(광고 세트 예산·유형)이 먼저, 없으면 세팅값의 하루 예산 × 기간 × 세트 수
+    # (확장 ② 세팅의 '광고 세트 총예산' 답이 오면 그 금액 × 세트 수)
     expected = float((getattr(bundle, "budget", None) or {}).get("total") or 0)
-    budget = (settings or {}).get("meta.adset.daily_budget")
-    if not expected and budget:
-        try:
-            expected = float(str(budget).replace(",", "").replace("원", "")) * daily["date"].nunique() * len(arms)
-        except ValueError:
-            expected = 0
+    s = settings or {}
+    if not expected and parse_won(s.get("meta.adset.lifetime_budget")):
+        expected = parse_won(s["meta.adset.lifetime_budget"]) * len(arms)
+    if not expected and parse_won(s.get("meta.adset.daily_budget")):
+        expected = parse_won(s["meta.adset.daily_budget"]) * daily["date"].nunique() * len(arms)
     if expected:
         if spend / expected < cfg["spend_used_min"]:
             out.append(_a("warn", "underspent", f"예산의 절반도 못 썼어요 (쓴 돈 {_won(spend)} / 설정 {_won(expected)}) → 타깃 범위가 너무 좁을 수 있어요.",

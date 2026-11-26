@@ -1,8 +1,8 @@
 // 사장님 대신 맞추는 복잡한 칸 (시작·종료 날짜 · 연령·성별 · 위치).
 // 2026-11-25 실제 메타 광고 세트 화면에서 확인한 구조: 날짜는 yyyy-mm-dd 글자 칸, 연령은 '최소/최대 연령' 목록(일부만 그림),
 // 성별은 '전체/남성/여성' 라디오, 위치는 기본 '대한민국'. 게시와 관련된 것은 건드리지 않는다.
-import { isoDate } from "../../lib/settings";
-import { byRoleText, firstShown, isChecked, textOf, typeInto } from "./locate";
+import { isoDate, parseWon } from "../../lib/settings";
+import { byRoleText, firstShown, isChecked, reveal, textOf, typeInto } from "./locate";
 
 export interface Pace { wait: (ms: number) => Promise<void> }
 
@@ -73,15 +73,29 @@ export async function setStartDate(doc: Document, value: string, pace: Pace = re
   return time ? setTimeAfter(doc, box, time, pace) : true;
 }
 
-/** 종료 날짜: '종료 날짜 설정'을 켜고, 그 스위치 바로 뒤에 오는 날짜 칸(시작 날짜 아님)에 yyyy-mm-dd로 넣는다. */
+/** 종료 날짜 칸을 찾는 기준: 일일 예산이면 '종료 날짜 설정' 스위치, 총예산이면 스위치 대신 '종료 날짜 기간' 목록(30일·직접 지정)이 나온다
+ *  (2026-11-26 새 초안에서 확인: '총 예산'을 고르면 메타가 종료 날짜를 30일 뒤로 켜고 스위치를 없앤다). 날짜 칸은 그 뒤의 첫 칸. */
+function endAnchor(doc: Document): { anchor: HTMLElement; on: boolean; isSwitch: boolean } | null {
+  const sw = byLabelledName(doc, "input, [role=checkbox], [role=switch]", "종료 날짜 설정");
+  if (sw) return { anchor: sw, on: isChecked(sw), isSwitch: true };
+  const period = byLabelledName(doc, "[role=combobox]", "종료 날짜 기간");
+  return period ? { anchor: period, on: true, isSwitch: false } : null;
+}
+
+function endBox(doc: Document, anchor: HTMLElement): HTMLInputElement | undefined {
+  return Array.from(doc.querySelectorAll<HTMLInputElement>("input[placeholder='yyyy-mm-dd']"))
+    .find((i) => anchor.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING);
+}
+
+/** 종료 날짜: (일일 예산이면) '종료 날짜 설정'을 켜고, 그 뒤 날짜 칸(시작 날짜 아님)에 yyyy-mm-dd로 넣는다.
+ *  총예산이면 '종료 날짜 기간' 뒤 날짜 칸에 넣는다 (넣으면 기간이 '직접 지정'으로 바뀜, 실제 화면 확인). */
 export async function setEndDate(doc: Document, value: string, pace: Pace = real): Promise<boolean> {
   const date = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
-  const sw = byLabelledName(doc, "input, [role=checkbox], [role=switch]", "종료 날짜 설정");
-  if (!date || !sw) return false;
-  const on = isChecked(sw);
-  if (!on) { sw.click(); await pace.wait(800); }
-  const box = Array.from(doc.querySelectorAll<HTMLInputElement>("input[placeholder='yyyy-mm-dd']"))
-    .find((i) => sw.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING);
+  let a = endAnchor(doc);
+  if (!date || !a) return false;
+  if (a.isSwitch && !a.on) { a.anchor.click(); await pace.wait(800); a = endAnchor(doc); if (!a) return false; }
+  const sw = a.anchor;
+  const box = endBox(doc, sw);
   if (!box) return false;
   box.scrollIntoView?.({ block: "center" });   // 화면에 안 보이는 날짜 칸은 메타가 입력을 무시한다
   await pace.wait(300);
@@ -161,4 +175,108 @@ export async function setAgeGender(doc: Document, value: string, pace: Pace = re
 export function checkLocation(doc: Document, value: string): boolean {
   if (!/전국/.test(value)) return false;
   return /대한민국/.test(textOf(byRoleText(doc, "button", (t) => t.startsWith("위치"))));
+}
+
+// ── 돈이 걸린 칸 (2026-11-26 실제 광고 세트 편집 화면에서 확인) ──
+// 캠페인 '예산 전략': 라디오 '캠페인 예산' / '광고 세트 예산' (aria-labelledby 이름표)
+// 광고 세트 '예산 및 일정': '예산 모드' 이름표가 붙은 목록(combobox, 글자 '일일 예산'·'총예산') + 그 뒤 '금액을 입력하세요' 칸(값 '20,000')
+// 이미 돌린 세트는 목록이 aria-disabled="true"로 잠긴다. 넣은 뒤엔 언제나 화면에서 다시 읽어 확인한다.
+// 주의: 메타는 화면 밖 구역을 그리지 않는다. 그리기 전의 금액 칸은 값이 '0'으로 읽힌다 (같은 날 실제 화면 확인)
+// → 읽기 전에 구역을 화면에 띄우고, 0·빈 값은 '못 읽음'(null)으로 보고 맞다고 하지 않는다.
+// 새 초안 기본값(2026-11-26): 일일 예산 ₩20,000 · 종료 날짜 꺼짐 → 그대로 게시하면 끌 때까지 하루 2만 원씩 나간다.
+// '총 예산'(목록 글자는 띄어 씀)을 고르면 메타가 금액을 ₩350,000으로 바꾸고 종료 날짜를 30일 뒤로 켠다 → 금액을 꼭 다시 넣는다.
+
+const AMOUNT = "input[placeholder='금액을 입력하세요']";
+
+/** 광고 세트 예산 칸: 종류(daily·lifetime·null=못 읽음), 금액(원), 목록·금액 칸. 칸이 없으면(캠페인 예산 사용) found = false */
+export function readBudget(doc: Document): { found: boolean; mode: "daily" | "lifetime" | null; amount: number | null; combo: HTMLElement | null; input: HTMLInputElement | null } {
+  const combo = byLabelledName(doc, "[role=combobox]", "예산 모드");
+  if (!combo) return { found: false, mode: null, amount: null, combo: null, input: null };
+  const t = textOf(combo);
+  const mode = /총\s?예산/.test(t) ? "lifetime" : /일일\s?예산/.test(t) ? "daily" : null;
+  const input = Array.from(doc.querySelectorAll<HTMLInputElement>(AMOUNT))
+    .find((i) => combo.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING) ?? null;
+  const n = Number((input?.value ?? "").replace(/[^\d]/g, ""));
+  return { found: true, mode, amount: n > 0 ? n : null, combo, input };
+}
+
+/** 캠페인 '예산 전략'을 '광고 세트 예산'으로 (캠페인 예산이면 광고 세트에 총예산 칸이 없고 메타가 캠페인 하루 예산으로 쓴다),
+ *  '예산 공유(최대 20%)'는 끈다. 둘 다 정말 그렇게 됐는지 다시 읽어 본다. */
+export async function useAdsetBudget(doc: Document, pace: Pace = real): Promise<boolean> {
+  const radio = byLabelledName(doc, "input[type=radio], [role=radio]", "광고 세트 예산");
+  if (!radio) { note("adset budget radio not found"); return false; }
+  if (!isChecked(radio)) { radio.click(); await pace.wait(800); }
+  const now = byLabelledName(doc, "input[type=radio], [role=radio]", "광고 세트 예산");
+  if (!(now && isChecked(now))) { note("adset budget radio did not stick"); return false; }
+  // '예산 일부를 다른 광고 세트와 공유하기'(최대 20%)는 새 캠페인에서 기본으로 켜져 있다 (2026-11-26 새 초안에서 확인).
+  // 켜 두면 A·B 중 한 세트가 자기 총예산보다 더 쓸 수 있다 → 끈다. 누르면 0.5초쯤 뒤에 반영된다
+  const share = () => doc.querySelector<HTMLInputElement>(`input[type=checkbox][aria-label="${SHARE}"]`);
+  if (share()?.checked) { share()!.click(); await pace.wait(1200); }
+  if (share()?.checked) { note("budget share did not turn off"); return false; }
+  return true;
+}
+
+const SHARE = "예산 일부를 다른 광고 세트와 공유하기";
+
+/** 광고 세트 예산을 '총예산' + 금액으로. 목록을 열어 '총예산'을 고르고 금액을 넣은 뒤, 화면에서 다시 읽어 둘 다 맞을 때만 true. */
+export async function setLifetimeBudget(doc: Document, value: string, pace: Pace = real): Promise<boolean> {
+  const want = parseWon(value);
+  if (!want) { note("no budget value"); return false; }
+  let b = readBudget(doc);
+  if (!b.combo) { note("budget mode box not found"); return false; }
+  reveal(b.combo);   // 구역이 그려져야 금액 칸 값이 맞게 읽힌다
+  await pace.wait(800);
+  b = readBudget(doc);
+  if (!b.combo) { note("budget mode box went away"); return false; }
+  if (b.mode !== "lifetime") {
+    if (b.combo.getAttribute("aria-disabled") === "true") { note("budget mode is locked"); return false; }
+    b.combo.scrollIntoView?.({ block: "center" });
+    b.combo.click();
+    await pace.wait(700);
+    const opt = Array.from(doc.querySelectorAll<HTMLElement>("[role=option]")).find((o) => /^총\s?예산/.test(textOf(o)));
+    if (!opt) { b.combo.click(); note("lifetime option not found"); return false; }   // 목록을 닫고 사장님께
+    opt.click();
+    await pace.wait(800);
+    b = readBudget(doc);
+    if (b.mode !== "lifetime") { note("budget mode did not stick"); return false; }
+  }
+  if (b.amount !== want) {
+    if (!b.input) { note("budget amount box not found"); return false; }
+    b.input.scrollIntoView?.({ block: "center" });
+    await pace.wait(300);
+    b.input.focus();
+    typeInto(b.input, String(want));
+    b.input.blur();
+    await pace.wait(700);
+    b = readBudget(doc);
+  }
+  const ok = b.mode === "lifetime" && b.amount === want;
+  if (!ok) note("budget did not stick", b.mode, b.amount === want);
+  return ok;
+}
+
+/** 게시 앞 돈 확인: 광고 세트 화면에서 다시 읽어 다른 것을 사장님 말로 돌려준다 (빈 목록 = 다 맞음).
+ *  - 예산 칸이 없음(캠페인 예산) · 종류가 총예산이 아님 · 금액이 세팅값과 다름 · 종료 날짜가 꺼졌거나 비어 있음 */
+export async function moneyProblems(doc: Document, value: string, pace: Pace = real): Promise<string[]> {
+  const want = parseWon(value);
+  const out: string[] = [];
+  const first = readBudget(doc);
+  if (first.combo) { reveal(first.combo); await pace.wait(800); }   // 구역이 그려져야 금액이 '0'이 아닌 진짜 값으로 읽힌다
+  const b = readBudget(doc);
+  const won = (n: number) => `${n.toLocaleString()}원`;
+  if (!want) out.push("② 세팅에서 정한 총예산이 없어요 → 패널 ② 세팅에서 금액을 정해 주세요");
+  if (!b.found) {
+    out.push("광고 세트에 예산 칸이 없어요 → 캠페인 '예산 전략'을 '광고 세트 예산'으로 바꿔 주세요");
+  } else {
+    if (b.mode !== "lifetime") out.push(`예산 종류가 '${b.mode === "daily" ? "일일 예산" : textOf(b.combo) || "알 수 없음"}'이에요 → '총예산'으로 바꿔 주세요`);
+    if (want && b.amount === null) out.push(`금액을 읽지 못했어요 (비었거나 아직 화면에 안 그려짐) → '예산 및 일정'을 화면에 띄우고 ${won(want)}인지 확인해 주세요`);
+    else if (want && b.amount !== want) out.push(`금액이 ${won(b.amount!)}이에요 → ${won(want)}으로 넣어 주세요`);
+  }
+  const end = endAnchor(doc);
+  if (!end || !end.on || !endBox(doc, end.anchor)?.value.trim()) out.push("종료 날짜가 없어요 → '종료 날짜 설정'을 켜고 날짜를 넣어 주세요 (없으면 끌 때까지 계속 나가요)");
+  // 메타 자체 경고: '예산은 ₩40,080.00 이상이어야 하며, 그렇지 않으면 광고가 게재되지 않을 수 있습니다' (하루 최소 × 기간보다 적을 때)
+  const low = Array.from(doc.querySelectorAll<HTMLElement>("body *")).map((e) => (e.children.length ? "" : textOf(e)))
+    .map((t) => t.match(/예산은 ₩([\d,]+)(?:\.\d+)? 이상이어야/)).find(Boolean);
+  if (low) out.push(`메타가 '예산은 ${low[1]}원 이상이어야 광고가 나가요'라고 해요 → 금액을 늘리거나 기간을 줄여 주세요`);
+  return out;
 }

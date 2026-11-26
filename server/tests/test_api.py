@@ -60,7 +60,7 @@ def test_fields_are_the_eleven_questions():
     fields = TestClient(app).get("/fields").json()["fields"]
     assert [f["id"] for f in fields] == [
         "meta.pre.fb_page", "meta.pre.ig_account", "meta.pre.store_product", "meta.campaign.objective", "meta.campaign.special_category",
-        "meta.adset.conversion_location", "meta.adset.end_date", "meta.adset.location", "meta.adset.age_gender",
+        "meta.adset.conversion_location", "meta.adset.end_date", "meta.adset.lifetime_budget", "meta.adset.location", "meta.adset.age_gender",
         "meta.ad.format", "meta.ad.website_url", "meta.ad.media"]
     end = next(f for f in fields if f["id"] == "meta.adset.end_date")
     assert end["kind"] == "question" and end["options"] == ["7일", "14일", "30일"] and end["ask"]

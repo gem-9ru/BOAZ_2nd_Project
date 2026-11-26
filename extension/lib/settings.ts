@@ -50,7 +50,9 @@ export const GENDER_LABEL: Record<Target["gender"], string> = { female: "여성"
 export const SETTING_ORDER = [
   "meta.campaign.objective",
   "meta.campaign.special_category",
+  "meta.campaign.budget_strategy",   // 돈: 캠페인 예산이면 메타가 하루 예산으로 계속 쓴다 → 광고 세트 예산으로
   "meta.adset.conversion_location",
+  "meta.adset.lifetime_budget",   // 광고 관리자 '예산 및 일정': 예산이 날짜보다 위
   "meta.adset.start_date",
   "meta.adset.end_date",
   "meta.adset.location",
@@ -62,6 +64,7 @@ export const SETTING_ORDER = [
   "meta.creative.copy.text",
   "meta.creative.copy.headline",
   "meta.ad.website_url",
+  "meta.money_check",   // 게시 앞 돈 확인 (총예산 종류·금액·종료 날짜를 화면에서 다시 읽음)
 ];
 
 /** 묻지 않고 앞 단계에서 채우는 칸: 목표(트래픽 고정), 연령·성별(① 찾기). */
@@ -74,6 +77,26 @@ export function askedFields(fields: Field[]): Field[] {
     return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
   }));
   return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id));
+}
+
+/** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */
+export const META_DAILY_MIN = 1336;
+
+/** '3만 원' · '25,000원' · '10000' → 원. 못 읽으면 null. */
+export function parseWon(text: string | undefined): number | null {
+  const t = (text ?? "").replace(/[,\s원]/g, "");
+  const n = t.endsWith("만") ? Number(t.slice(0, -1)) * 10000 : Number(t);
+  return t && Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/** 광고 기간 일수 (시작일·종료일 모두 셈). */
+export function scheduleDays(s: Schedule): number {
+  return Math.round((Date.parse(s.end) - Date.parse(s.start)) / 86400000) + 1;
+}
+
+/** 이 기간에 광고가 나가려면 세트마다 적어도 넣어야 할 총예산 (하루 최소 × 기간, 백 원 단위 올림). */
+export function minBudget(days: number): number {
+  return Math.ceil((META_DAILY_MIN * days) / 100) * 100;
 }
 
 /** 날짜 → YYYY-MM-DD (그 컴퓨터 날짜 기준). */
@@ -108,7 +131,10 @@ export function buildSettings(fields: Field[], answers: Record<string, string>, 
     "meta.adset.end_date": schedule.endTime ? `${schedule.end} ${schedule.endTime}` : schedule.end,
     "meta.creative.copy.text": copy.primary_text,
     "meta.creative.copy.headline": copy.headline,
+    "meta.campaign.budget_strategy": "광고 세트 예산",
+    "meta.money_check": answers["meta.adset.lifetime_budget"] ?? "",   // 확인할 총예산 금액
   };
-  const extra: Record<string, string> = { "meta.creative.copy.text": "기본 문구", "meta.creative.copy.headline": "제목", "meta.adset.start_date": "시작 날짜" };
+  const extra: Record<string, string> = { "meta.creative.copy.text": "기본 문구", "meta.creative.copy.headline": "제목", "meta.adset.start_date": "시작 날짜",
+    "meta.campaign.budget_strategy": "예산 전략", "meta.money_check": "게시 전 돈 확인" };
   return SETTING_ORDER.map((id) => ({ fieldId: id, label: extra[id] ?? label(id), value: value[id] ?? "" }));
 }

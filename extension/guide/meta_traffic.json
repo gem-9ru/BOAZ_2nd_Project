@@ -54,6 +54,26 @@
   "level": "campaign"
  },
  {
+  "id": "meta.campaign.budget_strategy",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "labelledBy": "광고 세트 예산"
+   }
+  ],
+  "say": "예산은 광고 세트마다 '총예산'으로 정할게요. '예산 전략'을 '광고 세트 예산'으로 두고, '예산 일부를 다른 광고 세트와 공유하기'는 꺼요 (켜 두면 한 세트가 자기 예산보다 더 쓸 수 있어요)",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "캠페인 화면 '예산'에서 '광고 세트 예산'을 고르고 '예산 일부를 다른 광고 세트와 공유하기'를 꺼 주세요"
+  },
+  "auto": "campaignBudget",
+  "level": "campaign"
+ },
+ {
   "id": "meta.adset.conversion_location",
   "mode": "create",
   "page": {
@@ -76,6 +96,26 @@
    "text": "화면에서 '전환 위치' 칸을 찾아 주세요"
   },
   "auto": "click",
+  "level": "adset"
+ },
+ {
+  "id": "meta.adset.lifetime_budget",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산 및 일정"
+   }
+  ],
+  "say": "예산 종류를 '총예산'으로 바꾸고 {value}을(를) 넣을게요. 넣은 뒤 화면에서 다시 읽어 맞는지 확인해요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "'예산 및 일정'에서 예산 종류를 '총예산'으로 고르고 금액을 넣어 주세요"
+  },
+  "auto": "lifetimeBudget",
   "level": "adset"
  },
  {
@@ -398,6 +438,26 @@
   "auto": "type",
   "level": "ad",
   "outsideDialog": true
+ },
+ {
+  "id": "meta.money_check",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산 및 일정"
+   }
+  ],
+  "say": "게시 전에 돈 설정을 다시 확인할게요: 예산 종류 '총예산', 금액 {value}, 종료 날짜",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "광고 세트 화면의 '예산 및 일정'을 열어 주세요. 돈 설정을 확인해야 게시로 넘어가요"
+  },
+  "auto": "moneyCheck",
+  "level": "adset"
  },
  {
   "id": "meta.publish",
