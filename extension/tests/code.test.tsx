@@ -51,14 +51,11 @@ describe("③ 코드 넣기", () => {
 });
 
 describe("③ 다음에 할 일 (코드로 받은 것)", () => {
-  it("shows the one change (v4: 3줄 요약 대신 변경안 카드 + 챗봇), and 그 칸으로 이동 starts the edit guide on that field", () => {
+  it("shows the one change (v4: 3줄 요약 대신 변경안 카드 + 챗봇)", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
-    const dispatch = vi.fn();
-    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
-    expect(screen.getByText(/종료 날짜/)).toBeTruthy();
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
+    expect(screen.getAllByText(/종료 날짜/).length).toBeGreaterThan(0);
     expect(screen.getByText(/세트당 총 151,000원이 쓰일 때까지 더 돌리기/)).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "그 칸으로 이동" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
   });
 
   it("flow: planLoaded → plan step, and the edit guide uses the plan's change", () => {

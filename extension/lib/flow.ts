@@ -12,7 +12,7 @@ export interface Plan {
   badge: { word: string; prob: number } | null;
   /** v4: 그대로 둘 칸 · 하지 말 것 (분석 페이지 매트릭스) */
   keep?: { field_id: string; path: string; value: string; reason: string }[];
-  watch?: { field_id: string; path: string; text: string }[];
+  watch?: { field_id: string; path: string; text: string; need_per_set?: number }[];
   dont?: string[];
 }
 
@@ -75,7 +75,8 @@ export type FlowEvent =
   | { type: "startUpload" }
   | { type: "planLoaded"; plan: Plan }
   | { type: "startFix" }
-  | { type: "startNextTest"; fieldId: string; label: string; value: string }
+  /** startDate·endDate·budget: 다음 테스트의 새 날짜(YYYY-MM-DD)와 세트당 총예산('5,400원'). 지난 날짜·금액을 그대로 쓰지 않게 */
+  | { type: "startNextTest"; fieldId: string; label: string; value: string; startDate?: string; endDate?: string; budget?: string }
   | { type: "prepDone"; missing: string[] }
   | { type: "openPrep" }
   | { type: "reset" };
@@ -134,10 +135,12 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
     case "startNextTest": {
       // ↺ 루프: EX-01 ② 세팅 목록으로 돌아가되, 바꿀 칸 1개만 새 값으로 (게시는 사장님이 직접)
       const has = s.settings.some((x) => x.fieldId === ev.fieldId);
-      const settings = has
-        ? s.settings.map((x) => (x.fieldId === ev.fieldId ? { ...x, value: ev.value } : x))
-        : [...s.settings, { fieldId: ev.fieldId, label: ev.label, value: ev.value }];
-      return { ...s, settings, step: "guide", guide: { mode: "create", index: 0, next: ev.fieldId } };
+      const fresh: Record<string, string | undefined> = { "meta.adset.start_date": ev.startDate, "meta.adset.end_date": ev.endDate,
+        "meta.adset.lifetime_budget": ev.budget, "meta.money_check": ev.budget };
+      const settings = (has ? s.settings : [...s.settings, { fieldId: ev.fieldId, label: ev.label, value: ev.value }])
+        .map((x) => (x.fieldId === ev.fieldId ? { ...x, value: ev.value } : fresh[x.fieldId] ? { ...x, value: fresh[x.fieldId]! } : x));
+      return { ...s, settings, startDate: ev.startDate ?? s.startDate, endDate: ev.endDate ?? s.endDate,
+        step: "guide", guide: { mode: "create", index: 0, next: ev.fieldId } };
     }
     case "prepDone":
       // 처음이면 ① 찾기로, 광고 관리자 열기에서 돌아왔으면 하던 단계(② 세팅 목록)로

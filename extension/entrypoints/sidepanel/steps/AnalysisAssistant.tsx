@@ -35,13 +35,13 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
     }, () => setBubbles((b) => [...b, { from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 분석 페이지의 내용은 그대로 보실 수 있어요." }]));
   }, [code, step]);
 
-  // AN-06 [확장 프로그램으로 보내기] → 테스트안을 받아 둔다 (광고 관리자로 가면 EX-03에서 그 칸을 짚는다)
+  // AN-06 [확장 프로그램으로 보내기] → 테스트안을 받아 둔다 (탭을 떠나면 EX-03 화면, [다음 테스트 세팅]을 눌러야 뭉치가 짚는다)
   useEffect(() => {
     if (!code || !tab.send || sent.current === tab.send) return;
     sent.current = tab.send;
     fetchPlan(code).then((p) => {
       dispatch({ type: "planLoaded", plan: p });
-      setBubbles((b) => [...b, { from: "assistant", text: `테스트안을 받았어요 (${p.change.path ?? p.change.label}). 광고 관리자로 가면 그 칸을 바로 가리켜 드려요. 게시는 사장님이 직접 해요.` }]);
+      setBubbles((b) => [...b, { from: "assistant", text: `테스트안을 받았어요 (${p.change.path ?? p.change.label}). 이 탭을 떠나면 이 패널에 [다음 테스트 세팅]이 보여요. 누르면 광고 관리자에서 그 칸을 짚어 드려요. 게시는 사장님이 직접 해요.` }]);
     }, (e: Error) => setBubbles((b) => [...b, { from: "assistant", text: e.message }]));
   }, [code, tab.send, dispatch]);
 

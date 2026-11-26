@@ -147,7 +147,7 @@ const plan: Plan = {
   change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로(9:16) 소재를 넣은 세트를 하나 더 만들어 보세요", note: "돈의 72%가 릴스에",
     path: "광고 › 형식·미디어", certainty: { level: "보류", label: "아직 몰라요", why: "돌려 본 적 없음" },
     checklist: ["시작 시간을 하루 여유 있게", "클릭이 30번 넘게 모일 때까지 그대로 두기", "바꾸는 칸은 형식·미디어 1개만", "두 세트는 같은 날 같이 시작"],
-    ...{ tag: "테스트 제안", new_short: "+ 세로(9:16) 1개" } },
+    ...{ tag: "테스트 제안", new_short: "+ 세로(9:16) 1개", what: "세로 소재", per_set: 5000 } },
   summary: ["a", "b", "c"], badge: { word: "B 쪽이에요", prob: 0.79 },
   keep: [{ field_id: "meta.adset.placements", path: "광고 세트 › 노출 위치", value: "직접 고르기(수동)", reason: "↓ 광고비 15% 싸요 · 확실해요" }],
   dont: ["여러 칸을 한 번에 바꾸지 않기 — 이유"],
@@ -179,67 +179,100 @@ describe("EX-03 바꿀 칸 받기", () => {
     expect(within(card).queryByText("유력")).toBeNull();
   });
 
-  it("the chatbot greets from the server and answers a suggested question", async () => {
+  it("the chatbot does not repeat the card's explanation, but offers suggested questions and answers them", async () => {
     const f = vi.fn((_u: string, init?: RequestInit) => {
       const b = JSON.parse(init!.body as string);
       return ok(b.question ? { message: `답: ${b.question}` } : { message: "이 칸만 짚어 드릴게요", suggestions: ["왜 이 칸이에요?", "언제 다시 봐요?"] });
     });
     vi.stubGlobal("fetch", f);
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
-    expect(await screen.findByText("이 칸만 짚어 드릴게요")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "왜 이 칸이에요?" })).toBeTruthy();
+    expect(screen.queryByText("이 칸만 짚어 드릴게요")).toBeNull();
     expect(JSON.parse((f.mock.calls[0]![1] as RequestInit).body as string)).toMatchObject({ code: "AB12", step: "EX-03" });
     fireEvent.click(screen.getByRole("button", { name: "왜 이 칸이에요?" }));
     expect(await screen.findByText("답: 왜 이 칸이에요?")).toBeTruthy();
   });
 
-  it("[다음 테스트 세팅] goes back to EX-01 after fixing", () => {
+  it("the only big button is [다음 테스트 세팅] (no 'edit the old set' button that breaks the comparison)", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
-    const dispatch = vi.fn();
-    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
-    fireEvent.click(screen.getByRole("button", { name: "그 칸으로 이동" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
+    expect(screen.queryByRole("button", { name: "그 칸으로 이동" })).toBeNull();
+    expect(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }).className).toContain("bg-accent");
   });
 });
 
 describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
   const settings = SETTING_ORDER.map((id) => ({ fieldId: id, label: `칸 ${id}`, value: "지난 값" }));
+  // 지난 광고: 11/17~11/20 (4일), 세트당 총 10,000원
+  const last = settings.map((x) => ({ ...x, value: { "meta.adset.start_date": "2026-11-17 09:00", "meta.adset.end_date": "2026-11-20",
+    "meta.adset.lifetime_budget": "10,000원", "meta.money_check": "10,000원" }[x.fieldId] ?? x.value }));
+  const go = { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "세로 소재",
+    startDate: "2026-11-27", endDate: "2026-11-30", budget: "5,400원" } as const;
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(2026, 10, 26, 10)); });
+  afterEach(() => vi.useRealTimers());
 
-  it("the button sends the owner back to ② 세팅 with only the changed field as the new value", () => {
+  it("says up front how much money and which dates the next test uses (two sets, from tomorrow, same length as last time)", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings: last }} dispatch={() => {}} />);
+    const box = screen.getByRole("region", { name: "다음 테스트 돈·기간" });
+    // 서버는 세트당 5,000원을 권하지만 4일이면 메타 최소(1,336원 × 4일 ≈ 5,400원)보다 적어서 올린다
+    expect(box.textContent).toContain("두 세트 × 세트당 5,400원 = 합계 10,800원");
+    expect(box.textContent).toContain("11월 27일 ~ 11월 30일 (4일)");
+    expect(box.textContent).toMatch(/지난 광고는 끝났어요/);
+    expect(box.textContent).toMatch(/메타 최소/);
+  });
+
+  it("the button sends the owner back to ② 세팅 with the changed field + new dates and amount, the rest as last time", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
-    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings }} dispatch={dispatch} />);
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings: last }} dispatch={dispatch} />);
     fireEvent.click(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
-    const s = reduce({ ...initialState(), step: "plan", plan, settings }, dispatch.mock.calls[0]![0]);
+    expect(dispatch).toHaveBeenCalledWith(go);
+    const s = reduce({ ...initialState(), step: "plan", plan, settings: last, startDate: "2026-11-17", endDate: "2026-11-20" }, go);
     expect(s.step).toBe("guide");
     expect(s.guide).toEqual({ mode: "create", index: 0, next: "meta.ad.media" });
-    expect(s.settings.find((x) => x.fieldId === "meta.ad.media")!.value).toBe("+ 세로(9:16) 1개");
-    expect(s.settings.filter((x) => x.value === "지난 값")).toHaveLength(settings.length - 1);
+    const v = (id: string) => s.settings.find((x) => x.fieldId === id)!.value;
+    expect(v("meta.ad.media")).toBe("세로 소재");   // 제안 문장('+ 세로(9:16) 1개')이 아니라 값
+    expect(v("meta.adset.start_date")).toBe("2026-11-27");
+    expect(v("meta.adset.end_date")).toBe("2026-11-30");
+    expect(v("meta.adset.lifetime_budget")).toBe("5,400원");
+    expect(v("meta.money_check")).toBe("5,400원");
+    expect([s.startDate, s.endDate]).toEqual(["2026-11-27", "2026-11-30"]);   // 기다리기 화면도 새 날짜
+    expect(s.settings.filter((x) => x.value === "지난 값")).toHaveLength(settings.length - 5);
+  });
+
+  it("when the change is the budget itself, the amount is what the analysis says is needed", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    const budgetPlan = { ...plan, change: { ...plan.change, field_id: "meta.adset.daily_budget", label: "예산", per_set: 5000 },
+      watch: [{ field_id: "meta.adset.daily_budget", path: "광고 세트 › 예산", text: "더 모아야", need_per_set: 82000 }] } as Plan;
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: budgetPlan, settings: last }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }));
+    expect(dispatch.mock.calls[0]![0]).toMatchObject({ budget: "82,000원" });
   });
 
   it("② 세팅 list: only the changed field is '지금', the rest are done with last values; the character gets just that field + publish check", async () => {
-    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings },
-      { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
+    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
     expect(items).toHaveLength(18);
     const now = items.filter((li) => li.getAttribute("aria-current") === "step");
     expect(now).toHaveLength(1);
-    expect(now[0]!.textContent).toContain("+ 세로(9:16) 1개");
+    expect(now[0]!.textContent).toContain("세로 소재");
     expect(now[0]!.textContent).toContain("지금");
-    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(15);   // 나머지 15칸은 끝난 칸, 돈 확인·게시 확인만 남음
+    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(12);   // 나머지 12칸은 끝난 칸, 금액·날짜·돈 확인·게시 확인이 남음
     expect(screen.getByText(/복제한 세트에서 '칸 meta.ad.media' 칸만 바꾸면 돼요/)).toBeTruthy();
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     const msg = send.mock.calls[0]![1] as { steps: { entry: { id: string } }[] };
-    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.money_check", "meta.publish"]);
+    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "meta.publish"]);
   });
 
   it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
     const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
-    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.money_check", "meta.publish"]);
+    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "meta.publish"]);
     expect(steps.all.at(-2)!.entry.id).toBe("meta.adset.placements");
   });
 });

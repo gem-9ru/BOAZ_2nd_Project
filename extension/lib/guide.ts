@@ -118,7 +118,7 @@ export function stepsFor(mode: GuideEntry["mode"], entries: GuideEntry[], settin
   return entries.filter((e) => e.mode === "export").map((entry) => ({ entry }));
 }
 
-/** EX-03 [다음 테스트 세팅] (v4.2): ② 세팅 목록 전체(all)는 보여 주되, 캐릭터에게는 바꿀 칸 1개 + 게시 직전 확인만(send) 보낸다.
+/** EX-03 [다음 테스트 세팅] (v4.2): ② 세팅 목록 전체(all)는 보여 주되, 캐릭터에게는 바꿀 칸 1개 + 새 금액·날짜 + 게시 직전 확인만(send) 보낸다.
  *  바꿀 칸이 만들기 목록에 없으면(예: 노출 위치) 수정 안내의 같은 칸을 게시 앞에 넣는다. 나머지 칸은 지난번 값으로 끝난 칸. */
 export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldId: string): { all: GuideStepItem[]; send: GuideStepItem[] } {
   const all = stepsFor("create", entries, settings, []);
@@ -133,6 +133,8 @@ export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldI
   }
   const publish = all.find((s) => s.entry.publish);
   const money = all.find((s) => s.entry.auto === "moneyCheck");   // 게시 앞 돈 확인은 다음 테스트에도 늘 거친다
-  const send = [target, money, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
+  // 복제한 세트는 지난 금액·지난(이미 끝난) 날짜를 그대로 가져온다 → 새 금액·날짜 칸도 늘 짚는다
+  const fresh = ["meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date"].map((id) => all.find((s) => s.entry.id === id));
+  const send = [target, ...fresh, money, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
   return { all, send };
 }

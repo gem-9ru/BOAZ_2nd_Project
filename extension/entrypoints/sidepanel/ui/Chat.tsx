@@ -51,7 +51,8 @@ export function AskForm({ id, label, suggestions, busy, onAsk }: { id: string; l
 
 /** 광고 어시스턴트 말풍선 (EX-03): 첫 말 + 추천 질문 2개, 질문하면 분석 결과(테스트안 JSON)로만 설명한다.
  *  말 규칙은 분석 페이지와 같다 (서버 assistant.SYSTEM, v4.2 AN-TXT): 판정 3단어 · JSON 숫자만 · 사장님 말 먼저. */
-export function Chat({ code, step }: { code: string; step: string }) {
+/** greet=false: 첫 말은 빼고 추천 질문만 (같은 설명이 바로 위 카드에 이미 있을 때) */
+export function Chat({ code, step, greet = true }: { code: string; step: string; greet?: boolean }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const started = useRef(false);
@@ -61,10 +62,10 @@ export function Chat({ code, step }: { code: string; step: string }) {
     if (started.current) return;
     started.current = true;
     askAssistant(code, step).then((o) => {
-      setBubbles([{ from: "assistant", text: o.message }]);
+      if (greet) setBubbles([{ from: "assistant", text: o.message }]);
       setSuggestions(o.suggestions ?? []);
     }, () => setBubbles([{ from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 바꿀 칸 안내는 그대로 쓸 수 있어요." }]));
-  }, [code, step]);
+  }, [code, step, greet]);
 
   return (
     <section aria-label="광고 어시스턴트" className="flex flex-col gap-2 rounded-card bg-accent-soft p-3">

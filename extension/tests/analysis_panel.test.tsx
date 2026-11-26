@@ -54,7 +54,10 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     const dispatch = vi.fn();
     render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "123" }} dispatch={dispatch} />);
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan }));
-    expect(await screen.findByText(/테스트안을 받았어요 \(광고 › 형식·미디어\)/)).toBeTruthy();
+    const said = await screen.findByText(/테스트안을 받았어요 \(광고 › 형식·미디어\)/);
+    // 탭만 바꿔서는 뭉치가 나오지 않는다 → 패널의 [다음 테스트 세팅]을 누르라고 말한다
+    expect(said.textContent).toContain("[다음 테스트 세팅]");
+    expect(said.textContent).not.toContain("광고 관리자로 가면");
   });
 });
 
