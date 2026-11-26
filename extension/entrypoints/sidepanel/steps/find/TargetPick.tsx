@@ -34,7 +34,7 @@ export default function TargetPick({ from, to, gender, rec, female, onChange }: 
           <span className="ml-1.5 text-small text-soft">{changed ? "직접 고침" : "추천"}</span>
         </p>
         <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
-          className="shrink-0 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           {open ? "닫기" : "나이·성별 바꾸기"}
         </button>
       </div>
@@ -70,10 +70,10 @@ export default function TargetPick({ from, to, gender, rec, female, onChange }: 
                 </label>
               ))}
             </div>
-            {gender !== "all" && <p className="text-small text-soft">{gender === "female" ? "남성" : "여성"} {pct[gender === "female" ? "male" : "female"]}%에게는 광고가 안 보여요.</p>}
+            {gender !== "all" && <p className="text-caption text-soft">{gender === "female" ? "남성" : "여성"} {pct[gender === "female" ? "male" : "female"]}%에게는 광고가 안 보여요.</p>}
           </fieldset>
           {changed && (
-            <button type="button" onClick={() => onChange(rec)} className="self-start text-caption text-soft underline">추천대로 되돌리기</button>
+            <button type="button" onClick={() => onChange(rec)} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">추천대로 되돌리기</button>
           )}
         </div>
       )}

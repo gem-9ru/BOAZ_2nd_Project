@@ -3,6 +3,10 @@
 export const BANNED = ["최저가", "최저", "1위", "1등", "최고", "최상", "최초", "국내 유일", "세계 유일", "유일", "넘버원",
   "no.1", "no 1", "100%", "무조건", "보장", "완치", "특효"];
 
+/** 효능·질병을 말하는 낱말: 칩으로 고를 수는 있지만 '낫는다'고 쓰면 광고 심의에 걸린다 (화장품·식품을 약처럼 광고) */
+export const HEALTH = ["탈모", "여드름", "아토피", "습진", "불면", "비염", "변비", "염증", "피부염", "치료", "완화", "면역", "혈압", "당뇨", "관절", "통증"];
+export const isHealth = (word: string) => HEALTH.some((h) => word.includes(h));
+
 /** 글에 들어 있는 금지 표현, 나온 순서대로 ('최저가'가 있으면 그 안의 '최저'는 따로 안 셈). */
 export function bannedIn(text: string): string[] {
   const src = text.toLowerCase();

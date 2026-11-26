@@ -21,7 +21,7 @@ describe("CopyStep", () => {
     expect(screen.queryByRole("button", { name: "이 문구로 할게요" })).toBeNull();   // 고르기 전엔 정하기 버튼 없음
     fireEvent.click(screen.getByRole("radio", { name: "2안: 제목 2" }));
     fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: three[1] });
+    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: three[1], strengths: ["버터 듬뿍"] });
   });
 
   it("passes the left-out words and can write again", async () => {
@@ -130,7 +130,7 @@ describe("CopyStep", () => {
     expect(screen.getByText("버터 듬뿍 쿠키")).toBeTruthy();   // 미리 보기
     expect(screen.getByText("8/40자")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: { headline: "버터 듬뿍 쿠키", primary_text: "본문 1" } });
+    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: { headline: "버터 듬뿍 쿠키", primary_text: "본문 1" }, strengths: ["버터 듬뿍"] });
   });
 
   it("too long a headline blocks the pick", async () => {
@@ -276,7 +276,10 @@ describe("② 문구 칩 수·직접 적기·말투·손님 카드·다음 안�
     vi.stubGlobal("fetch", f);
     render(<CopyStep state={base()} dispatch={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /개별포장/ }));
+    expect(screen.queryByRole("radio", { name: "감성적으로" })).toBeNull();   // 말투는 접혀 있음
+    fireEvent.click(screen.getByRole("button", { name: "말투 바꾸기" }));
     fireEvent.click(screen.getByRole("radio", { name: "감성적으로" }));
+    expect(screen.getByText("감성적으로")).toBeTruthy();   // 고르면 다시 접히고 고른 말투가 보임
     fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
     await waitFor(() => expect(f).toHaveBeenCalled());
     expect(JSON.parse(f.mock.calls[0]![1].body).tone).toBe("감성적으로");
@@ -378,5 +381,48 @@ describe("② 문구 복사 · 되돌리기 · 바로 보이는 부분 · 요약
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
     fireEvent.change(screen.getByLabelText("상품의 좋은 점"), { target: { value: "버터 듬뿍" } });
     expect(screen.getByText("버터 듬뿍").parentElement!.textContent).toContain("버터 듬뿍으로, 친근하게 써요 (좋은 점 1개)");
+  });
+});
+
+describe("② 문구 다시 쓰기 실패 안내", () => {
+  it("a failed rewrite shows the error next to the rewrite button", async () => {
+    const three = [1, 2, 3].map((i) => ({ primary_text: `본문 ${i}`, headline: `제목 ${i}` }));
+    const f = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 }))
+      .mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    vi.stubGlobal("fetch", f);
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.click(screen.getByRole("button", { name: "다른 문구로 다시 써 주세요" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy());
+    const rewrite = screen.getByRole("button", { name: "다른 문구로 다시 써 주세요" });
+    expect(rewrite.compareDocumentPosition(screen.getByRole("button", { name: "다시 시도" })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe("② 문구 효능 표현 주의", () => {
+  it("marks health-claim chips and explains when one is picked", () => {
+    const mods = [{ word: "탈모", group: "피부고민", total_qc: 900, examples: [] }, { word: "천연", group: "성분", total_qc: 800, examples: [] }];
+    const research = { headline: "", keywords: [], audience: null, fetched: "", source: "live" as const, notice: null, negatives: [], modifiers: mods };
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "수제 비누", research }} dispatch={() => {}} />);
+    expect(screen.getByLabelText("효능 표현 주의")).toBeTruthy();
+    expect(screen.queryByRole("note")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /탈모/ }));
+    expect(screen.getByRole("note").textContent).toContain("'탈모' 같은 효능 말은");
+  });
+});
+
+describe("② 문구 누르는 크기·도움말", () => {
+  it("small buttons are 44px tall and Enter help is a visible line tied to the box", () => {
+    const mods = [{ word: "버터", group: "맛", total_qc: 1, examples: [] }];
+    const research = { headline: "", keywords: [], audience: null, fetched: "", source: "live" as const, notice: null, negatives: [], modifiers: mods };
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키", research }} dispatch={() => {}} />);
+    expect(screen.getByRole("button", { name: "말투 바꾸기" }).className).toContain("min-h-11");
+    expect(screen.getByRole("button", { name: "문구를 직접 쓸게요" }).className).toContain("min-h-11");
+    expect(screen.getByLabelText("직접 적기").getAttribute("aria-describedby")).toBe("strengths-help");
+    fireEvent.change(screen.getByLabelText("직접 적기"), { target: { value: "당일 구움" } });
+    fireEvent.keyDown(screen.getByLabelText("직접 적기"), { key: "Enter" });
+    expect(screen.getByRole("button", { name: "당일 구움 빼기" }).className).toContain("size-11");
   });
 });

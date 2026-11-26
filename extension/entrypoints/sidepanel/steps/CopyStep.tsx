@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { bannedIn } from "../../../lib/copyRules";
+import { bannedIn, isHealth } from "../../../lib/copyRules";
 import { copies as fetchCopies, type Copy } from "../../../lib/api";
 import { compact } from "../../../lib/format";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
@@ -36,6 +36,7 @@ export default function CopyStep({ state, dispatch }: Props) {
   const [strengths, setStrengths] = useState(saved?.strengths ?? "");
   const [added, setAdded] = useState<string[]>(saved?.added ?? []);   // 직접 적어 엔터로 붙인 말 (칩)
   const [tone, setTone] = useState<(typeof TONES)[number]>(saved?.tone ?? "친근하게");
+  const [toneOpen, setToneOpen] = useState(false);   // 말투는 접어 두고 [바꾸기]로 연다
   const [picked, setPicked] = useState<string[]>(saved?.picked ?? []);
   const [rounds, setRounds] = useState<Copy[][]>(saved?.rounds ?? []);   // 써 달라고 할 때마다 한 묶음씩 쌓는다 (앞 문구도 남겨 비교)
   const [sources, setSources] = useState<string[]>(saved?.sources ?? []);   // 묶음마다 claude | template
@@ -64,7 +65,7 @@ export default function CopyStep({ state, dispatch }: Props) {
     const from = typeof choice === "number" ? list?.[choice] : undefined;
     const same = !!from && from.headline === draft.headline && from.primary_text === draft.text;
     const copy = same ? from! : { headline: draft.headline.trim(), primary_text: draft.text.trim() };   // 고쳤으면 근거 줄은 뺀다
-    dispatch({ type: "pickCopy", copy, ...(hasMods && all.length ? { strengths: all } : {}) });
+    dispatch({ type: "pickCopy", copy, ...(all.length ? { strengths: all } : {}) });   // 칩이 없어도 직접 적은 좋은 점은 넘긴다
   }
 
   const mods = state.research?.modifiers ?? [];
@@ -91,7 +92,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           <button key={m.word} type="button" aria-pressed={on} onClick={() => toggle(m.word)}
             className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               on ? "border-accent bg-accent-soft text-ink" : "border-line bg-paper text-soft"}`}>
-            <span>{on ? "✓ " : ""}{m.word}</span>
+            <span>{on ? "✓ " : ""}{m.word}{isHealth(m.word) && <span aria-label="효능 표현 주의" className="ml-0.5 text-warn">▲</span>}</span>
             <span className="text-small text-soft">{compact(m.total_qc)}번</span>
           </button>
         );
@@ -132,7 +133,7 @@ export default function CopyStep({ state, dispatch }: Props) {
         {on
           ? <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           : <p className="line-clamp-2 text-caption text-soft">{c.primary_text}</p>}
-        {c.basis && c.basis.length > 0 && <p className="text-small text-soft">이 문구에 쓴 말: {c.basis.join(" · ")}</p>}
+        {c.basis && c.basis.length > 0 && <p className="text-caption text-soft">이 문구에 쓴 말: {c.basis.join(" · ")}</p>}
         {on && <Editor draft={draft} setDraft={setDraft} banned={banned} original={{ headline: c.headline, text: c.primary_text }} />}
       </div>
     );
@@ -153,7 +154,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             {state.target && <span className="text-caption">{targetLine(state.target)}</span>}
           </span>
           <button type="button" onClick={() => dispatch({ type: "editFind" })}
-            className="shrink-0 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
+            className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
         </div>
       )}
       {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요. 칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
@@ -181,45 +182,60 @@ export default function CopyStep({ state, dispatch }: Props) {
           value={strengths}
           onChange={(e) => setStrengths(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addTyped(); } }}
+          aria-describedby="strengths-help"
           placeholder={hasMods ? "예: 버터 듬뿍 (적고 엔터)" : "예: 버터 듬뿍 (적고 엔터)"}
           className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
         />
+        <p id="strengths-help" className="text-caption text-soft">적고 엔터를 누르면 칩으로 붙어요. 쉼표로 여러 개 적어도 돼요.</p>
         {added.length > 0 && (
           <ul aria-label="직접 적은 말" className="flex flex-wrap gap-2">
             {added.map((w) => (
               <li key={w} className="inline-flex items-center gap-1 rounded-badge border border-accent bg-accent-soft px-3 py-1.5 text-caption">
                 ✓ {w}
                 <button type="button" aria-label={`${w} 빼기`} onClick={() => setAdded((a) => a.filter((x) => x !== w))}
-                  className="ml-0.5 text-soft focus-visible:outline-2 focus-visible:outline-accent">×</button>
+                  className="-my-3 -mr-3 grid size-11 place-items-center rounded-badge text-soft hover:bg-paper focus-visible:outline-2 focus-visible:outline-accent">×</button>
               </li>
             ))}
           </ul>
         )}
-        {error && <ErrorLine message={error} onRetry={write} />}
+        {error && !list && <ErrorLine message={error} onRetry={write} />}
       </div>
       {!list && choice !== "own" && (
         <div className="flex flex-col gap-2">
+          {!toneOpen ? (
+            <p className="flex items-center gap-2 text-caption">
+              <span><span className="text-soft">문구 말투</span> <span className="font-semibold">{tone}</span></span>
+              <button type="button" onClick={() => setToneOpen(true)}
+                className="min-h-11 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">말투 바꾸기</button>
+            </p>
+          ) : (
           <fieldset className="flex flex-col gap-2">
             <legend className="mb-2 text-caption font-semibold text-soft">문구 말투</legend>
             <div className="flex flex-wrap gap-2">
               {TONES.map((t) => (
                 <label key={t} className={`cursor-pointer rounded-badge border px-3 py-1.5 text-label has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
                   tone === t ? "border-accent bg-accent font-semibold text-on-accent" : "border-line"}`}>
-                  <input type="radio" name="tone" value={t} checked={tone === t} onChange={() => setTone(t)} className="sr-only" />
+                  <input type="radio" name="tone" value={t} checked={tone === t} onChange={() => { setTone(t); setToneOpen(false); }} className="sr-only" />
                   {t}
                 </label>
               ))}
             </div>
           </fieldset>
+          )}
+          {all.some(isHealth) && (
+            <p role="note" className="text-caption text-warn">
+              ▲ {all.filter(isHealth).map((w) => `'${w}'`).join(", ")} 같은 효능 말은 '낫는다·좋아진다'고 쓰면 광고 심의에 걸릴 수 있어요. 문구에는 '○○이 고민인 분께'처럼만 쓸게요.
+            </p>
+          )}
           {all.length > 0 && (
-            <p className="text-small text-soft">
+            <p className="text-caption text-soft">
               <span className="text-ink">{all.join(" · ")}</span>{euro(all[all.length - 1]!)}, {tone} 써요 (좋은 점 {all.length}개){all.length > PICK_GOOD ? " · 많이 고르면 문구가 길고 흐려질 수 있어요" : ""}
             </p>
           )}
           <PrimaryButton onClick={write} busy={busy} disabled={blocked}>문구 써 주세요</PrimaryButton>
-          {blocked && <p className="text-small text-soft">▲ 하나 이상 고르거나 적어 주세요</p>}
+          {blocked && <p className="text-caption text-warn">▲ 하나 이상 고르거나 적어 주세요</p>}
           <button type="button" onClick={() => choose("own")}
-            className="self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             문구를 직접 쓸게요
           </button>
         </div>
@@ -276,21 +292,22 @@ export default function CopyStep({ state, dispatch }: Props) {
           <strong className="text-body">직접 쓰기</strong>
           <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           <Editor draft={draft} setDraft={setDraft} banned={banned} />
-          <button type="button" onClick={() => setChoice(null)} className="self-start text-caption text-soft underline">← 문구를 써 달라고 할게요</button>
+          <button type="button" onClick={() => setChoice(null)} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">← 문구를 써 달라고 할게요</button>
         </div>
       )}
       {choice !== null && (
         <div className="flex flex-col gap-2">
           <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
           <p className="text-small text-soft">다음: 광고 설정 질문 몇 개에 답하면, 광고 관리자에 넣을 값을 만들어 드려요.</p>
-          {(!headOk || !textOk) && <p className="text-small text-soft">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요</p>}
+          {(!headOk || !textOk) && <p className="text-caption text-warn">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요</p>}
         </div>
       )}
       {list && (
-        <button type="button" onClick={write} disabled={busy || blocked} className="self-start text-caption text-soft underline disabled:opacity-(--state-disabled-opacity)">
+        <button type="button" onClick={write} disabled={busy || blocked} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-(--state-disabled-opacity)">
           {busy ? "다시 쓰는 중…" : "다른 문구로 다시 써 주세요"}
         </button>
       )}
+      {list && error && <ErrorLine message={error} onRetry={write} />}
       <p className="text-caption text-soft">사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.</p>
     </section>
   );
@@ -344,18 +361,18 @@ function Editor({ draft, setDraft, banned, original }: {
         aria-invalid={draft.text.length > TEXT_MAX || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2 text-body" />
       {draft.text.trim() && (
-        <p className="text-small text-soft">
+        <p className="text-caption text-soft">
           피드에서 바로 보이는 부분 (약 {FOLD}자): <span className="font-semibold text-ink">{draft.text.slice(0, FOLD)}</span>
           {draft.text.length > FOLD && <span> … 더 보기</span>}
         </p>
       )}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void copy()} disabled={!draft.headline.trim() && !draft.text.trim()}
-          className="rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           복사
         </button>
         {edited && (
-          <button type="button" onClick={() => setDraft(original!)} className="text-caption text-soft underline">원래 문구로</button>
+          <button type="button" onClick={() => setDraft(original!)} className="inline-flex min-h-11 items-center text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">원래 문구로</button>
         )}
         {copied && <span role="status" className="text-small text-soft">{copied === "ok" ? "제목과 본문을 복사했어요." : "복사하지 못했어요. 직접 골라 복사해 주세요."}</span>}
       </div>
@@ -394,17 +411,17 @@ function Preview({ name, draft, photo, setPhoto, view, setView }: {
     <div className="flex flex-col gap-1.5">
       <div role="radiogroup" aria-label="미리 보기 자리" className="flex flex-wrap gap-1.5">
         {(Object.keys(PREVIEW_LABEL) as PreviewKind[]).map((k) => (
-          <label key={k} className={`cursor-pointer rounded-badge border px-2.5 py-1 text-small has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+          <label key={k} className={`cursor-pointer inline-flex min-h-11 items-center rounded-badge border px-3 py-1 text-caption has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
             view === k ? "border-accent bg-accent font-semibold text-on-accent" : "border-line bg-paper"}`}>
             <input type="radio" name="preview-kind" checked={view === k} onChange={() => setView(k)} className="sr-only" />
             {PREVIEW_LABEL[k]}
           </label>
         ))}
       </div>
-      {view !== "fb" && <p className="text-small text-soft">{view === "ig" ? "인스타 피드에서는 제목이 거의 안 보여요. 본문 첫 줄이 중요해요." : "스토리에서는 제목이 안 보이고 본문도 한 줄만 보여요."}</p>}
+      {view !== "fb" && <p className="text-caption text-soft">{view === "ig" ? "인스타 피드에서는 제목이 거의 안 보여요. 본문 첫 줄이 중요해요." : "스토리에서는 제목이 안 보이고 본문도 한 줄만 보여요."}</p>}
       <FeedPreview name={name} headline={draft.headline} text={draft.text} photo={photo} kind={view} />
       <div className="flex items-center justify-between gap-2">
-        <label className="cursor-pointer text-caption font-semibold text-accent-ink underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
+        <label className="inline-flex min-h-11 cursor-pointer items-center text-caption font-semibold text-accent-ink underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
           {photo ? "사진 바꾸기" : "내 상품 사진 넣어 보기"}
           <input type="file" accept="image/*" className="sr-only"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(URL.createObjectURL(f)); }} />

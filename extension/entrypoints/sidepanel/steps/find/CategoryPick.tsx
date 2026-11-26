@@ -42,7 +42,7 @@ export function CategoryAsk({ categories, candidates, value, onPick }: {
       <p className="text-caption">이 중 어디에 가까워요?</p>
       <CategoryRadios categories={candidates} value={value} onPick={onPick} />
       <button type="button" onClick={() => setAll(true)}
-        className="self-start rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        className="self-start rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         다른 분야
       </button>
     </div>
@@ -68,7 +68,7 @@ export default function CategoryPick({ product, category, categories, candidates
           '{product}'는 '{category.name}'(으)로 볼게요.{category.guessed ? " 맞나요?" : ""}
         </p>
         <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
-          className="shrink-0 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           바꾸기
         </button>
       </div>

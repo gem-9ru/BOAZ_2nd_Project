@@ -49,7 +49,7 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                     {on && <i className="block size-1.5 rounded-badge bg-on-accent" />}
                   </span>
                   <strong className="text-body font-semibold">{seg.label}</strong>
-                  <span className="ml-auto shrink-0 rounded-badge bg-sunk px-2 py-0.5 text-small text-soft">{who(seg)}</span>
+                  <span className="ml-auto shrink-0 rounded-badge bg-sunk px-2 py-0.5 text-caption text-ink">{who(seg)}</span>
                 </span>
                 <span id={lineId} className="text-caption leading-relaxed">
                   {seg.line || (seg.audience ? "" : "누가 찾는지 자료가 아직 없어요")}
@@ -63,10 +63,10 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                 )}
                 {segments.length > 1 && (
                   <span className="flex items-center gap-2">
-                    <span aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-badge bg-sunk">
-                      <span className={`block h-full ${on ? "bg-accent" : "bg-line"}`} style={{ width: `${shareOf(seg, segments)}%` }} />
+                    <span aria-hidden className="h-1.5 flex-1 overflow-hidden rounded-badge border border-line bg-paper">
+                      <span className={`block h-full ${on ? "bg-accent" : "bg-soft"}`} style={{ width: `${shareOf(seg, segments)}%` }} />
                     </span>
-                    <span className="shrink-0 text-small text-soft">전체 검색의 {shareOf(seg, segments)}%</span>
+                    <span className="shrink-0 text-caption text-soft">전체 검색의 {shareOf(seg, segments)}%</span>
                   </span>
                 )}
                 <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}번</span>

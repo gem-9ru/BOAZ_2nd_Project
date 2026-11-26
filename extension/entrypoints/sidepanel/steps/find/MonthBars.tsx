@@ -18,12 +18,13 @@ export default function MonthBars({ monthly }: { monthly: Record<string, number>
         aria-label={`달별 검색 비중: ${months.map((m) => `${m}월 ${share(m)}%`).join(", ")}`}>
         {months.map((m) => (
           <div key={m} aria-hidden
-            className={`flex-1 rounded-t-sm ${m === peak ? "bg-accent" : "bg-line"}`}
+            className={`flex-1 rounded-t-sm border ${m === peak ? "border-accent bg-accent" : "border-soft bg-line"}`}
             style={{ height: `${Math.max(8, share(m))}%` }} />
         ))}
       </div>
-      <div aria-hidden className="flex justify-between text-small text-soft">
+      <div aria-hidden className="flex justify-between gap-2 text-small text-soft">
         <span>{months[0]}월</span>
+        {peak && <span className="font-semibold text-accent-ink">가장 많은 달 {peak}월</span>}
         <span>{months[months.length - 1]}월</span>
       </div>
     </div>

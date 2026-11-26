@@ -52,14 +52,14 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
                 </span>
                 {a in fem ? (
                   // 위 = 남성(연하게), 아래 = 여성(진하게)
-                  <div aria-hidden className="flex w-full max-w-10 flex-col overflow-hidden rounded-t-md"
+                  <div aria-hidden className={`flex w-full max-w-10 flex-col overflow-hidden rounded-t-md border ${isTop ? "border-accent" : "border-soft"}`}
                     style={{ height: `${Math.max(4, Math.round((share / max) * 76))}px` }}>
-                    <div className={isTop ? "bg-accent-soft" : "bg-sunk"} style={{ flexGrow: 1 - fem[a]! }} />
-                    <div className={isTop ? "bg-accent" : "bg-line"} style={{ flexGrow: fem[a]! }} />
+                    <div className={isTop ? "bg-accent-soft" : "bg-paper"} style={{ flexGrow: 1 - fem[a]! }} />
+                    <div className={`border-t ${isTop ? "border-accent bg-accent" : "border-soft bg-line"}`} style={{ flexGrow: fem[a]! }} />
                   </div>
                 ) : (
                   <div aria-hidden
-                    className={`w-full max-w-10 rounded-t-md ${isTop ? "bg-accent" : "bg-line"}`}
+                    className={`w-full max-w-10 rounded-t-md border ${isTop ? "border-accent bg-accent" : "border-soft bg-line"}`}
                     style={{ height: `${Math.max(4, Math.round((share / max) * 76))}px` }} />
                 )}
               </div>
@@ -75,7 +75,7 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
       {hasSplit && (
         <p aria-hidden className="flex items-center gap-3 text-small text-soft">
           <span className="inline-flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm bg-accent" />여성</span>
-          <span className="inline-flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm bg-accent-soft" />남성</span>
+          <span className="inline-flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm border border-accent bg-accent-soft" />남성</span>
           <span>막대 안에서 아래가 여성, 위가 남성이에요</span>
         </p>
       )}

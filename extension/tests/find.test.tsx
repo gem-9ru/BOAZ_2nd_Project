@@ -401,7 +401,7 @@ describe("타깃 확인·고치기", () => {
   it("shows what goes into Ads Manager above the button", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
     render(<FindStep state={state()} dispatch={() => {}} />);
-    expect(screen.getByText(/30–49세 · 여성만 · 검색어 5개/)).toBeTruthy();
+    expect(screen.getByText(/광고 관리자에는/).textContent).toContain("30–49세 · 여성만으로 넣고, 검색어 5개는 ② 문구에 써요");
   });
 
   it("the owner can change ages and gender; the confirm sends the changed target", () => {
@@ -412,11 +412,11 @@ describe("타깃 확인·고치기", () => {
     expect(screen.getByText(/남성 19%에게는 광고가 안 보여요/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("나이 까지"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("radio", { name: /남녀 모두/ }));
-    expect(screen.getByText(/30–39세 · 남녀 모두 · 검색어 5개/)).toBeTruthy();
+    expect(screen.getByText(/광고 관리자에는/).textContent).toContain("30–39세 · 남녀 모두로 넣고");
     fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
     expect(dispatch.mock.calls.at(-1)![0].target).toEqual({ ageMin: 30, ageMax: 39, gender: "all" });
     fireEvent.click(screen.getByRole("button", { name: "추천대로 되돌리기" }));
-    expect(screen.getByText(/30–49세 · 여성만 · 검색어 5개/)).toBeTruthy();
+    expect(screen.getByText(/광고 관리자에는/).textContent).toContain("30–49세 · 여성만으로 넣고, 검색어 5개는 ② 문구에 써요");
   });
 
   it("the product card is one line, details folded", () => {
@@ -577,5 +577,40 @@ describe("이름 그대로 자료 없음 · 뺀 말로 다시 · 무리 설명 �
     const text = write.mock.calls[0]![0] as string;
     expect(text).toContain("상품: 수제 쿠키 (식품)");
     expect(text).toContain("광고 대상: 30–49세 · 여성만");
+  });
+});
+
+describe("돌아와도 고친 타깃 · 그림 제목 · 거의 안 찾는 이름", () => {
+  it("coming back from ② keeps the edited target", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const dispatch = vi.fn();
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1],
+      target: { ageMin: 30, ageMax: 39, gender: "all" } }} dispatch={dispatch} />);
+    expect(screen.getByText(/광고 관리자에는/).textContent).toContain("30–39세 · 남녀 모두");
+    expect(screen.getByText("직접 고침")).toBeTruthy();
+    expect(screen.getByText("많이 찾는 사람 (추천)")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
+    expect(dispatch.mock.calls.at(-1)![0].target).toEqual({ ageMin: 30, ageMax: 39, gender: "all" });
+  });
+
+  it("a rarely searched exact name points to the word customers use", () => {
+    const stats = { keyword: "수제버터쿠키", total_qc: 230, mobile: 0.6, audience: null };
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "수제 버터 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/이름 그대로는 한 달 230번만 찾아요/).textContent).toContain("'수제쿠키'로 가장 많이 찾아요");
+  });
+});
+
+describe("① 찾기 그래프 구분·누르는 크기", () => {
+  it("the busiest month is named, not only colored", async () => {
+    const { default: MonthBars } = await import("../entrypoints/sidepanel/steps/find/MonthBars");
+    render(<MonthBars monthly={{ "2026-01": 40, "2026-05": 100, "2026-09": 30 }} />);
+    expect(screen.getByText("가장 많은 달 5월")).toBeTruthy();
+  });
+
+  it("recent product chips are 44px tall", () => {
+    localStorage.setItem("ad-coach.recent-products", JSON.stringify(["립밤"]));
+    render(<FindStep state={initialState()} dispatch={() => {}} />);
+    expect(screen.getByRole("button", { name: "립밤" }).className).toContain("min-h-11");
+    localStorage.clear();
   });
 });

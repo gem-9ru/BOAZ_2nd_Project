@@ -131,7 +131,7 @@ export default function FindStep({ state, dispatch }: Props) {
             <span className="text-small text-soft">최근에 찾은 상품</span>
             {recent.filter((w) => w !== product.trim()).slice(0, 3).map((w) => (
               <button key={w} type="button" onClick={() => tryWord(w)}
-                className="rounded-badge border border-line bg-paper px-2.5 py-1 text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                className="min-h-11 rounded-badge border border-line bg-paper px-3 py-1 text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                 {w}
               </button>
             ))}
@@ -320,7 +320,14 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const rec = selected?.audience
     ? (() => { const g = ageSpan(selected.audience.ages).groups; return { from: g[0]!, to: g[g.length - 1]!, gender: genderFrom(selected.audience.female) }; })()
     : null;
-  const [custom, setCustom] = useState<{ intent: string; from: string; to: string; gender: "all" | "female" | "male" } | null>(null);
+  // ②에 갔다 돌아왔을 때: 지난번에 정한 타깃이 추천과 다르면 그 값을 고친 값으로 다시 쓴다
+  const [custom, setCustom] = useState<{ intent: string; from: string; to: string; gender: "all" | "female" | "male" } | null>(() => {
+    const t = state.target;
+    if (!t || !selected || !rec || state.segment?.intent !== selected.intent) return null;
+    const g = (age: number) => String(Math.min(60, Math.max(10, Math.floor(age / 10) * 10)));
+    const back = { from: g(t.ageMin), to: g(t.ageMax), gender: t.gender };
+    return back.from === rec.from && back.to === rec.to && back.gender === rec.gender ? null : { intent: selected.intent, ...back };
+  });
   const pick = rec ? (custom && custom.intent === selected?.intent ? custom : rec) : null;
 
   // 무리가 하나뿐이면 미리 골라 둔다 (이 결과마다 한 번)
@@ -369,7 +376,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const detail = selected?.audience && pick && rec
     ? (
       <div className="flex flex-col gap-3">
-        <AgeFigure audience={selected.audience} split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
+        <AgeFigure audience={selected.audience} caption="많이 찾는 사람 (추천)" split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
         <TargetPick from={pick.from} to={pick.to} gender={pick.gender} rec={rec} female={selected.audience.female}
           onChange={(v) => setCustom({ intent: selected.intent, ...v })} />
       </div>
@@ -389,9 +396,9 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         <CategoryPick product={product} category={r.category} categories={r.categories} candidates={r.category_candidates} onPick={onPickCategory} />
       )}
       {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
-      {!r.product_stats && topWord && (
+      {topWord && (!r.product_stats || (r.product_stats.total_qc * 10 < topWord.total_qc && topWord.keyword !== r.product_stats.keyword)) && (
         <p className="rounded-card border border-line bg-paper px-4 py-3 text-caption">
-          '{product}' 이름 그대로는 찾는 사람이 적어요. 손님은 <span className="font-semibold">'{topWord.keyword}'</span>{euro(topWord.keyword)} 가장 많이 찾아요 (한 달 {compact(topWord.total_qc)}번).
+          '{product}' 이름 그대로는 {r.product_stats ? `한 달 ${compact(r.product_stats.total_qc)}번만 찾아요` : "찾는 사람이 적어요"}. 손님은 <span className="font-semibold">'{topWord.keyword}'</span>{euro(topWord.keyword)} 가장 많이 찾아요 (한 달 {compact(topWord.total_qc)}번).
         </p>
       )}
       {!r.category ? (
@@ -413,7 +420,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-button bg-sunk px-3 py-2">
               <span className="text-caption">검색어 {dropped.length}개를 뺐어요. 남긴 말로 손님을 다시 볼 수 있어요.</span>
               <button type="button" onClick={onResearch}
-                className="shrink-0 rounded-button border border-accent bg-paper px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                className="shrink-0 rounded-button border border-accent bg-paper min-h-11 px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                 뺀 말을 빼고 손님 다시 보기
               </button>
             </div>
@@ -435,7 +442,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
             {manualMissing && <p className="text-caption text-warn">▲ 보여 줄 나이와 성별을 골라 주세요.</p>}
             {ready && target && (
               <p className="rounded-button bg-sunk px-3 py-2 text-caption">
-                광고 관리자에 <span className="font-semibold">{targetLine(target)} · 검색어 {kept.length}개</span>로 넣을게요.
+                광고 관리자에는 <span className="font-semibold">{targetLine(target)}</span>{euro(targetLine(target))} 넣고, 검색어 {kept.length}개는 ② 문구에 써요.
               </p>
             )}
             <PrimaryButton onClick={confirm} disabled={!ready}>이 손님들로 할게요</PrimaryButton>
@@ -556,7 +563,7 @@ function CopySummary({ product, research: r, selected, target, kept }: {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <button type="button" onClick={() => void copy()}
-        className="rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         결과 복사
       </button>
       {done && <span role="status" className="text-small text-soft">{done === "ok" ? "찾은 결과를 복사했어요." : "복사하지 못했어요."}</span>}
