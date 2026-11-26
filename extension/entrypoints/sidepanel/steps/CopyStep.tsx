@@ -20,7 +20,8 @@ type Choice = number | "own" | null;
 export default function CopyStep({ state, dispatch }: Props) {
   const [strengths, setStrengths] = useState("");
   const [picked, setPicked] = useState<string[]>([]);
-  const [list, setList] = useState<Copy[] | null>(null);
+  const [rounds, setRounds] = useState<Copy[][]>([]);   // 써 달라고 할 때마다 한 묶음씩 쌓는다 (앞 문구도 남겨 비교)
+  const list: Copy[] | null = rounds.length ? rounds.flat() : null;   // 번호(1안·2안…)는 쓴 순서대로
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [choice, setChoice] = useState<Choice>(null);
@@ -76,13 +77,32 @@ export default function CopyStep({ state, dispatch }: Props) {
         product: state.product ?? "", strengths: all, keywords: state.keywords, avoid: state.research?.negatives ?? [],
         ...(seg ? { segment: { intent: seg.intent, label: seg.label, ...(peak ? { peak_month: peak } : {}) } } : {}),
       });
-      setList(r.copies);
-      setChoice(null);
+      setRounds((rs) => [...rs, r.copies]);   // 뒤에 붙이니 이미 고른 문구 번호는 그대로
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
     }
+  }
+
+  /** 문구 한 장: 라디오 + 피드 미리 보기 + 근거, 고르면 고쳐 쓰기 칸. */
+  function card(c: Copy, i: number) {
+    const on = choice === i;
+    return (
+      <div key={i} className={`flex flex-col gap-2 rounded-card border p-3 transition-colors ${on ? "border-accent bg-accent-soft" : "border-line bg-paper"}`}>
+        <label className="flex cursor-pointer items-center gap-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-accent">
+          <input type="radio" name="copy" checked={on} onChange={() => choose(i)} className="sr-only" aria-label={`${i + 1}안: ${c.headline}`} />
+          <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-badge border ${on ? "border-accent bg-accent" : "border-line"}`}>
+            {on && <i className="block size-1.5 rounded-badge bg-on-accent" />}
+          </span>
+          <strong className="text-body">{i + 1}안 · {c.headline}</strong>
+        </label>
+        <FeedPreview name={shop} headline={on ? draft.headline : c.headline} text={on ? draft.text : c.primary_text} />
+        {!on && <p className="text-caption text-soft">{c.primary_text}</p>}
+        {c.basis && c.basis.length > 0 && <p className="text-small text-soft">근거: {c.basis.join(" · ")}</p>}
+        {on && <Editor draft={draft} setDraft={setDraft} />}
+      </div>
+    );
   }
 
   return (
@@ -99,6 +119,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             className="text-caption font-semibold underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
         </p>
       )}
+      {hasMods && <p className="-mt-2 text-small text-soft">칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요. 많이 찾는 순서로 놓았어요.</p>}
       {hasMods && groups.map((g) => {
         const items = mods.filter((m) => m.group === g);
         if (items.length === 0) return null;
@@ -137,24 +158,28 @@ export default function CopyStep({ state, dispatch }: Props) {
           </button>
         </div>
       )}
+      {busy && <WritingSkeleton />}
       {list && (
         <div role="radiogroup" aria-label="광고 문구 고르기" className="flex flex-col gap-3">
-          {list.map((c, i) => {
-            const on = choice === i;
-            return (
-              <div key={i} className={`flex flex-col gap-2 rounded-card border p-3 transition-colors ${on ? "border-accent bg-accent-soft" : "border-line bg-paper"}`}>
-                <label className="flex cursor-pointer items-center gap-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-4 has-[:focus-visible]:outline-accent">
-                  <input type="radio" name="copy" checked={on} onChange={() => choose(i)} className="sr-only" aria-label={`${i + 1}안: ${c.headline}`} />
-                  <span aria-hidden className={`grid size-4 shrink-0 place-items-center rounded-badge border ${on ? "border-accent bg-accent" : "border-line"}`}>
-                    {on && <i className="block size-1.5 rounded-badge bg-on-accent" />}
-                  </span>
-                  <strong className="text-body">{i + 1}안 · {c.headline}</strong>
-                </label>
-                <FeedPreview name={shop} headline={on ? draft.headline : c.headline} text={on ? draft.text : c.primary_text} />
-                {!on && <p className="text-caption text-soft">{c.primary_text}</p>}
-                {c.basis && c.basis.length > 0 && <p className="text-small text-soft">근거: {c.basis.join(" · ")}</p>}
-                {on && <Editor draft={draft} setDraft={setDraft} />}
+          {[...rounds.keys()].reverse().map((ri) => {
+            const start = rounds.slice(0, ri).reduce((n, r) => n + r.length, 0);
+            const cards = rounds[ri]!.map((c, k) => card(c, start + k));
+            if (rounds.length === 1) return <div key={ri} className="flex flex-col gap-3">{cards}</div>;
+            const newest = ri === rounds.length - 1;
+            const hasChoice = typeof choice === "number" && choice >= start && choice < start + rounds[ri]!.length;
+            return newest ? (
+              <div key={ri} className="flex flex-col gap-3">
+                <span className="text-caption font-semibold text-soft">새로 쓴 문구</span>
+                {cards}
               </div>
+            ) : (
+              <details key={ri} open={hasChoice} className="group flex flex-col gap-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-caption font-semibold text-soft [&::-webkit-details-marker]:hidden">
+                  <span>앞에서 쓴 문구 ({start + 1}~{start + rounds[ri]!.length}안)</span>
+                  <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
+                </summary>
+                <div className="mt-3 flex flex-col gap-3">{cards}</div>
+              </details>
             );
           })}
           <div className={`flex flex-col gap-2 rounded-card border p-3 ${choice === "own" ? "border-accent bg-accent-soft" : "border-dashed border-line bg-paper"}`}>
@@ -220,6 +245,25 @@ function Editor({ draft, setDraft }: { draft: { headline: string; text: string }
         aria-invalid={draft.text.length > TEXT_MAX || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2 text-body" />
       <p className="text-small text-soft">사실이 아닌 말(최저가, 1위 등)은 쓰지 마세요.</p>
+    </div>
+  );
+}
+
+/** 문구를 쓰는 동안(5초쯤): 문구 카드 3장 모양의 빈 틀. */
+function WritingSkeleton() {
+  return (
+    <div className="flex flex-col gap-3">
+      <p role="status" className="text-caption text-soft">문구 3개를 쓰는 중이에요. 5초쯤 걸려요…</p>
+      <div aria-hidden className="skeleton flex flex-col gap-3">
+        {[0, 1, 2].map((k) => (
+          <div key={k} className="flex flex-col gap-2 rounded-card border border-line bg-paper p-3">
+            <div className="h-4 w-40 rounded-button bg-sunk" />
+            <div className="h-24 w-full rounded-button bg-sunk" />
+            <div className="h-3 w-full rounded-button bg-sunk" />
+            <div className="h-3 w-3/4 rounded-button bg-sunk" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -167,4 +167,39 @@ describe("CopyStep", () => {
     const labels = screen.getAllByText(/^(기능|재질|그 밖)$/).map((e) => e.textContent);
     expect(labels).toEqual(["기능", "재질", "그 밖"]);
   });
+
+  it("shows copy-shaped placeholders while writing", async () => {
+    let done!: (r: Response) => void;
+    vi.stubGlobal("fetch", vi.fn().mockReturnValue(new Promise<Response>((r) => { done = r; })));
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    expect(screen.getByRole("status").textContent).toContain("문구 3개를 쓰는 중이에요");
+    done(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 }));
+    await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
+  });
+
+  it("writing again keeps the earlier copies (folded) and keeps the pick", async () => {
+    const next = [4, 5, 6].map((i) => ({ primary_text: `본문 ${i}`, headline: `제목 ${i}` }));
+    const f = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ copies: next, source: "claude" }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    const dispatch = vi.fn();
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "2안: 제목 2" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2안: 제목 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "다른 문구로 다시 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "4안: 제목 4" }));
+    expect(screen.getByText("새로 쓴 문구")).toBeTruthy();
+    expect(screen.getByText("앞에서 쓴 문구 (1~3안)")).toBeTruthy();
+    expect((screen.getByRole("radio", { name: "2안: 제목 2" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: three[1] });
+  });
+
+  it("explains the number next to each chip", () => {
+    render(<CopyStep state={withMods()} dispatch={() => {}} />);
+    expect(screen.getByText(/칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요/)).toBeTruthy();
+  });
 });
