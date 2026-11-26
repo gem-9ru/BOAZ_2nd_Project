@@ -21,7 +21,9 @@ describe("GuideStep", () => {
 describe("WaitStep", () => {
   it("after guideDone shows the come-back date from endDate", () => {
     render(<WaitStep state={{ ...initialState(), step: "wait", endDate: "2026-12-06" }} dispatch={() => {}} />);
-    expect(screen.getByText(/2026-12-07에 결과를 보러 오세요/)).toBeTruthy();
+    expect(screen.getByText(/12월 7일에 결과를 보러 오세요/)).toBeTruthy();   // 날짜는 '12월 7일' 모양으로 (2026-12-07 아님)
+    expect(screen.queryByText(/2026-12-07/)).toBeNull();
+    expect(screen.getByText(/이 패널을 다시 열면/)).toBeTruthy();   // 알림이 따로 안 가니 어디로 오는지 말한다
     expect(screen.getByRole("button", { name: "결과 분석하기" })).toBeTruthy();
     expect(screen.queryByText(/에 시작해요/)).toBeNull();
   });

@@ -46,6 +46,9 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
   if (!p) return null;
   const c = p.change as TestPlan;
   const m = nextMoney(p, state.settings);
+  const checkKey = `plan:${p.code}`;   // 체크한 줄은 저장해 둔다 (패널을 닫았다 열어도 그대로)
+  const ticked = state.checks?.[checkKey] ?? [];
+  const cautions = [...(p.dont ?? []), ...(p.watch ?? []).map((w) => w.text)];
   const better = p.badge?.word?.startsWith("A") ? "A" : "B";
   const word = !c.tag && c.certainty ? ownerWord(c.certainty.level, c.certainty.label, better) : null;
   const look = word ? (word.endsWith("쪽이에요") ? LOOK.쪽이에요 : LOOK[word as "확실해요" | "아직 몰라요"] ?? LOOK["아직 몰라요"]) : null;
@@ -87,9 +90,19 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
         <div className="flex flex-col gap-1.5">
           <p className="text-caption font-semibold text-soft">다음 테스트 체크리스트</p>
           <ul className="flex flex-col gap-1 text-caption">
-            {c.checklist!.map((t) => <li key={t}><label className="flex items-start gap-2"><input type="checkbox" className="mt-0.5 accent-accent" />{t}</label></li>)}
+            {c.checklist!.map((t, i) => (
+              <li key={t}><label className="flex items-start gap-2">
+                <input type="checkbox" className="mt-0.5 accent-accent" checked={ticked.includes(i)} onChange={() => dispatch({ type: "toggleCheck", key: checkKey, index: i })} />{t}
+              </label></li>
+            ))}
           </ul>
         </div>
+      )}
+      {cautions.length > 0 && (
+        <details className="rounded-button bg-paper px-3 py-2 text-caption">
+          <summary className="cursor-pointer font-semibold text-accent-ink">하지 말 것 · 지켜볼 것 ({cautions.length})</summary>
+          <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">{cautions.map((t) => <li key={t}>{t}</li>)}</ul>
+        </details>
       )}
       <Chat code={p.code} step="EX-03" greet={false} />
       <PrimaryButton onClick={() => dispatch({ type: "startNextTest", fieldId: c.field_id, label: c.label, value: c.what ?? c.new_short ?? c.new,

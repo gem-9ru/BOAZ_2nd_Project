@@ -19,7 +19,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   async function load() {
     const c = tidyCode(code);
     if (c.length !== 4) {
-      setError("코드는 4자리예요. 분석 페이지 '다음에 할 일'에 있는 글자 4개를 넣어 주세요.");
+      setError("코드는 4자리예요. 분석 페이지 마지막 ⑥ 보내기에 있는 글자 4개를 넣어 주세요.");
       return;
     }
     setBusy(true);
@@ -41,10 +41,10 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   const budget = pick("meta.adset.lifetime_budget");
   return (
     <section className="flex flex-col gap-4">
-      <Coach>광고가 끝났으면 결과 파일을 받아서 다음에 바꿀 칸을 찾아볼까요? 분석 기준은 꼭 <b>일 · 노출 위치</b>로 골라 주세요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</Coach>
+      <Coach>광고가 끝났으면 결과 파일을 받아 분석 페이지에 올려요. 다음에 바꿔 볼 칸 1개를 찾아 드려요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</Coach>
       <ol className="flex flex-col gap-2 text-body">
         <li className="flex gap-2"><span className="font-bold text-accent-ink">1</span>
-          <span>광고 관리자 보고서에서 [내보내기] → 분석 기준 '일 · 노출 위치'
+          <span>광고 관리자에서 결과 파일 받기: [내보내기]에서 <b>일 · 노출 위치</b>를 꼭 고르기
             <button type="button" onClick={() => dispatch({ type: "startExport" })} className="ml-1 text-caption font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
           </span></li>
         <li className="flex gap-2"><span className="font-bold text-accent-ink">2</span>
@@ -53,7 +53,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
             <button type="button" onClick={async () => { await browser.tabs.create({ url: await analysisPageUrl(settings) }); }}
               className="mt-2 block rounded-button border border-accent bg-paper px-4 py-2 font-semibold text-accent-ink">분석 페이지 열기 (새 창)</button>
           </span></li>
-        <li className="flex gap-2"><span className="font-bold text-accent-ink">3</span><span>분석 페이지를 보는 동안 이 패널이 옆에서 단계마다 설명해 드려요. 마지막에 [확장 프로그램으로 보내기]를 누르면 테스트안이 바로 와요. (안 되면 코드 4자리를 아래에 넣기)</span></li>
+        <li className="flex gap-2"><span className="font-bold text-accent-ink">3</span><span>분석 페이지 마지막 ⑥ 보내기에서 [확장 프로그램으로 보내기]를 누르면 바꿀 칸이 여기로 와요. 안 오면 거기 있는 코드 4자리를 아래에 넣어 주세요.</span></li>
       </ol>
       {(summary || media) && (
         <section aria-label="이번 광고 세팅" className="flex flex-col gap-1 rounded-card border border-line bg-paper px-3 py-2 text-caption">

@@ -44,6 +44,8 @@ describe("③ 코드 넣기", () => {
     fireEvent.change(box, { target: { value: "75" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
     expect(screen.getByRole("alert").textContent).toContain("4자리");
+    expect(screen.getByRole("alert").textContent).toContain("⑥ 보내기");   // 분석 페이지에 실제로 코드가 있는 곳
+    expect(screen.getByRole("alert").textContent).not.toContain("다음에 할 일");
     fireEvent.change(box, { target: { value: "ZZZZ" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("다시 확인해 주세요"));
@@ -63,5 +65,37 @@ describe("③ 다음에 할 일 (코드로 받은 것)", () => {
     expect(s.step).toBe("plan");
     const fix = reduce(s, { type: "startFix" });
     expect(stepsFor("edit", GUIDE, [], fix.plan ? [fix.plan.change] : []).map((x) => x.entry.id)).toEqual(["meta.adset.end_date"]);
+  });
+});
+
+describe("③ 코드 넣기: 쉬운 말", () => {
+  it("does not use jargon like '분석 기준' or '테스트안', and says where the code is", () => {
+    render(<CodeStep state={{ ...initialState(), step: "upload" }} dispatch={() => {}} />);
+    const text = document.body.textContent ?? "";
+    expect(text).not.toMatch(/분석 기준|테스트안/);
+    expect(text).toMatch(/⑥ 보내기/);
+  });
+});
+
+describe("③ 결과 화면: 체크리스트 · 하지 말 것", () => {
+  const p: Plan = { ...plan, change: { ...plan.change, checklist: ["시작 시간을 하루 여유 있게", "두 세트는 같은 날 같이 시작"] },
+    dont: ["여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요."],
+    watch: [{ field_id: "meta.adset.end_date", path: "광고 세트 › 시작·종료 날짜", text: "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게" }] };
+
+  it("a ticked checklist line is saved (stays after the panel is closed and opened again)", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: p, checks: { "plan:75R7": [1] } }} dispatch={dispatch} />);
+    const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
+    expect(boxes.map((b) => b.checked)).toEqual([false, true]);
+    fireEvent.click(boxes[0]!);
+    expect(dispatch).toHaveBeenCalledWith({ type: "toggleCheck", key: "plan:75R7", index: 0 });
+  });
+
+  it("shows what not to do and what to watch from the analysis", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: p }} dispatch={() => {}} />);
+    expect(screen.getByText(/여러 칸 한 번에 변경/)).toBeTruthy();
+    expect(screen.getByText(/첫날 안 보여졌어요/)).toBeTruthy();
   });
 });
