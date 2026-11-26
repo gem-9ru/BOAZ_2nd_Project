@@ -314,6 +314,34 @@ def test_no_data_suggests_other_words(monkeypatch):
     assert TestClient(app).post("/research", json={"product": "수제 버터 쿠키"}).json()["suggestions"] == ["버터 쿠키", "쿠키"]
 
 
+def test_picked_word_is_not_avoided_and_source_counts_what_is_left(monkeypatch):
+    """향초: '캔들'이 뺄 말에도 있고 좋은 점 칩에도 있다. 고르면 빼지 않는다. 다 버려지면 source는 template."""
+    from server.engine import copywriter
+    claude = [{"headline": "은은한 캔들", "text": "은은하게 퍼지는 캔들 향을 집에서 즐겨 보세요. 프로필 링크에서 만나 보세요."}]
+    monkeypatch.setattr(copywriter, "_ask_claude", lambda *a, **k: claude)
+    monkeypatch.setattr(copywriter, "make_client", lambda: object())
+    c = TestClient(app)
+    b = c.post("/copies", json={"product": "향초", "strengths": ["캔들"], "avoid": ["캔들", "캔들만들기"]}).json()
+    assert b["source"] == "claude" and b["copies"][0]["headline"] == "은은한 캔들"
+    b = c.post("/copies", json={"product": "향초", "strengths": ["아로마"], "avoid": ["캔들"]}).json()
+    assert b["source"] == "template" and all("캔들" not in x["headline"] + x["primary_text"] for x in b["copies"])
+
+
+def test_a_good_point_chip_is_not_also_listed_as_a_word_to_leave_out(monkeypatch):
+    from server import app as app_mod
+    monkeypatch.setenv("COACH_OFFLINE", "1")
+    monkeypatch.setattr(app_mod, "_good_points", lambda product, mods: [{"word": "르뱅", "group": "맛", "total_qc": 1, "examples": []}])
+    real = app_mod.market.build
+
+    def build(*a, **k):
+        r = real(*a, **k)
+        r.negatives = ["르뱅", "쿠키만들기"]
+        return r
+    monkeypatch.setattr(app_mod.market, "build", build)
+    b = TestClient(app).post("/research", json={"product": "수제 쿠키"}).json()
+    assert b["negatives"] == ["쿠키만들기"]
+
+
 def test_privacy_policy_page_for_the_web_store():
     """크롬 웹 스토어 등록에 쓰는 개인정보 처리방침 (공개 주소/privacy). 비밀번호·결제 정보는 받지 않는다고 적혀 있어야 한다."""
     r = TestClient(app).get("/privacy")

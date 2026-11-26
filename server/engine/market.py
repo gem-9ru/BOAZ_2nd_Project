@@ -6,7 +6,7 @@
 """
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
@@ -243,6 +243,16 @@ def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15, strip: Option
         item["total_qc"] += int(row.total_qc)
         if len(item["examples"]) < 3:
             item["examples"].append(row.keyword)
+    # 오타·다른 표기(앤드그레인 ← 엔드그레인, 소세지 ← 소시지)는 많이 찾는 쪽 하나로 합친다 (3글자 이상만: 짧은 말은 엉뚱하게 붙음)
+    merged: Dict[str, dict] = {}
+    for item in sorted(found.values(), key=lambda m: m["total_qc"], reverse=True):
+        host = next((m for w, m in merged.items() if is_variant(item["word"], [w])), None)
+        if host:
+            host["total_qc"] += item["total_qc"]
+            host["examples"] = (host["examples"] + item["examples"])[:3]
+        else:
+            merged[item["word"]] = item
+    found = merged
     for item in found.values():
         item["group"] = next((g for g, ws in MODIFIER_GROUPS.items() if any(w in item["word"] for w in ws)), "그 밖")
     ranked = sorted(found.values(), key=lambda m: m["total_qc"], reverse=True)[:max(limit, 0)]
@@ -436,9 +446,17 @@ def trend_by_group(groups: Dict[str, List[str]], online: bool = True) -> Dict[st
     return out
 
 
+def lead_of(kws: List[str], name: str = "") -> str:
+    """무리의 대표 검색어: 상품 이름 전체(띄어쓰기 없앰)가 든 말 중 검색이 가장 많은 것, 없으면 그냥 가장 많은 것.
+    ('캠핑 의자'에서 '낚시의자'처럼 끝 낱말만 같은 다른 상품이 대표가 되어 손님 나이·성별이 엉뚱해지는 것을 막는다.)
+    kws는 검색이 많은 순."""
+    me = name.replace(" ", "")
+    return next((k for k in kws if me and me in k.replace(" ", "")), kws[0])
+
+
 def segments(kw: pd.DataFrame, rec: List[str], category: Optional[str], online: bool = True,
-             keep: Optional[List[str]] = None) -> List[dict]:
-    """추천 검색어를 뜻(선물·답례/시즌/상품)으로 묶은 손님 무리 최대 3개 (검색수 합이 큰 순)."""
+             keep: Optional[List[str]] = None, name: str = "") -> List[dict]:
+    """추천 검색어를 뜻(선물·답례/시즌/상품)으로 묶은 손님 무리 최대 3개 (검색수 합이 큰 순). 대표 검색어는 lead_of."""
     chosen = [k for k in rec if keep is None or k in keep]
     sub = kw[kw["keyword"].isin(chosen)].sort_values("total_qc", ascending=False)
     groups = []
@@ -450,7 +468,7 @@ def segments(kw: pd.DataFrame, rec: List[str], category: Optional[str], online: 
     trends = trend_by_group({i: kws[:5] for i, kws, _ in groups}, online)
     out = []
     for intent, kws, total in groups:
-        lead = kws[0]
+        lead = lead_of(kws, name)
         aud = audience(lead, category, online) if category else None
         trend, source = trends.get(intent), "search" if intent in trends else None
         if trend is None and aud and aud.get("monthly"):
@@ -510,7 +528,8 @@ class MarketReport:
 
 
 def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
-          keep: Optional[List[str]] = None, *, product: Optional[str] = None) -> Optional[MarketReport]:
+          keep: Optional[List[str]] = None, *, product: Optional[str] = None,
+          drop_words: Optional[Callable[[List[str]], Set[str]]] = None) -> Optional[MarketReport]:
     """한 번에: 키워드 표 → 분류 → 추천·제외·꾸밈말 → (분야가 있으면) 손님 무리 → 한 줄 요약. 키워드를 못 받으면 None.
     분야가 없거나 손님 무리가 비면 손님(쇼핑 인사이트) 조회 없이 첫 추천 검색어의 검색수 한 줄.
     product가 있으면 그 이름으로 사장님 낱말을 만들고, 없으면 첫 seed를 상품 이름으로 본다."""
@@ -522,8 +541,12 @@ def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
     words = product_words(name, seeds)
     kw = classify(table, words)
     rec = recommend(kw, seeds=words)
-    segs = segments(kw, rec, category, online, keep) if category else []
     mods = modifiers(kw, words, limit=MODIFIER_POOL, strip=strip_words(name, seeds))   # 넉넉히: 브랜드를 거른 뒤 화면에 15개
+    if drop_words:   # 다른 가게·브랜드 이름이 든 검색어(아트릭스핸드크림·스탠리텀블러)는 추천·손님 무리에서 뺀다
+        bad = drop_words([m["word"] for m in mods])
+        if bad:
+            rec = [k for k in rec if not any(b in k.replace(" ", "") for b in bad)]
+    segs = segments(kw, rec, category, online, keep, name) if category else []
     stats = product_stats(kw, name, category, online)
     common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
                   negatives=negative_list(kw), category=category, segments=segs, modifiers=mods, product_stats=stats)

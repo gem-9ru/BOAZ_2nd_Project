@@ -339,7 +339,8 @@ def test_lead_audience_is_the_most_distinctive_one():
     r = market.build(["수제 쿠키"], online=False, category=market.DEFAULT_CATEGORY)
     lead = next(iter(r.audiences))           # build는 손님 무리의 대표 검색어로 손님을 보여 준다 (분야가 있을 때만)
     assert lead in {s["lead"] for s in r.segments}
-    assert r.headline.startswith(f"{lead}{market._obj(lead)} 찾는 사람은 30대 여성이 분야 평균의")
+    assert lead == "수제쿠키"   # 상품 이름 전체가 든 말이 대표 (끝 낱말만 같은 다른 상품이 대표가 되지 않게)
+    assert r.headline.startswith(f"{lead}{market._obj(lead)} 찾는 사람은 ")
 
 
 def _count_hub(monkeypatch):

@@ -117,7 +117,10 @@ def _research(body: ResearchIn) -> dict:
         code, cands = (given, []) if given else market.category_guess(body.product, _online())
         if code:   # 정해진 분야는 빼고, 남은 가까운 후보는 [바꾸기]에서 먼저 보여 준다
             cands = [c for c in cands if c != code]
-        report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
+        off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
+        brand_check = lambda words: brands.classify(body.product, words, client=False if off else None)[0]   # noqa: E731
+        report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product,
+                              drop_words=brand_check)
         why = naver_api.last_error()
     mods = _good_points(body.product, report.modifiers if report else [])
     wide = {"category": _category_out(code, not given), "categories": [dict(c) for c in market.CATEGORIES],
@@ -143,7 +146,7 @@ def _research(body: ResearchIn) -> dict:
                for part, label in (("product", "검색어·연령"), ("baseline", "분야 평균")) if part in report.fetched_parts]
     live = report.fetched_parts.get("product", report.fetched) == today   # 이 상품 자료가 오늘 받은 것이면 실시간
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
-            "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None,
+            "source": "live" if live else "cache", "sources": sources, "negatives": [n for n in report.negatives if n not in {m["word"] for m in mods}][:20], "notice": None,
             **wide, "segments": report.segments, "modifiers": mods, "product_stats": report.product_stats}
 
 
@@ -197,7 +200,9 @@ def _copies(body: CopiesIn) -> dict:
     client = copywriter.make_client()
     # 상품 이름에 들어 있는 말은 빼지 않는다 (예: '쿠키만들기 키트'를 파는데 '쿠키만들기'를 빼면 문구가 남지 않음)
     product = body.product.replace(" ", "")
-    avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product]
+    # 사장님이 고른 좋은 점도 빼지 않는다 (향초의 '캔들'처럼 뺄 말 목록에도 있는 낱말을 고르면 Claude 문구가 다 버려졌음)
+    picked = [s.replace(" ", "") for s in body.strengths if s.strip()]
+    avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product and w.replace(" ", "") not in picked]
     clean = lambda cs: [c for c in cs if not any(w in c["text"] + c["headline"] for w in avoid)]
     words = list(body.strengths) + list(body.keywords)
     seg = body.segment.model_dump() if body.segment else None
@@ -213,7 +218,7 @@ def _copies(body: CopiesIn) -> dict:
                 made.append(c)
     return {"copies": [{"primary_text": c["text"], "headline": c["headline"],
                         "basis": copywriter.basis(c, words, seg)} for c in made],
-            "source": "claude" if used_claude else "template"}
+            "source": "claude" if any(c.get("by") == "claude" for c in made) else "template"}   # 뺄 말로 버린 뒤 남은 것 기준
 
 
 @app.get("/fields")

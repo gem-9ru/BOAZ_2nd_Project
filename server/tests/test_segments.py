@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 
 from server.engine import market, naver_api as api
-from server.tests.test_market import isolated, fake_keys, Resp  # noqa: F401
+from server.tests.test_market import SEEDS, isolated, fake_keys, Resp  # noqa: F401
 
 ROWS = [("답례품쿠키", "선물·답례", 2100), ("쿠키선물세트", "선물·답례", 1500),
         ("수제쿠키", "상품", 9300), ("크리스마스쿠키", "시즌", 800)]
@@ -93,3 +93,18 @@ def test_hub_calls_within_15(monkeypatch, isolated, tmp_path):  # noqa: F811
     assert segs[0]["trend_source"] == "search"
     assert "/shopping/v1/category/gender" in paths    # 분야 평균(baseline) 호출까지 센다
     assert len(paths) <= 15, paths
+
+
+def test_lead_prefers_a_word_with_the_full_product_name():
+    """'캠핑 의자' 무리의 대표가 '낚시의자'(끝 낱말만 같은 다른 상품)가 되면 손님 나이·성별이 엉뚱해진다."""
+    assert market.lead_of(["낚시의자", "경량캠핑의자", "캠핑의자"], "캠핑 의자") == "경량캠핑의자"
+    assert market.lead_of(["다이어트간식", "대용량강아지간식"], "강아지 간식") == "대용량강아지간식"
+    assert market.lead_of(["낚시의자", "휴대용의자"], "캠핑 의자") == "낚시의자"   # 없으면 가장 많은 말
+
+
+def test_build_drops_brand_keywords_before_making_groups(monkeypatch):
+    seen = []
+    r = market.build(SEEDS, online=False, category=None, product="쿠키",
+                     drop_words=lambda words: seen.append(list(words)) or {"르뱅"})
+    assert seen and r is not None
+    assert not any("르뱅" in k for k in r.recommended)

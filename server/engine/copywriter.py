@@ -197,6 +197,8 @@ def _system_prompt(n: int) -> str:
             "'손님'·'시기'가 있으면 그 손님의 상황에 맞춘다. '말투'가 있으면 그 말투로 쓴다.\n"
             "가게·브랜드 이름, 가격, 숫자, 후기, 수상처럼 주어지지 않은 사실은 지어내지 마. "
             "'최저가·1위·최고·국내 유일·100%·무조건' 같은 근거 없는 표현, 이모지, 해시태그, 특수문자 남발은 금지.\n"
+            "질병·증상(탈모·여드름·아토피·불면·습진 등)을 낫게 하거나 막는다고 쓰지 않는다 (광고 심의). "
+            "그런 장점은 '○○이 고민인 분께'처럼 대상만 말한다.\n"
             f"서로 다른 각도의 문구 {n}개를 쓴다 (예: 상황 공감 / 장점 강조 / 선물·시기).\n"
             "각 문구의 basis에는 그 문구에 실제로 쓴 '장점'·'검색어'를 받은 그대로(글자 그대로) 적는다. "
             "말을 바꿔 썼어도(가벼움 → 가벼운) 받은 낱말로 적는다.")
@@ -291,7 +293,7 @@ def _copies_with_source(product: str, strengths: Strengths, n: int, client,
     for i, c in enumerate(candidates + templates):
         key = (c["headline"], c["text"])
         if not check_copy(c) and key not in {(o["headline"], o["text"]) for o in out}:
-            out.append(c)
+            out.append({**c, "by": "claude"} if i < len(candidates) else c)   # by: 화면의 '틀 문장' 알림용
             used_claude = used_claude or i < len(candidates)
         if len(out) >= n:
             break
