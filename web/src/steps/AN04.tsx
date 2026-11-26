@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Placement, Result } from "../api";
 import { sentence } from "../blocks/sentence";
 import { MetricRow, ProbBar } from "../blocks/Trust";
-import { band, Card, HowCalculated, md, pct, people, ReferenceBadge, VerdictBadge, won, wordOf } from "../ui";
+import { band, Card, HowCalculated, md, pct, people, betterProb, ReferenceBadge, Tabs, VerdictBadge, won, wordOf } from "../ui";
 import { armName, Lead, sameMoney } from "./shared";
 
 /** AN-04 ★ 세팅 값별 비교 (v4.2): 맨 앞에 '손님 1명당 비용' (사장님이 궁금한 숫자) + B가 나을 확률,
@@ -21,12 +21,7 @@ export function AN04({ r }: { r: Result }) {
         </Lead>
       )}
       {tab === "places" && <PlacesLead r={r} />}
-      <div role="tablist" aria-label="비교 기준" className="flex flex-wrap gap-2">
-        {tabs.map(([id, t]) => (
-          <button key={id} role="tab" type="button" aria-selected={tab === id} onClick={() => setTab(id)}
-            className={`rounded-badge border px-4 py-1.5 text-body ${tab === id ? "border-accent bg-accent text-on-action font-semibold" : "border-line bg-surface"}`}>{t}</button>
-        ))}
-      </div>
+      <Tabs big label="비교 기준" value={tab} onChange={setTab} items={tabs.map(([id, t]) => ({ id, label: t }))} />
       {!v && tab !== "places" && <><Lead>비교할 세트가 하나라 값 비교는 없어요</Lead>
         <Card title="비교할 세트가 하나예요" summary="세트가 두 개 이상이어야 값을 비교할 수 있어요. 다음엔 칸 1개만 다르게 두 세트를 같은 날 같이 돌려 보세요" /></>}
       {v && tab === "ab" && <><CostPerCustomer r={r} /><AdCost r={r} /><Days r={r} /></>}
@@ -71,8 +66,8 @@ function CostPerCustomer({ r }: { r: Result }) {
       </ul>
       {same && <p className="text-body">같은 돈({won(same.base)})으로 온 손님 <b>A {same.counts[0]}명 · B {same.counts[1]}명</b></p>}
       {/* 이긴 쪽 기준으로 말한다 (A가 이기면 'A가 나을 확률 95%') */}
-      <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{pct(v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better)}</b> <VerdictBadge word={v.badge.word} small /></p>
-      <ProbBar p={v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better} />
+      <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{pct(betterProb(v.badge.better, m.prob_b_better))}</b> <VerdictBadge word={v.badge.word} small /></p>
+      <ProbBar p={betterProb(v.badge.better, m.prob_b_better)} />
       <p className="text-caption text-soft">점선: 70% 넘으면 '○ 쪽이에요' · 90% 넘으면 '확실해요'{v.badge.capped ? " · 클릭이 적거나 돈이 한쪽에 몰리면 한 단계 낮춰 보여 드려요" : ""}</p>
     </Card>
   );

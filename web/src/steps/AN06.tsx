@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { Result } from "../api";
-import { Button, Card, josa, TestTag, won } from "../ui";
+import { Button, Card, josa, Tabs, TestTag, won } from "../ui";
 import { DEV_LABEL } from "./Certainty";
 import { Lead } from "./shared";
 
@@ -61,12 +61,7 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
         </div>
       </Card>
       <Card title="근거" summary="이 결론이 어디서 나왔는지예요. 근거 탭은 확실 / 유력 / 보류로 적어요">
-        <div role="tablist" aria-label="근거" className="flex flex-wrap gap-2">
-          {EVIDENCE.map((t) => (
-            <button key={t} role="tab" type="button" aria-selected={tab === t} onClick={() => setTab(t)}
-              className={`rounded-badge border px-3 py-1 text-caption ${tab === t ? "border-accent bg-accent text-on-accent font-semibold" : "border-line bg-surface"}`}>{t}</button>
-          ))}
-        </div>
+        <Tabs label="근거" value={tab} onChange={setTab} items={EVIDENCE.map((t) => ({ id: t, label: t }))} />
         <div className="flex flex-col gap-2 text-body" role="tabpanel">
           {tab === "메타 공식 신호" && <>
             <p>· 퍼널 진단: 링크 클릭 vs 랜딩 페이지 조회 (Meta 비즈니스 도움말)</p>
