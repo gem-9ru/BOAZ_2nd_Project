@@ -244,7 +244,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           )}
           {all.some(isHealth) && (
             <p role="note" className="text-caption text-warn">
-              ▲ {all.filter(isHealth).map((w) => `'${w}'`).join(", ")} 같은 효능 말은 '낫는다·좋아진다'고 쓰면 법에 걸릴 수 있어요 (식품은 식품표시광고법 제8조). 문구에는 '○○이 고민인 분께'처럼만 쓸게요.
+              ▲ {all.filter(isHealth).map((w) => `'${w}'`).join(", ")} 같은 효능 말은 '낫는다·좋아진다'고 쓰면 법에 걸릴 수 있어요 (식품은 식품표시광고법 제8조, 화장품은 화장품법 제13조). 문구에는 '○○이 고민인 분께'처럼만 쓸게요.
             </p>
           )}
           {all.length > 0 && (
