@@ -8,7 +8,7 @@ export const STEPS = [
   { id: "AN-02", short: "막힌 곳", title: "어디서 막혔나요?", next: "내 세팅 보기" },
   { id: "AN-03", short: "세팅 카드", title: "내 다른 설정은 괜찮나요?", next: "값 비교 보기" },
   { id: "AN-04", short: "값 비교", title: "어떤 값이 더 나았나요?", next: "바꾸면 어떻게 돼요?" },
-  { id: "AN-05", short: "바꾸면", title: "예산을 바꾸면 손님이 몇 명 올까요?", next: "보내기" },
+  { id: "AN-05", short: "예산별 예상", title: "예산을 바꾸면 손님이 몇 명 올까요?", next: "보내기" },
   { id: "AN-06", short: "보내기", title: "이 테스트를 광고 관리자에 준비해요", next: "" },
 ] as const;
 

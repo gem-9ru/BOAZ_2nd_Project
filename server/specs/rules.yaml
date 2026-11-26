@@ -38,7 +38,7 @@ loop:
     share_hi: 0.20
   checklist:                # AN-06 · EX-03 다음 테스트 체크리스트 (v4.2: 남은 알림 → 할 일, ALT 번호는 화면에 안 보임)
     no_delivery: 시작 시간을 하루 여유 있게
-    small_sample: 클릭이 {min_clicks}번 넘게 모일 때까지 그대로 두기
+    small_sample: "{days}일 동안 그대로 두기 → {days}일 뒤 클릭 {min_clicks}번 미만이면 하루 연장(예산 추가) 또는 '아직 몰라요'로 마무리"   # 화면설계서 v4.2 AN-06 ②
     spend_gap: 두 세트 예산을 똑같이 나누기
     underspent: 총예산을 '하루 최소 × 기간'보다 넉넉하게
     low_visit_rate: 광고 주소를 휴대폰으로 열어 확인하기

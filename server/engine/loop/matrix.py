@@ -97,7 +97,7 @@ def _has_vertical(settings: Dict) -> Optional[bool]:
     return any(w in " ".join(vals) for w in ("세로", "9:16", "릴스", "동영상", "영상"))
 
 
-def _checklist(alerts: List[Dict], label: str) -> List[str]:
+def _checklist(alerts: List[Dict], label: str, days: int = 4) -> List[str]:
     """남은 주의 알림 → 할 일 + '칸 1개만' + '같은 날 같이 시작' (v4.2 AN-06 · EX-03, ALT 번호는 숨김)."""
     cfg = _loop()
     words = cfg.get("checklist", {})
@@ -105,7 +105,7 @@ def _checklist(alerts: List[Dict], label: str) -> List[str]:
     for a in alerts:
         t = words.get(a["kind"]) if a["level"] == "warn" else None
         if t:
-            t = t.format(min_clicks=cfg["alerts"]["min_clicks"], label=label)
+            t = t.format(min_clicks=cfg["alerts"]["min_clicks"], label=label, days=days)
             if t not in out:
                 out.append(t)
     out.append(words.get("one_field", "바꾸는 칸은 {label} 1개만").format(label=label))
@@ -273,7 +273,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
                   "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
                   # 근거 탭·개발 문서용: 진단 규칙 자체의 신뢰도 (확실/유력/보류 그대로)
                   "rule": {"row": pick, "level": p["level"], "why": "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")},
-                  "grade": p["grade"], "meta_says": p.get("meta_says"), "checklist": _checklist(alerts, label)}
+                  "grade": p["grade"], "meta_says": p.get("meta_says"), "checklist": _checklist(alerts, label, test_days)}
 
     if verdict and verdict["badge"]["level"] != "채택":
         mb = (verdict.get("min_budget") or {}).get("per_group")

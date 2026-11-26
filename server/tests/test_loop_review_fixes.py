@@ -116,3 +116,10 @@ def test_click_rate_is_told_in_times_not_people():
     r = run(read_export(OVEN))
     row2 = next(x for x in r["matrix"]["rows"] if x["row"] == "2")
     assert row2["signal"].startswith("1,000번 보여지면 약 16번 눌려요") and "명" not in row2["signal"]
+
+
+# 점검 L: 화면설계서 v4.2 AN-06 ② — 끝이 있는 '그대로 두기'
+def test_checklist_wait_item_has_an_end_like_the_spec():
+    c = run(read_export(OVEN))["matrix"]["change"]
+    assert "4일 동안 그대로 두기 → 4일 뒤 클릭 30번 미만이면 하루 연장(예산 추가) 또는 '아직 몰라요'로 마무리" in c["checklist"]
+    assert not any("모일 때까지" in t for t in c["checklist"])

@@ -527,3 +527,10 @@ describe("점검 B", () => {
     expect(screen.getByText(/작게 시험할 때는 '확실해요'까지 가지 않아도 돼요/)).toBeTruthy();
   });
 });
+
+describe("점검 K", () => {
+  it("step ⑤ is named like the spec (예산별 예상)", async () => {
+    showExample();
+    expect(await screen.findByRole("button", { name: "⑤ 예산별 예상" })).toBeTruthy();
+  });
+});
