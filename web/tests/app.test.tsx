@@ -249,6 +249,19 @@ describe("7단계 결과 (v4.2)", () => {
     expect(writeText).toHaveBeenCalledWith(oven.code);
     expect(new URLSearchParams(window.location.hash.slice(1)).get("send")).toBeTruthy();   // 옆 패널이 이걸 보고 테스트안을 받음
   });
+
+  it("AN-06 근거 탭 '가상 케이스' shows the 6-case table and says it is not used for the verdict", async () => {
+    showExample();
+    fireEvent.click(await screen.findByRole("button", { name: "이 테스트 바로 준비 →" }));
+    fireEvent.click(screen.getByRole("tab", { name: "가상 케이스" }));
+    const table = screen.getByRole("table", { name: "가상 케이스 6개 결과" });
+    expect(within(table).getAllByRole("row")).toHaveLength(7);   // 머리 1 + 케이스 6
+    const c3 = within(table).getByRole("row", { name: /C3 좁게·길게 인지도/ });
+    expect(within(c3).getByText("13,999원")).toBeTruthy();
+    expect(within(c3).getByText("100,370원")).toBeTruthy();
+    expect(within(within(table).getByRole("row", { name: /C0 광고 안 함/ })).getAllByText("–")).toHaveLength(3);
+    expect(screen.getByText(/판정에는 쓰지 않아요/)).toBeTruthy();
+  });
 });
 
 describe("광고 어시스턴트 = 크롬 확장 프로그램 사이드 패널 (v4.2 AN-COM ④)", () => {

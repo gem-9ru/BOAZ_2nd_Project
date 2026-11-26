@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Result } from "../api";
 import { Button, Card, josa, Tabs, TestTag, won } from "../ui";
 import { DEV_LABEL } from "./Certainty";
+import { VIRTUAL_CASES } from "./cases";
 import { Lead } from "./shared";
 
 const EVIDENCE = ["메타 공식 신호", "우리 실측 2건", "논문", "가상 케이스", "한계"] as const;
@@ -76,7 +77,33 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
             {c.rule && <p>· 이번 결론 규칙(진단 {c.rule.row}번): {DEV_LABEL[c.rule.level]} · 효과는 {DEV_LABEL[c.certainty?.level ?? "보류"]} (돌려 본 적 없음)</p>}
           </>}
           {tab === "논문" && <p>Lewis & Rao 2015 · Gordon 외 2019 · Johnson 외 2017 · Feit & Berman 2019 · Scott 2010 · Efron & Morris 1975 · Kohavi 외 2020</p>}
-          {tab === "가상 케이스" && <p>판정 규칙을 확인하려고 만든 가상 케이스 6개가 있어요. 판정에는 쓰지 않아요.</p>}
+          {tab === "가상 케이스" && <>
+            <p>판정 규칙을 확인하려고 만든 가상 케이스 6개예요. 실제로 돌린 광고가 아니라 시뮬레이션이라 <b>판정에는 쓰지 않아요</b>.
+              (소연베이크 가상 데이터 · 예산 30만 원 · 객단가 2.6만 원 · 광고 기간 + 7일)</p>
+            <div className="overflow-x-auto">
+              <table className="w-full text-body">
+                <caption className="sr-only">가상 케이스 6개 결과</caption>
+                <thead><tr className="text-left text-caption text-soft">
+                  <th className="py-2 pr-3">케이스</th><th className="pr-3 text-right">쓴 돈</th><th className="pr-3 text-right">광고로 온 주문</th>
+                  <th className="pr-3 text-right">주문 1건당 비용</th><th className="pr-3 text-right">마지막 클릭만 보면</th><th className="text-right">매출 ÷ 광고비</th>
+                </tr></thead>
+                <tbody>
+                  {VIRTUAL_CASES.map((v) => (
+                    <tr key={v.id} className="border-t border-line">
+                      <th scope="row" className="py-2 pr-3 text-left font-semibold">{v.id} {v.name}</th>
+                      <td className="pr-3 text-right">{won(v.spend)}</td>
+                      <td className="pr-3 text-right">{v.orders === null ? "–" : `약 ${Math.round(v.orders)}건`}</td>
+                      <td className="pr-3 text-right">{v.cost === null ? "–" : won(v.cost)}</td>
+                      <td className="pr-3 text-right text-soft">{v.lastClick === null ? "–" : won(v.lastClick)}</td>
+                      <td className="text-right">{v.roas === null ? "–" : `${v.roas.toFixed(1)}배`}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p>· 마지막 클릭만 세면 인지도 광고(C3)가 주문 1건당 약 10만 원으로 보이지만, 광고를 보고 나중에 검색해서 산 주문까지 세면 약 14,000원이에요 → 광고 전후·마지막 클릭만으로 효과를 단정하지 않는 근거예요.</p>
+            <p>· 대표 1회 결과라 운에 따라 순위가 바뀔 수 있어요 (같은 전략을 300번 돌리면 범위가 겹쳐요).</p>
+          </>}
           {tab === "한계" && <p>소액·짧은 기간이라 범위가 넓어요. 예산을 크게 늘릴 때 단가가 오르는 효과는 넣지 않았어요. 광고 전후 비교로는 효과를 말하지 않고, 같은 기간에 동시에 돌린 A/B 비교로만 말해요.</p>}
         </div>
       </Card>
