@@ -18,12 +18,15 @@ def test_sends_only_words_and_parses_the_answer(monkeypatch):
     class Msgs:
         def create(self, **kw):
             seen.update(kw)
-            return SimpleNamespace(content=[SimpleNamespace(type="text", text=json.dumps({"brands": ["스탠리", "없는말"]}))])
+            body = {"brands": ["스탠리", "없는말"], "groups": [{"name": "재질", "words": ["스텐", "스탠리"]}, {"name": "크기", "words": ["대용량"]}]}
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text=json.dumps(body, ensure_ascii=False))])
 
     monkeypatch.undo()   # conftest의 가짜 _ask를 풀고 진짜 _ask로
     monkeypatch.setattr(brands, "_known", {})
-    got = brands.brand_words("텀블러", ["스탠리", "스텐", "대용량"], client=SimpleNamespace(messages=Msgs()))
+    monkeypatch.setattr(brands, "_groups", {})
+    got, groups = brands.classify("텀블러", ["스탠리", "스텐", "대용량"], client=SimpleNamespace(messages=Msgs()))
     assert got == {"스탠리"}                       # 목록에 없는 말은 받지 않는다
+    assert groups == {"스텐": "재질", "대용량": "크기"}   # 브랜드는 묶음에서 빠짐
     sent = json.loads(seen["messages"][0]["content"])
     assert sent == {"상품": "텀블러", "낱말": ["스탠리", "스텐", "대용량"]}   # 숫자(검색수)는 안 보낸다
     assert seen["output_config"]["format"]["type"] == "json_schema"
@@ -31,7 +34,7 @@ def test_sends_only_words_and_parses_the_answer(monkeypatch):
 
 def test_remembers_words_and_asks_only_new_ones(monkeypatch):
     asked = []
-    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: asked.append(list(ws)) or {"투썸"} & set(ws))
+    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: (asked.append(list(ws)) or {"투썸"} & set(ws), {w: "기능" for w in ws if w != "투썸"}))
     assert brands.brand_words("텀블러", ["투썸", "보온"], client=object()) == {"투썸"}
     assert brands.brand_words("텀블러", ["투썸", "보온", "유리"], client=object()) == {"투썸"}
     assert asked == [["투썸", "보온"], ["유리"]]
@@ -48,11 +51,12 @@ def test_failure_or_no_key_filters_nothing(monkeypatch):
 def test_good_points_drop_brands_then_keep_15(monkeypatch):
     monkeypatch.delenv("COACH_OFFLINE", raising=False)
     monkeypatch.delenv("COACH_NO_LLM", raising=False)
-    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: {w for w in ws if w.startswith("브")})
+    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: ({w for w in ws if w.startswith("브")}, {w: "기능" for w in ws}))
     monkeypatch.setattr(brands.copywriter, "make_client", lambda: object())
     words = [f"브랜드{i}" for i in range(5)] + [f"좋은점{i}" for i in range(20)]
     out = _good_points("텀블러", _mods(words))
     assert len(out) == 15 and not any(m["word"].startswith("브") for m in out)
+    assert {m["group"] for m in out} == {"기능"}   # 묶음 이름은 Claude가 준 것으로
 
 
 def test_offline_research_never_asks_claude(monkeypatch):

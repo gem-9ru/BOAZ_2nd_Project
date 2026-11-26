@@ -84,13 +84,14 @@ def research(body: ResearchIn) -> dict:
 
 
 def _good_points(product: str, mods: List[dict]) -> List[dict]:
-    """좋은 점 칩: 다른 가게·브랜드 이름(스탠리·투썸…)을 Claude로 걸러 MAX_MODIFIERS개. 낱말만 보내고 숫자는 안 보낸다.
-    오프라인·LLM 끔이면 이미 물어본 낱말만 거른다."""
+    """좋은 점 칩: 다른 가게·브랜드 이름(스탠리·투썸…)을 Claude로 걸러 MAX_MODIFIERS개, 묶음 이름은 상품에 맞게(재질·기능…).
+    낱말만 보내고 숫자는 안 보낸다. 오프라인·LLM 끔이면 이미 물어본 것만 쓰고, 묶음은 원래대로(포장·맛·재료·배송·양·그 밖)."""
     off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
-    drop = brands.brand_words(product, [m["word"] for m in mods], client=False if off else None)
+    drop, groups = brands.classify(product, [m["word"] for m in mods], client=False if off else None)
     if drop:
         log.info("good points brands dropped n=%d", len(drop))
-    return [m for m in mods if m["word"] not in drop][:MAX_MODIFIERS]
+    kept = [m for m in mods if m["word"] not in drop][:MAX_MODIFIERS]
+    return [{**m, "group": groups.get(m["word"], m["group"])} for m in kept]
 
 
 def _research(body: ResearchIn) -> dict:

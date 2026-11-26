@@ -15,9 +15,11 @@ describe("CopyStep", () => {
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "수제 쿠키", keywords: ["수제쿠키"] }} dispatch={dispatch} />);
     fireEvent.change(screen.getByLabelText("상품의 좋은 점"), { target: { value: "버터 듬뿍" } });
     fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
-    await waitFor(() => expect(screen.getAllByRole("button", { name: /이 문구로/ })).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByRole("radio", { name: /안:/ })).toHaveLength(3));
     expect(JSON.parse(f.mock.calls[0]![1].body)).toEqual({ product: "수제 쿠키", strengths: ["버터 듬뿍"], keywords: ["수제쿠키"], avoid: [] });
-    fireEvent.click(screen.getAllByRole("button", { name: /이 문구로/ })[1]!);
+    expect(screen.queryByRole("button", { name: "이 문구로 할게요" })).toBeNull();   // 고르기 전엔 정하기 버튼 없음
+    fireEvent.click(screen.getByRole("radio", { name: "2안: 제목 2" }));
+    fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: three[1] });
   });
 
@@ -28,7 +30,7 @@ describe("CopyStep", () => {
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "수제 쿠키", keywords: ["수제쿠키"], research }} dispatch={() => {}} />);
     fireEvent.change(screen.getByLabelText("상품의 좋은 점"), { target: { value: "버터 듬뿍" } });
     fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
-    await waitFor(() => expect(screen.getAllByRole("button", { name: /이 문구로/ })).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByRole("radio", { name: /안:/ })).toHaveLength(3));
     expect(JSON.parse(f.mock.calls[0]![1].body).avoid).toEqual(["쿠키만들기"]);
     fireEvent.click(screen.getByRole("button", { name: "다른 문구로 다시 써 주세요" }));
     await waitFor(() => expect(f).toHaveBeenCalledTimes(2));
@@ -110,5 +112,59 @@ describe("CopyStep", () => {
   it("old state without modifiers still lets owner type", () => {
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
     expect(screen.getByRole("button", { name: "문구 써 주세요" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("the picked copy can be edited; the preview follows and an edited copy drops its basis", async () => {
+    const withBasis = three.map((c) => ({ ...c, basis: ["버터 듬뿍"] }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: withBasis, source: "claude" }), { status: 200 })));
+    const dispatch = vi.fn();
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "수제 쿠키" }} dispatch={dispatch} />);
+    fireEvent.change(screen.getByLabelText("상품의 좋은 점"), { target: { value: "버터 듬뿍" } });
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "버터 듬뿍 쿠키" } });
+    expect(screen.getByText("버터 듬뿍 쿠키")).toBeTruthy();   // 미리 보기
+    expect(screen.getByText("8/40자")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: { headline: "버터 듬뿍 쿠키", primary_text: "본문 1" } });
+  });
+
+  it("too long a headline blocks the pick", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "가".repeat(41) } });
+    expect(screen.getByRole("button", { name: "이 문구로 할게요" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByText("41/40자")).toBeTruthy();
+  });
+
+  it("the owner can write the copy themselves without asking, even with no chips picked", () => {
+    const dispatch = vi.fn();
+    render(<CopyStep state={withMods()} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구를 직접 쓸게요" }));
+    fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "오늘 구운 쿠키" } });
+    fireEvent.change(screen.getByLabelText("본문 (고쳐도 돼요)"), { target: { value: "매일 아침 구워 보내요." } });
+    fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "pickCopy", copy: { headline: "오늘 구운 쿠키", primary_text: "매일 아침 구워 보내요." } });
+  });
+
+  it("after getting three, '직접 쓰기' is a fourth choice", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "직접 쓰기" }));
+    fireEvent.click(screen.getByRole("radio", { name: "직접 쓰기" }));
+    expect((screen.getByLabelText("제목 (고쳐도 돼요)") as HTMLInputElement).value).toBe("");
+  });
+
+  it("chip groups come from the server (any names), '그 밖' last", () => {
+    const mixed = [{ word: "보온", group: "기능", total_qc: 9, examples: [] }, { word: "컴퓨터", group: "그 밖", total_qc: 8, examples: [] },
+      { word: "스텐", group: "재질", total_qc: 7, examples: [] }];
+    render(<CopyStep state={{ ...withMods(), research: { ...research, modifiers: mixed } }} dispatch={() => {}} />);
+    const labels = screen.getAllByText(/^(기능|재질|그 밖)$/).map((e) => e.textContent);
+    expect(labels).toEqual(["기능", "재질", "그 밖"]);
   });
 });
