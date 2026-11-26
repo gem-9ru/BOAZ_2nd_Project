@@ -21,7 +21,7 @@ METRICS = [  # (키, 사장님 말 이름 (약어), 클수록 좋은가)
     ("cpc", "클릭 1번에 드는 돈 (CPC)", False),
     ("ctr", "본 사람 중 누른 비율 (CTR)", True),
 ]
-ADOPT, LIKELY = 0.9, 0.7
+ADOPT, LIKELY = words.ADOPT, words.LIKELY   # 판정 경계는 words 한 곳에서
 
 
 def level(p: float) -> str:

@@ -53,7 +53,29 @@ def arm_short(name: str, index: int) -> str:
     return letter
 
 
-def set_budget(per_set: Optional[float], days: Optional[int] = None) -> str:
-    """예산은 총예산인지 하루 예산인지 분명히: '세트당 총 5,000원 (4일)'."""
-    s = f"세트당 총 {won(per_set)}"
-    return f"{s} ({days}일)" if days else s
+_PLATFORM_KO = {"Facebook": "페이스북", "Instagram": "인스타그램", "Messenger": "메신저"}
+_POSITION_KO = {
+    "feed": "피드", "instagram_reels": "릴스", "facebook_reels": "릴스", "instagram_stories": "스토리",
+    "facebook_stories": "스토리", "instream_video": "인스트림 동영상", "instagram_explore": "탐색 탭",
+    "instagram_explore_grid_home": "탐색 홈", "marketplace": "마켓플레이스", "right_hand_column": "오른쪽 칼럼",
+    "search": "검색 결과", "video_feeds": "동영상 피드", "facebook_profile_feed": "프로필 피드",
+    "instagram_profile_feed": "프로필 피드", "an_classic": "네이티브·배너·전면", "rewarded_video": "보상형 동영상",
+    "messenger_inbox": "받은 메시지함", "messenger_stories": "스토리",
+    "네이티브, 배너 및 전면 광고": "네이티브·배너·전면",   # 한국어 내보내기의 Audience Network 자리
+}
+_PLATFORMS = ("Audience Network", "Facebook", "Instagram", "Messenger", "Threads")
+
+
+def placement_label(name: str) -> str:
+    """'Instagram instagram_reels' → '인스타그램 릴스'. 모르는 이름은 그대로 둔다 (보고서 표시용)."""
+    name = str(name)
+    plat = next((p for p in _PLATFORMS if name.startswith(p + " ")), None)
+    if plat:
+        rest = name[len(plat) + 1:]
+        if rest.lower().startswith(plat.lower() + " "):   # 'Instagram Instagram 릴스' 같은 겹침
+            rest = rest[len(plat) + 1:]
+        return f"{_PLATFORM_KO.get(plat, plat)} {_POSITION_KO.get(rest, rest)}"
+    head, _, pos = name.rpartition(" ")
+    if not head:
+        return name
+    return f"{_PLATFORM_KO.get(head, head)} {_POSITION_KO.get(pos, pos)}"

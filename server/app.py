@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from server.engine import analyze as analysis, brands, copywriter, market, naver_api, specs
+from server.engine import brands, copywriter, market, naver_api, specs
 from server.engine.meta_export import read_export
 from server.engine.loop import run as loop_run, simulate as loop_simulate
 
@@ -86,8 +86,7 @@ def research(body: ResearchIn) -> dict:
 def _good_points(product: str, mods: List[dict]) -> List[dict]:
     """좋은 점 칩: 다른 가게·브랜드 이름(스탠리·투썸…)을 Claude로 걸러 MAX_MODIFIERS개, 묶음 이름은 상품에 맞게(재질·기능…).
     낱말만 보내고 숫자는 안 보낸다. 오프라인·LLM 끔이면 이미 물어본 것만 쓰고, 묶음은 원래대로(포장·맛·재료·배송·양·그 밖)."""
-    off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
-    drop, groups = brands.classify(product, [m["word"] for m in mods], client=False if off else None)
+    drop, groups = brands.classify(product, [m["word"] for m in mods], client=None if _online() else False)
     if drop:
         log.info("good points brands dropped n=%d", len(drop))
     kept = [m for m in mods if m["word"] not in drop][:MAX_MODIFIERS]
@@ -175,7 +174,7 @@ def copies(body: CopiesIn) -> dict:
 
 
 def _copies(body: CopiesIn) -> dict:
-    client = None if os.environ.get("COACH_NO_LLM") == "1" else copywriter.make_client()
+    client = copywriter.make_client()
     # 상품 이름에 들어 있는 말은 빼지 않는다 (예: '쿠키만들기 키트'를 파는데 '쿠키만들기'를 빼면 문구가 남지 않음)
     product = body.product.replace(" ", "")
     avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product]
@@ -208,15 +207,6 @@ def fields() -> dict:
     preset = [{"id": f["id"], "label": f["label"], "default": str(f["default"]), "why": f["why"]}
               for f in all_meta if f.get("kind") in SET_KINDS and f.get("default") is not None and f.get("why")]
     return {"fields": asked, "defaults": preset}
-
-
-@app.post("/analyze")
-async def analyze(file: UploadFile = File(...)):
-    bundle = read_export(await file.read())
-    if "meta_daily" not in bundle.tables:
-        msg = " ".join(bundle.problems) or "메타 결과를 읽지 못했어요. 광고 관리자에서 일·노출 위치 기준으로 내보내 주세요."
-        return JSONResponse(status_code=400, content={"error": msg})
-    return analysis.analyze(bundle)
 
 
 # ── 분석 페이지: 0 검증 → 5 다음 세팅 (server/engine/loop) ────────────────────
@@ -341,14 +331,13 @@ class AssistantIn(BaseModel):
 @app.post("/assistant")
 def assistant_reply(body: AssistantIn):
     """분석 페이지 오른쪽 어시스턴트: 질문이 없으면 그 단계 첫 말풍선, 있으면 그 단계 결과 JSON으로 설명."""
-    from server.engine.copywriter import make_client
     from server.engine.loop import assistant
     p = _PLANS.get(body.code.upper())
     if p is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾지 못했어요. 파일을 다시 올려 주세요.")
     if not body.question:
         return assistant.opening(p, body.step)
-    return assistant.answer(p, body.step, body.question, client=make_client())
+    return assistant.answer(p, body.step, body.question, client=copywriter.make_client())
 
 
 # ── 분석 페이지 화면 (web/ 를 빌드한 web/dist) ────────────────────────────────

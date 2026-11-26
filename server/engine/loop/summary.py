@@ -1,6 +1,8 @@
 """1 실측 요약: 세트별 지출·노출·클릭·도착과 비율 (희수 4장 지표 정의), 노출 위치별 지출."""
 from typing import Dict, Optional
 
+from .words import placement_label
+
 COUNTS = ("spend", "impressions", "link_clicks", "landing_page_views")
 
 
@@ -20,7 +22,6 @@ def arm(name: str, spend: float, impressions: float, link_clicks: float, landing
 
 
 def run(bundle) -> Dict:
-    from ..analyze import placement_label   # 보고서와 같은 한국어 이름
 
     daily = bundle.tables["meta_daily"].df
     cols = [c for c in COUNTS if c in daily.columns]

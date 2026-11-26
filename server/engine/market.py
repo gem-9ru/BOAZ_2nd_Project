@@ -16,7 +16,6 @@ log = logging.getLogger("coach.market")
 
 DEFAULT_CATEGORY = "50000006"  # 쇼핑 인사이트 분야: 식품
 HUB = "/shopping/v1/category"
-SOURCE = "네이버 검색광고 키워드 도구 · 네이버 데이터랩 쇼핑인사이트"   # 화면에 보일 자료 출처
 AGE_GROUPS = ("10", "20", "30", "40", "50", "60")
 MIN_AGE_SHARE = 0.25           # 헤드라인에 쓸 연령은 비중이 이 이상일 때만 (작은 집단의 큰 배수는 잡음)
 HIGH_INDEX = 1.2               # 이 배수 이상일 때만 "분야 평균의 N배"라고 말함
@@ -473,13 +472,6 @@ def _obj(word: str) -> str:
     if "가" <= last <= "힣":
         return "을" if (ord(last) - 0xAC00) % 28 else "를"
     return "을(를)"
-
-
-def audience_targets(kw: pd.DataFrame, rec: List[str], n: int = 3) -> List[str]:
-    """손님을 조회할 키워드 n개: 추천 중 선물·답례 → 시즌 → 상품 순 (같은 묶음 안에서는 추천 순서)."""
-    rank = {"선물·답례": 0, "시즌": 1, "상품": 2}
-    intent = dict(zip(kw["keyword"], kw["intent"]))
-    return sorted(rec, key=lambda k: rank.get(intent.get(k), 3))[:n]
 
 
 def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: bool = True) -> Optional[dict]:

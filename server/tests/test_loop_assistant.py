@@ -93,3 +93,12 @@ def test_v42_openings_use_owner_words_only():
         for bad in ("유력", "보류", "₩", "코치"):
             assert bad not in o["message"], (s, bad)
     assert "보통" in assistant.opening(r, "AN-05")["message"] and "적게" in assistant.opening(r, "AN-05")["message"]
+
+
+def test_no_llm_switch_stops_every_claude_client(monkeypatch):
+    """COACH_NO_LLM=1이면 키가 있어도 클라이언트를 안 만든다 (문구·좋은 점·/assistant 모두 make_client를 쓴다).
+    예전엔 /assistant만 스위치를 무시하고 Claude를 불렀다."""
+    from server.engine import copywriter
+    monkeypatch.setattr(copywriter, "_read_key", lambda: "sk-test")
+    monkeypatch.setenv("COACH_NO_LLM", "1")
+    assert copywriter.make_client() is None

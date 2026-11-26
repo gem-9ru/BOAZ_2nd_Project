@@ -49,8 +49,7 @@ def _ask(client, product: str, words: List[str]) -> Tuple[Set[str], Dict[str, st
         model=MODEL, max_tokens=4000, system=SYSTEM,
         output_config={"effort": "low", "format": {"type": "json_schema", "schema": SCHEMA}},
         messages=[{"role": "user", "content": json.dumps({"상품": product, "낱말": words}, ensure_ascii=False)}])
-    text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "")
-    data = json.loads(text)
+    data = json.loads(copywriter.reply_text(resp))
     brand = {w for w in data.get("brands", []) if w in words}
     groups: Dict[str, str] = {}
     for g in data.get("groups", []):

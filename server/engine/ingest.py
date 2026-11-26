@@ -43,15 +43,6 @@ class Bundle:
                         seen.append(c)
         return seen
 
-    def modes(self) -> List[str]:
-        seen = []
-        for t in self.tables.values():
-            if "mode" in t.df:
-                for m in t.df["mode"].dropna().unique():
-                    if m not in seen:
-                        seen.append(m)
-        return seen
-
     def select(self, case: Optional[str] = None, mode: Optional[str] = None) -> "Bundle":
         """케이스·구분 하나만 남긴 묶음 (열이 없는 표는 그대로)."""
         out = Bundle(problems=list(self.problems))
@@ -144,54 +135,6 @@ def _find_header_row(raw: pd.DataFrame, table: str) -> int:
     return best
 
 
-def guess_table(df: pd.DataFrame) -> Optional[str]:
-    """CSV 한 파일이 어느 표인지 머리글로 짐작 (필수 열이 다 맞는 표 중 가장 많이 맞는 것)."""
-    best, best_hits = None, 0
-    for table, spec in specs.columns()["tables"].items():
-        m = _rename_map(list(df.columns), table)
-        got = set(m.values())
-        req = {c for c, s in spec["columns"].items() if s.get("required")}
-        if req <= got and len(got) > best_hits:
-            best, best_hits = table, len(got)
-    return best
-
-
-def read_csvs(files: List[object]) -> Bundle:
-    """실제 내보내기 CSV 여러 개 (메타·네이버·스토어). 어느 표인지는 머리글로 짐작."""
-    b = Bundle()
-    for f in files:
-        name = getattr(f, "name", str(f))
-        try:
-            df = _read_any_csv(f)
-        except Exception:  # noqa: BLE001
-            b.problems.append(f"{name}: 파일을 열지 못했어요. CSV(쉼표 구분)나 엑셀로 내보내 주세요.")
-            continue
-        table = guess_table(df)
-        if table is None:
-            b.problems.append(f"{name}: 어떤 리포트인지 알아보지 못했어요. 메타는 '일·광고 세트', 네이버는 '키워드별 일별'로 내보내 주세요.")
-            continue
-        t, problems = clean(df, table, name)
-        b.problems += problems
-        if t is not None:
-            if "mode" not in t.df:
-                t.df["mode"] = "real"
-            if table in b.tables:
-                b.tables[table].df = pd.concat([b.tables[table].df, t.df], ignore_index=True)
-            else:
-                b.tables[table] = t
-    return b
-
-
-def _read_any_csv(f) -> pd.DataFrame:
-    for enc in ("utf-8-sig", "cp949"):
-        try:
-            if hasattr(f, "seek"):
-                f.seek(0)
-            return pd.read_csv(f, encoding=enc)
-        except UnicodeDecodeError:
-            continue
-    raise ValueError("encoding")
-
-
 def demo() -> Bundle:
+    """가상 데이터 엑셀 (규칙 8개 정답 테스트용)."""
     return read_excel(DEMO_XLSX)

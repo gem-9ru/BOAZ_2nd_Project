@@ -16,8 +16,6 @@ MODEL = os.environ.get("COACH_COPY_MODEL", "claude-sonnet-5-5")
 MAX_TOKENS = 16000   # 생각(thinking)이 먼저 토큰을 쓰므로 넉넉히: 1024에서는 답이 중간에 잘려 문장 틀로 떨어졌다
 KEY_NAME = "ANTHROPIC_API_KEY"
 
-NAVER_HEADLINE_MAX = 15
-NAVER_TEXT_MIN, NAVER_TEXT_MAX = 20, 45
 META_HEADLINE_MAX = 40
 META_TEXT_MIN, META_TEXT_MAX = 10, 125
 
@@ -25,7 +23,6 @@ META_TEXT_MIN, META_TEXT_MAX = 10, 125
 BANNED = ["최저가", "최저", "1위", "1등", "최고", "최상", "최초", "국내 유일", "세계 유일", "유일", "넘버원",
           "no.1", "no 1", "100%", "무조건", "보장", "완치", "특효"]
 GENERIC_STRENGTH = "정성껏 만들었어요"
-NAVER_FILLERS = ["스토어에서 확인해 보세요", "지금 만나 보세요", "후기도 확인해 보세요"]
 _SAFE_CHARS = re.compile(r"[^0-9A-Za-z가-힣ㄱ-ㅎㅏ-ㅣ\s.,!?~%&()·\-+'\"]")
 
 Copy = Dict[str, str]
@@ -80,11 +77,10 @@ def _clip(text: str, limit: int) -> str:
     return cut.rstrip(" ,.·-")
 
 
-def check_copy(media: str, copy: Copy) -> List[str]:
-    """문구 하나의 문제 목록 (비어 있으면 통과). media: 'meta' | 'naver'."""
+def check_copy(copy: Copy) -> List[str]:
+    """메타 문구 하나의 문제 목록 (비어 있으면 통과)."""
     h, t = copy.get("headline", ""), copy.get("text", "")
-    lim = ((NAVER_HEADLINE_MAX, NAVER_TEXT_MIN, NAVER_TEXT_MAX) if media == "naver"
-           else (META_HEADLINE_MAX, META_TEXT_MIN, META_TEXT_MAX))
+    lim = (META_HEADLINE_MAX, META_TEXT_MIN, META_TEXT_MAX)
     problems = []
     if not h or len(h) > lim[0]:
         problems.append(f"제목은 1~{lim[0]}자여야 해요 (지금 {len(h)}자)")
@@ -98,36 +94,6 @@ def check_copy(media: str, copy: Copy) -> List[str]:
 
 
 # ── 문장 틀 (키 없을 때·보충용) ─────────────────────────────────
-
-def _fit_text(text: str, lo: int, hi: int, fillers: Sequence[str]) -> str:
-    """text를 lo~hi자로 맞춤: 길면 자르고, 짧으면 덧붙임."""
-    text = tidy(text)
-    for filler in fillers:
-        if len(text) >= lo:
-            break
-        text = f"{text.rstrip('.!? ')}. {filler}"
-    return _clip(text, hi)
-
-
-def _naver_templates(product: str, strengths: List[str]) -> List[Copy]:
-    out: List[Copy] = []
-    for i in range(max(len(strengths), 3) * 2):
-        s = strengths[i % len(strengths)]
-        shape = i % 3
-        if shape == 0:
-            head = product if len(product) <= NAVER_HEADLINE_MAX else s
-            body = f"{s}. {product} 지금 만나 보세요"
-        elif shape == 1:
-            head = f"{product} 보러 가기"
-            body = f"{product}, {s}"
-        else:
-            head = s
-            body = f"{product} 찾으세요? {s}"
-        head = _clip(tidy(head, 0), NAVER_HEADLINE_MAX) or _clip(product, NAVER_HEADLINE_MAX)
-        out.append({"headline": head,
-                    "text": _fit_text(body, NAVER_TEXT_MIN, NAVER_TEXT_MAX, NAVER_FILLERS)})
-    return out
-
 
 def _meta_templates(product: str, strengths: List[str]) -> List[Copy]:
     out: List[Copy] = []
@@ -199,7 +165,9 @@ def _read_key() -> Optional[str]:
 
 
 def make_client():
-    """키와 SDK가 있으면 클라이언트, 없으면 None (문장 틀로)."""
+    """키와 SDK가 있으면 클라이언트, 없거나 COACH_NO_LLM=1이면 None (문장 틀·정해진 설명으로)."""
+    if os.environ.get("COACH_NO_LLM") == "1":
+        return None
     key = _read_key()
     if not key:
         return None
@@ -210,15 +178,16 @@ def make_client():
         return None
 
 
-def _system_prompt(media: str, n: int) -> str:
-    if media == "naver":
-        spec = (f"제목은 {NAVER_HEADLINE_MAX}자 이하, 설명은 {NAVER_TEXT_MIN}~{NAVER_TEXT_MAX}자. "
-                "네이버 검색 결과에 보이는 광고라 검색한 사람의 질문에 답하는 말투로.")
-    else:
-        spec = (f"제목(headline)은 {META_HEADLINE_MAX}자 이하, 본문(text)은 60~{META_TEXT_MAX}자. "
-                "인스타그램·페이스북 피드에서 스크롤하다 멈추게 하는 광고다. 본문은 "
-                "① 손님이 공감할 상황이나 질문 한 문장 → ② 이 상품의 장점을 구체적으로 → ③ 부담 없는 행동 권유(예: 프로필 링크에서 보기) 순서로 쓴다. "
-                "제목은 본문을 반복하지 말고 장점 하나를 짧고 또렷하게.")
+def reply_text(resp) -> str:
+    """Claude 답에서 글(text) 부분만."""
+    return next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "")
+
+
+def _system_prompt(n: int) -> str:
+    spec = (f"제목(headline)은 {META_HEADLINE_MAX}자 이하, 본문(text)은 60~{META_TEXT_MAX}자. "
+            "인스타그램·페이스북 피드에서 스크롤하다 멈추게 하는 광고다. 본문은 "
+            "① 손님이 공감할 상황이나 질문 한 문장 → ② 이 상품의 장점을 구체적으로 → ③ 부담 없는 행동 권유(예: 프로필 링크에서 보기) 순서로 쓴다. "
+            "제목은 본문을 반복하지 말고 장점 하나를 짧고 또렷하게.")
     return ("너는 광고를 처음 하는 1인 가게 사장님을 돕는 한국어 광고 카피라이터야. 쉬운 말, 존댓말(해요체)로 쓴다.\n"
             f"{spec}\n"
             "'장점'은 사장님이 직접 고르거나 적은 사실이다. 문구의 내용은 이 장점에서만 가져온다.\n"
@@ -265,7 +234,7 @@ def _parse(text: str) -> List[Copy]:
     return out
 
 
-def _ask_claude(client, media: str, product: str, strengths: List[str], n: int,
+def _ask_claude(client, product: str, strengths: List[str], n: int,
                 segment: Optional[dict] = None, keywords: Optional[List[str]] = None) -> List[Copy]:
     """Claude에게 문구를 받음. 어떤 실패든 빈 목록 (오류 문구에 키가 섞이지 않게 내용은 버림)."""
     try:
@@ -277,11 +246,10 @@ def _ask_claude(client, media: str, product: str, strengths: List[str], n: int,
             if segment.get("peak_month"):
                 payload["시기"] = f"{segment['peak_month']}월"
         resp = client.messages.create(
-            model=MODEL, max_tokens=MAX_TOKENS, system=_system_prompt(media, n),
+            model=MODEL, max_tokens=MAX_TOKENS, system=_system_prompt(n),
             output_config={"effort": "medium", "format": {"type": "json_schema", "schema": COPY_SCHEMA}},
             messages=[{"role": "user", "content": json.dumps(payload, ensure_ascii=False)}])
-        text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "")
-        out = _parse(text)
+        out = _parse(reply_text(resp))
         if not out:
             log.warning("claude degraded err=empty stop=%s", getattr(resp, "stop_reason", None))
         return out
@@ -292,11 +260,7 @@ def _ask_claude(client, media: str, product: str, strengths: List[str], n: int,
 
 # ── 공개 함수 ─────────────────────────────────────────────
 
-def _copies(media: str, product: str, strengths: Strengths, n: int, client) -> List[Copy]:
-    return _copies_with_source(media, product, strengths, n, client)[0]
-
-
-def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, client,
+def _copies_with_source(product: str, strengths: Strengths, n: int, client,
                         segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None):
     """→ (문구 목록, Claude가 쓴 문구가 하나라도 들어갔는지)."""
     n = max(int(n), 0)
@@ -311,16 +275,16 @@ def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, 
         client = make_client()
     elif client is False:
         client = None
-    candidates: List[Copy] = _ask_claude(client, media, product, own, n, segment, kws) if client else []
-    templates = _naver_templates(product, pieces) if media == "naver" else _meta_templates(product, pieces)
-    seg_tpl = _segment_template(product, pieces[0], segment) if media == "meta" else None
+    candidates: List[Copy] = _ask_claude(client, product, own, n, segment, kws) if client else []
+    templates = _meta_templates(product, pieces)
+    seg_tpl = _segment_template(product, pieces[0], segment)
     if seg_tpl:
         templates.insert(0, seg_tpl)
     out: List[Copy] = []
     used_claude = False
     for i, c in enumerate(candidates + templates):
         key = (c["headline"], c["text"])
-        if not check_copy(media, c) and key not in {(o["headline"], o["text"]) for o in out}:
+        if not check_copy(c) and key not in {(o["headline"], o["text"]) for o in out}:
             out.append(c)
             used_claude = used_claude or i < len(candidates)
         if len(out) >= n:
@@ -331,17 +295,11 @@ def _copies_with_source(media: str, product: str, strengths: Strengths, n: int, 
 def meta_copies(product: str, strengths: Strengths, n: int = 3, client=None,
                 segment: Optional[dict] = None) -> List[Copy]:
     """메타 문구 n개 [{headline, text}]. client: None이면 키로 자동, False면 항상 문장 틀 (테스트·미리보기)."""
-    return _copies_with_source("meta", product, strengths, n, client, segment)[0]
+    return _copies_with_source(product, strengths, n, client, segment)[0]
 
 
 def meta_copies_with_source(product: str, strengths: Strengths, n: int = 3, client=None,
                             segment: Optional[dict] = None, keywords: Optional[Sequence[str]] = None):
     """meta_copies와 같고, Claude 문구가 쓰였는지도 돌려준다 (화면의 출처 표시용).
     keywords: 손님 검색어 (Claude에게는 장점과 따로 보냄)."""
-    return _copies_with_source("meta", product, strengths, n, client, segment, keywords)
-
-
-def naver_copies(product: str, strengths: Strengths, n: int = 3, client=None) -> List[Copy]:
-    """네이버 문구 n개 [{headline(≤15자), text(20~45자)}]."""
-    return _copies("naver", product, strengths, n, client)
-
+    return _copies_with_source(product, strengths, n, client, segment, keywords)

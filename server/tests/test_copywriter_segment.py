@@ -25,7 +25,7 @@ def test_basis_without_segment_and_no_duplicates():
 def test_gift_segment_template_first():
     cs, _ = copywriter.meta_copies_with_source("수제 쿠키", ["개별포장"], n=3, client=False, segment=GIFT)
     assert cs[0]["text"].startswith("고마운 분께")
-    assert all(not copywriter.check_copy("meta", c) for c in cs)
+    assert all(not copywriter.check_copy(c) for c in cs)
 
 
 def test_season_segment_template_first():
