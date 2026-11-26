@@ -11,13 +11,17 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("분석 페이지 주소 읽기", () => {
   it("reads code and step after # only on the analysis page", () => {
-    expect(parseAnalysisUrl("http://localhost:8000/analysis#s=K&code=AB12&step=AN-02")).toEqual({ code: "AB12", step: "AN-02", send: null });
-    expect(parseAnalysisUrl("http://localhost:8000/analysis")).toEqual({ code: null, step: null, send: null });
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#s=K&code=AB12&step=AN-02")).toEqual({ code: "AB12", step: "AN-02", send: null, budget: null });
+    expect(parseAnalysisUrl("http://localhost:8000/analysis")).toEqual({ code: null, step: null, send: null, budget: null });
     // 공개 주소 ad-report.gem-9ru.com (분석 페이지 전용 주소, 2026-11-26)
-    expect(parseAnalysisUrl("https://ad-report.gem-9ru.com/analysis#code=AB12&step=AN-01")).toEqual({ code: "AB12", step: "AN-01", send: null });
+    expect(parseAnalysisUrl("https://ad-report.gem-9ru.com/analysis#code=AB12&step=AN-01")).toEqual({ code: "AB12", step: "AN-01", send: null, budget: null });
     expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&step=AN-06&send=17")!.send).toBe("17");
     expect(parseAnalysisUrl("https://adsmanager.facebook.com/adsmanager#code=AB12")).toBeNull();
-    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=<x>&step=AN-09")).toEqual({ code: null, step: null, send: null });
+    // ③에서 고른 세트당 예산: 숫자·범위(1천 원~1천만 원)만 받는다
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&step=AN-06&send=17&budget=10000")!.budget).toBe(10000);
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&budget=12.5")!.budget).toBeNull();
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&budget=99999999999")!.budget).toBeNull();
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=<x>&step=AN-09")).toEqual({ code: null, step: null, send: null, budget: null });
   });
 });
 
@@ -42,7 +46,7 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     expect(await screen.findByText("AN-01 요약")).toBeTruthy();
     const log = screen.getByText("AN-01 요약").parentElement!;
     expect(log.children[0]!.textContent).toContain("11/17 안 보여졌어요");   // 알림 말풍선이 먼저
-    expect(screen.getByText(/분석 페이지 · ① 확인·결론/)).toBeTruthy();
+    expect(screen.getByText(/분석 페이지 · ① 결론/)).toBeTruthy();
     rerender(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-02", send: null }} dispatch={() => {}} />);
     expect(await screen.findByText("AN-02 요약")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "질문 하나" }));
@@ -60,6 +64,14 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     // 탭만 바꿔서는 뭉치가 나오지 않는다 → 패널의 [다음 테스트 세팅]을 누르라고 말한다
     expect(said.textContent).toContain("[다음 테스트 세팅]");
     expect(said.textContent).not.toContain("광고 관리자로 가면");
+  });
+
+  it("the budget picked on ③ (budget in the address) replaces the plan's per-set amount", async () => {
+    const plan = { code: "AB12", action: "한 번 더", change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로", note: "n", path: "광고 › 형식·미디어", per_set: 6000 }, summary: [], badge: null };
+    vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "124", budget: 10000 }} dispatch={dispatch} />);
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: { ...plan, change: { ...plan.change, per_set: 10000 } } }));
   });
 });
 

@@ -44,6 +44,7 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
           {watch.length ? <>
             <b className="mt-1.5 text-body">{watch.map((w) => w.title ?? w.path.split(" › ").pop()).join(" · ")}</b>
             <span>{watch.map((w) => w.short ?? w.text).join(" · ")}</span>
+            {(c.checklist?.length ?? 0) > 0 && <span className="text-caption text-soft">→ ③ 준비하기 체크리스트에 넣었어요</span>}
           </> : <span className="text-soft">이번엔 없어요</span>}
         </li>
       </ul>

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Character3D } from "../../lib/character3d/Character3D";
 import { bubbleSpot, gaitFor, handPoint, headingYaw, home, pointAngle, standSpot, travelAt, type Mode, type Point, type Side } from "../../lib/character3d/motion";
+import { groupOf } from "../../lib/guide";
 import type { GuideView } from "./guideRunner";
 import { isChoice, reveal } from "./locate";
 
@@ -147,6 +148,9 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
   const bubbleLeft = b.x, bubbleTop = b.y;
   const moving = mode === "walk" || mode === "run";
   // 첫 칸에서 아직 자동 진행을 안 켰으면: [자동 진행] 안내 한 줄 + 단추 강조 (2026-11-26 사용자: 처음엔 멈춘 채 시작)
+  // 사장님이 직접 할 차례 (사장님 칸·뭉치가 못 해서 기다림·게시): 꼬리표·테두리·주 버튼을 크게 (2026-11-26 사용자)
+  const publishTurn = view.waiting === "publish" || Boolean(view.publish);
+  const ownerTurn = Boolean(view.owner) || view.waiting === "owner" || publishTurn;
   const firstAsk = Boolean(onToggleAuto) && view.index === 0 && !view.auto && view.waiting !== "publish";
 
   return (
@@ -168,25 +172,33 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
       </div>
       {!leaving && (
         <div ref={bubbleEl} className="coach-bubble-wrap" style={{ left: bubbleLeft, top: bubbleTop, opacity: moving ? "var(--coach-moving-opacity)" : 1 }}>
-          <div className="coach-bubble">
+          <div className={ownerTurn ? "coach-bubble coach-bubble-owner" : "coach-bubble"}>
             {/* 화면 읽기: 바뀌는 안내만 알림 영역 (단추까지 넣으면 0.5초마다 다시 읽힐 수 있다) */}
+            {/* 꾸미기안_뭉치: 맨 위 칩('1 / 14 · 캠페인') + ✕ 닫기 */}
+            <div className="coach-hd">
+              <p className="coach-count">{Math.min(view.index + 1, view.total)} / {view.total}{groupOf(view.id) ? ` · ${groupOf(view.id)}` : ""}</p>
+              <button type="button" className="coach-close" onClick={() => setLeaving(true)} aria-label="안내 닫기">✕</button>
+            </div>
             <div role="status">
-              {view.owner && <p className="coach-owner">직접 눌러 주세요</p>}
-              <p className="coach-count">{Math.min(view.index + 1, view.total)} / {view.total}</p>
-              <p className="coach-text">{view.text}</p>
+              {ownerTurn && <p className="coach-owner"><strong>직접</strong> {publishTurn ? "게시해 주세요" : "눌러 주세요"}</p>}
+              <p className="coach-text">{markDirect(view.text)}</p>
             </div>
             {view.image && !view.found && <img src={browser.runtime.getURL(`/${view.image}` as never)} alt="이 칸이 있는 화면" className="coach-shot" />}
+            {view.total > 1 && view.total <= 30 && (
+              <div className="coach-dots" aria-hidden="true">
+                {Array.from({ length: view.total }, (_, i) => <i key={i} className={i <= view.index ? "on" : undefined} />)}
+              </div>
+            )}
             <div className="coach-actions">
-              <button type="button" onClick={onBack} disabled={view.index === 0}>이전 칸</button>
+              <button type="button" className="coach-ghost" onClick={onBack} disabled={view.index === 0} aria-label="이전 칸">◀</button>
               {/* [다음 칸]: 페이지에서 대신 고르기·넣기·누르기 (게시는 안 함). 직접 맞출 칸에선 [다 했어요].
                   게시 칸에선 [게시했어요]: 사장님이 직접 게시한 뒤 누르면 다음으로 (뭉치는 게시 버튼을 누르지 않음) */}
-              <button type="button" className="coach-primary" onClick={onDone}>
-                {view.waiting === "publish" || view.publish ? "게시했어요" : view.waiting === "owner" ? "다 했어요" : "다음 칸"}
+              <button type="button" className={ownerTurn ? "coach-primary coach-primary-owner" : "coach-primary"} onClick={onDone}>
+                {publishTurn ? "게시했어요" : view.waiting === "owner" ? "다 했어요" : "다음 칸"}
               </button>
               {onToggleAuto && view.waiting !== "publish" && (
-                <button type="button" onClick={onToggleAuto} aria-pressed={Boolean(view.auto)} className={firstAsk ? "coach-attn" : undefined}>{view.auto ? "멈추기" : "자동 진행"}</button>
+                <button type="button" onClick={onToggleAuto} aria-pressed={Boolean(view.auto)} className={firstAsk ? "coach-ghost coach-attn" : "coach-ghost"}>{view.auto ? "잠깐 멈추기" : "자동 진행"}</button>
               )}
-              <button type="button" onClick={() => setLeaving(true)} aria-label="안내 닫기">닫기</button>
             </div>
             {firstAsk && <p className="coach-note">[자동 진행]을 누르면 뭉치가 칸을 차례로 채워요. 게시는 하지 않아요.</p>}
             {view.publish && <p className="coach-note">캐릭터는 게시 버튼을 누르지 않아요.</p>}
@@ -196,4 +208,11 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
       )}
     </div>
   );
+}
+
+/** 말풍선 글 속 '직접'을 굵은 꼬리표로 (사장님이 해야 하는 일이 한눈에 보이게) */
+/** '직접'은 보라 꼬리표, 작은따옴표로 싼 값('트래픽')은 배 색 밑줄 (꾸미기안_뭉치 .card .tx b) */
+function markDirect(text: string) {
+  return text.split(/(직접|'[^']{1,40}')/).map((part, i) => (part === "직접" ? <strong key={i} className="coach-direct">직접</strong>
+    : /^'.+'$/.test(part) ? <b key={i} className="coach-val">{part}</b> : part));
 }

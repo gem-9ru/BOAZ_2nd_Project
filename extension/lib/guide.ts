@@ -171,3 +171,13 @@ export function shownDates(text: string): string {
 export function guideSignature(steps: { entry: { id: string } }[]): string {
   return steps.map((s) => s.entry.id).join("|");
 }
+
+/** 안내 목록 묶음 이름: 메타 화면 순서 (캠페인 → 광고 세트 → 광고) 그대로라 '지금 어디쯤'이 보인다 (꾸미기안_뭉치) */
+export function groupOf(id?: string): string | null {
+  if (!id) return null;
+  if (id.startsWith("meta.campaign")) return "캠페인";
+  if (id.startsWith("meta.adset")) return "광고 세트";
+  if (/^meta\.(ad|creative)\./.test(id)) return "광고";
+  return null;
+}
+

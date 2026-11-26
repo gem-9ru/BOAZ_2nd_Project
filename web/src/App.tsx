@@ -56,7 +56,28 @@ export default function App() {
     setError(null);
     try { setResult(await get()); setStep(0); setReached(0); window.scrollTo({ top: 0 }); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
-  function go(i: number) { setStep(i); setReached((r) => Math.max(r, i)); window.scrollTo({ top: 0 }); }
+  /** 단계 이동: 브라우저 기록에 한 칸 쌓아서 [뒤로]가 앞 단계로 오게 한다 (아래 popstate). */
+  function go(i: number) {
+    if (i !== step) window.history.pushState(null, "", window.location.href);   // 새 칸 → 아래 효과가 이 칸의 # 를 새 단계로 바꾼다
+    setStep(i); setReached((r) => Math.max(r, i)); window.scrollTo({ top: 0 });
+  }
+  // 브라우저 [뒤로]·[앞으로]: 주소 #의 step으로 단계를 맞춘다 (결과는 메모리에만 있어서 페이지를 떠나면 사라지므로)
+  useEffect(() => {
+    const onPop = () => {
+      const id = new URLSearchParams(window.location.hash.slice(1)).get("step");
+      const i = STEPS.findIndex((x) => x.id === id);
+      if (i >= 0) setStep(i);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+  // 결과가 있는 동안 페이지를 떠나려 하면 브라우저가 한 번 묻는다 (결과는 다시 볼 수 없어요)
+  useEffect(() => {
+    if (!result) return;
+    const ask = (e: BeforeUnloadEvent) => { e.preventDefault(); };
+    window.addEventListener("beforeunload", ask);
+    return () => window.removeEventListener("beforeunload", ask);
+  }, [result]);
   function showToast(t: string) { setToast(t); setTimeout(() => setToast(null), 3500); }
   // 옆의 광고 어시스턴트(확장 프로그램)가 읽는 자리: 주소 # 뒤 (서버로 가지 않음)
   useEffect(() => {
@@ -65,10 +86,11 @@ export default function App() {
     const next = `#${q.toString()}`;
     if (window.location.hash !== next) window.history.replaceState(null, "", next === "#" ? window.location.pathname : next);
   }, [result, step, settingsKey]);
-  /** AN-06 [확장 프로그램으로 보내기]: 옆 패널이 주소의 send를 보고 테스트안을 받는다. */
-  function sendToExtension() {
+  /** ③ [확장 프로그램으로 보내기]: 옆 패널이 주소의 send를 보고 테스트안을 받는다. 고른 세트당 예산도 같이 (budget). */
+  function sendToExtension(budget?: number) {
     const q = new URLSearchParams(window.location.hash.slice(1));
     q.set("send", String(Date.now()));
+    if (budget) q.set("budget", String(budget));
     window.history.replaceState(null, "", `#${q.toString()}`);
   }
 

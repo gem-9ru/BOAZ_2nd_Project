@@ -25,8 +25,27 @@
 .coach-ring-focus { box-shadow: 0 0 0 9999px color-mix(in srgb, var(--coach-scrim) 55%, transparent); }
 .coach-keep { position: fixed; z-index: 2147483646; margin: 0; pointer-events: none; font-family: var(--coach-font-family); font-size: var(--coach-small-font-size); font-weight: 700;
   background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-radius: var(--coach-button-radius); padding: 4px 10px; }
-/* 사장님 차례: 말풍선 맨 위 꼬리표 */
-.coach-owner { display: inline-block; margin: 0 0 6px; font-size: var(--coach-small-font-size); font-weight: 700; background: var(--coach-primary-bg); color: var(--coach-primary-fg);
-  border-radius: var(--coach-button-radius); padding: 2px 10px; }
+/* 사장님 차례: 말풍선 맨 위 큰 꼬리표 + 두꺼운 테두리 + 한 줄 전체 주 버튼 (2026-11-26 사용자: 직접 할 일은 크게, 눈에 띄게) */
+.coach-owner { display: inline-block; margin: 0 0 8px; font-size: var(--coach-button-font-size); font-weight: 700; background: var(--coach-primary-bg); color: var(--coach-primary-fg);
+  border-radius: var(--coach-button-radius); padding: 4px 14px; }
+.coach-owner strong { font-size: var(--coach-owner-font-size); font-weight: 800; }
+.coach-bubble-owner { border-width: var(--coach-owner-border-width); border-color: var(--coach-primary-bg); }
+.coach-direct { font-weight: 800; background: var(--coach-primary-bg); color: var(--coach-primary-fg); border-radius: 6px; padding: 0 4px; }
+.coach-actions .coach-primary-owner { order: -1; flex-basis: 100%; font-size: var(--coach-owner-button-font-size); min-height: var(--coach-owner-button-min-height); }
 /* 첫 말풍선의 [자동 진행]: 테두리를 두껍게 */
 .coach-actions .coach-attn { border: var(--coach-focus-width) solid var(--coach-primary-bg); font-weight: 700; }
+
+/* 꾸미기안_뭉치 ② 안내 말풍선: 칩 + ✕ · 값 밑줄 · 진행 점 · ◀ / 다 했어요 / 잠깐 멈추기 */
+.coach-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.coach-hd .coach-count { margin: 0; background: var(--coach-chip-bg); color: var(--coach-chip-fg); border-radius: var(--coach-button-radius); padding: 3px 8px; }
+.coach-close { margin-left: auto; width: 28px; height: 28px; border-radius: var(--coach-button-radius); border: 0; display: grid; place-items: center; cursor: pointer;
+  font: inherit; font-size: var(--coach-small-font-size); background: var(--coach-ghost-bg); color: var(--coach-ghost-fg); }
+.coach-close:focus-visible { outline: var(--coach-focus-width) solid var(--coach-focus); outline-offset: var(--coach-focus-offset); }
+.coach-text { font-weight: 600; }
+.coach-val { color: var(--coach-chip-fg); background: linear-gradient(transparent 62%, var(--coach-mark-bg) 62%); }
+.coach-dots { display: flex; gap: 4px; margin: 0 0 var(--coach-gap); }
+.coach-dots i { flex: 1; height: 5px; border-radius: var(--coach-button-radius); background: var(--coach-dot); }
+.coach-dots i.on { background: var(--coach-dot-on); }
+.coach-actions { align-items: center; }
+.coach-actions .coach-primary { flex: 1; box-shadow: var(--coach-primary-shadow); }
+.coach-actions .coach-ghost { background: var(--coach-ghost-bg); color: var(--coach-ghost-fg); border-color: transparent; }

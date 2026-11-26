@@ -41,11 +41,13 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
   useEffect(() => {
     if (!code || !tab.send || sent.current === tab.send) return;
     sent.current = tab.send;
-    fetchPlan(code).then((p) => {
+    fetchPlan(code).then((got) => {
+      // 사장님이 ③에서 고른 예산이 있으면 그 금액으로 (서버 계획은 기본값 per_set)
+      const p = tab.budget ? { ...got, change: { ...got.change, per_set: tab.budget } } : got;
       dispatch({ type: "planLoaded", plan: p });
       setBubbles((b) => [...b, { from: "assistant", text: `테스트안을 받았어요 (${p.change.path ?? p.change.label}). 이 탭을 떠나면 이 패널에 [다음 테스트 세팅]이 보여요. 누르면 광고 관리자에서 그 칸을 짚어 드려요. 게시는 사장님이 직접 해요.` }]);
     }, (e: Error) => setBubbles((b) => [...b, { from: "assistant", text: e.message }]));
-  }, [code, tab.send, dispatch]);
+  }, [code, tab.send, tab.budget, dispatch]);
 
   useEffect(() => { end.current?.scrollIntoView?.({ block: "end" }); }, [bubbles]);
 

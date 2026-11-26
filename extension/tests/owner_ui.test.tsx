@@ -16,12 +16,23 @@ const base = { index: 0, total: 3, found: false, text: "여기" };
 
 describe("말풍선: 사장님 차례 표시", () => {
   it("사장님이 직접 할 칸이면 맨 위에 '직접 눌러 주세요' 꼬리표", () => {
-    render(<Character view={{ ...base, owner: true }} onDone={noop} onBack={noop} onClose={noop} />);
-    expect(screen.getByText("직접 눌러 주세요")).toBeTruthy();
+    const { container } = render(<Character view={{ ...base, owner: true, waiting: "owner", text: "사진을 직접 골라 주세요" }} onDone={noop} onBack={noop} onClose={noop} />);
+    const tag = container.querySelector(".coach-owner")!;
+    expect(tag.textContent).toBe("직접 눌러 주세요");
+    expect(tag.querySelector("strong")!.textContent).toBe("직접");                       // '직접'만 크게
+    expect(container.querySelector(".coach-bubble-owner")).not.toBeNull();               // 두꺼운 테두리
+    expect(container.querySelector(".coach-text .coach-direct")!.textContent).toBe("직접");   // 글 속 '직접'도 꼬리표
+    expect(screen.getByRole("button", { name: "다 했어요" }).className).toContain("coach-primary-owner");   // 큰 주 버튼
+  });
+  it("게시 칸이면 '직접 게시해 주세요' + [게시했어요]도 크게", () => {
+    const { container } = render(<Character view={{ ...base, publish: true }} onDone={noop} onBack={noop} onClose={noop} />);
+    expect(container.querySelector(".coach-owner")!.textContent).toBe("직접 게시해 주세요");
+    expect(screen.getByRole("button", { name: "게시했어요" }).className).toContain("coach-primary-owner");
   });
   it("뭉치가 하는 칸이면 꼬리표 없음", () => {
-    render(<Character view={base} onDone={noop} onBack={noop} onClose={noop} />);
-    expect(screen.queryByText("직접 눌러 주세요")).toBeNull();
+    const { container } = render(<Character view={base} onDone={noop} onBack={noop} onClose={noop} />);
+    expect(container.querySelector(".coach-owner")).toBeNull();
+    expect(screen.getByRole("button", { name: "다음 칸" }).className).not.toContain("coach-primary-owner");
   });
   it("Guide: auto owner 칸은 자동 진행이 꺼져 있어도 owner로 알린다", () => {
     document.documentElement.lang = "ko";

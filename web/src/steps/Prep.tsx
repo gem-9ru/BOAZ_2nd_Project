@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { simulate, type Result } from "../api";
+import { simulate, type Result, type Simulation } from "../api";
 import { Simulator } from "../blocks/Simulator";
-import { BigButton, Fold, Folds, Ghost, md, TestTag } from "../ui";
+import { AlertMark, BigButton, Fold, Folds, Ghost, md, TestTag, won } from "../ui";
 import { Mungchi } from "../ui/Mungchi";
 import type { Result as R } from "../api";
 import { AN05 } from "./AN05";
@@ -10,7 +10,7 @@ import { oneLine } from "./Conclusion";
 
 /** ③ 준비하기 (축소안 v5 · 기존 AN-05 + AN-06 합침): 지금 세트 vs 새 세트 → 예산(결정용 질문) → 체크리스트 → 보내기.
  *  예산은 '이 예산이면 판단할 수 있을까?' 한 줄로 답하고, 방문자 수·Test & Roll·예측 검증은 접기. 이 페이지는 결제·게시를 하지 않는다. */
-export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (msg: string) => void; onSend?: () => void; onReload?: () => void }) {
+export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (msg: string) => void; onSend?: (budget: number) => void; onReload?: () => void }) {
   const c = r.matrix.change ?? r.next.change;
   const keep = r.matrix.keep[0];
   const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
@@ -18,14 +18,19 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
   const start = c.per_set ?? 5000;
   const options = [...new Set([5000, start, 10000])].sort((a, b) => a - b);
   const [budget, setBudget] = useState(start);
-  const chance = useJudge(r, options, days);
+  const sims = useSims(r, options, days);
+  const chance = Object.fromEntries(Object.entries(sims).filter(([, x]) => x.judge != null).map(([b, x]) => [b, x.judge!])) as Record<number, number>;
+  const low = sims[budget]?.below_daily_min ? sims[budget] : null;   // 하루 금액이 메타 하루 최소보다 적음 → 광고가 안 나갈 수 있어요
+  const floor = sims[start]?.daily_min;
   const bt = r.backtest;
 
   // 옆 광고 어시스턴트(확장 프로그램 패널)로 보낸다. 패널이 안 열려 있을 때를 위해 코드도 복사해 둔다.
+  // 보낸 결과는 버튼 아래에 남긴다 (코드는 패널이 안 열려 있을 때 꼭 필요해서 잠깐 뜨는 알림에만 두지 않음)
+  const [sent, setSent] = useState<{ budget: number; copied: boolean } | null>(null);
   function send() {
-    onSend?.();
-    const done = `오른쪽 광고 어시스턴트로 보냈어요. 패널이 안 열려 있으면 확장 프로그램 ③ 분석에 코드 ${r.code}를 넣어 주세요`;
-    navigator.clipboard.writeText(r.code).then(() => onCopied(`${done} (코드 복사됨)`), () => onCopied(done));
+    onSend?.(budget);
+    navigator.clipboard.writeText(r.code).then(() => setSent({ budget, copied: true }), () => setSent({ budget, copied: false }));
+    onCopied("오른쪽 광고 어시스턴트로 보냈어요");
   }
   function download() {
     const blob = new Blob([JSON.stringify({ code: r.code, change: c, budget_per_set: budget, keep: r.matrix.keep, dont: r.matrix.dont, checklist }, null, 2)], { type: "application/json" });
@@ -55,10 +60,20 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         <div role="radiogroup" aria-label="세트당 총액" className="flex flex-wrap gap-2">
           {options.map((b) => (
             <label key={b} className={`cursor-pointer rounded-badge border-2 px-4.5 py-2 text-label font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${budget === b ? "border-accent bg-accent text-on-accent shadow-press" : "border-line bg-surface text-soft"}`}>
-              <input type="radio" name="budget" className="sr-only" checked={budget === b} onChange={() => setBudget(b)} />{plain(b)}
+              <input type="radio" name="budget" className="sr-only" checked={budget === b} onChange={() => setBudget(b)} />
+              {sims[b]?.below_daily_min && <span aria-hidden="true" className="mr-1">▲</span>}{plain(b)}
+              {sims[b]?.below_daily_min && <span className="sr-only"> (하루 최소보다 적어요)</span>}
             </label>
           ))}
         </div>
+        {/* 기본값의 근거 (UX 원칙 §7: 기본값과 권장안에 근거가 같이 보이는가) */}
+        {floor && <p className="text-caption text-soft">기본 {plain(start)} = 하루 약 {won(Math.round(start / days / 10) * 10)} × {days}일 · 메타 하루 최소(약 {won(floor)})를 넘는 가장 작은 금액이에요</p>}
+        {low && (
+          <p role="status" className="flex items-start gap-2 rounded-button border-2 border-warn-mark/40 bg-warn-bg px-4 py-2.5 text-label text-warn">
+            <AlertMark level="warn" />
+            <span>하루 {won(Math.round(budget / days / 10) * 10)}은 메타 하루 최소(약 {won(low.daily_min)})보다 적어요 → 광고가 안 나갈 수 있어요. {plain(start)} 이상을 골라 주세요.</span>
+          </p>
+        )}
         <p className="pt-2 text-lead font-bold" aria-live="polite">이 예산이면 {days}일 뒤 결과를 판단할 수 있을 가능성 <span className="text-number font-extrabold text-accent">{chanceText(chance[budget])}</span></p>
         <div aria-hidden="true" className="h-4 overflow-hidden rounded-badge bg-sunk">
           <i className="block h-full rounded-badge bg-linear-90 from-accent-line to-accent transition-[width] duration-(--motion-expand)" style={{ width: `${Math.round((chance[budget] ?? 0) * 100)}%` }} />
@@ -93,6 +108,13 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         <Ghost onClick={download}>계획 파일 내려받기</Ghost>
         <Mungchi pose="run" className="ml-auto w-20 max-sm:hidden" />
       </div>
+      {sent && (
+        <p role="status" className="-mt-2 flex flex-wrap items-center gap-2 rounded-button border-2 border-ok/30 bg-ok-bg px-4 py-2.5 text-label">
+          <AlertMark level="ok" />
+          <span>보냈어요 · 세트당 {plain(sent.budget)} · 코드 <b className="tracking-widest tabular-nums">{r.code}</b>{sent.copied ? " (복사됨)" : ""}</span>
+          <span className="text-soft">패널이 안 열려 있으면 확장 프로그램 ③ 분석에 이 코드를 넣어 주세요</span>
+        </p>
+      )}
 
       <Folds label="근거와 결과 PDF">
         <Fold label="근거 · 메타 공식 신호 · 우리 실측 2건 · 논문 · 가상 케이스 · 한계" preview="세트 복제 시 겹쳐 보일 수 있음 등"><Evidence r={r} /></Fold>
@@ -117,17 +139,18 @@ function chanceText(p: number | undefined) {
   return p == null ? "…" : p >= 0.995 ? "거의 확실" : `약 ${Math.round(p * 10) * 10}%`;
 }
 
-/** 예산 칩마다 서버 /simulate의 judge(두 세트 합쳐 클릭 30번 넘을 가능성)를 받아 둔다. 새 세트도 지금 이긴 세트처럼 반응한다고 가정. */
-function useJudge(r: Result, budgets: number[], days: number) {
-  const [out, setOut] = useState<Record<number, number>>({});
+/** 예산 칩마다 서버 /simulate를 받아 둔다: judge(두 세트 합쳐 클릭 30번 넘을 가능성) · below_daily_min(하루 최소 미만).
+ *  새 세트도 지금 이긴 세트처럼 반응한다고 가정. */
+function useSims(r: Result, budgets: number[], days: number) {
+  const [out, setOut] = useState<Record<number, Simulation>>({});
   const arms = r.summary.arms;
   const arm = arms[r.verdict?.badge.better === "A" || arms.length < 2 ? 0 : 1];
   const key = budgets.join(",");
   useEffect(() => {
     if (!arm) return;
     let live = true;
-    Promise.all(budgets.map((b) => simulate(r.code, arm.name, b, 100000, days).then((s) => [b, s.judge ?? null] as const)))
-      .then((xs) => { if (live) setOut(Object.fromEntries(xs.filter((x): x is readonly [number, number] => x[1] != null))); }, () => {});
+    Promise.all(budgets.map((b) => simulate(r.code, arm.name, b, 100000, days).then((s) => [b, s] as const)))
+      .then((xs) => { if (live) setOut(Object.fromEntries(xs)); }, () => {});
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r.code, arm?.name, key, days]);

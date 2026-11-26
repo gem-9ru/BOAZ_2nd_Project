@@ -260,8 +260,8 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(now).toHaveLength(1);
     expect(now[0]!.textContent).toContain("'복제'");   // 첫 칸은 지난 세트 복제 (사장님이 직접), 그다음 바꿀 칸
     expect(now[0]!.textContent).toContain("지금");
-    expect(items.find((li) => li.textContent!.includes("세로 소재"))!.className).not.toContain("line-through");
-    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(11);   // 나머지 11칸은 끝난 칸, 예산 공유 끄기·금액·날짜·돈 확인·게시 확인이 남음
+    expect(items.find((li) => li.textContent!.includes("세로 소재"))!.className).not.toContain("opacity-55");
+    expect(items.filter((li) => li.className.includes("opacity-55"))).toHaveLength(11);   // 나머지 11칸은 끝난 칸, 예산 공유 끄기·금액·날짜·돈 확인·게시 확인이 남음
     const intro = screen.getByText(/다음 테스트 세팅이에요/).textContent!;
     expect(intro).toMatch(/지난 광고 세트를 복제해 새 세트 2개/);
     expect(intro).toContain("바꿀 세트에서 '칸 meta.ad.media' 칸만 바꿔요");

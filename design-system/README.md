@@ -243,7 +243,7 @@ component (부품, 예: button.bg, coach.ring)
 | 보조 글자 (크림 바탕) | #6B6590 | #FFFAF2 | 5.20:1 | 4.5:1 | 통과 |
 | 말풍선 단계 칩 | #5B3FD9 | #EFEBFF | 5.70:1 | 4.5:1 | 통과 |
 | 말풍선 작은 보조 버튼 | #6B6590 | #F3F0FB | 4.80:1 | 4.5:1 | 통과 |
-| 말풍선 안 굵은 값 | #5B3FD9 | #EFEBFF | 5.70:1 | 4.5:1 | 통과 |
+| 말풍선 안 굵은 값 | #5B3FD9 | #FFFFFF | 6.65:1 | 4.5:1 | 통과 |
 | 패널 머리 흰 글자 (그라데이션 밝은 쪽) | #FFFFFF | #6A4FE6 | 5.42:1 | 4.5:1 | 통과 |
 | 패널 머리 흰 글자 (그라데이션 어두운 쪽) | #FFFFFF | #4A2FC4 | 8.42:1 | 4.5:1 | 통과 |
 | 초점 링·현재 단계 테두리 | #5B3FD9 | #FFFFFF | 6.65:1 | 3:1 | 통과 |
@@ -299,7 +299,7 @@ ui-ux-pro-max 기준으로 다시 보고 빈 곳을 채웠어요. 색 값은 하
 - 그림자:
   - 토스트 → `shadow-float`
   - `PlanStep` sticky 칸 → `shadow-raised`
-  - 오버레이 말풍선 → `--coach-shadow`. `coach.bubble-shadow` 색 토큰 대신 `coach.shadow`가 `elevation.float`를 써요
+  - 오버레이 말풍선 → `--coach-shadow` = `primitive.shadow.bubble` (`0 10px 28px` 검정 28%). 바탕은 흰색(`coach.bubble-bg` = `tone.surface`), 테두리는 옅은 보라(`coach.bubble-border` = `tone.accent-line`): 메타 흰 화면 위에서 그림자로 떠 보이고, 보라 테두리로 우리 안내임을 알게 해요 (꾸미기안_뭉치, 사용자 확인 2026-11-27)
 
 ## 꾸미기안_뭉치 2026-11-26 반영
 

@@ -1,16 +1,12 @@
 import type { ReactNode } from "react";
+import wave from "../../../assets/mungchi/wave.png";
 
-/** 광고 어시스턴트가 하는 말 한 덩어리: 작은 캐릭터 + 글. 말풍선 상자 없이 글만 둔다. */
+/** 광고 어시스턴트가 하는 말 한 덩어리: 손 흔드는 뭉치 + 흰 말풍선 (꾸미기안_뭉치 .say). 그림은 장식이라 읽지 않는다. */
 export function Coach({ children }: { children: ReactNode }) {
   return (
-    <div className="flex gap-3 items-start">
-      <span aria-hidden className="mt-0.5 size-7 shrink-0 rounded-badge bg-accent grid place-items-center">
-        <span className="flex gap-1">
-          <i className="block size-1.5 rounded-badge bg-on-accent" />
-          <i className="block size-1.5 rounded-badge bg-on-accent" />
-        </span>
-      </span>
-      <div className="text-body leading-relaxed">{children}</div>
+    <div className="flex items-end gap-2.5">
+      <img src={wave} alt="" aria-hidden="true" draggable={false} className="w-14 shrink-0 select-none" />
+      <div className="rounded-card rounded-bl-mark border-2 border-line bg-paper px-3.5 py-3 text-label leading-relaxed">{children}</div>
     </div>
   );
 }
@@ -22,7 +18,7 @@ export function PrimaryButton(props: { children: ReactNode; onClick?: () => void
       type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled || props.busy}
-      className="w-full rounded-button bg-accent text-on-accent py-3 text-body font-semibold transition-colors hover:bg-accent-ink active:bg-accent-ink disabled:opacity-(--state-disabled-opacity) disabled:hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="w-full min-h-12 rounded-button bg-accent text-on-accent py-3 text-body font-bold shadow-press transition-colors hover:bg-accent-ink active:translate-y-0.5 active:shadow-none disabled:opacity-(--state-disabled-opacity) disabled:shadow-none disabled:hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {props.busy ? "잠시만요…" : props.children}
     </button>

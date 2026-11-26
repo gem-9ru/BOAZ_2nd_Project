@@ -1,6 +1,6 @@
 // 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
 import type { GuideStepItem } from "../../lib/guide";
-import { checkLocation, moneyProblems, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace, currentAdsetId } from "./actions";
+import { checkLocation, moneyProblems, UNSEEN, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace, currentAdsetId } from "./actions";
 import { shownDates, type Level, type MoneyKind } from "../../lib/guide";
 import { currentLevel, goToLevel, hasValue, openDialog, isChecked, isChoice, isKorean, isPublishLike, isTextField, locateWith, mainScroller, typeInto } from "./locate";
 
@@ -12,6 +12,7 @@ const MONEY_FAIL: Record<MoneyKind, string> = {
   lifetimeBudget: "총예산을 넣지 못했어요 → '예산 및 일정'에서 종류를 '총예산'으로 고르고 금액을 직접 넣어 주세요",
   moneyCheck: "돈 설정을 확인하지 못했어요",
 };
+const SHARE_UNSEEN = `'예산 일부를 다른 광고 세트와 공유하기'가 꺼져 있는지 확인해 주세요 (켜져 있으면 한 세트가 정한 돈보다 더 쓸 수 있어요)${UNSEEN}`;
 const LANGUAGE_TEXT = "화면 언어를 한국어로 바꿔 주세요. (메뉴 › 설정 › 언어) 바꾼 뒤 '다음 칸'을 눌러 주세요.";
 
 export interface GuideView {
@@ -31,6 +32,8 @@ export interface GuideView {
   waiting?: "owner" | "publish";
   /** 사장님 차례 (직접 할 칸·사장님 단계·뭉치가 못 해서 넘긴 칸): 말풍선 맨 위에 '직접 눌러 주세요' */
   owner?: boolean;
+  /** 지금 칸 id (말풍선 칩의 '캠페인 · 광고 세트 · 광고' 묶음 이름용) */
+  id?: string;
 }
 
 // 사장님이 눈으로 따라올 수 있게 천천히 (2026-11-25 요청): 뭉치가 걸어가 가리키고, 말풍선을 읽을 시간을 둔다
@@ -76,8 +79,11 @@ export class Guide {
   private hintPresses = 0;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
   /** 찾는 칸이 열린 창 뒤에 가려져 있음 (창을 먼저 마쳐야 함) */
   private behindDialog = false;
-  /** 돈 확인을 통과한 광고 세트 id (다음 테스트의 두 세트가 같은 세트를 두 번 읽지 않게) */
-  private checkedSets: string[] = [];
+  /** 돈 확인을 통과한 광고 세트 id → 통과한 돈 확인 칸 번호 (다음 테스트의 두 세트가 같은 세트를 두 번 읽지 않게).
+   *  같은 칸으로 [이전 칸] 뒤 돌아와 다시 확인하는 것은 막지 않는다 (화면 검토 14) */
+  private checkedSets = new Map<string, number>();
+  /** 이 칸 돈 확인이 '칸을 못 찾음'만으로 멈췄음 → 다음 [다 했어요]는 사장님 확인으로 보고 넘긴다 */
+  private unseenAt = -1;
   /** kill() 뒤: 어떤 동작도 하지 않는다 */
   private dead = false;
   private dialogWait = false;   // 칸이 창 뒤라서 기다리는 중 (창이 닫히면 저절로 풀린다)
@@ -119,7 +125,7 @@ export class Guide {
     const item = this.steps[this.index];
     const ownerTurn = Boolean(item && !item.entry.publish && this.languageOk
       && (item.entry.auto === "owner" || this.waiting === "owner" || (item.entry.stages && item.entry.stages[this.stage]?.by === "owner")));
-    const v = { ...this.baseView(), ...(ownerTurn ? { owner: true } : {}) };
+    const v = { ...this.baseView(), ...(ownerTurn ? { owner: true } : {}), ...(item ? { id: item.entry.id } : {}) };
     if (this.money && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
       text: `▲ 돈 확인: ${this.money}. 고친 뒤 '다 했어요'를 누르면 다시 확인할게요 (맞을 때만 넘어가요).` };
     if (this.pasteAsk && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
@@ -473,17 +479,23 @@ export class Guide {
   private checkMoney(kind: MoneyKind, value: string): void {
     if (this.busy) return;
     const at = this.index;
+    // 사장님이 멈춘 말풍선을 보고 [다 했어요]를 다시 눌렀을 때만 (자동 진행은 기다리는 동안 부르지 않는다)
+    const pressedAgain = this.unseenAt === at && this.waiting === "owner";
     this.busy = true;
     this.waiting = undefined;
     const set = kind === "moneyCheck" ? currentAdsetId(this.doc) : null;
-    const run: Promise<string[]> = kind === "moneyCheck" && set && this.checkedSets.includes(set)
+    const other = set !== null && this.checkedSets.has(set) && this.checkedSets.get(set) !== at;
+    const run: Promise<string[]> = other
       ? Promise.resolve(["아까 확인한 세트예요 → 복제한 다른 세트('그대로' 세트)를 열고 '다 했어요'를 눌러 주세요"])
       : kind === "moneyCheck" ? moneyProblems(this.doc, value)
-      : (kind === "campaignBudget" ? useAdsetBudget(this.doc) : setLifetimeBudget(this.doc, value)).then((ok) => (ok ? [] : [MONEY_FAIL[kind]]));
+      : kind === "campaignBudget" ? useAdsetBudget(this.doc).then((ok) => (ok === true ? [] : ok === "unseen" ? [SHARE_UNSEEN] : [MONEY_FAIL[kind]]))
+      : setLifetimeBudget(this.doc, value).then((ok) => (ok ? [] : [MONEY_FAIL[kind]]));
     void run.then((problems) => {
       this.busy = false;
       if (this.index !== at) return;
-      if (!problems.length) { if (set) this.checkedSets.push(set); this.money = null; return this.advance(); }
+      const onlyUnseen = problems.length > 0 && problems.every((p) => p.endsWith(UNSEEN));
+      if (!problems.length || (onlyUnseen && pressedAgain)) { if (set) this.checkedSets.set(set, at); this.money = null; return this.advance(); }
+      this.unseenAt = onlyUnseen ? at : -1;
       this.money = problems.join(" · ");
       this.waiting = "owner";
     }, () => { this.busy = false; if (this.index === at) { this.money = MONEY_FAIL[kind]; this.waiting = "owner"; } });
@@ -553,6 +565,7 @@ export class Guide {
     this.hintWait = false;
     this.hintDone = 0;
     this.money = null;
+    this.unseenAt = -1;
     this.resetStage();
     this.index = index;
     this.tries = 0;

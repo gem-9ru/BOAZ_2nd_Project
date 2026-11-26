@@ -59,7 +59,19 @@
    "text": "화면에서 '특별 광고 카테고리' 칸을 찾아 주세요"
   },
   "auto": "skip",
-  "level": "campaign"
+  "level": "campaign",
+  "variants": [
+   {
+    "when": {
+     "field": "meta.campaign.special_category",
+     "match": "^네"
+    },
+    "set": {
+     "auto": "owner",
+     "say": "특별 광고 카테고리예요. ② 세팅에서 '네'라고 하셨어요 → 여기서 해당 카테고리(금융·고용·주택·사회문제·선거·정치)를 직접 골라 주세요. 사회문제·선거·정치는 광고주 인증도 필요해요."
+    }
+   }
+  ]
  },
  {
   "id": "meta.campaign.budget_strategy",

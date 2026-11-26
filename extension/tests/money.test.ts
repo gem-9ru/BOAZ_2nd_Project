@@ -231,7 +231,7 @@ describe("감사 1·2: 예산 공유 칸·두 세트 돈 확인 (2026-11-26)", (
   it("예산 공유 칸을 못 찾으면 '껐다'고 넘어가지 않는다 (메타가 아직 안 그렸을 수 있음)", async () => {
     campaign(false);
     document.querySelector("input[type=checkbox]")!.remove();
-    expect(await useAdsetBudget(document, fast)).toBe(false);
+    expect(await useAdsetBudget(document, fast)).toBe("unseen");   // '껐다'(true)가 아니라 '못 봄' → 사장님 확인
   });
 
   it("두 세트 돈 확인: 두 번째 확인이 첫 번째와 같은 세트(주소의 광고 세트 id)면 통과하지 않는다", async () => {

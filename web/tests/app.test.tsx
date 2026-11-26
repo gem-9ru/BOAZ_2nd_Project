@@ -175,6 +175,20 @@ describe("① 결론", () => {
     expect((screen.getByRole("button", { name: "왜 그런지 보기 ▶" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
+  it("browser [뒤로] goes to the previous step instead of leaving the result", async () => {
+    show();
+    await click("왜 그런지 보기 ▶");
+    await h1("왜 이 칸이에요?");
+    window.history.replaceState(null, "", window.location.pathname + "#code=" + oven.code + "&step=AN-01");
+    fireEvent.popState(window);
+    expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
+  });
+
+  it("the 다시 보기 card says where the to-do went", async () => {
+    show();
+    expect(await screen.findByText("→ ③ 준비하기 체크리스트에 넣었어요")).toBeTruthy();
+  });
+
   it("[다른 파일 올리기] asks first, because the result would be lost", async () => {
     show();
     await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요");
@@ -268,7 +282,7 @@ describe("③ 준비하기", () => {
     const answer = () => screen.getByText(/결과를 판단할 수 있을 가능성/).textContent;
     await waitFor(() => expect(answer()).toContain("약 90%"));
     expect(screen.getByText("5,000원 약 70% · 10,000원 거의 확실")).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "5,000원" }));
+    fireEvent.click(screen.getByRole("radio", { name: /5,000원/ }));
     expect(answer()).toContain("약 70%");
     expect(screen.getByText(/성공 확률 아님/)).toBeTruthy();
     expect(screen.getByText(/금액을/).textContent).toContain("결제·게시를 하지 않아요");
@@ -299,6 +313,22 @@ describe("③ 준비하기", () => {
     fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기 →" }));
     expect(await screen.findByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy();
     expect(new URLSearchParams(window.location.hash.slice(1)).get("send")).toBeTruthy();
+  });
+
+  it("a chip under Meta's daily minimum gets ▲ and a warning; the default says why; send carries the picked budget and leaves the code on screen", async () => {
+    await prep();
+    expect(await screen.findByText(/기본 6,000원 = 하루 약 1,500원 × 4일 · 메타 하루 최소\(약 1,336원\)를 넘는 가장 작은 금액/)).toBeTruthy();
+    expect(screen.getByRole("radio", { name: "5,000원 (하루 최소보다 적어요)" })).toBeTruthy();   // 5,000원 칩에만
+    expect(screen.getByRole("radio", { name: "6,000원" })).toBeTruthy();
+    expect(screen.queryByText(/광고가 안 나갈 수 있어요/)).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: /5,000원/ }));
+    expect(screen.getByText(/하루 1,250원은 메타 하루 최소\(약 1,336원\)보다 적어요 → 광고가 안 나갈 수 있어요\. 6,000원 이상을 골라 주세요/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "10,000원" }));
+    vi.stubGlobal("navigator", { clipboard: { writeText: () => Promise.resolve() } });
+    fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기 →" }));
+    expect(new URLSearchParams(window.location.hash.slice(1)).get("budget")).toBe("10000");
+    const line = await screen.findByText(/보냈어요 · 세트당 10,000원 · 코드/);
+    expect(line.textContent).toContain(oven.code);
   });
 
   it("evidence is one fold with the 5 tabs, including 6 virtual cases not used for the verdict", async () => {

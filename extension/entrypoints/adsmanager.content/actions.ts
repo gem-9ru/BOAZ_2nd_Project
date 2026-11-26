@@ -243,7 +243,7 @@ export function readBudget(doc: Document): { found: boolean; mode: "daily" | "li
 
 /** 캠페인 '예산 전략'을 '광고 세트 예산'으로 (캠페인 예산이면 광고 세트에 총예산 칸이 없고 메타가 캠페인 하루 예산으로 쓴다),
  *  '예산 공유(최대 20%)'는 끈다. 둘 다 정말 그렇게 됐는지 다시 읽어 본다. */
-export async function useAdsetBudget(doc: Document, pace: Pace = real): Promise<boolean> {
+export async function useAdsetBudget(doc: Document, pace: Pace = real): Promise<boolean | "unseen"> {
   const radio = byLabelledName(doc, "input[type=radio], [role=radio]", "광고 세트 예산");
   if (!radio) { note("adset budget radio not found"); return false; }
   if (!isChecked(radio)) { radio.click(); await pace.wait(800); }
@@ -262,7 +262,7 @@ export async function useAdsetBudget(doc: Document, pace: Pace = real): Promise<
   if (share()?.checked) { note("budget share did not turn off"); return false; }
   // 칸을 못 찾으면 꺼졌는지 알 수 없다 (메타는 화면 밖 구역을 안 그린다) → '껐다'고 넘어가지 않고 사장님께
   if (!share()) { reveal(now); await pace.wait(800); }
-  if (!share()) { note("budget share box not found"); return false; }
+  if (!share()) { note("budget share box not found"); return "unseen"; }   // 못 찾음 ≠ 켜져 있음 → 사장님이 보고 한 번 더 누르면 넘어간다
   return !share()!.checked;
 }
 
@@ -273,6 +273,9 @@ export function currentAdsetId(doc: Document): string | null {
 }
 
 const SHARE = "예산 일부를 다른 광고 세트와 공유하기";
+
+/** 돈 확인 문구 끝: 칸을 화면에서 못 찾아 '다르다'고 말할 수 없는 경우. 이것만 남으면 [다 했어요]를 두 번째 눌렀을 때 넘어간다 (화면 검토 13) */
+export const UNSEEN = " (화면에서 칸을 못 찾았어요 → 직접 확인하셨으면 '다 했어요'를 한 번 더 눌러 주세요)";
 
 /** 광고 세트 예산을 '총예산' + 금액으로. 목록을 열어 '총예산'을 고르고 금액을 넣은 뒤, 화면에서 다시 읽어 둘 다 맞을 때만 true. */
 export async function setLifetimeBudget(doc: Document, value: string, pace: Pace = real): Promise<boolean> {
@@ -327,12 +330,13 @@ export async function moneyProblems(doc: Document, value: string, pace: Pace = r
     out.push("광고 세트에 예산 칸이 없어요 → 캠페인 '예산 전략'을 '광고 세트 예산'으로 바꿔 주세요");
   } else {
     if (b.mode !== "lifetime") out.push(`예산 종류가 '${b.mode === "daily" ? "일일 예산" : textOf(b.combo) || "알 수 없음"}'이에요 → '총예산'으로 바꿔 주세요`);
-    if (want && b.amount === null) out.push(`금액을 읽지 못했어요 (비었거나 아직 화면에 안 그려짐) → '예산 및 일정'을 화면에 띄우고 ${won(want)}인지 확인해 주세요`);
+    if (want && b.amount === null) out.push(`금액을 읽지 못했어요 (비었거나 아직 화면에 안 그려짐) → '예산 및 일정'을 화면에 띄우고 ${won(want)}인지 확인해 주세요${UNSEEN}`);
     else if (want && b.amount !== want) out.push(`금액이 ${won(b.amount!)}이에요 → ${won(want)}으로 넣어 주세요`);
   }
   const end = endAnchor(doc);
   const endValue = end && end.on ? endBox(doc, end.anchor)?.value.trim() : "";
-  if (!endValue) out.push("종료 날짜가 없어요 → '종료 날짜 설정'을 켜고 날짜를 넣어 주세요 (없으면 끌 때까지 계속 나가요)");
+  if (!end) out.push(`종료 날짜 칸을 찾지 못했어요 → '예산 및 일정'에서 종료 날짜가 들어 있는지 확인해 주세요${UNSEEN}`);
+  else if (!endValue) out.push("종료 날짜가 없어요 → '종료 날짜 설정'을 켜고 날짜를 넣어 주세요 (없으면 끌 때까지 계속 나가요)");
   else if ((dateOf(endValue) ?? "9999") < isoDate(new Date())) out.push("종료 날짜가 이미 지났어요 → 오늘 이후 날짜로 바꿔 주세요");
   // 메타 자체 경고: '예산은 ₩40,080.00 이상이어야 하며, 그렇지 않으면 광고가 게재되지 않을 수 있습니다' (하루 최소 × 기간보다 적을 때)
   const low = Array.from(doc.querySelectorAll<HTMLElement>("body *")).map((e) => (e.children.length ? "" : textOf(e)))

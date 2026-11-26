@@ -64,29 +64,37 @@ export default function App() {
   const current = analysis ? 2 : STAGES.findIndex((st) => st.steps.includes(state.step));
 
   return (
-    <main className="min-h-screen p-4 flex flex-col gap-6">
-      <header className="flex items-center justify-between">
-        <div className="flex items-center gap-1.5">
-          <HomeSeat away={Boolean(state.guide?.away)} />
-          <h1 className="text-lead font-bold">광고 어시스턴트</h1>
+    <main className="min-h-screen flex flex-col gap-6 pb-4">
+      {/* 꾸미기안_뭉치: 보라 머리(아래만 둥글게) · 뭉치 얼굴(집) · 이름과 한 줄 소개 · 알약 모양 단계 */}
+      <header className="rounded-b-card bg-linear-135 from-accent to-accent-ink px-4 pt-4 pb-3.5 text-on-accent">
+        <div className="flex items-center gap-2.5">
+          <span className="grid size-12 shrink-0 place-items-center rounded-badge bg-belly ring-3 ring-on-accent/35">
+            <HomeSeat away={Boolean(state.guide?.away)} />
+          </span>
+          <div className="min-w-0">
+            <h1 className="text-title font-extrabold tracking-tight">광고 어시스턴트</h1>
+            <p className="text-small opacity-80">메타 광고, 한 칸씩 같이 채워요</p>
+          </div>
+          {state.step !== "find" && state.step !== "prep" && (
+            <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }}
+              className="ml-auto min-h-8 shrink-0 rounded-badge bg-on-accent/15 px-2.5 text-small font-semibold">
+              ↺ 처음부터
+            </button>
+          )}
         </div>
-        <ol className="flex gap-3 text-caption" aria-label="진행 단계">
+        <ol className="mt-4 flex rounded-badge bg-on-accent/15 p-1 text-caption" aria-label="진행 단계">
           {STAGES.map((st, i) => (
             <li
               key={st.label}
               aria-current={i === current ? "step" : undefined}
-              className={i === current ? "font-semibold text-accent-ink" : i < current ? "text-soft" : "text-soft opacity-(--state-disabled-opacity)"}
+              className={`flex-1 rounded-badge py-1.5 text-center font-semibold ${i === current ? "bg-paper text-accent" : i < current ? "opacity-95" : "opacity-75"}`}
             >
-              {"①②③"[i]} {st.label}
+              {i < current ? `✓ ${st.label}` : `${"①②③"[i]} ${st.label}`}
             </li>
           ))}
         </ol>
-        {state.step !== "find" && state.step !== "prep" && (
-          <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }} className="text-small text-soft underline">
-            처음부터
-          </button>
-        )}
       </header>
+      <div className="flex flex-col gap-6 px-4">
       {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} />}
       {!analysis && <>
       {state.guide && state.step !== "prep" && <GuideStep state={state} dispatch={dispatch} />}
@@ -104,6 +112,7 @@ export default function App() {
       )}
       {(state.step === "questions" || state.step === "prep") && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
       </>}
+      </div>
     </main>
   );
 }

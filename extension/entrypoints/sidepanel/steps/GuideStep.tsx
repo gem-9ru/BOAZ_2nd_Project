@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { nextTestSteps, stepsFor, type GuideMsg, type GuideStepItem, shownDates } from "../../../lib/guide";
+import { groupOf, nextTestSteps, stepsFor, type GuideMsg, type GuideStepItem, shownDates } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
 import { sendWithRetry } from "../../../lib/progress";
 import { Coach, PrimaryButton, WarnLine } from "../ui/Coach";
@@ -148,39 +148,46 @@ export default function GuideStep({ state, dispatch }: Props) {
     <section className="flex flex-col gap-5">
       <Coach>{intro}</Coach>
       {total > 0 && (
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-baseline justify-between text-caption">
-            <span className="font-semibold text-accent-ink">지금 칸</span>
-            <span className="tabular-nums text-soft">{Math.min(index + 1, total)} / {total}</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-baseline justify-between text-caption font-bold">
+            <span>지금 채우는 칸</span>
+            <span className="tabular-nums font-semibold text-soft">{Math.min(index + 1, total)} / {total}</span>
           </div>
+          {/* 진행 막대: 보라로 채우고 지금 자리에 뭉치 배 색 점 (꾸미기안_뭉치 .prog) */}
           <div role="progressbar" aria-label="세팅 진행" aria-valuemin={0} aria-valuemax={total} aria-valuenow={index}
-            className="h-2 overflow-hidden rounded-badge bg-sunk">
-            <div className="h-full rounded-badge bg-accent transition-[width]" style={{ width: `${(index / total) * 100}%` }} />
+            className="relative h-2.5 rounded-badge bg-sunk">
+            <div className="h-full rounded-badge bg-linear-90 from-accent-line to-accent transition-[width]" style={{ width: `${(index / total) * 100}%` }} />
+            <span aria-hidden="true" className="absolute top-1/2 size-4.5 -translate-x-1/2 -translate-y-1/2 rounded-badge border-3 border-paper bg-belly-strong shadow-raised transition-[left]" style={{ left: `${(index / total) * 100}%` }} />
           </div>
         </div>
       )}
-      <ol className="flex flex-col gap-1.5">
+      <ol className="flex flex-col gap-1">
         {shown.map((s, n) => {
           // 다음 테스트 세팅: 보내는 칸(바꿀 칸·게시 확인)만 순서대로, 나머지는 지난번 값으로 끝난 칸
           const i = next ? steps.indexOf(s) : n;
           const done = next ? i < 0 || i < index : i < index;
           const now = i >= 0 && i === index;
+          const group = groupOf(s.entry.id);
+          const newGroup = group && group !== groupOf(shown[n - 1]?.entry.id);
+          const label = state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text;
+          const publish = Boolean(s.entry.publish);
           return (
-            <li
-              key={s.entry.id + s.entry.mode}
-              aria-current={now ? "step" : undefined}
-              className={`text-caption flex gap-2 rounded-button px-2 py-1 ${now ? "bg-accent-soft font-semibold text-ink" : done ? "text-soft line-through" : "text-soft"}`}
-            >
-              <span className="w-5 text-right">{done ? "✓" : n + 1}</span>
-              <span className="flex flex-col gap-1">
-                <span>
-                  {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
-                  {s.value ? ` · ${shownDates(s.value)}` : ""}
-                  {next && now && !s.entry.publish && <span className="ml-1 rounded-badge bg-accent px-1.5 text-small text-on-accent">지금</span>}
-                  {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="ml-1 rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
+            <li key={`${s.entry.id}${s.entry.mode}${n}`} aria-current={now ? "step" : undefined} className={`flex flex-col ${done ? "opacity-55" : ""}`}>   {/* 다음 테스트는 돈 확인 칸이 두 번 들어간다 (화면 검토 26) */}
+              {newGroup && <p aria-hidden="true" className="mt-2 mb-1 flex items-center gap-1.5 px-0.5 text-small font-bold text-soft after:h-px after:flex-1 after:bg-line">{group}</p>}
+              <div className={`flex items-center gap-2.5 rounded-button text-caption ${now ? "border-2 border-accent bg-paper p-2.5 shadow-raised" : publish ? "mt-1 border-2 border-dashed border-warn-mark/60 bg-warn-bg px-2.5 py-1.5" : "px-2.5 py-1"}`}>
+                {publish && !done
+                  ? <span aria-hidden="true" className="inline-grid size-5.5 shrink-0 place-items-center pt-1 text-mark font-bold text-on-accent bg-warn-mark [clip-path:polygon(50%_0,100%_100%,0_100%)]">!</span>
+                  : <span aria-hidden="true" className={`inline-grid size-5.5 shrink-0 place-items-center rounded-badge border-2 text-small font-bold ${done ? "border-ok bg-ok text-on-accent" : now ? "border-accent bg-accent text-on-accent" : "border-line bg-paper text-soft"}`}>{done ? "✓" : n + 1}</span>}
+                <span className="flex min-w-0 flex-1 flex-col gap-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>
+                    {now && !publish && <span className="rounded-badge bg-accent px-1.5 text-small font-bold text-on-accent">지금</span>}
+                    {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
+                    {s.value && <span className={`ml-auto max-w-48 truncate text-right font-semibold ${now ? "text-accent" : "text-ink"}`}>{shownDates(s.value)}</span>}
+                  </span>
+                  {mode === "create" && !done && <InlineNotice id={s.entry.id} publish={publish} state={state} />}
                 </span>
-                {mode === "create" && !done && <InlineNotice id={s.entry.id} publish={Boolean(s.entry.publish)} state={state} />}
-              </span>
+              </div>
             </li>
           );
         })}
@@ -199,7 +206,14 @@ export default function GuideStep({ state, dispatch }: Props) {
           <button type="button" onClick={() => dispatch({ type: "openPrep" })} className="self-start font-semibold underline">준비물 다시 보기</button>
         </div>
       )}
-      <PrimaryButton onClick={open} busy={busy} disabled={mode === "create" && (state.prepMissing?.length ?? 0) > 0}>광고 관리자 열기</PrimaryButton>
+      <div className="flex flex-col gap-2">
+        <PrimaryButton onClick={open} busy={busy} disabled={mode === "create" && (state.prepMissing?.length ?? 0) > 0}>광고 관리자 열기 <span aria-hidden="true" className="opacity-80">↗</span></PrimaryButton>
+        <p className="text-center text-small text-soft">어시스턴트는 결제·게시를 대신 누르지 않아요</p>
+      </div>
+      {mode === "export" && (
+        // 뭉치 없이 파일을 받았거나 뭉치를 닫았어도 다음 화면(분석 페이지 열기·코드 넣기)으로 갈 수 있게 (화면 검토 22)
+        <button type="button" onClick={() => dispatch({ type: "closeExport" })} className="min-h-11 self-start text-label text-accent-ink underline">← 파일을 받았어요 · 돌아가기</button>
+      )}
       {next && state.beforeNext && (
         // 다음 테스트를 누른 뒤 마음이 바뀌면: 지난 세팅·날짜·금액으로 되돌리고 결과 화면으로
         <button type="button" onClick={() => dispatch({ type: "backToPlan" })} className="min-h-11 self-start text-label text-accent-ink underline">← 결과 화면으로 돌아가기</button>

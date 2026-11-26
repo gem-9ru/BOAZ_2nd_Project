@@ -52,6 +52,11 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
         {/* 올린 파일 검사 결과: 통과면 ✓ 파일 · 줄 수, 차단이면 고칠 방법을 파일 칸 바로 아래에 */}
         {checked && !checked.blocks.length && <p role="status" className="text-body font-semibold text-ok">✓ {checked.name} · {checked.rows}줄 확인</p>}
         {checked && checked.blocks.length > 0 && <ul role="alert" className="flex flex-col gap-2 rounded-button bg-block-bg px-4 py-3">{checked.blocks.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
+        {/* [분석 시작]은 파일 칸 바로 아래 (통과 표시와 다음에 누를 버튼을 붙여 둔다). 회색일 땐 이유를 글로 */}
+        <div className="flex items-center justify-end gap-3">
+          {!ready && <span className="text-label text-soft">파일을 올리면 눌러져요</span>}
+          <Button onClick={onStart} disabled={!ready}>분석 시작 ▶</Button>
+        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
@@ -88,11 +93,6 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
         </Fold>
       </Folds>
 
-      <div className="flex items-center justify-end gap-3">
-        {/* 파일이 통과해야 진해진다. 회색일 땐 이유를 글로 (툴팁에 숨기지 않음) */}
-        {!ready && <span className="text-label text-soft">파일을 올리면 눌러져요</span>}
-        <Button onClick={onStart} disabled={!ready}>분석 시작 ▶</Button>
-      </div>
     </div>
   );
 }

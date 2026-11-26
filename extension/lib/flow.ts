@@ -76,6 +76,8 @@ export type FlowEvent =
   | { type: "guideClosed" }
   | { type: "guideDone" }
   | { type: "startExport" }
+  /** 결과 내보내기 안내를 그만 보기 (파일을 직접 받았거나 뭉치를 닫았을 때) → 하던 화면(기다리기·코드 넣기)으로 */
+  | { type: "closeExport" }
   | { type: "startUpload" }
   | { type: "planLoaded"; plan: Plan }
   | { type: "startFix" }
@@ -131,6 +133,8 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, step: "wait", guide: null, beforeNext: undefined };
     case "startExport":
       return { ...s, guide: { mode: "export", index: 0 } };
+    case "closeExport":
+      return s.guide?.mode === "export" ? { ...s, guide: null } : s;
     case "startUpload":
       return { ...s, step: "upload", guide: null };
     case "planLoaded":
@@ -157,7 +161,8 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
     case "openPrep":
       return { ...s, step: "prep" };
     case "reset":
-      return initialState();
+      // rev는 남긴다: 없으면 저장할 때 저장소의 옛 진행(step·guide)이 '더 새 것'으로 이겨 처음으로 안 돌아간다 (화면 검토 21)
+      return { ...initialState(), rev: s.rev };
     default:
       return s;
   }
