@@ -300,7 +300,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       className="group flex flex-col gap-3 rounded-card border border-line bg-paper p-4">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
         <span className="flex flex-col gap-0.5">
-          <span className="text-caption font-semibold text-soft">광고에 넣을 검색어</span>
+          <span className="text-caption font-semibold text-soft">문구에 넣을 검색어</span>
           <span className="text-body">검색어 {kept.length}개를 넣어요{dropped.length ? ` (${dropped.length}개 뺌)` : ""}</span>
         </span>
         <span className="shrink-0 text-caption font-semibold text-soft">
@@ -308,6 +308,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         </span>
       </summary>
       <div className="mt-3 flex flex-col gap-4">
+        <p className="text-small text-soft">이 말들은 ② 문구를 쓸 때 넣어요. 메타 광고는 검색어로 손님을 고르지 않아서, 손님은 위에서 고른 나이·성별로 정해요.</p>
         <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
           title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
         <Negatives words={r.negatives} />
@@ -343,7 +344,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   return (
     <div className="flex flex-col gap-5">
       {r.category && (
-        <CategoryPick product={product} category={r.category} categories={r.categories} onPick={onPickCategory} />
+        <CategoryPick product={product} category={r.category} categories={r.categories} candidates={r.category_candidates} onPick={onPickCategory} />
       )}
       {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
       {!r.category ? (

@@ -443,3 +443,28 @@ describe("타깃 확인·고치기", () => {
     expect(screen.getByText("· 누가 찾는지 (나이·성별)")).toBeTruthy();
   });
 });
+
+describe("무리 카드 한 줄 · 검색어 쓰임 · 가까운 분야", () => {
+  it("each customer card says who searches without opening it", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={() => {}} />);
+    const group = screen.getByRole("radiogroup", { name: "광고를 보여 줄 손님" });
+    expect(within(group).getByText("30~40대 여성")).toBeTruthy();   // 30대 50% · 40대 30%, 여성 81%
+  });
+
+  it("says the keywords go into the copy, not into Meta targeting", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={() => {}} />);
+    expect(screen.getByText(/이 말들은 ② 문구를 쓸 때 넣어요. 메타 광고는 검색어로 손님을 고르지 않아서/)).toBeTruthy();
+  });
+
+  it("changing the category shows the nearby ones first, the rest behind '다른 분야'", () => {
+    const r = { ...withSegs, category_candidates: [{ code: "50000008", name: "생활/건강" }] };
+    render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키", category: "50000006" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getAllByRole("button", { name: "바꾸기" })[0]!);
+    expect(screen.getByText("이 중 어디에 가까워요?")).toBeTruthy();
+    expect(screen.getAllByRole("radio", { name: /식품|생활\/건강/ })).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "다른 분야" }));
+    expect(screen.getAllByRole("radio", { name: /./ }).length).toBeGreaterThanOrEqual(12);
+  });
+});

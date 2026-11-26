@@ -1,11 +1,19 @@
 import type { ReactNode } from "react";
 import type { Segment } from "../../../../lib/api";
 import { compact } from "../../../../lib/format";
+import { GENDER_LABEL, ageSpan, ageSpanLabel, genderFrom } from "../../../../lib/settings";
 import MonthBars from "./MonthBars";
 
 const TREND_SOURCE: Record<"search" | "shopping", string> = { search: "네이버 검색", shopping: "네이버 쇼핑 클릭" };
 
 /** 3) 손님 무리 카드: 하나를 고른다. 고른 카드 아래에 연령 그림(또는 직접 정하기)을 붙인다. */
+/** 카드 제목 옆 한 줄: 누가 찾나 ('30~40대 여성'). 자료가 없으면 '누가 찾는지 자료 없음'. */
+function who(seg: Segment): string {
+  if (!seg.audience) return "누가 찾는지 자료 없음";
+  const g = genderFrom(seg.audience.female);
+  return `${ageSpanLabel(ageSpan(seg.audience.ages).groups)}${g === "all" ? " 남녀" : ` ${GENDER_LABEL[g]}`}`;
+}
+
 export default function SegmentCards({ segments, selected, dropped, onPick, onResearch, selectedDetail }: {
   segments: Segment[];
   selected?: Segment;
@@ -35,6 +43,7 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                     {on && <i className="block size-1.5 rounded-badge bg-on-accent" />}
                   </span>
                   <strong className="text-body font-semibold">{seg.label}</strong>
+                  <span className="ml-auto shrink-0 rounded-badge bg-sunk px-2 py-0.5 text-small text-soft">{who(seg)}</span>
                 </span>
                 <span id={lineId} className="text-caption leading-relaxed">
                   {seg.line || (seg.audience ? "" : "누가 찾는지 자료가 아직 없어요")}

@@ -258,6 +258,9 @@ def test_research_returns_category_candidates_when_unknown(monkeypatch):
     assert [c["code"] for c in b["category_candidates"]] == ["50000006", "50000008"] and all(c["name"] for c in b["category_candidates"])
     monkeypatch.setattr(market, "category_guess", lambda product, online=True: ("50000006", ["50000006"]))
     assert TestClient(app).post("/research", json={"product": "캠핑의자"}).json()["category_candidates"] == []
+    # 추정한 분야가 있어도 남은 가까운 후보는 준다 ([바꾸기]에서 먼저 보여 줌)
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: ("50000008", ["50000008", "50005542"]))
+    assert [c["code"] for c in TestClient(app).post("/research", json={"product": "텀블러"}).json()["category_candidates"]] == ["50005542"]
 
 
 def test_research_counts_category_points_calls_once_even_when_all_fail(monkeypatch):

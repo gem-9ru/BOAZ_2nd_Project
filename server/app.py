@@ -98,8 +98,8 @@ def _research(body: ResearchIn) -> dict:
     with _NAVER_LOCK:
         given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
         code, cands = (given, []) if given else market.category_guess(body.product, _online())
-        if code:
-            cands = []
+        if code:   # 정해진 분야는 빼고, 남은 가까운 후보는 [바꾸기]에서 먼저 보여 준다
+            cands = [c for c in cands if c != code]
         report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
         why = naver_api.last_error()
     mods = _good_points(body.product, report.modifiers if report else [])
