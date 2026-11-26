@@ -22,14 +22,14 @@ export function Card({ id, step, title, summary, badge, children }: {
 }
 
 /** 주 버튼 / 보조 버튼 / 로딩 버튼 (누른 버튼에 '…중'을 띄워 같은 자리에서 기다리게 한다). */
-export function Button({ children, onClick, kind = "primary", busy, disabled, type = "button" }: {
-  children: ReactNode; onClick?: () => void; kind?: "primary" | "secondary"; busy?: boolean; disabled?: boolean; type?: "button" | "submit";
+export function Button({ children, onClick, kind = "primary", busy, disabled, type = "button", title }: {
+  children: ReactNode; onClick?: () => void; kind?: "primary" | "secondary"; busy?: boolean; disabled?: boolean; type?: "button" | "submit"; title?: string;
 }) {
   const look = kind === "primary"
     ? "bg-button text-button-fg hover:bg-button-hover"
     : "border border-ink text-ink hover:bg-sunk";
   return (
-    <button type={type} onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined}
+    <button type={type} onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined} title={title}
       className={`h-button px-5 rounded-button text-body font-semibold disabled:opacity-(--state-disabled-opacity) ${look}`}>
       {busy ? "계산하는 중…" : children}
     </button>

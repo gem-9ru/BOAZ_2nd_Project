@@ -550,6 +550,12 @@ describe("점검 M", () => {
   });
 });
 
+function answerFive() {
+  fireEvent.click(screen.getByRole("button", { name: "5개만 직접 입력" }));
+  for (const name of ["트래픽", "20대", "수동", "이미지 1장"]) fireEvent.click(screen.getByRole("radio", { name }));
+  fireEvent.change(screen.getByLabelText("세트당 하루 예산 (원)"), { target: { value: "1350" } });
+}
+
 describe("점검 Q·R (화면설계서 v4.2 AN-00 · AN-COM)", () => {
   const csv = () => new File(["a"], "내파일.csv", { type: "text/csv" });
 
@@ -557,6 +563,7 @@ describe("점검 Q·R (화면설계서 v4.2 AN-00 · AN-COM)", () => {
     const f = vi.fn((_u: string, _i?: RequestInit) => ok(oven));
     vi.stubGlobal("fetch", f);
     render(<App />);
+    answerFive();
     fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [csv()] } });
     expect(await screen.findByText(`✓ 내파일.csv · ${oven.check.read.placement_rows}줄 확인`)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();   // 아직 결과로 안 넘어감
@@ -587,5 +594,41 @@ describe("점검 Q·R (화면설계서 v4.2 AN-00 · AN-COM)", () => {
     vi.stubGlobal("confirm", vi.fn(() => true));
     fireEvent.click(screen.getByRole("button", { name: "◀ 업로드" }));
     expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();
+  });
+});
+
+describe("점검: [분석 시작]은 내 광고 설정이 있어야 (설계서 AN-00 ⑤) · 차단이면 [다음]에 이유 (AN-COM ⑤)", () => {
+  it("a good file without settings keeps [분석 시작] off and says what is left", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok(oven)));
+    render(<App />);
+    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
+    await screen.findByText(/x\.csv · \d+줄 확인/);
+    const start = screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement;
+    expect(start.disabled).toBe(true);
+    expect(screen.getByText("내 광고 설정 5개를 넣으면 시작할 수 있어요 (남은 5개)")).toBeTruthy();
+    answerFive();
+    expect(start.disabled).toBe(false);
+    expect(document.body.textContent).not.toMatch(/몰라도 분석은 돼요/);
+  });
+
+  it("settings from the extension are enough", async () => {
+    window.history.replaceState(null, "", "/#s=K3yK3yK3yK3yK3y");
+    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/settings/") ? { count: 13 } : oven)));
+    render(<App />);
+    await screen.findByText(/자동으로 받음 \(13칸\)/);
+    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
+    await screen.findByText(/x\.csv · \d+줄 확인/);
+    expect((screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement).disabled).toBe(false);
+    window.history.replaceState(null, "", "/");
+  });
+
+  it("a blocked result's [다음] tells why on the button itself too", async () => {
+    const block = { level: "block", mark: "■", kind: "sum_mismatch", text: "기간이 겹치거나 빠진 날이 있어요.", todo: "다시 내보내 주세요.", screen: "AN-00" };
+    vi.stubGlobal("fetch", vi.fn(() => ok({ ...oven, blocked: true, alerts: [block] })));
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
+    const nextBtn = await screen.findByRole("button", { name: "왜 그런지 보기 ▶" });
+    expect((nextBtn as HTMLButtonElement).disabled).toBe(true);
+    expect(nextBtn.getAttribute("title")).toBe("차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요");
   });
 });

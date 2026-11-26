@@ -139,7 +139,8 @@ export default function App() {
           <nav aria-label="이전 다음" className="flex items-center justify-between gap-3 pt-2 print:hidden">
             {step > 0 ? <Button kind="secondary" onClick={() => go(step - 1)}>◀ {STEPS[step - 1]!.short}</Button> : <Button kind="secondary" onClick={leave}>◀ 업로드</Button>}
             {/* ①에는 [이 테스트 바로 준비]가 주 버튼이라 [다음]은 보조 (한 화면에 주 버튼 하나) */}
-            {!last && <Button kind={step === 0 && !result.blocked ? "secondary" : "primary"} onClick={() => go(step + 1)} disabled={result.blocked}>{s.next} ▶</Button>}
+            {!last && <Button kind={step === 0 && !result.blocked ? "secondary" : "primary"} onClick={() => go(step + 1)} disabled={result.blocked}
+              title={result.blocked ? "차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요" : undefined}>{s.next} ▶</Button>}
             {last && <Button kind="secondary" onClick={() => go(0)}>처음으로 ▶</Button>}
           </nav>
           {result.blocked && <p className="text-body text-block-ink">■ 차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요.</p>}

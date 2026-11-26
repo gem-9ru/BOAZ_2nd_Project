@@ -11,6 +11,9 @@ const QUESTIONS: { id: string; label: string; options?: string[]; number?: true 
   { id: "meta.ad.format", label: "소재 형식", options: ["이미지 1장", "동영상", "여러 장 (슬라이드)"] },
 ];
 
+/** 5문항 중 아직 안 고른 개수 (화면설계서 v4.2 AN-00 ⑤: 설정 또는 5문항을 마쳐야 [분석 시작]). */
+export const missingAnswers = (value: Settings) => QUESTIONS.filter((q) => !(value[q.id] ?? "").trim()).length;
+
 /** 입력 ② 내 광고 설정 (세팅값) (v4 8장, v4.2 이름): 확장 프로그램에서 오면 받은 칸 수만, 아니면 5문항(선택). */
 export function MySettings({ received, value, onChange }: { received: number | null; value: Settings; onChange: (s: Settings) => void }) {
   const [open, setOpen] = useState(false);
@@ -23,7 +26,7 @@ export function MySettings({ received, value, onChange }: { received: number | n
   }
   const set = (id: string, v: string) => onChange({ ...value, [id]: v });
   return (
-    <Card title="내 광고 설정 (세팅값)" summary="파일이 없으면 5개만 입력해 주세요. '내 세팅 카드'에서 칸마다 바꿀지·둘지를 알려 드려요 (몰라도 분석은 돼요)">
+    <Card title="내 광고 설정 (세팅값)" summary="파일이 없으면 5개만 입력해 주세요. '내 세팅 카드'에서 칸마다 바꿀지·둘지를 알려 드려요">
       {!open ? (
         <div><button type="button" onClick={() => setOpen(true)} className="rounded-button border border-accent px-4 py-2 text-body font-semibold text-accent-ink">5개만 직접 입력</button></div>
       ) : (

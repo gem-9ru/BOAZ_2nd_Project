@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Alert, ExampleName } from "../api";
 import { AlertLine } from "../steps/shared";
 import { Button, Card, Grade } from "../ui";
-import { MySettings, type Settings } from "./MySettings";
+import { missingAnswers, MySettings, type Settings } from "./MySettings";
 
 const PREP = [
   "광고 세트 2개, 하나만 다르게 (예: 노출 위치만)",
@@ -18,6 +18,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
   received: number | null; settings: Settings; onSettings: (s: Settings) => void;
 }) {
   const [prep, setPrep] = useState(false);
+  const left = received !== null ? 0 : missingAnswers(settings);   // 확장에서 받았으면 충분
   const [over, setOver] = useState(false);
   const [done, setDone] = useState<boolean[]>(PREP.map(() => false));
   return (
@@ -57,7 +58,10 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
         {/* 올린 파일 검사 결과: 통과면 ✓ 파일 · 줄 수, 차단이면 고칠 방법을 여기(업로드 칸 바로 아래)에 */}
         {checked && !checked.blocks.length && <p role="status" className="text-body font-semibold text-ok">✓ {checked.name} · {checked.rows}줄 확인</p>}
         {checked && checked.blocks.length > 0 && <ul role="alert" className="flex flex-col gap-2">{checked.blocks.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
-        <div><Button onClick={onStart} disabled={!checked || checked.blocks.length > 0 || busy}>분석 시작 ▶</Button></div>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={onStart} disabled={!checked || checked.blocks.length > 0 || left > 0 || busy}>분석 시작 ▶</Button>
+          {left > 0 && <p className="text-body text-soft">내 광고 설정 5개를 넣으면 시작할 수 있어요 (남은 {left}개)</p>}
+        </div>
       </Card>
 
       <MySettings received={received} value={settings} onChange={onSettings} />
