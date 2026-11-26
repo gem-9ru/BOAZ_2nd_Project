@@ -83,12 +83,24 @@ export function prepMissing(fields: Field[], answers: Record<string, string>): s
   return prepFields(fields).filter((f) => f.required && answers[f.id] !== f.options?.[0]).map((f) => f.label);
 }
 
-export function askedFields(fields: Field[]): Field[] {
+/** 준비물에서 사진을 확인했으니 ② 세팅에서 다시 묻지 않는 칸 (값은 기본값, 사진은 사장님이 올림) */
+const NOT_ASKED = new Set(["meta.ad.media"]);
+
+/** 준비물에서 받은 상품·인스타 주소 → 광고를 누르면 갈 곳과 그 주소 (② 세팅에서 다시 묻지 않게) */
+export function routeFromPrep(answers: Record<string, string>): Record<string, string> {
+  const store = answers["meta.pre.store_url"], insta = answers["meta.pre.insta_url"], pick = answers["meta.pre.store_product"];
+  if (pick === "올렸어요" && store) return { "meta.adset.conversion_location": "스토어 상품 페이지", "meta.ad.website_url": store };
+  if (pick && pick !== "올렸어요" && insta) return { "meta.adset.conversion_location": "인스타그램 프로필", "meta.ad.website_url": insta };
+  return {};
+}
+
+export function askedFields(fields: Field[], answers: Record<string, string> = {}): Field[] {
   const follow = new Set(fields.flatMap((f) => {                                   // 다른 질문에서 이어 받는 칸
     const to = f.then_ask?.field;
     return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
   }));
-  return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id) && f.stage !== PREP_STAGE);
+  const routed = routeFromPrep(answers);
+  return fields.filter((f) => !PREFILLED.has(f.id) && !NOT_ASKED.has(f.id) && !follow.has(f.id) && !(f.id in routed) && f.stage !== PREP_STAGE);
 }
 
 /** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */
@@ -117,10 +129,10 @@ export function isoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** "7일" → 오늘부터 7일 뒤 날짜 (YYYY-MM-DD). */
+/** "7일" → 오늘 포함 7일째 날짜 (YYYY-MM-DD). 날짜 직접 정하기·scheduleDays처럼 시작일·종료일을 모두 센다. */
 export function endDateFrom(choice: string, today: Date = new Date()): string {
   const days = parseInt(choice, 10) || 14;
-  return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days));
+  return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days - 1));
 }
 
 /** 시작일·종료일 (YYYY-MM-DD). 시각(HH:MM)은 사장님이 정했을 때만 — 없으면 광고 관리자 기본 시각 그대로 */
@@ -136,6 +148,8 @@ export function scheduleFrom(choice: string, today: Date = new Date()): Schedule
 export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, schedule: Schedule): Setting[] {
   const label = (id: string) => fields.find((f) => f.id === id)?.label ?? id;
   const value: Record<string, string> = {
+    "meta.ad.media": fields.find((f) => f.id === "meta.ad.media")?.default ?? "",
+    ...routeFromPrep(answers),
     ...answers,
     "meta.campaign.objective": OBJECTIVE,
     "meta.adset.age_gender": `${target.ageMin}–${target.ageMax}세 · ${GENDER_LABEL[target.gender]}`,

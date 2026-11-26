@@ -48,18 +48,31 @@ describe("총예산 질문", () => {
 
   it("tells the minimum for the chosen period and marks too-small options with ▲", () => {
     render(<QuestionStep state={atBudget("14일")} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
-    expect(screen.getByText(/광고 기간이 15일이라 세트마다 적어도 약 20,100원/)).toBeTruthy();   // 오늘 포함 15일
-    expect(screen.getByRole("button", { name: /^1만 원.*15일 동안 쓰기엔 적어요/ })).toBeTruthy();
+    expect(screen.getByText(/광고 기간이 14일이라 적어도 약 18,800원/)).toBeTruthy();   // 오늘 포함 14일
+    expect(screen.getByRole("button", { name: /^1만 원.*14일 동안 쓰기엔 적어요/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: /^3만 원\s*권장$/ })).toBeTruthy();
+  });
+
+  it("the question says the amount is the whole spend, not per ad set", () => {
+    render(<QuestionStep state={atBudget("14일")} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    expect(screen.queryByText(/세트마다/)).toBeNull();
+  });
+
+  it("30일: 권장 moves to the smallest amount that is enough (3만 원 is short)", () => {
+    render(<QuestionStep state={atBudget("30일")} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    expect(screen.getByRole("button", { name: /^5만 원\s*권장$/ })).toBeTruthy();
+    const three = screen.getByRole("button", { name: /^3만 원/ });
+    expect(three.textContent).not.toContain("권장");
+    expect(three.className).not.toContain("font-semibold");
   });
 
   it("typing an amount: shows it in 원, warns when short, answers '25,000원'", () => {
     const dispatch = vi.fn();
     render(<QuestionStep state={atBudget("7일")} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
     fireEvent.click(screen.getByRole("button", { name: "금액 직접 넣기" }));
-    const box = screen.getByLabelText("광고 세트마다 총예산 (원)");
+    const box = screen.getByLabelText("기간 전체 총예산 (원)");
     fireEvent.change(box, { target: { value: "5000" } });
-    expect(screen.getByText(/약 10,700원보다 적어서 광고가 안 나갈 수 있어요/)).toBeTruthy();   // 8일 × 1,336원
+    expect(screen.getByText(/약 9,400원보다 적어서 광고가 안 나갈 수 있어요/)).toBeTruthy();   // 7일 × 1,336원
     fireEvent.change(box, { target: { value: "25000" } });
     expect(screen.queryByText(/적어서 광고가 안 나갈 수 있어요/)).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "다음" }));

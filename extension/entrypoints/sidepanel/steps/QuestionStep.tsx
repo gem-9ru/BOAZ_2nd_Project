@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Field, OptionHelp, PresetField } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { askedFields, buildSettings, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
+import { SETTING_ORDER, askedFields, buildSettings, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
@@ -14,8 +14,9 @@ interface Props {
 }
 
 /** ② 질문: 한 번에 하나씩. 다 답하면 광고 관리자에 넣을 세팅값 목록을 만든다. */
-export default function QuestionStep({ state, dispatch, fields, defaults }: Props) {
-  const asked = askedFields(fields);
+export default function QuestionStep({ state, dispatch, fields, defaults: all }: Props) {
+  const asked = askedFields(fields, state.answers);
+  const defaults = all.filter((d) => !SETTING_ORDER.includes(d.id));   // 뭉치가 안내하는 칸은 '묻지 않고 둔 칸'이 아님
   const next = asked.find((f) => !(f.id in state.answers));
   const index = next ? asked.indexOf(next) : asked.length;
 
@@ -98,7 +99,6 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
   field: Field; answers: Record<string, string>; keywords: string[]; checked: number[]; onCheck: (index: number) => void;
   onAnswer: (v: string, extra?: Record<string, string>) => void;
 }) {
-  const recommended = byEarlier(field.default_if, answers) ?? field.default;
   const note = byEarlier(field.note_if, answers);
   const [text, setText] = useState(field.default ?? "");
   const [bad, setBad] = useState(false);
@@ -111,6 +111,10 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
   // 총예산 질문: 앞에서 고른 기간으로 '세트마다 적어도 ○원'을 알려 주고, 그보다 적은 금액엔 ▲ (EX-01 ④)
   const days = field.custom === "won" ? scheduleDays(scheduleFrom(answers["meta.adset.end_date"] ?? "14일")) : 0;
   const least = days > 0 ? minBudget(days) : 0;
+  const enough = (o: string) => (parseWon(o) ?? Infinity) >= least;
+  const base = byEarlier(field.default_if, answers) ?? field.default;
+  // 기본 권장 금액이 이 기간엔 모자라면, 충분한 가장 작은 금액을 권장 (없으면 권장 없음)
+  const recommended = least > 0 && base && !enough(base) ? field.options?.find(enough) : base;
   const [url, setUrl] = useState("");
   const then = picked ? field.then_ask : undefined;
   /** 이 답을 고르면 주소를 이어 받을 칸 (없으면 바로 넘어감) */
@@ -152,7 +156,7 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
         <h2 className="text-lead font-semibold">{field.ask}</h2>
         {field.why && <p className="text-caption text-soft mt-1">{field.why}</p>}
         {note && <p className="text-caption text-ink mt-1">{note}</p>}
-        {least > 0 && <p className="text-caption text-ink mt-1">광고 기간이 {days}일이라 세트마다 적어도 약 {least.toLocaleString()}원 (하루 최소 약 1,336원 × {days}일)은 넣어야 광고가 나가요.</p>}
+        {least > 0 && <p className="text-caption text-ink mt-1">광고 기간이 {days}일이라 적어도 약 {least.toLocaleString()}원 (하루 최소 약 1,336원 × {days}일)은 넣어야 광고가 나가요.</p>}
       </Coach>
       {money ? (
         <WonInput least={least} onBack={() => setMoney(false)} onDone={(v) => onAnswer(v)} />
@@ -348,7 +352,7 @@ function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void
   const short = n !== null && least > 0 && n < least;
   return (
     <div className="flex flex-col gap-2">
-      <label htmlFor="budget-won" className="text-caption text-soft">광고 세트마다 총예산 (원)</label>
+      <label htmlFor="budget-won" className="text-caption text-soft">기간 전체 총예산 (원)</label>
       <input id="budget-won" value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="numeric" autoComplete="off"
         placeholder="예: 25000" aria-describedby={short ? "budget-short" : undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />

@@ -193,14 +193,14 @@ fields:
     label: 예산 전략 (캠페인 예산 / 광고 세트 예산)
     kind: next_cycle
     default: 광고 세트 예산
-    why: 광고 세트가 1개면 차이가 없어요. 여러 타겟을 비교할 때 바꿔요.
+    why: 캠페인 예산으로 두면 하루 예산처럼 계속 나갈 수 있어서, 광고 세트 예산(총예산)으로 둬요. 뭉치가 이 칸을 안내해요.
 
   - id: meta.campaign.budget_share
     stage: 캠페인
     label: 예산 최대 20% 공유
     kind: default
-    default: 그대로 둠
-    why: 같은 캠페인 안 다른 광고 세트로 예산의 최대 20%를 옮겨 쓰는 기능이에요. 전체 지출은 그대로이고, 광고 세트가 1개면 효과가 없어요.
+    default: 끄기
+    why: 켜 두면 한 광고 세트가 자기 예산보다 더 쓸 수 있어서 꺼요. 뭉치가 '예산 전략' 칸에서 같이 안내해요.
 
   - id: meta.campaign.bid_strategy
     stage: 캠페인
@@ -323,13 +323,13 @@ fields:
 
   - id: meta.adset.lifetime_budget
     stage: 광고 세트
-    label: 총예산 (광고 세트마다)
+    label: 총예산 (기간 전체)
     kind: question
-    ask: 광고 세트마다 총 얼마 쓸까요?
+    ask: 광고 기간 전체에 총 얼마 쓸까요?
     options: [1만 원, 3만 원, 5만 원]
     custom: won               # [금액 직접 넣기] → 원 단위 (답: 25,000원)
     default: 3만 원
-    why: 기간 전체에 쓸 돈이에요 (하루 예산 아님). 메타는 하루에 약 1,336원보다 적게 받으면 광고를 거의 안 내보내요. 분석 페이지는 이 금액으로 '예산을 반도 못 썼는지' 봐요.
+    why: 하루 예산이 아니라 기간 전체에 쓸 돈이에요. 광고비는 이 금액을 넘지 않아요. 메타는 하루에 약 1,336원보다 적게 받으면 광고를 거의 안 내보내요.
 
   - id: meta.adset.location
     stage: 광고 세트
