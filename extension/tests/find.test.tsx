@@ -514,7 +514,7 @@ describe("지금 시기 · 무리 크기 · 휴대폰 · 단계 안내 · 분야
     const { nowLine } = await import("../entrypoints/sidepanel/steps/find/when");
     const monthly = { "2025-11": 30, "2025-12": 100, "2026-05": 50, "2026-10": 60 };
     expect(nowLine(monthly, new Date(2026, 10, 26))).toBe("곧 많이 찾는 때예요 (12월). 지금(11월)은 가장 많은 달의 30% 정도예요.");
-    expect(nowLine({ "2025-12": 100, "2026-05": 40 }, new Date(2026, 11, 3))).toBe("지금(12월)은 많이 찾는 때예요.");
+    expect(nowLine({ "2025-12": 100, "2026-05": 40 }, new Date(2026, 11, 3))).toBe("지금(12월)은 가장 많은 달의 100%라 많이 찾는 때로 봐요 (80% 이상 · 이 도구 기준).");
     expect(nowLine({ "2025-12": 100, "2026-05": 40 }, new Date(2026, 4, 3))).toBe("지금(5월)은 가장 많은 달의 40% 정도예요.");
     expect(nowLine({ "2026-05": 40 }, new Date(2026, 0, 3))).toBeNull();
   });
@@ -530,8 +530,8 @@ describe("지금 시기 · 무리 크기 · 휴대폰 · 단계 안내 · 분야
     const stats = { keyword: "텀블러", total_qc: 128900, mobile: 0.7,
       audience: { female: 0.66, ages: { "30": 0.2, "40": 0.4, "50": 0.25 }, top_age: "40", index: { female: 1.36, "40": 1.25 } } };
     render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
-    expect(screen.getByText("휴대폰으로 많이 찾아요 (70%) → 피드에는 4:5 세로 사진이 권장돼요 (메타 광고 가이드).")).toBeTruthy();
-    expect(screen.getByText("네이버 쇼핑 클릭으로 보면 같은 분야 평균보다 40대가 1.3배, 여성이 1.4배 많아요.")).toBeTruthy();
+    expect(screen.getByText("메타 피드 사진은 4:5 세로가 권장돼요 (메타 광고 가이드).")).toBeTruthy();
+    expect(screen.getByText("네이버 쇼핑 클릭으로 보면 같은 분야 평균보다 40대가 1.3배, 여성이 1.4배 많아요 (1.2배 이상만 보여 줘요 · 이 도구 기준).")).toBeTruthy();
   });
 
   it("search waiting message moves through steps", async () => {

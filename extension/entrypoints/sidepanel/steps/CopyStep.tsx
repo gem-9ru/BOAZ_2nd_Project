@@ -166,7 +166,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
         </div>
       )}
-      {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요. 칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
+      {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요 (이 도구가 권하는 개수예요). 칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
       {hasMods && groups.map((g) => {
         const items = mods.filter((m) => m.group === g);
         if (items.length === 0) return null;

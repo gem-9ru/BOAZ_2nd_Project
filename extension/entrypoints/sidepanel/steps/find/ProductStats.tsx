@@ -20,7 +20,7 @@ export function vsCategory(aud: { index?: Record<string, number>; top_age: strin
   if (age && age >= 1.2) parts.push(`${aud!.top_age}대가 ${age.toFixed(1)}배`);
   const sex = (idx.female ?? 0) >= 1.2 ? ["여성", idx.female!] as const : (idx.male ?? 0) >= 1.2 ? ["남성", idx.male!] as const : null;
   if (sex) parts.push(`${sex[0]}이 ${sex[1].toFixed(1)}배`);
-  return parts.length ? `네이버 쇼핑 클릭으로 보면 같은 분야 평균보다 ${parts.join(", ")} 많아요.` : null;
+  return parts.length ? `네이버 쇼핑 클릭으로 보면 같은 분야 평균보다 ${parts.join(", ")} 많아요 (1.2배 이상만 보여 줘요 · 이 도구 기준).` : null;
 }
 
 /** 내 상품 그대로: 한 달 검색 수 + (분야를 알면) 찾는 사람의 연령·성별(나이대마다 여성·남성) + 몇 월에 많이 찾나. */
@@ -58,9 +58,7 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
           </span>
         )}
       </div>
-      {stats.mobile != null && stats.mobile >= 0.6 && (
-        <p className="text-caption">휴대폰으로 많이 찾아요 ({Math.round(stats.mobile * 100)}%) → 피드에는 4:5 세로 사진이 권장돼요 (메타 광고 가이드).</p>
-      )}
+      <p className="text-caption">메타 피드 사진은 4:5 세로가 권장돼요 (메타 광고 가이드).</p>
       {vs && <p className="text-caption">{vs}</p>}
       {stats.audience
         ? <AgeFigure audience={stats.audience} caption="네이버 쇼핑에서 이 말로 클릭한 사람"

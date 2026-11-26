@@ -10,7 +10,7 @@ export function nowLine(monthly: Record<string, number>, today: Date = new Date(
   const peakKey = Object.keys(monthly).reduce((a, b) => ((monthly[b] ?? 0) > (monthly[a] ?? 0) ? b : a));
   const peak = Number(peakKey.split("-")[1]);
   const ahead = (peak - m + 12) % 12;   // 가장 많은 달까지 남은 달 수
-  if (share >= 80) return `지금(${m}월)은 많이 찾는 때예요.`;
+  if (share >= 80) return `지금(${m}월)은 가장 많은 달의 ${share}%라 많이 찾는 때로 봐요 (80% 이상 · 이 도구 기준).`;
   if (ahead >= 1 && ahead <= 2) return `곧 많이 찾는 때예요 (${peak}월). 지금(${m}월)은 가장 많은 달의 ${share}% 정도예요.`;
   return `지금(${m}월)은 가장 많은 달의 ${share}% 정도예요.`;
 }
