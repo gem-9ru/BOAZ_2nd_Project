@@ -248,7 +248,7 @@ function Negatives({ words }: { words?: string[] }) {
         <span>광고에서 뺄 말 {words.length}개 <span className="font-normal">(만들기·매장·관련 낮은 말)</span></span>
         <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
       </summary>
-      <p className="mt-2">이런 말로 찾는 사람은 사지 않을 가능성이 커서 문구에 넣지 않아요.</p>
+      <p className="mt-2">만들기·매장 찾기처럼 사려는 뜻과 다르거나 상품과 관련이 낮은 말이라, 문구에 넣지 않아요 (이 도구 기준).</p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
         {words.map((w) => <li key={w} className="rounded-badge bg-sunk px-2 py-0.5 line-through decoration-soft">{w}</li>)}
       </ul>

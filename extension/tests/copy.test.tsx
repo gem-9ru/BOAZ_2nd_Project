@@ -239,7 +239,7 @@ describe("② 문구 미리 보기·금지 표현", () => {
     await start();
     fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
     fireEvent.change(screen.getByLabelText("본문 (고쳐도 돼요)"), { target: { value: "동네 최저가 100% 수제" } });
-    expect(screen.getByRole("alert").textContent).toContain("'최저가', '100%' 같은 말은 근거를 댈 수 없는 말이라");
+    expect(screen.getByRole("alert").textContent).toContain("'최저가', '100%' 같은 말은 근거 자료가 있어야 쓸 수 있어요");
     expect(screen.getByRole("button", { name: "이 문구로 할게요" }).hasAttribute("disabled")).toBe(true);
   });
 });

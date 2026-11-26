@@ -244,7 +244,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           )}
           {all.some(isHealth) && (
             <p role="note" className="text-caption text-warn">
-              ▲ {all.filter(isHealth).map((w) => `'${w}'`).join(", ")} 같은 효능 말은 '낫는다·좋아진다'고 쓰면 광고 심의에 걸릴 수 있어요. 문구에는 '○○이 고민인 분께'처럼만 쓸게요.
+              ▲ {all.filter(isHealth).map((w) => `'${w}'`).join(", ")} 같은 효능 말은 '낫는다·좋아진다'고 쓰면 법에 걸릴 수 있어요 (식품은 식품표시광고법 제8조). 문구에는 '○○이 고민인 분께'처럼만 쓸게요.
             </p>
           )}
           {all.length > 0 && (
@@ -400,7 +400,7 @@ function Editor({ draft, setDraft, banned, original, product }: {
         {copied && <span role="status" className="text-small text-soft">{copied === "ok" ? "제목과 본문을 복사했어요." : "복사하지 못했어요. 직접 골라 복사해 주세요."}</span>}
       </div>
       {banned.length > 0
-        ? <p role="alert" className="text-caption text-warn">▲ {banned.map((b) => `'${b}'`).join(", ")} 같은 말은 근거를 댈 수 없는 말이라 광고에 쓸 수 없어요. 빼거나 바꿔 주세요.</p>
+        ? <p role="alert" className="text-caption text-warn">▲ {banned.map((b) => `'${b}'`).join(", ")} 같은 말은 근거 자료가 있어야 쓸 수 있어요 (표시광고법 제5조). 이 도구는 근거를 확인할 수 없어서 빼거나 바꿔 주세요.</p>
         : <p className="text-small text-soft">사실이 아닌 말(최저가, 1위 등)은 쓰지 마세요.</p>}
     </div>
   );
