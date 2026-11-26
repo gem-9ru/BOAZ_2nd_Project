@@ -194,6 +194,10 @@ export default function GuideStep({ state, dispatch }: Props) {
         </div>
       )}
       <PrimaryButton onClick={open} busy={busy} disabled={mode === "create" && (state.prepMissing?.length ?? 0) > 0}>광고 관리자 열기</PrimaryButton>
+      {next && state.beforeNext && (
+        // 다음 테스트를 누른 뒤 마음이 바뀌면: 지난 세팅·날짜·금액으로 되돌리고 결과 화면으로
+        <button type="button" onClick={() => dispatch({ type: "backToPlan" })} className="min-h-11 self-start text-label text-accent-ink underline">← 결과 화면으로 돌아가기</button>
+      )}
       <div className="flex gap-2">
         <button type="button" onClick={() => void move(-1)} disabled={index === 0}
           className="flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:opacity-(--state-disabled-opacity)">이전 칸</button>

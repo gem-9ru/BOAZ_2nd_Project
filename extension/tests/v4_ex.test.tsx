@@ -285,6 +285,21 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(send.at(-2)!.value).toBe("5,400원");   // 두 번째 돈 확인도 같은 금액
   });
 
+  it("다음 테스트 세팅 중엔 '← 결과 화면으로 돌아가기'로 지난 세팅·결과 화면으로 돌아갈 수 있다", () => {
+    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
+    const dispatch = vi.fn();
+    render(<GuideStep state={state} dispatch={dispatch} />);
+    const back = screen.getByRole("button", { name: "← 결과 화면으로 돌아가기" });
+    expect(back.className).toContain("min-h-11");
+    fireEvent.click(back);
+    expect(dispatch).toHaveBeenCalledWith({ type: "backToPlan" });
+  });
+
+  it("처음 만들 때(다음 테스트 아님)는 돌아가기 버튼이 없다", () => {
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings: last, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
+    expect(screen.queryByRole("button", { name: "← 결과 화면으로 돌아가기" })).toBeNull();
+  });
+
   it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
     const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
     expect(steps.send.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
