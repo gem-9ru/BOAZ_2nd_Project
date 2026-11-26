@@ -47,7 +47,7 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
           </p>
           <p className="text-body">이유: {c.reason ?? c.note}</p>
           {c.tested === false && <p className="text-body">{what} 효과: 아직 몰라요 → 이번 테스트로 확인</p>}
-          <p className="text-body text-soft">세트당 총 {won(c.per_set ?? 5000)}, {days}일 · 두 세트 같은 날 같이 시작</p>
+          <p className="text-body text-soft">세트당 총 {won(c.per_set ?? 5000)}, {days}일{c.test_roll ? " (Test & Roll 권장 범위 안)" : ""} · 두 세트 같은 날 같이 시작</p>
         </div>
       </Card>
       <Card title="다음 테스트 체크리스트" summary={`${checklist.length}개만 지키면 다음 결과로 효과를 잴 수 있어요`}>
@@ -77,7 +77,7 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
           {tab === "우리 실측 2건" && <>
             <p>· 오븐로그: 수동 노출 위치가 광고비(CPM) {ok ? ok.reason.replace("↓ 광고비 ", "").replace(" 싸요 · 확실해요", "") : "15%"} 저렴 · 판정 {DEV_LABEL["채택"]}</p>
             <p>· 희수 실험: 수동 세트 광고비(CPM) 36% 저렴 — 두 실측이 같은 방향이에요.</p>
-            {r.verdict && <p>· 손님 1명당 비용 판정: {DEV_LABEL[r.verdict.badge.level]} ({Math.round(r.verdict.badge.prob * 100)}%){r.verdict.badge.capped ? ` · ${r.verdict.badge.capped.join(", ")}` : ""}</p>}
+            {r.verdict && <p>· 방문 1명당 비용 판정: {DEV_LABEL[r.verdict.badge.level]} ({Math.round(r.verdict.badge.prob * 100)}%){r.verdict.badge.capped ? ` · ${r.verdict.badge.capped.join(", ")}` : ""}</p>}
             {c.rule && <p>· 이번 결론 규칙(진단 {c.rule.row}번): {DEV_LABEL[c.rule.level]} · 효과는 {DEV_LABEL[c.certainty?.level ?? "보류"]} (돌려 본 적 없음)</p>}
           </>}
           {tab === "논문" && <p>Lewis & Rao 2015 · Gordon 외 2019 · Johnson 외 2017 · Feit & Berman 2019 · Scott 2010 · Efron & Morris 1975 · Kohavi 외 2020</p>}

@@ -38,7 +38,7 @@ def run(arm: Dict, budget: float, runs: int = RUNS, seed: int = 0) -> Dict:
 def tried(arm: Dict, budget: float, days: Optional[int] = None) -> Dict:
     """써 본 적 있는 금액인지 (AN-05 · ALT-24): 세트당 총액이 실제로 쓴 돈 이하이고,
     기간을 주면 하루 금액(총액 ÷ 기간)도 하루에 가장 많이 써 본 돈 이하여야 '써 본 금액'.
-    기간은 손님 수 범위를 바꾸지 않는다(총액 기준 계산) — 바뀌는 건 하루 금액과 '가설' 여부."""
+    기간은 방문자 수 범위를 바꾸지 않는다(총액 기준 계산) — 바뀌는 건 하루 금액과 '가설' 여부."""
     total_ok = budget <= arm["spend"]
     daily = budget / days if days else None
     daily_ok = daily is None or not arm.get("daily_max") or daily <= arm["daily_max"] + 0.5

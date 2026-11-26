@@ -5,7 +5,7 @@ import { Card, HowCalculated, pct, seriesBg } from "../ui";
 export function Funnel({ r }: { r: Result }) {
   const f = r.funnel;
   return (
-    <Card id="funnel" title="단계별로 몇 명이 남았나" summary="보여진 횟수 → 클릭 → 손님(페이지 방문)">
+    <Card id="funnel" title="단계별로 몇 명이 남았나" summary="보여진 횟수 → 클릭 → 방문자(페이지 방문)">
       {f.hint && <p className="text-lead font-semibold">{f.hint}</p>}
       <div className="grid gap-group sm:grid-cols-2">
         {f.arms.map((arm, i) => {

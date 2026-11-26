@@ -19,7 +19,7 @@ loop:
     spend_gap_pp: 0.30      # ▲ 두 세트 지출 비중 차이 (희수 28 : 72) → 확실도 한 단계 낮춤
     min_clicks: 30          # ▲ 링크 클릭(세트 합)이 이보다 적으면 판정 최대 '유력' (화면: 'B 쪽이에요')
     min_actions: 5          # ▲ 들어온 뒤 행동(알림 신청 등)이 세트 합으로 이보다 적으면 ④단계 '아직 몰라요'
-    replay_min_visits: 5    # AN-04 날짜별: 그날까지 손님이 세트마다 이보다 적으면 그날 판정은 '아직 몰라요'
+    replay_min_visits: 5    # AN-04 날짜별: 그날까지 방문자가 세트마다 이보다 적으면 그날 판정은 '아직 몰라요'
     visit_rate_min: 0.60    # ▲ 랜딩 조회 ÷ 링크 클릭
     frequency_max: 2.5      # ▲ 노출 ÷ 도달
     an_share_max: 0.5       # ▲ Audience Network에 쓴 지출 비중

@@ -34,8 +34,8 @@ export function AN02({ r }: { r: Result }) {
   }
   const lines: Line[] = [
     first,
-    { n: "②", stage: "광고가 눌리는 정도", suspect: ok("2") ? "—" : "소재 · 문구 · 형식", kind: ok("2") ? "ok" : "low",
-      meaning: `1,000번 보여지면 ${both((a) => people(a.ctr, 1000, "번"))} 눌렸어요 → ${ok("2") ? "괜찮아요" : "기준보다 적어요"}` },
+    { n: "②", stage: "본 사람이 누르는 정도", suspect: ok("2") ? "—" : "소재 · 문구 · 형식", kind: ok("2") ? "ok" : "low",
+      meaning: `1,000번 보이면 ${both((a) => people(a.ctr, 1000, "번"))} 눌려요 → ${ok("2") ? "괜찮아요" : "기준보다 적어요"}` },
     { n: "③", stage: "누른 뒤 페이지에 들어오는 정도", suspect: ok("3") ? "—" : "웹사이트 URL · 페이지 속도", kind: ok("3") ? "ok" : "low",
       meaning: `누른 100명 중 ${both((a) => `${Math.round((a.click_to_visit ?? 0) * 100)}명`)} → ${ok("3") ? "괜찮아요" : "적어요"}` },
     { n: "④", stage: "들어온 뒤 행동", suspect: "—", kind: row("4")?.status === "ok" ? "ok" : "unknown",
@@ -44,8 +44,7 @@ export function AN02({ r }: { r: Result }) {
   ];
   const blocked = lines.find((l) => l.kind === "low");
   const lead = blocked ? `'${blocked.stage}'에서 처음 막혔어요`
-    // ①의 '유지' 카드와 이어지게: 보이는 값 차이는 싼 쪽을 유지하면 해결 (막힘이 아님)
-    : first.kind === "worse" ? `A·B 차이는 광고가 보이는 값뿐이에요. ${paren(armName(arms[cpm?.better === "B" ? 1 : 0]!.name, cpm?.better === "B" ? 1 : 0))}를 유지하면 되고, 그 아래는 괜찮아요`
+    : first.kind === "worse" ? `광고가 보이는 단계에서만 ${cpm?.better === "B" ? "A" : "B"}가 비쌌고, 그 아래는 괜찮아요`   // 설계서 AN-02 그대로
     : "크게 막힌 곳은 없어요";
 
   return (

@@ -34,6 +34,25 @@ export default function App() {
   const title = useRef<HTMLHeadingElement>(null);
   useEffect(() => { if (result) title.current?.focus(); }, [result, step]);   // 단계가 바뀌면 제목으로 초점
 
+  // 화면설계서 v4.2 AN-00: 파일을 올리면 그 자리에서 검사(✓ 파일 · N줄 / 차단 알림) → [분석 시작]으로 결과
+  const [checked, setChecked] = useState<{ file: File; result: Result; given: string } | null>(null);
+  const given = () => (received !== null ? `key:${settingsKey}` : JSON.stringify(settings));
+  async function check(f: File) {
+    setBusy(true); setError(null); setChecked(null);
+    try { setChecked({ file: f, result: await analyzeFile(f, received !== null ? { settingsKey } : { settings }), given: given() }); }
+    catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  }
+  function startAnalysis() {
+    if (!checked) return;
+    // 올린 뒤 세팅을 바꿨으면 그 세팅으로 다시 계산, 아니면 검사 때 계산한 결과를 그대로
+    if (checked.given !== given()) void load(() => analyzeFile(checked.file, received !== null ? { settingsKey } : { settings }));
+    else { setResult(checked.result); setStep(0); setReached(0); window.scrollTo({ top: 0 }); }
+  }
+  /** 결과를 닫고 업로드 화면으로 (결과가 사라져서 한 번 묻는다). */
+  function leave() {
+    if (window.confirm("지금 결과를 닫고 다른 파일을 올릴까요? 지금 결과는 다시 볼 수 없어요.")) { setResult(null); setChecked(null); }
+  }
+
   async function load(get: () => Promise<Result>) {
     setBusy(true);
     setError(null);
@@ -58,7 +77,10 @@ export default function App() {
   if (!result) {
     return (
       <main className="mx-auto max-w-page px-4 py-section flex flex-col gap-group">
-        <Start onFile={(f) => { setFileName(f.name); void load(() => analyzeFile(f, received !== null ? { settingsKey } : { settings })); }}
+        <Start onFile={(f) => { setFileName(f.name); void check(f); }}
+          checked={checked && { name: checked.file.name, rows: checked.result.check.read.placement_rows || checked.result.check.read.daily_rows,
+            blocks: checked.result.alerts.filter((a) => a.level === "block") }}
+          onStart={startAnalysis}
           onExample={(name: ExampleName = "ovenlog") => { setFileName(EXAMPLE_FILE[name]); void load(() => example(received !== null ? settingsKey : null, name)); }}
           busy={busy} error={error} received={received} settings={settings} onSettings={setSettings} />
         <Toast text={toast} />
@@ -77,6 +99,8 @@ export default function App() {
         </div>
         <nav aria-label="단계" className="print:hidden max-sm:w-full max-sm:min-w-0">
           <ol className="flex flex-wrap gap-1.5 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4">
+            {/* 화면설계서 v4.2 스테퍼: 업로드 — ① … ⑥ */}
+            <li><button type="button" onClick={leave} className="inline-flex min-h-8 items-center whitespace-nowrap rounded-badge bg-accent-soft px-3 text-caption text-accent-ink">업로드</button></li>
             {STEPS.map((x, i) => {
               const can = i <= reached || (i === STEPS.length - 1 && !result.blocked);   // 차단이면 ⑥으로 건너뛰지 않음
               return (
@@ -91,7 +115,7 @@ export default function App() {
           </ol>
         </nav>
         {/* 결과를 지우는 일이라 한 번 묻는다. 자주 쓰는 버튼이 아니라 작은 글자 버튼으로 */}
-        <button type="button" onClick={() => { if (window.confirm("지금 결과를 닫고 다른 파일을 올릴까요? 지금 결과는 다시 볼 수 없어요.")) setResult(null); }}
+        <button type="button" onClick={leave}
           className="print:hidden inline-flex min-h-11 items-center px-2 text-body text-soft underline hover:text-ink">다른 파일 올리기</button>
       </header>
 
@@ -113,7 +137,7 @@ export default function App() {
           {step === 4 && <AN05 r={result} onReload={() => setResult(null)} />}
           {step === 5 && <AN06 r={result} onCopied={showToast} onSend={sendToExtension} />}
           <nav aria-label="이전 다음" className="flex items-center justify-between gap-3 pt-2 print:hidden">
-            {step > 0 ? <Button kind="secondary" onClick={() => go(step - 1)}>◀ {STEPS[step - 1]!.short}</Button> : <span />}
+            {step > 0 ? <Button kind="secondary" onClick={() => go(step - 1)}>◀ {STEPS[step - 1]!.short}</Button> : <Button kind="secondary" onClick={leave}>◀ 업로드</Button>}
             {/* ①에는 [이 테스트 바로 준비]가 주 버튼이라 [다음]은 보조 (한 화면에 주 버튼 하나) */}
             {!last && <Button kind={step === 0 && !result.blocked ? "secondary" : "primary"} onClick={() => go(step + 1)} disabled={result.blocked}>{s.next} ▶</Button>}
             {last && <Button kind="secondary" onClick={() => go(0)}>처음으로 ▶</Button>}

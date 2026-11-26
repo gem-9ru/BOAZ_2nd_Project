@@ -4,7 +4,7 @@ import { armName, Lead } from "../steps/shared";
 import { AlertMark, band, Button, Card, HowCalculated, won } from "../ui";
 
 /** AN-05 예상 범위 (v4.2): 예산(세트당 총액)과 기간(4일/7일)을 고르면 '보통 ○명 (적게 ○명 ~ 많이 ○명)'.
- *  손님 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
+ *  방문자 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
  *  메타 하루 최소보다 적으면 ▲ (광고가 안 나갈 수 있어요).
  *  10번 중 8번은 이 안에 들어요(10~90%). 써 본 적 없는 금액은 점선 + '가설'. 보통 값은 진한 보라 점(주황은 주의 색). */
 export function Simulator({ r, onReload }: { r: Result; onReload?: () => void }) {
@@ -48,7 +48,7 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
       <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.what ? ` · ${c.what} 효과는 아직 재 본 적 없어요` : ""}`}>
         {first ? `지금 세팅으로 세트당 총 ${won(budget)}을 ${days}일 동안 쓰면 ${band(first.visits)} 와요` : "계산하는 중…"}
       </Lead>
-      <Card title="예상 손님 수" summary="10번 중 8번은 이 안에 들어요">
+      <Card title="예상 방문자 수" summary="10번 중 8번은 이 안에 들어요">
         <label htmlFor="budget" className="flex flex-wrap items-baseline justify-between gap-2 text-body">
           <span>예산 <span className="text-soft">(세트당 총액)</span></span><b className="tabular-nums">{won(budget)}</b>
         </label>
@@ -99,7 +99,7 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
             ? `하루 ${won(first.daily)}은 써 본 적 없어서 가설이에요 (하루 최대 ${won(first.daily_max)}까지 써 봤어요).`
             : `이 금액은 써 본 적 없어서 범위가 넓어요 (세트당 ${won(spent)}까지만 써 봤어요).`}
         </p>}
-        <p className="text-caption text-soft">손님 수 범위는 세트당 총액으로 계산해요. 기간을 바꾸면 하루 금액과 '가설' 여부가 바뀌어요.</p>
+        <p className="text-caption text-soft">방문자 수 범위는 세트당 총액으로 계산해요. 기간을 바꾸면 하루 금액과 '가설' 여부가 바뀌어요.</p>
         {error && <p role="alert" className="text-body text-warn">{error}</p>}
       </Card>
       {nt && (
@@ -114,10 +114,10 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
         </Card>
       )}
       <HowCalculated easy="실측으로 맞춘 범위에서 광고비·누르는 정도·페이지 도착을 무작위로 뽑아 수만 번 가상으로 돌려 보고, 가운데 80%를 보여 드려요.">
-        <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 손님. 골라 뽑지 않고 전체 분포를 써요.</p>
+        <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 방문자. 골라 뽑지 않고 전체 분포를 써요.</p>
         <p>한계: {first?.limits ?? "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>
         {nt && <p>Test & Roll (Feit & Berman 2019): 실측으로 맞춘 몫 {(nt.share_lo * 100).toFixed(1)}~{Math.round(nt.share_hi * 100)}%.</p>}
-        {r.verdict?.min_budget.per_group && <p>고전적 표본 크기: 손님 1명당 비용이 20% 나은 걸 확실하게 고르려면 세트당 약 {won(r.verdict.min_budget.per_group)} (10번 중 8번). 작게 시험할 때는 '확실해요'까지 가지 않아도 돼요. 두 세트를 작게 비교해 나은 쪽을 고르고, 남은 돈은 그쪽에 써요 (Test & Roll).</p>}
+        {r.verdict?.min_budget.per_group && <p>고전적 표본 크기: 방문 1명당 비용이 20% 나은 걸 확실하게 고르려면 세트당 약 {won(r.verdict.min_budget.per_group)} (10번 중 8번). 작게 시험할 때는 '확실해요'까지 가지 않아도 돼요. 두 세트를 작게 비교해 나은 쪽을 고르고, 남은 돈은 그쪽에 써요 (Test & Roll).</p>}
       </HowCalculated>
     </>
   );

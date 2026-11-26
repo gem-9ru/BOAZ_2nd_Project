@@ -137,7 +137,7 @@ def test_setting_rows_cover_every_given_field_in_ads_manager_order():
     assert [x["field_id"] for x in rows][:1] == ["meta.campaign.objective"]
     by = {x["field_id"]: x for x in rows}
     assert by["meta.ad.media"]["kind"] == "테스트" and by["meta.ad.media"]["value"] == "정사각 이미지"
-    assert by["meta.adset.placements"]["kind"] == "그대로" and by["meta.adset.placements"]["note"].startswith("↓ 광고비")
+    assert by["meta.adset.placements"]["kind"] == "그대로" and by["meta.adset.placements"]["note"].startswith("광고비")   # ↓는 퍼널 전용 (설계서 AN-03 ③)
     assert by["meta.campaign.objective"]["kind"] == "그대로" and by["meta.campaign.objective"]["path"].startswith("캠페인")
 
 

@@ -37,7 +37,7 @@ def test_below_average_becomes_a_side_signal_on_its_funnel_row():
     m = run(read_export(_csv()))["matrix"]
     assert m["rankings"] is True
     assert m["meta_signals"] == [{"row": "1", "key": "quality",
-                                  "text": "메타 품질 순위: A(자동) 평균 이하 — 같은 손님을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식"}]
+                                  "text": "메타 품질 순위: A(자동) 평균 이하 — 같은 사람을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식"}]
     assert "메타 품질 순위" in next(r for r in m["rows"] if r["row"] == "1")["detail"]
 
 

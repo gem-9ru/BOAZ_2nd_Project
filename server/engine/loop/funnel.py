@@ -12,7 +12,7 @@ from ..specs import loop as _loop
 _MATRIX = _loop()["matrix"]   # 다음 세팅(matrix)과 같은 기준으로 힌트를 준다
 
 FEW = 10
-STAGES = [("impressions", "보여진 횟수"), ("link_clicks", "클릭"), ("landing_page_views", "손님 (페이지 방문)")]
+STAGES = [("impressions", "보여진 횟수"), ("link_clicks", "클릭"), ("landing_page_views", "방문자 (페이지 방문)")]
 VERB = {"link_clicks": "눌렀어요", "landing_page_views": "들어왔어요"}
 
 
@@ -25,7 +25,7 @@ def _per100(rate: float, key: str) -> str:
     """비율을 사람 수로 (v4.2): 누르는 정도는 100명 기준으로 차이가 안 보여서 1,000명 기준."""
     if key == "link_clicks":   # 노출은 사람 수가 아니라 보여진 횟수
         n = rate * 1000
-        return f"1,000번 보여지면 약 {n:.0f}번 눌렸어요" if n >= 1 else f"1,000번 보여지면 약 {n:.1f}번 눌렸어요"
+        return f"1,000번 보이면 약 {n:.0f}번 눌려요" if n >= 1 else f"1,000번 보이면 약 {n:.1f}번 눌려요"
     base = 100
     n = rate * base
     shown = f"약 {n:.0f}명" if n >= 1 else f"약 {n:.1f}명"
@@ -53,5 +53,5 @@ def run(arms: List[Dict]) -> Dict:
     if clicks >= 5 and visits / clicks < _MATRIX["visit_rate_min"]:
         hint = f"누른 사람 중 {visits / clicks:.0%}만 들어왔어요. 클릭은 했는데 도착이 적으면 페이지가 늦게 열리는지 점검해 보세요."
     elif imps >= 300 and clicks / imps < _MATRIX["ctr_low"]:
-        hint = f"1,000번 보여지면 {clicks / imps * 1000:.0f}번만 눌려요. 사진과 첫 문장을 바꿔 보는 게 먼저예요."
+        hint = f"1,000번 보이면 {clicks / imps * 1000:.0f}번만 눌려요. 사진과 첫 문장을 바꿔 보는 게 먼저예요."
     return {"arms": out, "hint": hint}

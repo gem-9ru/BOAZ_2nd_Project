@@ -5,7 +5,7 @@ import { MetricRow, ProbBar } from "../blocks/Trust";
 import { band, Card, HowCalculated, md, pct, people, betterProb, ReferenceBadge, Tabs, VerdictBadge, won, wordOf } from "../ui";
 import { armName, Lead, sameMoney } from "./shared";
 
-/** AN-04 ★ 세팅 값별 비교 (v4.2): 맨 앞에 '손님 1명당 비용' (사장님이 궁금한 숫자) + B가 나을 확률,
+/** AN-04 ★ 세팅 값별 비교 (v4.2): 맨 앞에 '방문 1명당 비용' (사장님이 궁금한 숫자) + B가 나을 확률,
  *  광고비 범위(CPM)는 기본 화면에 사장님 말로, CPC·CTR 막대는 🔎 안. 색은 추천 쪽 = 바이올렛, 나머지 = 회색. */
 export function AN04({ r }: { r: Result }) {
   const [tab, setTab] = useState<"ab" | "places" | "days">("ab");
@@ -17,7 +17,7 @@ export function AN04({ r }: { r: Result }) {
     <>
       {tab !== "places" && v && (
         <Lead badge={<VerdictBadge word={v.badge.word} />}>
-          {v.badge.word === "아직 몰라요" ? "어느 쪽이 손님을 더 데려왔는지는 아직 몰라요" : `${paren(armName(v.badge.better === "B" ? arms[1]!.name : arms[0]!.name, v.badge.better === "B" ? 1 : 0))}가 같은 돈으로 손님을 더 데려왔어요`}
+          {v.badge.word === "아직 몰라요" ? "어느 쪽이 방문자를 더 데려왔는지는 아직 몰라요" : `${paren(armName(v.badge.better === "B" ? arms[1]!.name : arms[0]!.name, v.badge.better === "B" ? 1 : 0))}가 같은 돈으로 방문자를 더 데려왔어요`}
         </Lead>
       )}
       {tab === "places" && <PlacesLead r={r} />}
@@ -42,7 +42,7 @@ export function AN04({ r }: { r: Result }) {
 
 const paren = (s: string) => (s.includes(" ") ? `${s.replace(" ", "(")})` : s);   // 'B 수동' → 'B(수동)'
 
-/** 손님 1명당 비용 (핵심 카드): 손님 1명당 비용 · 같은 돈으로 온 손님 수 · B가 나을 확률. */
+/** 방문 1명당 비용 (핵심 카드): 방문 1명당 비용 · 같은 돈으로 온 방문자 수 · B가 나을 확률. */
 function CostPerCustomer({ r }: { r: Result }) {
   const v = r.verdict!;
   const arms = r.summary.arms.slice(0, 2);
@@ -52,7 +52,7 @@ function CostPerCustomer({ r }: { r: Result }) {
   const max = Math.max(...costs.map((c) => c ?? 0)) || 1;
   const better = v.badge.better === "B" ? 1 : 0;
   return (
-    <Card title="손님 1명당 비용" summary={sentence(m, r)}>
+    <Card title="방문 1명당 비용" summary={sentence(m, r)}>
       <ul className="flex flex-col gap-2">
         {arms.map((a, i) => (
           <li key={a.name} className="grid grid-cols-[6rem_1fr_5rem] items-center gap-3 text-body">
@@ -64,7 +64,7 @@ function CostPerCustomer({ r }: { r: Result }) {
           </li>
         ))}
       </ul>
-      {same && <p className="text-body">같은 돈({won(same.base)})으로 온 손님 <b>A {same.counts[0]}명 · B {same.counts[1]}명</b></p>}
+      {same && <p className="text-body">같은 돈({won(same.base)})으로 온 방문자 <b>A {same.counts[0]}명 · B {same.counts[1]}명</b></p>}
       {/* 이긴 쪽 기준으로 말한다 (A가 이기면 'A가 나을 확률 95%') */}
       <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{pct(betterProb(v.badge.better, m.prob_b_better))}</b> <VerdictBadge word={v.badge.word} small /></p>
       <ProbBar p={betterProb(v.badge.better, m.prob_b_better)} />
@@ -118,7 +118,7 @@ function Days({ r }: { r: Result }) {
   const steady = days.length >= 2 && days.every((d, i) => i === 0 || of(d.prob) >= of(days[i - 1]!.prob) - 0.03);
   return (
     <Card title={!steady ? "하루씩 더해 보면 아직 오락가락해요" : lastWord === "아직 몰라요" ? `하루씩 쌓일수록 ${side} 쪽으로 기울지만 아직 몰라요` : `하루씩 쌓일수록 ${side} 쪽으로 굳어지고 있어요`}
-      summary={`손님 1명당 비용 기준 · ${side}가 나을 확률${lastWord === "확실해요" ? "" : " · 더 돌리면 '확실해요'까지 갈 수도 있지만 아직 장담은 못 해요"}`}>
+      summary={`방문 1명당 비용 기준 · ${side}가 나을 확률${lastWord === "확실해요" ? "" : " · 더 돌리면 '확실해요'까지 갈 수도 있지만 아직 장담은 못 해요"}`}>
       <ol className="flex flex-wrap items-center gap-2">
         {days.map((d, i) => (
           <li key={d.date} className="flex items-center gap-2">
@@ -161,12 +161,12 @@ function Places({ r }: { r: Result }) {
   const top = r.placements[0];
   return (
     <>
-      <Card title="어떤 노출 위치에서 잘 눌렸나요?" summary="1,000번 보여지면 몇 번 눌렸는지예요. 보여진 횟수가 적은 칸은 우연히 튀기 쉬워서 보정한 값을 먼저 보여 드려요">
+      <Card title="어떤 노출 위치에서 잘 눌렸나요?" summary="1,000번 보일 때 몇 번 눌렸는지예요. 보여진 횟수가 적은 칸은 우연히 튀기 쉬워서 보정한 값을 먼저 보여 드려요">
         <div className="overflow-x-auto">
           <table className="w-full text-body">
             <thead><tr className="text-left text-caption text-soft">
               <th className="py-2 pr-3">세트</th><th className="pr-3">노출 위치</th><th className="pr-3 text-right">보여진 횟수</th>
-              <th className="pr-3 text-right">1,000번 중 눌린 횟수 (보정)</th><th className="text-right">실제 그대로</th>
+              <th className="pr-3 text-right">1,000번 보일 때 클릭 (보정)</th><th className="text-right">실제 그대로</th>
             </tr></thead>
             <tbody>
               {rows.map((p) => (
@@ -183,7 +183,7 @@ function Places({ r }: { r: Result }) {
             </tbody>
           </table>
         </div>
-        <p className="rounded-button border border-line px-4 py-3 text-body">평균이 나쁜 자리를 바로 끄지 마세요. 메타는 '다음 손님 1명에 드는 돈'을 보고 돈을 나눠요.</p>
+        <p className="rounded-button border border-line px-4 py-3 text-body">평균이 나쁜 자리를 바로 끄지 마세요. 메타는 '다음 1건에 드는 돈'을 보고 돈을 나눠요.</p>
       </Card>
       {top && (
         <Card title="돈이 몰린 곳" summary={tops.length ? `${tops.join(", ")}이 ${short(top.label)}에서 나갔어요` : `100원 중 ${Math.round(top.share * 100)}원이 ${short(top.label)}에서 나갔어요`}>

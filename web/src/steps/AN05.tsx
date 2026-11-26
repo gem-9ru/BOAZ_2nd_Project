@@ -17,7 +17,7 @@ export function AN05({ r, onReload }: { r: Result; onReload?: () => void }) {
               <li key={a.name} className="rounded-button bg-bg px-4 py-3 text-body">
                 <p className="font-semibold">{"AB"[i] ?? a.name}</p>
                 <p>클릭 예측 {a.link_clicks.lo}~{a.link_clicks.hi}번 · 실제 {a.link_clicks.actual}번 {a.link_clicks.inside ? "✓" : "✕"}</p>
-                <p>손님 예측 {a.visits.lo}~{a.visits.hi}명 · 실제 {a.visits.actual}명 {a.visits.inside ? "✓" : "✕"}</p>
+                <p>방문자 예측 {a.visits.lo}~{a.visits.hi}명 · 실제 {a.visits.actual}명 {a.visits.inside ? "✓" : "✕"}</p>
               </li>
             ))}
           </ul>

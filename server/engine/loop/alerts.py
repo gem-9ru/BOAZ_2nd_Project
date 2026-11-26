@@ -102,7 +102,7 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
                       f"그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요. 클릭이 {cfg['min_clicks']}번 넘게 모일 때까지 그대로 두세요.", "AN-02"))
     elif actions is not None and actions < cfg["min_actions"]:
         label = summary.get("action_label") or "행동"
-        out.append(_a("warn", "small_sample", f"{label}이 {int(actions)}건뿐이라 '들어온 뒤 행동'은 아직 몰라요.",
+        out.append(_a("warn", "small_sample", f"{label}이 {int(actions)}건뿐이라 ④단계는 아직 몰라요.",
                       f"{label}이 {cfg['min_actions']}건 넘게 모이면 알 수 있어요. 그래서 화면 판정은 'B 쪽이에요'까지만 보여 드려요.", "AN-02", actions=actions))
     for a in arms if not no_visits else []:   # 도착 칸이 비었으면 0명으로 세지 않는다 (위 차단 알림)
         r = a.get("click_to_visit")

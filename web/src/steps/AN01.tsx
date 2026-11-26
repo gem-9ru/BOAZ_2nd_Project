@@ -40,7 +40,7 @@ export function AN01({ r, onApply, onOpenSetting }: { r: Result; onApply: () => 
       <ul className="grid gap-3 sm:grid-cols-3" aria-label="나머지 칸">
         <Mini tag="유지" field={keep?.field_id} onOpen={onOpenSetting} title={keep ? keep.title ?? `${keep.path.split(" › ").pop()} = ${keep.value}` : "바꿀 이유가 없는 칸"}>
           {keep && same && badge
-            ? <><span>같은 돈으로 손님 A {same.counts[0]}명 · B {same.counts[1]}명</span> <VerdictBadge word={badge.word} small /></>
+            ? <><span>같은 돈으로 방문자 A {same.counts[0]}명 · B {same.counts[1]}명</span> <VerdictBadge word={badge.word} small /></>
             : keep ? keep.reason : "이번 결과로는 없어요"}
         </Mini>
         <Mini tag="지켜보기" field={watch?.field_id} onOpen={onOpenSetting} title={watch ? watch.title ?? watch.path.split(" › ").pop()! : "없어요"}>{watch?.text ?? "이번엔 없어요"}</Mini>

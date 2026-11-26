@@ -7,8 +7,8 @@ export const STEPS = [
   { id: "AN-01", short: "확인·결론", title: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요", next: "왜 그런지 보기" },
   { id: "AN-02", short: "막힌 곳", title: "어디서 막혔나요?", next: "내 세팅 보기" },
   { id: "AN-03", short: "세팅 카드", title: "내 다른 설정은 괜찮나요?", next: "값 비교 보기" },
-  { id: "AN-04", short: "값 비교", title: "어떤 값이 더 나았나요?", next: "바꾸면 어떻게 돼요?" },
-  { id: "AN-05", short: "예산별 예상", title: "예산을 바꾸면 손님이 몇 명 올까요?", next: "보내기" },
+  { id: "AN-04", short: "값 비교", title: "어떤 값이 더 나았나요?", next: "예산별 예상 보기" },
+  { id: "AN-05", short: "예산별 예상", title: "예산을 바꾸면 방문자가 몇 명 올까요?", next: "보내기" },
   { id: "AN-06", short: "보내기", title: "이 테스트를 광고 관리자에 준비해요", next: "" },
 ] as const;
 
@@ -30,7 +30,7 @@ export function armName(name: string, i: number): string {
   return l;
 }
 
-/** 같은 돈으로 온 손님 수: 두 세트 중 적게 쓴 돈 기준 (지출이 달라도 공정하게). */
+/** 같은 돈으로 온 방문자 수: 두 세트 중 적게 쓴 돈 기준 (지출이 달라도 공정하게). */
 export function sameMoney(r: Result): { base: number; counts: number[] } | null {
   const arms = r.summary.arms.slice(0, 2);
   if (arms.length < 2) return null;

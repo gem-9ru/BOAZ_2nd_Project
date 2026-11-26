@@ -15,7 +15,7 @@ export type Level = "채택" | "유력" | "보류";   // 개발·근거 탭 값 
 export interface Change { field_id: string; label: string; new: string; note: string; path?: string; now?: string | null;
   reason?: string; certainty?: { level: Level; label: string; why: string }; grade?: string; meta_says?: string | null; checklist?: string[];
   /** v4.2: 돌려 본 적 없는 선택지 → '테스트 제안' 태그 (판정 배지 없음) */
-  tag?: string; tested?: boolean; what?: string; new_short?: string; test?: string; unknown?: string; per_set?: number; days?: number; row?: string;
+  tag?: string; tested?: boolean; what?: string; new_short?: string; test?: string; unknown?: string; per_set?: number; days?: number; test_roll?: boolean; row?: string;
   rule?: { row: string; level: Level; why: string } }
 export type AlertLevel = "block" | "warn" | "info";
 export interface Alert { level: AlertLevel; mark: string; kind: string; text: string; todo: string; screen: string; date?: string;

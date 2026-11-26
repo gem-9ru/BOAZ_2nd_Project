@@ -30,7 +30,7 @@ def test_owner_words_on_rows_and_keep():
     m = oven()["matrix"]
     row1 = next(r for r in m["rows"] if r["row"] == "1")
     assert row1["signal"] == "B(수동)가 15% 싸요 · 확실해요" and "CPM" not in row1["signal"]
-    assert m["keep"][0]["reason"].startswith("↓ 광고비 15% 싸요")
+    assert m["keep"][0]["reason"].startswith("광고비 15% 싸요")   # ↓는 퍼널 전용 (설계서 AN-03 ③)
     assert m["keep"][0]["value"].startswith("직접 고르기(수동)")
     assert not any("₩" in w["text"] or "유력" in w["text"] for w in m["watch"])
 

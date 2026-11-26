@@ -8,6 +8,7 @@ from typing import Dict, List, Optional
 
 from ..specs import all_fields, fields as _fields
 from ..specs import loop as _loop
+from .simulate import next_test_budget
 from .words import arm_short, josa, per_people, won
 
 PATH = {
@@ -153,11 +154,11 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
             keep.append({"field_id": field, "path": PATH.get(field, field),
                          "value": f"{arm_short(cheap['name'], ci)} 세트 그대로 ({' · '.join(many)} 함께)",
                          "title": f"{arm_short(cheap['name'], ci)} 세트 그대로 ({' · '.join(many)} 함께)",
-                         "reason": f"↓ 광고비 {pct:.0%} 싸요 · 확실해요 · {' · '.join(many)}이 같이 달라서 어느 칸 덕인지는 몰라요",
+                         "reason": f"광고비 {pct:.0%} 싸요 · 확실해요 · {' · '.join(many)}이 같이 달라서 어느 칸 덕인지는 몰라요",
                          "saving": pct, "arm": cheap["name"]})
         elif field:
             keep.append({"field_id": field, "path": PATH.get(field, field), "value": _value(field, cheap["name"]),
-                         "reason": f"↓ 광고비 {pct:.0%} 싸요 · 확실해요", "saving": pct, "arm": cheap["name"]})
+                         "reason": f"광고비 {pct:.0%} 싸요 · 확실해요", "saving": pct, "arm": cheap["name"]})
     elif len(arms) == 1 and arms[0].get("cpm") and arms[0]["cpm"] > cfg["cpm_high"]:
         rows.append(_row("1", "광고가 보이는 값", f"광고 1,000번 보여주는 데 {won(arms[0]['cpm'])} 들어서 기준보다 비싸요", "blocked", "meta.adset.placements"))
         proposals["1"] = {"field_id": "meta.adset.placements", "new": "노출 위치 직접 고르기(수동: 피드·릴스), 연령 '더 제한하기'로 고정",
@@ -170,11 +171,11 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     # 2 본 사람이 누르는 정도
     ctr = tot["link_clicks"] / tot["impressions"] if tot["impressions"] else None
     if ctr is not None and ctr < cfg["ctr_low"]:
-        rows.append(_row("2", "누르는 정도", f"1,000번 보여지면 {per_people(ctr, unit='번')} 눌려요 · 기준({per_people(cfg['ctr_low'], unit='번')})보다 적어요", "blocked", "meta.ad.media"))
+        rows.append(_row("2", "누르는 정도", f"1,000번 보이면 {per_people(ctr, unit='번')} 눌려요 · 기준({per_people(cfg['ctr_low'], unit='번')})보다 적어요", "blocked", "meta.ad.media"))
         proposals["2"] = {"field_id": "meta.ad.media", "new": "소재 바꾸기 (세로형 추가, 첫 장면에 상품)", "short": "+ 새 소재 1개", "what": "새 소재",
                           "reason": "보는 사람은 많은데 누르는 사람이 적어요. 소재·문구가 눈길을 못 끌어요.", "level": "유력", "grade": "A"}
     else:
-        rows.append(_row("2", "누르는 정도", f"1,000번 보여지면 {per_people(ctr, unit='번')} 눌려요 → 괜찮아요" if ctr is not None else "클릭 자료가 없어요",
+        rows.append(_row("2", "누르는 정도", f"1,000번 보이면 {per_people(ctr, unit='번')} 눌려요 → 괜찮아요" if ctr is not None else "클릭 자료가 없어요",
                          "ok" if ctr is not None else "skip"))
 
     # 2b 소재 피로
@@ -264,12 +265,15 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
         per_set = max(5000, int(tot["spend"] / max(1, len(arms)) // 1000 * 1000)) if arms else 5000
         per_set = max(per_set, -(-int(floor * test_days) // 1000) * 1000)
         what = p.get("what", f"{label} 변경")
+        _tr = next_test_budget(100000)
         change = {"row": pick, "field_id": p["field_id"], "path": PATH[p["field_id"]], "label": label,
                   "now": settings.get(p["field_id"]), "new": p["new"], "new_short": p["short"], "reason": p["reason"],
                   # v4.2: 결론은 돌려 본 적 없는 선택지 → 판정 배지 대신 '테스트 제안' (효과는 아직 몰라요)
                   "tag": "테스트 제안", "tested": False, "per_set": per_set, "days": test_days, "what": what,
+                  # 설계서 AN-06 '(Test & Roll 권장 범위 안)': AN-05 전체 예산 칸 기본값(10만 원) 기준
+                  "test_roll": _tr["per_set_lo"] <= per_set <= _tr["per_set_hi"],
                   "test": f"지금 세트와 {won(per_set)}씩 같이 돌려서 직접 비교해요.",
-                  "unknown": f"{josa(what)} 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+                  "unknown": f"{josa(what)} 방문자를 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
                   "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
                   # 근거 탭·개발 문서용: 진단 규칙 자체의 신뢰도 (확실/유력/보류 그대로)
                   "rule": {"row": pick, "level": p["level"], "why": "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")},
@@ -278,15 +282,15 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     if verdict and verdict["badge"]["level"] != "채택":
         mb = (verdict.get("min_budget") or {}).get("per_group")
         ss = next((a for a in alerts if a["kind"] == "small_sample"), None)
-        more = "같은 세팅으로 기간을 늘리거나 예산을 더 써야 알 수 있어요"
-        why = (f"{act_label}이 {int(ss['actions'])}건뿐이에요 → {more}" if ss and ss.get("actions") is not None
-               else f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모였어요 → {more}" if ss
-               else f"판정이 '{verdict['badge']['word']}'예요 → {more}")
+        # 문구는 화면설계서 v4.2 AN-01 '알림 신청이 1건뿐이라 아직 몰라요' 그대로
+        why = (f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요" if ss and ss.get("actions") is not None
+               else f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요" if ss
+               else f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요")
         watch.insert(0, {"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"], "title": "기간 · 예산",
                          "text": why, "need_per_set": mb})
 
     dont = ["여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요.",
-            "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 손님 1명에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요."]
+            "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 1건에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요."]
     if learning:
         dont.append("자주 고치기 — 큰 수정은 메타가 처음부터 다시 배우게 해요.")
 
@@ -298,7 +302,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
 
 # 메타 관련성 진단 → 퍼널 단계 (v4 2장·3장: 보조 신호. 결론은 바꾸지 않고 '메타 진단도 이렇게 봤어요'로 덧붙임)
 RANK_ROWS = {
-    "quality": ("1", "품질 순위", "같은 손님을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식"),
+    "quality": ("1", "품질 순위", "같은 사람을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식"),
     "engagement": ("2", "참여율 순위", "다른 광고보다 누르거나 반응하는 사람이 적어요 → 소재 · 문구"),
     "conversion": ("4", "전환율 순위", "들어온 뒤 행동이 다른 광고보다 적어요 → 랜딩 페이지 · 버튼 문구"),
 }

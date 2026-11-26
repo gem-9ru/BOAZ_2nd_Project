@@ -33,7 +33,7 @@ def _by_verdict(verdict: Optional[Dict], diag: Dict) -> Dict:
     if badge["level"] == "채택":
         change = rule_change or COPY
         return {"action": "고정하고 새 변수", "change": change, "summary": [
-            f"이번에 알게 된 것: {josa(win)} 같은 돈으로 손님을 더 데려왔어요 (나을 확률 {pct}% · 확실해요)",
+            f"이번에 알게 된 것: {josa(win)} 같은 돈으로 방문자를 더 데려왔어요 (나을 확률 {pct}% · 확실해요)",
             "아직 모르는 것: 다른 칸을 바꾸면 더 나아질지",
             f"다음에 바꿀 것: {win} 세팅은 그대로, {change['label']}만 바꿔 보기"]}
     if badge["level"] == "유력":

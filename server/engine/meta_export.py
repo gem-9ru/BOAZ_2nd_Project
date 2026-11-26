@@ -30,6 +30,8 @@ Source = Union[str, Path, io.IOBase, bytes]
 
 def _read_csv(src: Source) -> pd.DataFrame:
     raw = src if isinstance(src, bytes) else (src.read() if hasattr(src, "read") else Path(src).read_bytes())
+    if raw[:2] == b"PK":   # 엑셀(.xlsx)은 zip이라 'PK'로 시작 (화면설계서 v4.2 AN-00: .csv / .xlsx 허용)
+        return pd.read_excel(io.BytesIO(raw))
     for enc in ("utf-8-sig", "cp949"):
         try:
             return pd.read_csv(io.BytesIO(raw), encoding=enc)
