@@ -53,6 +53,19 @@ describe("questions", () => {
     expect(s.find((x) => x.fieldId === "meta.adset.end_date")!.value).toBe("2026-12-14 21:30");
   });
 
+  it("the first question starts with how many questions and that no money goes out until 게시", () => {
+    render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy }} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    const n = askedFields(FIELDS).length;
+    expect(screen.getByText(new RegExp(`${n}가지만 물어볼게요`))).toBeTruthy();
+    expect(screen.getByText(/'게시'를 누르기 전에는 돈이 나가지 않아요/)).toBeTruthy();
+  });
+
+  it("the intro is only on the first question", () => {
+    const first = askedFields(FIELDS)[0]!;
+    render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy, answers: { [first.id]: first.default ?? "x" } }} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    expect(screen.queryByText(/가지만 물어볼게요/)).toBeNull();
+  });
+
   it("QuestionStep shows one question at a time and moves on with the default", () => {
     const dispatch = vi.fn();
     const state: FlowState = { ...initialState(), step: "questions", target, copy };
