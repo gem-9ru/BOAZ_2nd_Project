@@ -62,7 +62,7 @@ export class Guide {
   private surveying: string | null = null;
   private jumped = -1;   // 지도로 점프한 단계 (한 단계에 한 번만)
   private shown = -1;   // 이 단계 칸을 이미 가리켜 보여 줬는지
-  private hintPresses = 0;
+  private hintPresses = 0;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
   /** 찾는 칸이 열린 창 뒤에 가려져 있음 (창을 먼저 마쳐야 함) */
   private behindDialog = false;
   private dialogWait = false;   // 칸이 창 뒤라서 기다리는 중 (창이 닫히면 저절로 풀린다)
@@ -76,7 +76,7 @@ export class Guide {
   private waitFor: HTMLElement | null = null;   // 도착을 기다리기 시작한 칸
   private waitSince = 0;
   /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
-  private pasteAsk = false;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
+  private pasteAsk = false;
   /** 하위 단계가 있는 칸: 지금 하위 단계(-1 = 아직), 안 보인 횟수, 가리켜 보여 준 단계, 사장님이 되돌아갔는지 */
   private stage = -1;
   private stageMiss = 0;
@@ -165,15 +165,7 @@ export class Guide {
       return;
     }
     // 진짜 칸이 아직 없다 → 다른 편집 화면에 있는 칸이면 그 화면으로, 아니면 끝까지 내려 보며 찾고, 그래도 없으면 준비 안내(만들기·계속·다음)를 누른다
-    if (!this.surveyed && !dialog && currentLevel(this.doc) !== "list") {
-      // 편집 화면에 처음 들어왔다 → 세 화면을 훑어 칸 위치 지도를 만든다 (그동안 다른 동작은 쉼)
-      this.busy = true;
-      void this.survey().finally(() => { this.busy = false; this.nextAt = 0; });
-      return;
-    }
-    if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return; }
-    if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return; }
-    if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return; }
+    if (this.walkToField(now, dialog)) return;
     if (this.target && hint) {
       if (isPublishLike(this.target)) { this.waiting = "publish"; this.auto = false; return; }
       // 사장님이 직접 할 칸(사진 등)은 준비 버튼을 한 번만 열어 주고 기다린다. 어떤 칸이든 3번 눌러도 그대로면 멈춘다.
@@ -186,6 +178,21 @@ export class Guide {
       return;
     }
     this.waiting = "owner";   // 화면 어디에도 없다 → 대신 그림과 함께 사장님을 기다린다
+  }
+
+  /** 칸이 화면에 아직 없을 때 한 걸음: 처음이면 세 화면을 훑어 지도 만들기 → 다른 편집 화면으로 → 지도 높이로 점프 → 내려 보며 찾기.
+   *  한 걸음 했으면 true (다음 걸음 시각도 정함), 더 할 게 없으면 false. */
+  private walkToField(now: number, dialog: HTMLElement | null): boolean {
+    if (!this.surveyed && !dialog && currentLevel(this.doc) !== "list") {
+      // 편집 화면에 처음 들어왔다 → 세 화면을 훑어 칸 위치 지도를 만든다 (그동안 다른 동작은 쉼)
+      this.busy = true;
+      void this.survey().finally(() => { this.busy = false; this.nextAt = 0; });
+      return true;
+    }
+    if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return true; }
+    if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return true; }
+    if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return true; }
+    return false;
   }
 
   /** 칸이 다른 편집 화면(캠페인·광고 세트·광고)에 있으면 왼쪽 목록으로 그 화면에 간다. 갔으면 true.
@@ -422,21 +429,17 @@ export class Guide {
   /** [이전 칸]: 한 칸 뒤로 (첫 칸이면 그대로). */
   back(): void {
     if (this.index === 0) return;
-    this.stop();
-    this.scan = { wrapped: false, done: false };
-    this.waiting = undefined;
-    this.hintPresses = 0;
-    this.finishPresses = 0;
-    this.dialogWait = false;
-    this.pasteAsk = false;
-    this.resetStage();
-    this.index -= 1;
-    this.tries = 0;
-    this.onProgress(this.index);
+    this.moveTo(this.index - 1);
     if (!this.ensureLevel()) this.seek();
   }
 
   private advance(): void {
+    this.moveTo(this.index + 1);
+    this.seek();
+  }
+
+  /** 다른 칸으로: 칸마다 새로 세는 값(스크롤·기다림·누른 횟수·하위 단계)을 모두 비운다 */
+  private moveTo(index: number): void {
     this.stop();
     this.scan = { wrapped: false, done: false };
     this.waiting = undefined;
@@ -445,10 +448,9 @@ export class Guide {
     this.dialogWait = false;
     this.pasteAsk = false;
     this.resetStage();
-    this.index += 1;
+    this.index = index;
     this.tries = 0;
     this.onProgress(this.index);
-    this.seek();
   }
 
   private seek(): void {
@@ -557,14 +559,7 @@ export class Guide {
     if (!this.target || !st) {
       const dialog = openDialog(this.doc);
       if (this.stage >= 0) { this.nextAt = now + SCAN_GAP; return; }   // 단계 사이: 스크롤하지 않고 다음 요소를 기다린다
-      if (!this.surveyed && !dialog && currentLevel(this.doc) !== "list") {
-        this.busy = true;
-        void this.survey().finally(() => { this.busy = false; this.nextAt = 0; });
-        return;
-      }
-      if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return; }
-      if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return; }
-      if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return; }
+      if (this.walkToField(now, dialog)) return;
       this.waiting = "owner";
       return;
     }

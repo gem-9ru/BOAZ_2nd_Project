@@ -1,11 +1,10 @@
 import type { FlowEvent, FlowState } from "../../../lib/flow";
+import { isoDate } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 function nextDay(iso: string): string {
   const [y, m, d] = iso.split("-").map(Number);
-  const t = new Date(y!, m! - 1, d! + 1);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`;
+  return isoDate(new Date(y!, m! - 1, d! + 1));
 }
 
 /** 광고를 켠 뒤: 결과를 보러 올 날 + 내보내기 안내 + 올리기. */

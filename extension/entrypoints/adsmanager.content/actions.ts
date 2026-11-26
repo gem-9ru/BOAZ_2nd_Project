@@ -1,7 +1,8 @@
 // 사장님 대신 맞추는 복잡한 칸 (시작·종료 날짜 · 연령·성별 · 위치).
 // 2026-11-25 실제 메타 광고 세트 화면에서 확인한 구조: 날짜는 yyyy-mm-dd 글자 칸, 연령은 '최소/최대 연령' 목록(일부만 그림),
 // 성별은 '전체/남성/여성' 라디오, 위치는 기본 '대한민국'. 게시와 관련된 것은 건드리지 않는다.
-import { typeInto } from "./locate";
+import { isoDate } from "../../lib/settings";
+import { byRoleText, firstShown, isChecked, textOf, typeInto } from "./locate";
 
 export interface Pace { wait: (ms: number) => Promise<void> }
 
@@ -11,20 +12,10 @@ function note(...parts: unknown[]): void {
 }
 const real: Pace = { wait: (ms) => new Promise((r) => setTimeout(r, ms)) };
 
-function text(e: Element | null): string {
-  return (e?.textContent ?? "").replace(/[​‌‍﻿]/g, "").replace(/\s+/g, " ").trim();
-}
-
 /** aria-labelledby가 가리키는 이름표 글자가 name인 요소 (selector에 맞는 것 중 화면에 그려진 것 먼저). */
-function byLabel(doc: Document, selector: string, name: string): HTMLElement | null {
-  const list = Array.from(doc.querySelectorAll<HTMLElement>(selector)).filter((e) =>
-    (e.getAttribute("aria-labelledby") ?? "").split(/\s+/).some((id) => text(doc.getElementById(id)) === name));
-  return list.find((e) => e.getClientRects().length > 0) ?? list[0] ?? null;
-}
-
-function button(doc: Document, test: (t: string) => boolean): HTMLElement | null {
-  const list = Array.from(doc.querySelectorAll<HTMLElement>("[role=button], button, a")).filter((e) => test(text(e)));
-  return list.find((e) => e.getClientRects().length > 0) ?? list[0] ?? null;
+function byLabelledName(doc: Document, selector: string, name: string): HTMLElement | null {
+  return firstShown(Array.from(doc.querySelectorAll<HTMLElement>(selector)).filter((e) =>
+    (e.getAttribute("aria-labelledby") ?? "").split(/\s+/).some((id) => textOf(doc.getElementById(id)) === name)));
 }
 
 /** 날짜 칸 뒤의 '시간'(0~23)·'분'(0~59) 스핀 버튼에 HH:MM을 넣고, 정말 그 값이 됐는지 본다 (2026-11-26 실제 화면: aria-label 시간·분, 24시간제).
@@ -58,11 +49,10 @@ async function setTimeAfter(doc: Document, dateBox: HTMLElement, time: string, p
 export async function setStartDate(doc: Document, value: string, pace: Pace = real, today: Date = new Date()): Promise<boolean> {
   const date = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
   const time = value.match(/\b\d{2}:\d{2}\b/)?.[0];
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const now = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+  const now = isoDate(today);
   if (!date || (date <= now && !time)) return true;   // 오늘 바로 시작 → 메타 기본값 그대로
   const boxes = Array.from(doc.querySelectorAll<HTMLInputElement>("input[placeholder='yyyy-mm-dd']"));
-  const sw = byLabel(doc, "input, [role=checkbox], [role=switch]", "종료 날짜 설정");
+  const sw = byLabelledName(doc, "input, [role=checkbox], [role=switch]", "종료 날짜 설정");
   const before = sw ? boxes.filter((i) => sw.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_PRECEDING) : boxes.slice(0, 1);
   const box = before[before.length - 1];
   if (!box) { note("start date box not found"); return false; }
@@ -86,9 +76,9 @@ export async function setStartDate(doc: Document, value: string, pace: Pace = re
 /** 종료 날짜: '종료 날짜 설정'을 켜고, 그 스위치 바로 뒤에 오는 날짜 칸(시작 날짜 아님)에 yyyy-mm-dd로 넣는다. */
 export async function setEndDate(doc: Document, value: string, pace: Pace = real): Promise<boolean> {
   const date = value.match(/\d{4}-\d{2}-\d{2}/)?.[0];
-  const sw = byLabel(doc, "input, [role=checkbox], [role=switch]", "종료 날짜 설정");
+  const sw = byLabelledName(doc, "input, [role=checkbox], [role=switch]", "종료 날짜 설정");
   if (!date || !sw) return false;
-  const on = sw instanceof HTMLInputElement ? sw.checked : sw.getAttribute("aria-checked") === "true";
+  const on = isChecked(sw);
   if (!on) { sw.click(); await pace.wait(800); }
   const box = Array.from(doc.querySelectorAll<HTMLInputElement>("input[placeholder='yyyy-mm-dd']"))
     .find((i) => sw.compareDocumentPosition(i) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -114,12 +104,12 @@ export function parseAgeGender(value: string): { min: string; max: string; gende
 
 /** 목록(combobox)을 열고 선택지를 찾아 누른다. 메타는 선택지를 일부만 그리므로 목록을 내리며 찾는다. */
 async function pickOption(doc: Document, name: string, want: string, pace: Pace): Promise<boolean> {
-  const box = byLabel(doc, "[role=combobox]", name);
+  const box = byLabelledName(doc, "[role=combobox]", name);
   if (!box) return false;
-  if (text(box) === want) return true;
+  if (textOf(box) === want) return true;
   box.click();
   await pace.wait(700);
-  const find = () => Array.from(doc.querySelectorAll<HTMLElement>("[role=option]")).find((o) => text(o) === want);
+  const find = () => Array.from(doc.querySelectorAll<HTMLElement>("[role=option]")).find((o) => textOf(o) === want);
   let hit = find();
   const first = doc.querySelector<HTMLElement>("[role=option]");
   let sc: HTMLElement | null = first?.parentElement ?? null;
@@ -133,7 +123,7 @@ async function pickOption(doc: Document, name: string, want: string, pace: Pace)
   hit.click();
   await pace.wait(500);
   // 메타가 다시 그렸을 수 있으니 칸을 새로 찾아, 정말 그 값이 됐는지 본다
-  const now = text(byLabel(doc, "[role=combobox]", name));
+  const now = textOf(byLabelledName(doc, "[role=combobox]", name));
   if (now !== want) { note("age pick did not stick", name, want, now); return false; }
   return true;
 }
@@ -142,26 +132,26 @@ async function pickOption(doc: Document, name: string, want: string, pace: Pace)
 export async function setAgeGender(doc: Document, value: string, pace: Pace = real): Promise<boolean> {
   const want = parseAgeGender(value);
   if (!want) return false;
-  if (!byLabel(doc, "[role=combobox]", "최소 연령")) {
-    const show = button(doc, (t) => t === "설정 표시");
+  if (!byLabelledName(doc, "[role=combobox]", "최소 연령")) {
+    const show = byRoleText(doc, "button", (t) => t === "설정 표시");
     if (show) { show.click(); await pace.wait(1000); }
-    const age = button(doc, (t) => /^연령\d/.test(t));
+    const age = byRoleText(doc, "button", (t) => /^연령\d/.test(t));
     if (age) { age.click(); await pace.wait(1000); }
-    note("age opened", { show: Boolean(show), age: Boolean(age), boxes: Boolean(byLabel(doc, "[role=combobox]", "최소 연령")) });
+    note("age opened", { show: Boolean(show), age: Boolean(age), boxes: Boolean(byLabelledName(doc, "[role=combobox]", "최소 연령")) });
   }
   if (!(await pickOption(doc, "최소 연령", want.min, pace))) return false;
   if (!(await pickOption(doc, "최대 연령", want.max, pace))) return false;
-  let radio = byLabel(doc, "input[type=radio], [role=radio]", want.gender);
+  let radio = byLabelledName(doc, "input[type=radio], [role=radio]", want.gender);
   if (!radio) {
-    const g = button(doc, (t) => /^성별/.test(t));
+    const g = byRoleText(doc, "button", (t) => /^성별/.test(t));
     if (g) { g.click(); await pace.wait(800); }
-    radio = byLabel(doc, "input[type=radio], [role=radio]", want.gender);
+    radio = byLabelledName(doc, "input[type=radio], [role=radio]", want.gender);
   }
   if (!radio) { note("gender radio not found", want.gender); return false; }
-  const on = radio instanceof HTMLInputElement ? radio.checked : radio.getAttribute("aria-checked") === "true";
+  const on = isChecked(radio);
   if (!on) radio.click();
   await pace.wait(400);
-  const checked = radio instanceof HTMLInputElement ? radio.checked : radio.getAttribute("aria-checked") === "true";
+  const checked = isChecked(radio);
   if (!checked) { note("gender radio did not stick", want.gender); return false; }
   note("age/gender set", want.min, want.max, want.gender);
   return true;
@@ -170,5 +160,5 @@ export async function setAgeGender(doc: Document, value: string, pace: Pace = re
 /** 위치: '전국'이면 메타 기본값 '대한민국'이 이미 맞다 → 할 일 없음(true). 동네·반경은 지도에서 직접 골라야 해서 false. */
 export function checkLocation(doc: Document, value: string): boolean {
   if (!/전국/.test(value)) return false;
-  return /대한민국/.test(text(button(doc, (t) => t.startsWith("위치"))));
+  return /대한민국/.test(textOf(byRoleText(doc, "button", (t) => t.startsWith("위치"))));
 }

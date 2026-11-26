@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { nextTestSteps, stepsFor } from "../../../lib/guide";
+import { nextTestSteps, stepsFor, type GuideMsg } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
 import { sendWithRetry } from "../../../lib/progress";
 import { Coach, PrimaryButton, WarnLine } from "../ui/Coach";
@@ -61,7 +61,7 @@ export default function GuideStep({ state, dispatch }: Props) {
     setError(null);
     dispatch({ type: "guideOpened" });   // 뭉치가 집을 나선다
     const tab = await adsTab();
-    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index });
+    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index } satisfies GuideMsg);
     let ok = await sendWithRetry(send, 2, 800);
     if (!ok && tab.id) {
       // 확장을 다시 불러오기 전에 열린 탭은 뭉치 스크립트가 없다 → 새로고침해서 넣고 다시 부른다
@@ -77,7 +77,7 @@ export default function GuideStep({ state, dispatch }: Props) {
   async function move(delta: 1 | -1) {
     const tab = await findAdsTab();
     if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
-    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta }).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
+    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
   // 수정 안내 목록에 없는 칸만 바뀌었으면: 탭을 열지 않고 글로 알려 준다.

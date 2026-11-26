@@ -1,5 +1,5 @@
 import ReactDOM from "react-dom/client";
-import type { GuideStepItem } from "../../lib/guide";
+import type { GuideMsg } from "../../lib/guide";
 import { Character } from "./Character";
 import { Guide } from "./guideRunner";
 import "./overlay.css";
@@ -43,7 +43,7 @@ export default defineContentScript({
           onArrive={(el) => guide?.arrived(el, performance.now())}
           onClose={() => {
             // 집에 도착: 패널 제목 왼쪽 집에 다시 앉힌다 (배경 스크립트가 저장 → 패널이 따라감)
-            void browser.runtime.sendMessage({ type: "guide:closed" }).catch(() => {});
+            void browser.runtime.sendMessage({ type: "guide:closed" } satisfies GuideMsg).catch(() => {});
             stopGuide();
             ui.remove();
           }}
@@ -51,10 +51,10 @@ export default defineContentScript({
       );
     }
 
-    browser.runtime.onMessage.addListener((msg: { type?: string; steps?: GuideStepItem[]; startIndex?: number; delta?: number }) => {
+    browser.runtime.onMessage.addListener((msg: GuideMsg) => {
       // 패널의 [이전 칸] [다음 칸]
       if (msg.type === "guide:move" && guide) {
-        if ((msg.delta ?? 0) < 0) guide.back(); else guide.apply();
+        if (msg.delta < 0) guide.back(); else guide.apply();
         render();
         return;
       }
@@ -63,7 +63,7 @@ export default defineContentScript({
       ui.mount();
       const total = msg.steps.length;
       guide = new Guide(document, msg.steps, msg.startIndex ?? 0, (index) => {
-        void browser.runtime.sendMessage({ type: "guide:progress", index, total }).catch(() => {});
+        void browser.runtime.sendMessage({ type: "guide:progress", index, total } satisfies GuideMsg).catch(() => {});
         render();
       });
       guide.followBuddy();   // 뭉치가 칸에 도착한 뒤에 누르고 넣는다

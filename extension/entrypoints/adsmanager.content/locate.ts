@@ -7,7 +7,7 @@ const FIELD = "input, select, textarea, [role=combobox], [role=textbox], [conten
 const RADIO_FIELD = `${FIELD}, [role=radio], [role=checkbox], [role=switch]`;
 
 /** 같은 글자의 요소가 여럿이면 화면에 그려진 것을 먼저 (메타는 숨은 복제본을 둔다). 그려진 게 없으면 첫 번째. */
-function firstShown(list: HTMLElement[]): HTMLElement | null {
+export function firstShown(list: HTMLElement[]): HTMLElement | null {
   return list.find((e) => e.getClientRects().length > 0) ?? list[0] ?? null;
 }
 
@@ -17,8 +17,8 @@ function byAria(doc: Root, name: string): HTMLElement | null {
   return firstShown(Array.from(doc.querySelectorAll<HTMLElement>("[aria-label]")).filter((e) => e.getAttribute("aria-label")?.trim() === name));
 }
 
-function textOf(e: Element): string {
-  return (e.textContent ?? "").replace(/[\u200b\u200c\u200d\ufeff]/g, "").replace(/\s+/g, " ").trim();
+export function textOf(e: Element | null): string {
+  return (e?.textContent ?? "").replace(/[\u200b\u200c\u200d\ufeff]/g, "").replace(/\s+/g, " ").trim();
 }
 
 /** 글자가 정확히 같은 가장 작은 요소를 찾고, 그 근처(같은 부모 → 위로 MAX_CLIMB 단계)의 첫 입력칸을 고른다. */
@@ -37,7 +37,7 @@ function byLabel(doc: Root, label: string): HTMLElement | null {
   return null;
 }
 
-function byRoleText(doc: Root, role: string, match: (t: string) => boolean): HTMLElement | null {
+export function byRoleText(doc: Root, role: string, match: (t: string) => boolean): HTMLElement | null {
   const sel = role === "button" ? "[role=button], button, a" : `[role=${role}]`;   // 메타의 "설정 표시" 같은 링크도 버튼처럼 누른다
   return firstShown(Array.from(doc.querySelectorAll<HTMLElement>(sel)).filter((e) => match(textOf(e))));
 }

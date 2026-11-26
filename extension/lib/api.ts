@@ -209,14 +209,16 @@ export function plan(code: string): Promise<import("./flow").Plan> {
   return call(`/plan/${encodeURIComponent(code)}`);
 }
 
-/** 광고 어시스턴트: 질문이 없으면 첫 말 + 추천 질문, 있으면 분석 결과로 설명 (EX-03). */
-export function askAssistant(code: string, step: string, question?: string): Promise<{ message: string; suggestions?: string[] }> {
-  return call("/assistant", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, step, question }) });
+export interface AssistantAlert { level: "block" | "warn" | "info"; text: string; todo: string }
+
+/** 광고 어시스턴트: 질문이 없으면 첫 말 + 추천 질문(분석 페이지 단계면 그 단계 알림도), 있으면 분석 결과로 설명 (EX-03). */
+export function askAssistant(code: string, step: string, question?: string): Promise<{ message: string; suggestions?: string[]; alerts?: AssistantAlert[] }> {
+  return call("/assistant", json({ code, step, question }));
 }
 
 /** 세팅값(칸 id → 값)을 서버에 맡기고 키만 받는다. 분석 페이지 주소에는 이 키만 붙인다 (값은 URL에 넣지 않음). */
 export function keepSettings(settings: Record<string, string>): Promise<{ key: string; count: number }> {
-  return call("/settings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ settings }) });
+  return call("/settings", json({ settings }));
 }
 
 /** 분석 페이지 주소: 세팅값을 맡겼으면 #s=키 (# 뒤는 서버 기록에 남지 않음). 실패하면 그냥 연다 → 분석 페이지가 5문항으로 묻는다. */
