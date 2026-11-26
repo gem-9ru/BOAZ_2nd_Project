@@ -149,7 +149,8 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
         />
       )}
       {rect && !leaving && keepOthers && (
-        <p className="coach-keep" style={{ left: rect.left - 6, top: Math.max(4, rect.top - 34) }}>
+        // 테두리 오른쪽 위: 메타 칸 이름표는 왼쪽 위에 있어서 그쪽에 두면 이름표를 덮는다 (2026-11-26 실제 화면 확인)
+        <p className="coach-keep" style={{ right: window.innerWidth - (rect.right + 6), top: Math.max(4, rect.top - 28) }}>
           이 칸만 바꿔요 · 나머지 칸은 그대로 (유지)
         </p>
       )}

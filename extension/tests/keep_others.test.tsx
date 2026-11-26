@@ -28,7 +28,10 @@ describe("EX-03 나머지 칸 흐리게", () => {
     const { container } = render(<Character view={{ index: 0, total: 3, found: true, text: "여기", target: f }} keepOthers
       onDone={() => {}} onBack={() => {}} onClose={() => {}} />);
     expect(container.querySelector(".coach-ring")!.className).toContain("coach-ring-focus");
-    expect(screen.getByText("이 칸만 바꿔요 · 나머지 칸은 그대로 (유지)")).toBeTruthy();
+    const tag = screen.getByText("이 칸만 바꿔요 · 나머지 칸은 그대로 (유지)");
+    expect(tag.style.left).toBe("");   // 칸 이름표(왼쪽 위)를 덮지 않게 테두리 오른쪽 위에 붙임
+    expect(parseFloat(tag.style.right)).toBe(window.innerWidth - 306);   // 칸 오른쪽 300 + 테두리 여백 6
+    expect(parseFloat(tag.style.top)).toBe(272);
     expect(screen.getByText(/나머지 칸은 지난번 그대로 두세요/)).toBeTruthy();
   });
 
