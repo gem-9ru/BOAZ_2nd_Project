@@ -330,9 +330,9 @@ describe("② 문구 기억 · 자리별 미리 보기 · 틀 문장 알림", ()
     expect((screen.getByRole("radio", { name: "인스타 피드" }) as HTMLInputElement).checked).toBe(true);
     expect(screen.getByText(/인스타 피드는 제목 40자, 본문 125자가 권장돼요/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "스토리" }));
-    expect(screen.getByText(/스토리에서는 제목이 안 보이고/)).toBeTruthy();
+    expect(screen.getByText(/스토리는 9:16 세로 사진이 권장돼요/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "페이스북 피드" }));
-    expect(screen.queryByText(/인스타 피드는 제목 40자|제목이 안 보이고/)).toBeNull();
+    expect(screen.queryByText(/인스타 피드는 제목 40자|스토리는 9:16/)).toBeNull();
   });
 
   it("says when the copies came from the fallback template", async () => {

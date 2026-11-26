@@ -8,7 +8,7 @@ export const PREVIEW_LABEL: Record<PreviewKind, string> = { ig: "인스타 피�
 /** 광고가 뜨는 자리마다 문구가 보이는 모양을 작게 미리 보기 (사진은 내 사진 또는 자리만).
  *  - 인스타 피드: 사진 → [더 알아보기] 막대 → '가게 이름 본문' 두 줄 (메타 가이드 권장: 제목 40자·본문 125자, 제목이 어디 보이는지는 확인 못 함)
  *  - 페이스북 피드: 본문 → 사진 → 제목 + [더 알아보기]
- *  - 스토리: 세로 화면 가득 사진, 아래에 본문 한 줄과 [더 알아보기] (제목은 안 보임) */
+ *  - 스토리: 세로 화면 가득 사진, 아래에 본문과 [더 알아보기] (메타 가이드: 9:16, 위 14%·아래 35% 비우기. 본문 한 줄 자르기는 확인 못 한 그림일 뿐) */
 export default function FeedPreview({ name, headline, text, photo, kind = "fb" }: {
   name: string; headline: string; text: string; photo?: string | null; kind?: PreviewKind;
 }) {
