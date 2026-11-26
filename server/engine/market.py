@@ -334,6 +334,22 @@ def audience_index(female: float, ages: Dict[str, float], baseline: Optional[dic
     return idx
 
 
+BY_AGE_MIN = 0.05   # 이보다 적게 찾는 나이대는 성별을 따로 묻지 않음 (호출 수를 줄임)
+
+
+def female_by_age(keyword: str, category: str, ages: Dict[str, float], online: bool = True) -> Dict[str, float]:
+    """나이대마다 그 안의 여성 비중 (쇼핑인사이트 성별 + ages 필터). 막대를 여성·남성으로 나눠 그리는 데 씀. 못 받은 나이대는 빠짐.
+    /research에서는 부르지 않는다 (호출 수 한도): 화면에 그림이 열릴 때 /audience/split으로 따로 받는다."""
+    out: Dict[str, float] = {}
+    for age, share in ages.items():
+        if share < BY_AGE_MIN:
+            continue
+        g = _shares(_sums(api.shopping_insight(f"{HUB}/keyword/gender", category, keyword, online, ages=[age])), ("f", "m"))
+        if g:
+            out[age] = round(g["f"], 3)
+    return out
+
+
 def audience(keyword: str, category: str = DEFAULT_CATEGORY, online: bool = True) -> Optional[dict]:
     """키워드를 찾는 사람의 성별·연령·기기·월별. 성별이나 연령을 못 받으면 None. 근거 등급 B."""
     g = _shares(_sums(api.shopping_insight(f"{HUB}/keyword/gender", category, keyword, online)), ("f", "m"))
@@ -478,7 +494,8 @@ def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: 
     aud = audience(word, category, online) if category else None
     out = {"keyword": word, "total_qc": total,
            "mobile": round(float(r["mobile_qc"]) / total, 3) if total > 0 and "mobile_qc" in row else None,
-           "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None}
+           "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
+           "trend": _trend_of(aud["monthly"]) if aud and aud.get("monthly") else None}   # 몇 월에 많이 찾나 (쇼핑인사이트 클릭)
     log.info("product stats keyword=%s qc=%d audience=%s", word, total, "yes" if aud else "no")
     return out
 

@@ -128,6 +128,24 @@ def _research(body: ResearchIn) -> dict:
             **wide, "segments": report.segments, "modifiers": mods, "product_stats": report.product_stats}
 
 
+class SplitIn(BaseModel):
+    keyword: str
+    category: str
+    ages: dict = {}   # 나이대 → 비중 (/research가 준 audience.ages). 적게 찾는 나이대는 묻지 않음
+
+
+@app.post("/audience/split")
+def audience_split(body: SplitIn) -> dict:
+    """연령 막대를 여성·남성으로 나눠 그리기: 나이대마다 그 안의 여성 비중. 화면에 그림이 열릴 때 따로 부른다 (저장해 둠)."""
+    if body.category not in {c["code"] for c in market.CATEGORIES}:
+        return {"female_by_age": {}}
+    ages = {str(k): float(v) for k, v in body.ages.items() if str(k) in market.AGE_GROUPS}
+    with _NAVER_LOCK:
+        out = market.female_by_age(body.keyword.replace(" ", ""), body.category, ages, _online())
+    log.info("audience split keyword=%s ages=%d", body.keyword, len(out))
+    return {"female_by_age": out}
+
+
 ASKED_KINDS = ("question", "precheck")
 SET_KINDS = ("default", "auto", "next_cycle")
 

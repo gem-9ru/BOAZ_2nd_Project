@@ -37,13 +37,13 @@ describe("FindStep", () => {
   it("shows the top group from top_age, the cache source line, and confirms the target", () => {
     const dispatch = vi.fn();
     render(<FindStep state={{ ...initialState(), research, product: "수제 쿠키" }} dispatch={dispatch} />);
-    expect(screen.getByText("30대 여성")).toBeTruthy();
+    expect(screen.getByText("30~50대 여성")).toBeTruthy();   // 40대가 가장 많고 30·50대도 많이 찾음
     expect(screen.getByText(/저장된 자료/)).toBeTruthy();
     expect(screen.getByText(/2026-11-15/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "이 사람들로 할게요" }));
     expect(dispatch).toHaveBeenCalledWith({
       type: "confirmTarget",
-      target: { ageMin: 30, ageMax: 39, gender: "female" },
+      target: { ageMin: 30, ageMax: 59, gender: "female" },
       keywords: ["수제쿠키", "르뱅쿠키"],
     });
   });
@@ -255,7 +255,7 @@ describe("FindStep — 분야·손님 무리", () => {
     const ev = dispatch.mock.calls.at(-1)![0];
     expect(ev.type).toBe("confirmTarget");
     expect(ev.segment.intent).toBe("선물·답례");
-    expect(ev.target).toEqual({ ageMin: 30, ageMax: 39, gender: "female" });
+    expect(ev.target).toEqual({ ageMin: 30, ageMax: 49, gender: "female" });   // 30대 50% · 40대 30% → 30~40대
     expect(ev.keywords).toEqual(withSegs.keywords.map((k) => k.keyword));
   });
 
@@ -368,5 +368,28 @@ describe("FindStep — 이 상품 검색 카드", () => {
     render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키" }} dispatch={() => {}} />);
     expect(screen.getByText("9,320회")).toBeTruthy();
     expect(screen.getByText("분야를 고르면 누가 찾는지도 보여 드릴게요.")).toBeTruthy();
+  });
+});
+
+describe("나이대마다 여성·남성 · 몇 월에 많이 찾나", () => {
+  const stats = { keyword: "텀블러", total_qc: 128900, mobile: 0.7,
+    audience: { female: 0.66, ages: { "20": 0.08, "30": 0.19, "40": 0.39, "50": 0.26 }, top_age: "40" },
+    trend: { monthly: { "2026-01": 40, "2026-05": 100, "2026-09": 30 }, peak_month: 5, seasonal: true } };
+
+  it("asks the split for the product word and draws the legend once it arrives", async () => {
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify({ female_by_age: { "30": 0.64, "40": 0.67 } }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
+    await waitFor(() => expect(screen.getAllByText("막대 안에서 아래가 여성, 위가 남성이에요").length).toBeGreaterThan(0));
+    const call = f.mock.calls.find((c) => String(c[0]).endsWith("/audience/split"))!;
+    expect(JSON.parse((call[1] as RequestInit).body as string)).toMatchObject({ keyword: "텀블러", category: "50000006" });
+    expect(screen.getAllByRole("img", { name: /40대 39% \(여성 67%\)/ }).length).toBeGreaterThan(0);
+  });
+
+  it("shows the busiest month separately", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
+    expect(screen.getByText("언제 많이 찾나요?")).toBeTruthy();
+    expect(screen.getByText("5월에 가장 많이 찾아요")).toBeTruthy();
   });
 });

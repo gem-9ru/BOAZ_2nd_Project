@@ -28,6 +28,8 @@ export interface ProductStats {
   /** 모바일 비중 0~1 */
   mobile: number | null;
   audience: { female: number; ages: Record<string, number>; top_age: string } | null;
+  /** 몇 월에 많이 찾나 (쇼핑인사이트 클릭, 가장 많은 달 = 100) */
+  trend?: { monthly: Record<string, number>; peak_month: number | null; seasonal: boolean } | null;
 }
 
 export interface Category { code: string; name: string }
@@ -170,6 +172,20 @@ export function research(product: string, opts: { seeds?: string[]; category?: s
 export function copies(body: { product: string; strengths: string[]; keywords: string[]; avoid: string[];
   segment?: { intent: string; label: string; peak_month?: number | null } }): Promise<{ copies: Copy[]; source: string }> {
   return call("/copies", json(body));
+}
+
+/** 나이대마다 그 안의 여성 비중 (막대를 여성·남성으로 나눠 그리기). 같은 말은 한 번만 묻는다. */
+const splitCache = new Map<string, Promise<Record<string, number>>>();
+export function audienceSplit(keyword: string, category: string, ages: Record<string, number>): Promise<Record<string, number>> {
+  const key = `${category}|${keyword}`;
+  let p = splitCache.get(key);
+  if (!p) {
+    p = call<{ female_by_age: Record<string, number> }>("/audience/split", json({ keyword, category, ages }))
+      .then((r) => r.female_by_age ?? {})
+      .catch(() => { splitCache.delete(key); return {}; });
+    splitCache.set(key, p);
+  }
+  return p;
 }
 
 export function fields(): Promise<{ fields: Field[]; defaults: PresetField[] }> {

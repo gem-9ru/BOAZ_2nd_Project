@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { research as fetchResearch, type Research, type Segment } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { compact } from "../../../lib/format";
-import { ageGroupToRange, genderFrom } from "../../../lib/settings";
+import { ageGroupToRange, ageSpan, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import AgeFigure from "./find/AgeFigure";
 import CategoryPick, { CategoryAsk } from "./find/CategoryPick";
@@ -227,7 +227,8 @@ function Result({ research: r, dropped, dispatch }: {
   const kept = r.keywords.map((k) => k.keyword).filter((k) => !dropped.includes(k));
 
   function confirm() {
-    dispatch({ type: "confirmTarget", target: { ...ageGroupToRange(top), gender }, keywords: kept });
+    const { ageMin, ageMax } = aud ? ageSpan(aud.ages) : ageGroupToRange(top);
+    dispatch({ type: "confirmTarget", target: { ageMin, ageMax, gender }, keywords: kept });
   }
 
   return (
@@ -277,13 +278,13 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   function confirm() {
     if (!selected) return;
     const target = selected.audience
-      ? { ...ageGroupToRange(selected.audience.top_age), gender: genderFrom(selected.audience.female) }
+      ? (() => { const { ageMin, ageMax } = ageSpan(selected.audience.ages); return { ageMin, ageMax, gender: genderFrom(selected.audience.female) }; })()
       : { ...ageGroupToRange(age), gender: gender as "all" | "female" | "male" };
     dispatch({ type: "confirmTarget", target, keywords: kept, segment: selected });
   }
 
   const detail = selected?.audience
-    ? <AgeFigure audience={selected.audience} />
+    ? <AgeFigure audience={selected.audience} split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
     : (
       <div className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
         <Choice legend="보여 줄 나이" name="segment-age"
@@ -298,7 +299,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       {r.category && (
         <CategoryPick product={product} category={r.category} categories={r.categories} onPick={onPickCategory} />
       )}
-      {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} />}
+      {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
       <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
         title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
       <Negatives words={r.negatives} />

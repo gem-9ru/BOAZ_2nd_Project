@@ -11,6 +11,33 @@ export function ageGroupToRange(group: string): { ageMin: number; ageMax: number
   return { ageMin: Math.max(start, META_MIN_AGE), ageMax: Math.min(start + 9, META_MAX_AGE) };
 }
 
+/** 광고를 보여 줄 나이대: 가장 많이 찾는 나이대에서 시작해, 바로 옆 나이대가 AGE_SPAN_MIN 이상이면서
+ *  가장 많은 나이대의 절반 이상이면 넓힌다 (30대 23% · 40대 29% · 50대 25% → 30~50대). 두 옆 중 큰 쪽부터. */
+export const AGE_SPAN_MIN = 0.15;
+const AGE_GROUPS = ["10", "20", "30", "40", "50", "60"];
+
+export function ageSpan(ages: Record<string, number>): { groups: string[]; ageMin: number; ageMax: number } {
+  const have = AGE_GROUPS.filter((a) => a in ages);
+  if (have.length === 0) return { groups: ["30"], ...ageGroupToRange("30") };
+  const share = (a?: string) => (a ? ages[a] ?? 0 : 0);
+  const top = have.reduce((b, a) => (share(a) > share(b) ? a : b));
+  const ok = (a?: string) => !!a && share(a) >= AGE_SPAN_MIN && share(a) >= share(top) / 2;
+  let lo = AGE_GROUPS.indexOf(top), hi = lo;
+  for (;;) {
+    const left = AGE_GROUPS[lo - 1], right = AGE_GROUPS[hi + 1];
+    const pick = [left, right].filter(ok).sort((x, y) => share(y) - share(x))[0];
+    if (!pick) break;
+    if (pick === left) lo -= 1; else hi += 1;
+  }
+  const groups = AGE_GROUPS.slice(lo, hi + 1);
+  return { groups, ageMin: ageGroupToRange(groups[0]!).ageMin, ageMax: ageGroupToRange(groups[groups.length - 1]!).ageMax };
+}
+
+/** ['30','40','50'] → '30~50대', ['40'] → '40대' */
+export function ageSpanLabel(groups: string[]): string {
+  return groups.length > 1 ? `${groups[0]}~${groups[groups.length - 1]}대` : `${groups[0]}대`;
+}
+
 /** 여성 비중 → 성별 타겟 (60% 이상이면 여성, 40% 이하면 남성, 그 사이는 전체). */
 export function genderFrom(female: number): Target["gender"] {
   return female >= 0.6 ? "female" : female <= 0.4 ? "male" : "all";
