@@ -126,26 +126,19 @@ def _segment_template(product: str, strength: str, segment: Optional[dict]) -> O
 
 
 def _used(word: str, flat: str) -> bool:
-    """낱말이 문구에 들어갔나 (띄어쓰기 무시). 3글자 이상이면 끝 글자가 바뀐 꼴도 본다 (가벼움 → 가벼운, 따뜻함 → 따뜻한)."""
+    """낱말이 문구에 들어갔나 (띄어쓰기 무시). '-움·-음·-함·-임'으로 끝나는 3글자 이상 말은 끝 글자가 바뀐 꼴도 본다
+    (가벼움 → 가벼운, 따뜻함 → 따뜻한). 다른 말은 그대로만 ('아로마향초'를 '아로마 향'으로 인정하지 않게)."""
     w = re.sub(r"\s+", "", word)
-    return bool(w) and (w in flat or (len(w) >= 3 and w[:-1] in flat))
-
-
-def _partly(word: str, flat: str) -> bool:
-    """두 글자 조각 하나라도 문구에 있나 (Claude가 쓴다고 한 낱말을 풀어 쓴 경우: 개별포장 → '하나씩 따로 포장')."""
-    w = re.sub(r"\s+", "", word)
-    return any(w[i:i + 2] in flat for i in range(len(w) - 1))
+    return bool(w) and (w in flat or (len(w) >= 3 and w[-1] in "움음함임" and w[:-1] in flat))
 
 
 def basis(copy: Copy, words: Sequence[str], segment: Optional[dict]) -> List[str]:
-    """문구에 쓴 낱말(중복 없음) + 고른 손님 무리 이름.
-    Claude가 basis를 주면 그중 받은 낱말이고 문구에도 보이는 것만 믿고, 그다음 글자로 맞춰 본 낱말을 더한다."""
+    """문구에 실제로 들어간 낱말(띄어쓰기·끝 글자 차이는 같은 말로, 중복 없음) + 고른 손님 무리 이름.
+    Claude가 '썼다'고만 한 말은 믿지 않는다 (두 글자만 겹쳐도 인정했더니 '천연 재료'에 '천연비누'가 붙었음)."""
     flat = re.sub(r"\s+", "", copy.get("headline", "") + copy.get("text", ""))
-    given = [(w or "").strip() for w in words]
-    claimed = {b.strip() for b in copy.get("basis", []) or []}   # type: ignore[union-attr]
     out: List[str] = []
-    for w in given:   # 받은 순서대로
-        if w and w not in out and (_used(w, flat) or (w in claimed and _partly(w, flat))):
+    for w in ((w or "").strip() for w in words):   # 받은 순서대로
+        if w and w not in out and _used(w, flat):
             out.append(w)
     if segment and segment.get("label"):
         out.append(segment["label"])
@@ -197,6 +190,7 @@ def _system_prompt(n: int) -> str:
             "(예: 검색어에 '대여'·'할인'·'리퍼'가 있어도 장점에 없으면 '대여 가능'·'할인 중'이라고 쓰지 않는다). "
             "검색어는 자연스러울 때만 한두 개 넣고, 붙여 쓴 말은 띄어 쓴다(가성비노트북 → 가성비 노트북).\n"
             "'손님'·'시기'가 있으면 그 손님의 상황에 맞춘다. '말투'가 있으면 그 말투로 쓴다.\n"
+            "'상품' 이름은 제목이나 본문에 한 번은 그대로 넣는다 (무엇을 파는 광고인지 알 수 있게).\n"
             "가게·브랜드 이름, 가격, 숫자, 후기, 수상처럼 주어지지 않은 사실은 지어내지 마. "
             "'최저가·1위·최고·국내 유일·100%·무조건' 같은 근거 없는 표현, 이모지, 해시태그, 특수문자 남발은 금지.\n"
             "질병·증상(탈모·여드름·아토피·불면·습진 등)을 낫게 하거나 막는다고 쓰지 않는다 (광고 심의). "
