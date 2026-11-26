@@ -126,11 +126,13 @@ export default function GuideStep({ state, dispatch }: Props) {
     );
   }
 
-  const target = next?.send.find((s) => !s.entry.publish);
+  const target = next?.send.find((s) => !s.entry.publish && !s.entry.id.startsWith("next."));   // 복제 칸 다음의 바꿀 칸
   const targetLabel = target ? state.settings.find((x) => x.fieldId === target.entry.id)?.label ?? target.entry.fallback.text : "";
+  const val = (id: string) => state.settings.find((x) => x.fieldId === id)?.value ?? "";
+  const money = `${val("meta.adset.lifetime_budget")} · ${val("meta.adset.start_date")} ~ ${val("meta.adset.end_date")}`;
   const intro = {
     create: next
-      ? `다음 테스트 세팅이에요. 원래 세트는 그대로 두고, 복제한 세트에서 '${targetLabel}' 칸만 바꾸면 돼요. 나머지 칸은 지난번 값 그대로예요. 두 세트는 같은 날 같이 시작하고, '동의하고 게시'는 마지막에 직접 눌러 주세요.`
+      ? `다음 테스트 세팅이에요. 지난 광고는 끝났으니 ① 지난 광고 세트를 복제해 새 세트 2개를 만들어요 (하나는 지난번 그대로, 하나는 바꿀 세트). ② 바꿀 세트에서 '${targetLabel}' 칸만 바꿔요. ③ 두 세트 모두 총예산 ${money} 로 맞춰요 (돈이 정한 만큼만 나가게). 그 밖의 칸은 지난번 값 그대로예요. 뭉치가 차례로 짚고, '그대로' 세트의 금액·날짜는 사장님이 직접 맞춰요. '동의하고 게시'는 마지막에 직접 눌러 주세요.`
       : "광고 관리자를 열면 캐릭터가 칸마다 무엇을 넣을지 알려 드려요. '동의하고 게시' 버튼은 마지막에 직접 눌러 주세요.",
     edit: "바꿀 칸만 캐릭터가 짚어 드려요. 광고 관리자에서 지난번 광고 세트나 광고를 열어 수정하세요.",
     export: "광고 관리자에서 결과를 내보내는 곳을 캐릭터가 짚어 드려요.",
@@ -215,9 +217,9 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     // 총예산을 ② 세팅에서 받았으면 실제로 견줘 본다: 모자라면 ▲, 넉넉하면 알림 없음. 못 받았으면 ● 참고 안내
     const budget = parseWon(state.settings.find((x) => x.fieldId === BUDGET)?.value);
     const least = minBudget(days);
+    const each = state.guide?.next ? "세트마다 " : "총예산을 ";   // 다음 테스트는 세트 2개라 세트당 금액, 처음엔 세트 1개라 총액
     if (budget !== null) {
       if (budget >= least) return null;
-    const each = state.guide?.next ? "세트마다 " : "총예산을 ";   // 다음 테스트는 세트 2개라 세트당 금액, 처음엔 세트 1개라 총액
       return (
         <span role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-warn">
           <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>

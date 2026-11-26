@@ -46,7 +46,8 @@ beforeEach(() => { document.documentElement.lang = "ko"; history.pushState({}, "
 describe("사진 칸 하위 단계", () => {
   it("guide JSON: media has 3 stages (buddy, buddy, owner) and a done signal, and passes validation", () => {
     expect(media.stages?.map((s) => s.by)).toEqual(["buddy", "buddy", "owner"]);
-    expect(media.doneWhen).toEqual([{ placeholder: "광고 후 사람들이 방문하는 URL을 입력하세요" }]);   // 사진을 고르고 [다음]을 눌러야 보이는 칸
+    // 사진을 고르고 [다음]을 눌러야 창 안에 보이는 칸, 또는 창을 닫은 뒤 화면에 생기는 문구 칸
+    expect(media.doneWhen).toEqual([{ placeholder: "광고 후 사람들이 방문하는 URL을 입력하세요", inDialog: true }, { aria: "간단하게 광고를 소개하세요", pageOnly: true }]);
     expect(validateGuide(GUIDE.filter((e) => e.id === "meta.ad.media"), ["meta.ad.media"])).toEqual([]);
   });
 

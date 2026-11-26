@@ -70,7 +70,7 @@ export default defineContentScript({
         render();
       });
       guide.followBuddy();   // 뭉치가 칸에 도착한 뒤에 누르고 넣는다
-      guide.setAuto(true);   // 기본: 뭉치가 알아서 창을 넘기고 칸을 채운다 (직접 맞출 칸·게시 앞에서 멈춤)
+      // 자동 진행은 사장님이 말풍선의 [자동 진행]을 눌러야 시작 (2026-11-26 사용자: "바로 자동진행하지 말고")
       render();
       // 광고 관리자는 화면을 다시 그리거나 다음 화면으로 넘어간다 → 0.5초마다 칸을 다시 찾고, 자동 진행 한 걸음, 다시 그린다.
       timer = window.setInterval(() => {

@@ -116,9 +116,24 @@ export function parseAgeGender(value: string): { min: string; max: string; gende
   return { min: m[1]!, max, gender };
 }
 
+/** '제어 옵션'의 '최소 연령' 버튼(접힘: '최소 연령18세 · …', 펼침: '최소 연령'). 펼치면 바로 옆 구역에 같은 이름 '최소 연령' 목록이 생긴다 (2026-11-26 실제 화면, 18~25만). */
+function controlAgeButton(doc: Document): HTMLElement | null {
+  return byRoleText(doc, "button", (t) => /^최소 연령(\s*\d|$)/.test(t));
+}
+function controlAgeBox(doc: Document): HTMLElement | null {
+  return controlAgeButton(doc)?.nextElementSibling?.querySelector<HTMLElement>("[role=combobox]") ?? null;
+}
+/** '타겟 추천'의 연령 목록 (위쪽 '제어 옵션'의 같은 이름 칸은 뺀다) */
+function suggestBox(doc: Document, name: string): HTMLElement | null {
+  const control = controlAgeBox(doc);
+  return firstShown(Array.from(doc.querySelectorAll<HTMLElement>("[role=combobox]")).filter((e) => e !== control &&
+    (e.getAttribute("aria-labelledby") ?? "").split(/\s+/).some((id) => textOf(doc.getElementById(id)) === name)));
+}
+const CONTROL_AGE_MAX = 25;   // 메타가 꼭 지키는 최소 연령은 25세까지만 고를 수 있다
+
 /** 목록(combobox)을 열고 선택지를 찾아 누른다. 메타는 선택지를 일부만 그리므로 목록을 내리며 찾는다. */
-async function pickOption(doc: Document, name: string, want: string, pace: Pace): Promise<boolean> {
-  const box = byLabelledName(doc, "[role=combobox]", name);
+async function pickOption(doc: Document, name: string, want: string, pace: Pace, get: () => HTMLElement | null = () => suggestBox(doc, name)): Promise<boolean> {
+  const box = get();
   if (!box) return false;
   if (textOf(box) === want) return true;
   box.click();
@@ -137,7 +152,7 @@ async function pickOption(doc: Document, name: string, want: string, pace: Pace)
   hit.click();
   await pace.wait(500);
   // 메타가 다시 그렸을 수 있으니 칸을 새로 찾아, 정말 그 값이 됐는지 본다
-  const now = textOf(byLabelledName(doc, "[role=combobox]", name));
+  const now = textOf(get());
   if (now !== want) { note("age pick did not stick", name, want, now); return false; }
   return true;
 }
@@ -146,12 +161,12 @@ async function pickOption(doc: Document, name: string, want: string, pace: Pace)
 export async function setAgeGender(doc: Document, value: string, pace: Pace = real): Promise<boolean> {
   const want = parseAgeGender(value);
   if (!want) return false;
-  if (!byLabelledName(doc, "[role=combobox]", "최소 연령")) {
+  if (!suggestBox(doc, "최소 연령")) {
     const show = byRoleText(doc, "button", (t) => t === "설정 표시");
     if (show) { show.click(); await pace.wait(1000); }
     const age = byRoleText(doc, "button", (t) => /^연령\d/.test(t));
     if (age) { age.click(); await pace.wait(1000); }
-    note("age opened", { show: Boolean(show), age: Boolean(age), boxes: Boolean(byLabelledName(doc, "[role=combobox]", "최소 연령")) });
+    note("age opened", { show: Boolean(show), age: Boolean(age), boxes: Boolean(suggestBox(doc, "최소 연령")) });
   }
   if (!(await pickOption(doc, "최소 연령", want.min, pace))) return false;
   if (!(await pickOption(doc, "최대 연령", want.max, pace))) return false;
@@ -168,7 +183,24 @@ export async function setAgeGender(doc: Document, value: string, pace: Pace = re
   const checked = isChecked(radio);
   if (!checked) { note("gender radio did not stick", want.gender); return false; }
   note("age/gender set", want.min, want.max, want.gender);
-  return true;
+  return setControlMinAge(doc, want.min, pace);
+}
+
+/** 꼭 지키는 '최소 연령' (제어 옵션): 추천 나이는 메타가 넘을 수 있어서, 최소 나이만은 여기에도 넣는다 (25세까지만 됨).
+ *  이 칸이 없는 화면이면 할 일 없음(true). */
+async function setControlMinAge(doc: Document, min: string, pace: Pace): Promise<boolean> {
+  const btn = controlAgeButton(doc);
+  if (!btn) { note("control age not found"); return true; }
+  if (!controlAgeBox(doc)) {
+    reveal(btn);
+    await pace.wait(800);
+    btn.click();
+    await pace.wait(1000);
+  }
+  const want = String(Math.min(Number(min), CONTROL_AGE_MAX));
+  const ok = await pickOption(doc, "최소 연령", want, pace, () => controlAgeBox(doc));
+  note("control min age", want, ok);
+  return ok;
 }
 
 /** 위치: '전국'이면 메타 기본값 '대한민국'이 이미 맞다 → 할 일 없음(true). 동네·반경은 지도에서 직접 골라야 해서 false. */

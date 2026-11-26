@@ -255,25 +255,40 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(18);
+    expect(items).toHaveLength(21);   // + 복제, '그대로' 세트 맞추기, 그 세트 돈 확인
     const now = items.filter((li) => li.getAttribute("aria-current") === "step");
     expect(now).toHaveLength(1);
-    expect(now[0]!.textContent).toContain("세로 소재");
+    expect(now[0]!.textContent).toContain("'복제'");   // 첫 칸은 지난 세트 복제 (사장님이 직접), 그다음 바꿀 칸
     expect(now[0]!.textContent).toContain("지금");
+    expect(items.find((li) => li.textContent!.includes("세로 소재"))!.className).not.toContain("line-through");
     expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(12);   // 나머지 12칸은 끝난 칸, 금액·날짜·돈 확인·게시 확인이 남음
-    expect(screen.getByText(/복제한 세트에서 '칸 meta.ad.media' 칸만 바꾸면 돼요/)).toBeTruthy();
+    const intro = screen.getByText(/다음 테스트 세팅이에요/).textContent!;
+    expect(intro).toMatch(/지난 광고 세트를 복제해 새 세트 2개/);
+    expect(intro).toContain("바꿀 세트에서 '칸 meta.ad.media' 칸만 바꿔요");
+    expect(intro).toContain("두 세트 모두 총예산 5,400원 · 2026-11-27 ~ 2026-11-30");
+    expect(intro).not.toMatch(/나머지 칸은 지난번 값 그대로예요\. 두 세트/);   // 금액·날짜는 새로 넣는다
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     const msg = send.mock.calls[0]![1] as { steps: { entry: { id: string } }[] };
-    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "meta.publish"]);
+    expect(msg.steps.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.ad.media", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
+  });
+
+  it("the '그대로' set gets the same amount and dates (owner sets it, then the money check reads that set too)", () => {
+    const s = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
+    const { send } = nextTestSteps(GUIDE, s.settings, "meta.ad.media");
+    const keep = send.find((x) => x.entry.id === "next.keep_set")!;
+    expect(keep.entry.auto).toBe("owner");
+    expect(keep.value).toBe("5,400원 · 2026-11-27 ~ 2026-11-30");
+    expect(send[0]!.entry.auto).toBe("owner");   // 복제는 사장님이 직접
+    expect(send.at(-2)!.value).toBe("5,400원");   // 두 번째 돈 확인도 같은 금액
   });
 
   it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
     const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
-    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "meta.publish"]);
-    expect(steps.all.at(-2)!.entry.id).toBe("meta.adset.placements");
+    expect(steps.send.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
+    expect(steps.all.at(-4)!.entry.id).toBe("meta.adset.placements");
   });
 });
 

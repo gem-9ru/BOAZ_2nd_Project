@@ -39,7 +39,9 @@ function byLabel(doc: Root, label: string): HTMLElement | null {
 
 export function byRoleText(doc: Root, role: string, match: (t: string) => boolean): HTMLElement | null {
   const sel = role === "button" ? "[role=button], button, a" : `[role=${role}]`;   // 메타의 "설정 표시" 같은 링크도 버튼처럼 누른다
-  return firstShown(Array.from(doc.querySelectorAll<HTMLElement>(sel)).filter((e) => match(textOf(e))));
+  const hits = Array.from(doc.querySelectorAll<HTMLElement>(sel)).filter((e) => match(textOf(e)));
+  // 열린 창 안에서는 맨 아래(마지막) 단추부터: 창의 '다음'보다 앞에 '사이트 링크' 넘기기 화살표 '다음'이 있다 (2026-11-26 실제 화면)
+  return firstShown(doc.nodeType === 9 ? hits : hits.reverse());
 }
 
 /** 메타는 칸 이름을 aria-labelledby로 잇는다: 연결된 요소 중 하나의 글자가 정확히 같으면 그 칸. */

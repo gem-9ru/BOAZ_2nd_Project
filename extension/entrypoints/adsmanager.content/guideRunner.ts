@@ -84,6 +84,10 @@ export class Guide {
   private arrivedTime = 0;
   private waitFor: HTMLElement | null = null;   // 도착을 기다리기 시작한 칸
   private waitSince = 0;
+  /** 뭉치가 넣는 칸인데 준비 버튼을 눌러도 칸이 안 생겨 사장님을 기다리는 중 (진짜 칸이 나타나면 이어서 넣는다) */
+  private hintWait = false;
+  /** 그때 사장님이 [다 했어요]를 누른 횟수 (첫 번째 = 준비를 마침 → 다시 찾기, 두 번째 = 이 칸은 넘어가기) */
+  private hintDone = 0;
   /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
   private pasteAsk = false;
   /** 돈 칸: 화면에서 다시 읽었더니 다른 것 (있으면 다음 칸으로 가지 않는다) */
@@ -148,6 +152,12 @@ export class Guide {
 
   /** 자동 진행 한 걸음 (콘텐츠 스크립트가 tick 뒤에 부른다). now = ms */
   autoStep(now: number): void {
+    // 준비 단계에서 기다리다가 진짜 칸이 나타났다 → 사장님 [다 했어요] 없이 이어서 넣는다
+    if (this.hintWait && this.waiting === "owner" && this.target && !this.steps[this.index]?.entry.find[this.matched]?.say) {
+      this.hintWait = false;
+      this.waiting = undefined;
+      this.shown = -1;
+    }
     if (!this.auto || this.waiting || this.busy || now < this.nextAt || !this.languageOk) return;
     const item = this.steps[this.index];
     if (!item) { this.auto = false; return; }
@@ -182,7 +192,7 @@ export class Guide {
     if (this.target && hint) {
       if (isPublishLike(this.target)) { this.waiting = "publish"; this.auto = false; return; }
       // 사장님이 직접 할 칸(사진 등)은 준비 버튼을 한 번만 열어 주고 기다린다. 어떤 칸이든 3번 눌러도 그대로면 멈춘다.
-      if ((kind === "owner" && this.hintPresses >= 1) || this.hintPresses >= 3) { this.waiting = "owner"; return; }
+      if ((kind === "owner" && this.hintPresses >= 1) || this.hintPresses >= 3) { this.waiting = "owner"; this.hintWait = kind !== "owner"; return; }
       if (!this.atTarget(this.target, now)) { this.nextAt = now + ARRIVE_POLL; return; }   // 뭉치가 도착한 뒤에 누른다
       this.hintPresses += 1;
       this.apply();
@@ -374,8 +384,16 @@ export class Guide {
     if (this.languageOk && item && (!el || item.entry.find[this.matched]?.say) && this.ensureLevel()) return;   // 다른 화면의 칸 → 그 화면으로
     if (!this.languageOk || !item || !el) return this.markDone();
     if (item.entry.publish || isPublishLike(el)) return;   // 게시는 사장님이 직접
-    if (ownerDone) return this.advance();
     const hint = Boolean(item.entry.find[this.matched]?.say);
+    // 뭉치가 넣는 칸의 준비 단계에서 [다 했어요] = 준비를 마쳤다 → 칸을 건너뛰지 않고 다시 찾아 넣는다 (두 번째 누르면 넘어감)
+    if (ownerDone && this.hintWait && this.hintDone < 1) {
+      this.hintDone += 1;
+      this.hintPresses = 0;
+      this.nextAt = 0;
+      this.recheck();
+      return;
+    }
+    if (ownerDone) return this.advance();
     if (hint) {
       // 이미 고른 준비 선택지('수동 트래픽 캠페인' ✓)면 그 뒤의 준비 버튼('계속')을 누른다
       if (isChoice(el) && isChecked(el)) {
@@ -500,6 +518,8 @@ export class Guide {
     this.finishPresses = 0;
     this.dialogWait = false;
     this.pasteAsk = false;
+    this.hintWait = false;
+    this.hintDone = 0;
     this.money = null;
     this.resetStage();
     this.index = index;
@@ -517,7 +537,8 @@ export class Guide {
       return;
     }
     const dialog = openDialog(this.doc);
-    const hit = item && this.languageOk ? locateWith(dialog ?? this.doc, item.entry.find) : null;
+    // 창 밖 칸(웹사이트 URL)은 창 안의 같은 칸에 넣지 않는다: 창 안에 넣은 값은 [완료] 뒤 광고 화면 칸에 남지 않았다 (2026-11-26 실제 화면)
+    const hit = item && this.languageOk && !(dialog && item.entry.outsideDialog) ? locateWith(dialog ?? this.doc, item.entry.find) : null;
     // 창 안에 없고 창 밖(가려진 곳)에 진짜 칸이 있으면: 창을 먼저 마쳐야 한다
     // (창 안의 '다음' 같은 준비 버튼이 보여도, 진짜 칸이 창 뒤에 있으면 그 버튼을 누르지 않는다)
     const realInside = Boolean(hit && !item?.entry.find[hit.index]?.say);

@@ -202,7 +202,7 @@
     "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
    }
   ],
-  "say": "연령과 바로 아래 성별을 {value}(으)로 맞추고 '다음 칸'을 누르세요",
+  "say": "연령과 바로 아래 성별을 {value}(으)로 맞출게요. 이 나이는 메타가 '추천'으로만 써서 조금 넘을 수 있어요. 그래서 꼭 지키는 '제어 옵션 › 최소 연령'도 맞춰요 (메타는 25세까지만 정할 수 있어요)",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.age_gender.png",
@@ -348,7 +348,12 @@
   ],
   "doneWhen": [
    {
-    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
+    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요",
+    "inDialog": true
+   },
+   {
+    "aria": "간단하게 광고를 소개하세요",
+    "pageOnly": true
    }
   ]
  },
@@ -373,7 +378,8 @@
    "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
   },
   "auto": "type",
-  "level": "ad"
+  "level": "ad",
+  "outsideDialog": true
  },
  {
   "id": "meta.creative.copy.text",
@@ -384,6 +390,10 @@
   "find": [
    {
     "aria": "간단하게 광고를 소개하세요"
+   },
+   {
+    "labelText": "간단하게 광고를 소개하세요",
+    "pageOnly": true
    },
    {
     "role": "button",
@@ -890,5 +900,51 @@
   },
   "auto": "owner",
   "level": "list"
+ },
+ {
+  "id": "next.duplicate",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "text": "복제"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭을 누르고 지난 광고 세트 이름 왼쪽 칸에 체크하세요"
+   }
+  ],
+  "say": "여기는 사장님이 직접 해 주세요: 지난 광고 세트에 체크하고 '복제'로 새 세트 2개를 만드세요 (하나는 지난번 그대로, 하나는 바꿀 세트). 지난 광고는 끝났으니 두 세트 모두 새로 돌려요. 바꿀 세트의 수정 화면을 열었으면 '다 했어요'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/export.open.png",
+   "text": "광고 관리자 목록의 '광고 세트' 탭에서 지난 세트에 체크하고 '복제'를 눌러 주세요"
+  },
+  "auto": "owner",
+  "level": "list"
+ },
+ {
+  "id": "next.keep_set",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산 및 일정"
+   }
+  ],
+  "say": "여기는 사장님이 직접 해 주세요: 왼쪽 목록에서 '지난번 그대로' 세트를 열고 총예산·날짜를 바꾼 세트와 똑같이 {value}(으)로 맞추세요. 두 세트가 같은 돈·같은 날이어야 비교가 맞고, 돈도 정한 만큼만 나가요. 맞췄으면 '다 했어요' — 그 세트의 돈 설정도 다시 읽어 확인할게요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "왼쪽 목록에서 '그대로' 세트를 열고 '예산 및 일정'을 같은 금액·날짜로 맞춰 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
  }
 ]

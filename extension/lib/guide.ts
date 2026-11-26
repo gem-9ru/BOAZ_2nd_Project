@@ -135,6 +135,15 @@ export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldI
   const money = all.find((s) => s.entry.auto === "moneyCheck");   // 게시 앞 돈 확인은 다음 테스트에도 늘 거친다
   // 복제한 세트는 지난 금액·지난(이미 끝난) 날짜를 그대로 가져온다 → 새 금액·날짜 칸도 늘 짚는다
   const fresh = ["meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date"].map((id) => all.find((s) => s.entry.id === id));
-  const send = [target, ...fresh, money, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
+  // 지난 광고는 끝났다 → 지난 세트를 복제해 두 세트로 새로 돌린다. 뭉치는 바꾼 세트를 짚고, '그대로' 세트는 사장님이 같은 금액·날짜로 맞춘 뒤 그 세트도 돈 확인
+  const value = (id: string) => settings.find((s) => s.fieldId === id)?.value ?? "";
+  const extra = (id: string, v?: string) => { const entry = entries.find((e) => e.id === id); return entry ? { entry, value: v } : undefined; };
+  const duplicate = extra("next.duplicate");
+  const keep = extra("next.keep_set", `${value("meta.adset.lifetime_budget")} · ${value("meta.adset.start_date")} ~ ${value("meta.adset.end_date")}`);
+  const keepMoney = money ? { ...money } : undefined;   // 같은 돈 확인을 '그대로' 세트에서 한 번 더 (다른 물건이라 아래 중복 거르기에 안 걸림)
+  if (duplicate) all.unshift(duplicate);
+  const at = all.findIndex((s) => s.entry.publish);
+  all.splice(at < 0 ? all.length : at, 0, ...[keep, keepMoney].filter((x): x is GuideStepItem => Boolean(x)));
+  const send = [duplicate, target, ...fresh, money, keep, keepMoney, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
   return { all, send };
 }
