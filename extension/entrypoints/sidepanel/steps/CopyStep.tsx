@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { bannedIn } from "../../../lib/copyRules";
 import { copies as fetchCopies, type Copy } from "../../../lib/api";
 import { compact } from "../../../lib/format";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
@@ -26,6 +27,8 @@ export default function CopyStep({ state, dispatch }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [choice, setChoice] = useState<Choice>(null);
   const [draft, setDraft] = useState({ headline: "", text: "" });
+  const [photo, setPhoto] = useState<string | null>(null);   // 미리 보기에만 쓰는 내 사진 (패널 안에서만, 올리지 않음)
+  useEffect(() => () => { if (photo) URL.revokeObjectURL(photo); }, [photo]);
   const shop = (state.answers?.["meta.pre.ig_account"] ?? "").replace(/^@/, "").trim() || "내 가게";
 
   function choose(c: Choice) {
@@ -35,6 +38,7 @@ export default function CopyStep({ state, dispatch }: Props) {
   }
   const headOk = draft.headline.trim().length > 0 && draft.headline.length <= HEADLINE_MAX;
   const textOk = draft.text.trim().length > 0 && draft.text.length <= TEXT_MAX;
+  const banned = bannedIn(`${draft.headline} ${draft.text}`);
   function confirm() {
     const from = typeof choice === "number" ? list?.[choice] : undefined;
     const same = !!from && from.headline === draft.headline && from.primary_text === draft.text;
@@ -97,10 +101,11 @@ export default function CopyStep({ state, dispatch }: Props) {
           </span>
           <strong className="text-body">{i + 1}안 · {c.headline}</strong>
         </label>
-        <FeedPreview name={shop} headline={on ? draft.headline : c.headline} text={on ? draft.text : c.primary_text} />
-        {!on && <p className="text-caption text-soft">{c.primary_text}</p>}
+        {on
+          ? <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} />
+          : <p className="line-clamp-2 text-caption text-soft">{c.primary_text}</p>}
         {c.basis && c.basis.length > 0 && <p className="text-small text-soft">근거: {c.basis.join(" · ")}</p>}
-        {on && <Editor draft={draft} setDraft={setDraft} />}
+        {on && <Editor draft={draft} setDraft={setDraft} banned={banned} />}
       </div>
     );
   }
@@ -192,8 +197,8 @@ export default function CopyStep({ state, dispatch }: Props) {
             </label>
             {choice === "own" && (
               <>
-                <FeedPreview name={shop} headline={draft.headline} text={draft.text} />
-                <Editor draft={draft} setDraft={setDraft} />
+                <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} />
+                <Editor draft={draft} setDraft={setDraft} banned={banned} />
               </>
             )}
           </div>
@@ -202,14 +207,14 @@ export default function CopyStep({ state, dispatch }: Props) {
       {!list && choice === "own" && (
         <div className="flex flex-col gap-2 rounded-card border border-accent bg-accent-soft p-3">
           <strong className="text-body">직접 쓰기</strong>
-          <FeedPreview name={shop} headline={draft.headline} text={draft.text} />
-          <Editor draft={draft} setDraft={setDraft} />
+          <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} />
+          <Editor draft={draft} setDraft={setDraft} banned={banned} />
           <button type="button" onClick={() => setChoice(null)} className="self-start text-caption text-soft underline">← 문구를 써 달라고 할게요</button>
         </div>
       )}
       {choice !== null && (
         <div className="flex flex-col gap-2">
-          <PrimaryButton onClick={confirm} disabled={!headOk || !textOk}>이 문구로 할게요</PrimaryButton>
+          <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
           {(!headOk || !textOk) && <p className="text-small text-soft">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요</p>}
         </div>
       )}
@@ -224,7 +229,9 @@ export default function CopyStep({ state, dispatch }: Props) {
 }
 
 /** 고른 문구 고치기: 제목·본문 + 글자 수 (메타 기준을 넘으면 경고색). */
-function Editor({ draft, setDraft }: { draft: { headline: string; text: string }; setDraft: (d: { headline: string; text: string }) => void }) {
+function Editor({ draft, setDraft, banned }: {
+  draft: { headline: string; text: string }; setDraft: (d: { headline: string; text: string }) => void; banned: string[];
+}) {
   const count = (n: number, max: number) => (
     <span className={`text-small tabular-nums ${n > max ? "font-semibold text-warn" : "text-soft"}`}>{n}/{max}자</span>
   );
@@ -244,7 +251,9 @@ function Editor({ draft, setDraft }: { draft: { headline: string; text: string }
       <textarea id="copy-text" rows={4} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })}
         aria-invalid={draft.text.length > TEXT_MAX || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2 text-body" />
-      <p className="text-small text-soft">사실이 아닌 말(최저가, 1위 등)은 쓰지 마세요.</p>
+      {banned.length > 0
+        ? <p role="alert" className="text-caption text-warn">▲ {banned.map((b) => `'${b}'`).join(", ")} 같은 말은 근거를 댈 수 없는 말이라 광고에 쓸 수 없어요. 빼거나 바꿔 주세요.</p>
+        : <p className="text-small text-soft">사실이 아닌 말(최저가, 1위 등)은 쓰지 마세요.</p>}
     </div>
   );
 }
@@ -263,6 +272,25 @@ function WritingSkeleton() {
             <div className="h-3 w-3/4 rounded-button bg-sunk" />
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+/** 고른 문구의 피드 미리 보기 + 내 사진 넣어 보기 (사진은 이 패널에서만 보이고 어디에도 올리지 않음). */
+function Preview({ name, draft, photo, setPhoto }: {
+  name: string; draft: { headline: string; text: string }; photo: string | null; setPhoto: (u: string | null) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <FeedPreview name={name} headline={draft.headline} text={draft.text} photo={photo} />
+      <div className="flex items-center justify-between gap-2">
+        <label className="cursor-pointer text-caption font-semibold text-accent-ink underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
+          {photo ? "사진 바꾸기" : "내 상품 사진 넣어 보기"}
+          <input type="file" accept="image/*" className="sr-only"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) setPhoto(URL.createObjectURL(f)); }} />
+        </label>
+        <span className="text-small text-soft">미리 보기에만 써요 (올리지 않아요)</span>
       </div>
     </div>
   );

@@ -203,3 +203,40 @@ describe("CopyStep", () => {
     expect(screen.getByText(/칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요/)).toBeTruthy();
   });
 });
+
+describe("② 문구 미리 보기·금지 표현", () => {
+  const three = [1, 2, 3].map((i) => ({ primary_text: `본문 ${i}`, headline: `제목 ${i}` }));
+  const start = async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+  };
+
+  it("only the picked copy shows the full feed preview", async () => {
+    await start();
+    expect(screen.queryAllByText("사진 자리")).toHaveLength(0);
+    fireEvent.click(screen.getByRole("radio", { name: "2안: 제목 2" }));
+    expect(screen.getAllByText("사진 자리")).toHaveLength(1);
+  });
+
+  it("the owner's photo shows in the preview without uploading", async () => {
+    const created = vi.fn(() => "blob:local-1");
+    vi.stubGlobal("URL", Object.assign(URL, { createObjectURL: created, revokeObjectURL: vi.fn() }));
+    await start();
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    const file = new File(["x"], "cookie.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText("내 상품 사진 넣어 보기"), { target: { files: [file] } });
+    expect(created).toHaveBeenCalledWith(file);
+    expect(document.querySelector('img[src="blob:local-1"]')).toBeTruthy();
+    expect(screen.getByText("사진 바꾸기")).toBeTruthy();
+  });
+
+  it("banned words are flagged while editing and block the pick", async () => {
+    await start();
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.change(screen.getByLabelText("본문 (고쳐도 돼요)"), { target: { value: "동네 최저가 100% 수제" } });
+    expect(screen.getByRole("alert").textContent).toContain("'최저가', '100%' 같은 말은 근거를 댈 수 없는 말이라");
+    expect(screen.getByRole("button", { name: "이 문구로 할게요" }).hasAttribute("disabled")).toBe(true);
+  });
+});
