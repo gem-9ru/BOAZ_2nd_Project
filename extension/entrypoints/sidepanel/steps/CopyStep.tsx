@@ -4,7 +4,7 @@ import { copies as fetchCopies, type Copy } from "../../../lib/api";
 import { compact } from "../../../lib/format";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
-import FeedPreview from "./copy/FeedPreview";
+import FeedPreview, { PREVIEW_LABEL, type PreviewKind } from "./copy/FeedPreview";
 import { targetLine } from "./find/TargetPick";
 
 const TONES = ["친근하게", "깔끔하게", "감성적으로"] as const;
@@ -21,18 +21,33 @@ export const HEADLINE_MAX = 40;
 export const TEXT_MAX = 125;
 type Choice = number | "own" | null;
 
+/** 문구 화면에서 한 일을 상품·손님 무리별로 기억 (① 찾기에 갔다 와도 그대로). 패널이 열려 있는 동안만. 사진은 기억하지 않음. */
+interface Saved {
+  strengths: string; added: string[]; tone: (typeof TONES)[number]; picked: string[];
+  rounds: Copy[][]; sources: string[]; choice: Choice; draft: { headline: string; text: string }; view: PreviewKind;
+}
+const MEMO = new Map<string, Saved>();
+export function forgetCopyWork(): void { MEMO.clear(); }
+
 /** ② 문구: 좋은 점 고르기 → 문구 3안(피드 모양 미리 보기) → 하나 고르거나 직접 쓰기 → 고쳐서 정하기. */
 export default function CopyStep({ state, dispatch }: Props) {
-  const [strengths, setStrengths] = useState("");
-  const [added, setAdded] = useState<string[]>([]);   // 직접 적어 엔터로 붙인 말 (칩)
-  const [tone, setTone] = useState<(typeof TONES)[number]>("친근하게");
-  const [picked, setPicked] = useState<string[]>([]);
-  const [rounds, setRounds] = useState<Copy[][]>([]);   // 써 달라고 할 때마다 한 묶음씩 쌓는다 (앞 문구도 남겨 비교)
+  const memoKey = `${state.product ?? ""}|${state.segment?.intent ?? ""}`;
+  const saved = MEMO.get(memoKey);
+  const [strengths, setStrengths] = useState(saved?.strengths ?? "");
+  const [added, setAdded] = useState<string[]>(saved?.added ?? []);   // 직접 적어 엔터로 붙인 말 (칩)
+  const [tone, setTone] = useState<(typeof TONES)[number]>(saved?.tone ?? "친근하게");
+  const [picked, setPicked] = useState<string[]>(saved?.picked ?? []);
+  const [rounds, setRounds] = useState<Copy[][]>(saved?.rounds ?? []);   // 써 달라고 할 때마다 한 묶음씩 쌓는다 (앞 문구도 남겨 비교)
+  const [sources, setSources] = useState<string[]>(saved?.sources ?? []);   // 묶음마다 claude | template
+  const [view, setView] = useState<PreviewKind>(saved?.view ?? "ig");
   const list: Copy[] | null = rounds.length ? rounds.flat() : null;   // 번호(1안·2안…)는 쓴 순서대로
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [choice, setChoice] = useState<Choice>(null);
-  const [draft, setDraft] = useState({ headline: "", text: "" });
+  const [choice, setChoice] = useState<Choice>(saved?.choice ?? null);
+  const [draft, setDraft] = useState(saved?.draft ?? { headline: "", text: "" });
+  useEffect(() => {
+    MEMO.set(memoKey, { strengths, added, tone, picked, rounds, sources, choice, draft, view });
+  }, [memoKey, strengths, added, tone, picked, rounds, sources, choice, draft, view]);
   const [photo, setPhoto] = useState<string | null>(null);   // 미리 보기에만 쓰는 내 사진 (패널 안에서만, 올리지 않음)
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo); }, [photo]);
   const shop = (state.answers?.["meta.pre.ig_account"] ?? "").replace(/^@/, "").trim() || "내 가게";
@@ -94,6 +109,7 @@ export default function CopyStep({ state, dispatch }: Props) {
         tone,
       });
       setRounds((rs) => [...rs, r.copies]);   // 뒤에 붙이니 이미 고른 문구 번호는 그대로
+      setSources((ss) => [...ss, r.source]);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -114,7 +130,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           <strong className="text-body">{i + 1}안 · {c.headline}</strong>
         </label>
         {on
-          ? <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} />
+          ? <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           : <p className="line-clamp-2 text-caption text-soft">{c.primary_text}</p>}
         {c.basis && c.basis.length > 0 && <p className="text-small text-soft">근거: {c.basis.join(" · ")}</p>}
         {on && <Editor draft={draft} setDraft={setDraft} banned={banned} />}
@@ -214,12 +230,18 @@ export default function CopyStep({ state, dispatch }: Props) {
           {[...rounds.keys()].reverse().map((ri) => {
             const start = rounds.slice(0, ri).reduce((n, r) => n + r.length, 0);
             const cards = rounds[ri]!.map((c, k) => card(c, start + k));
-            if (rounds.length === 1) return <div key={ri} className="flex flex-col gap-3">{cards}</div>;
+            const fallback = sources[ri] === "template" && ri === rounds.length - 1 && (
+              <p role="status" className="rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">
+                ▲ 이번엔 Claude가 문구를 쓰지 못해 기본 문장 틀로 썼어요. [다른 문구로 다시 써 주세요]를 누르면 나아질 수 있어요.
+              </p>
+            );
+            if (rounds.length === 1) return <div key={ri} className="flex flex-col gap-3">{fallback}{cards}</div>;
             const newest = ri === rounds.length - 1;
             const hasChoice = typeof choice === "number" && choice >= start && choice < start + rounds[ri]!.length;
             return newest ? (
               <div key={ri} className="flex flex-col gap-3">
                 <span className="text-caption font-semibold text-soft">새로 쓴 문구</span>
+                {fallback}
                 {cards}
               </div>
             ) : (
@@ -242,7 +264,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             </label>
             {choice === "own" && (
               <>
-                <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} />
+                <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
                 <Editor draft={draft} setDraft={setDraft} banned={banned} />
               </>
             )}
@@ -252,7 +274,7 @@ export default function CopyStep({ state, dispatch }: Props) {
       {!list && choice === "own" && (
         <div className="flex flex-col gap-2 rounded-card border border-accent bg-accent-soft p-3">
           <strong className="text-body">직접 쓰기</strong>
-          <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} />
+          <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           <Editor draft={draft} setDraft={setDraft} banned={banned} />
           <button type="button" onClick={() => setChoice(null)} className="self-start text-caption text-soft underline">← 문구를 써 달라고 할게요</button>
         </div>
@@ -324,12 +346,23 @@ function WritingSkeleton() {
 }
 
 /** 고른 문구의 피드 미리 보기 + 내 사진 넣어 보기 (사진은 이 패널에서만 보이고 어디에도 올리지 않음). */
-function Preview({ name, draft, photo, setPhoto }: {
+function Preview({ name, draft, photo, setPhoto, view, setView }: {
   name: string; draft: { headline: string; text: string }; photo: string | null; setPhoto: (u: string | null) => void;
+  view: PreviewKind; setView: (v: PreviewKind) => void;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <FeedPreview name={name} headline={draft.headline} text={draft.text} photo={photo} />
+      <div role="radiogroup" aria-label="미리 보기 자리" className="flex flex-wrap gap-1.5">
+        {(Object.keys(PREVIEW_LABEL) as PreviewKind[]).map((k) => (
+          <label key={k} className={`cursor-pointer rounded-badge border px-2.5 py-1 text-small has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+            view === k ? "border-accent bg-accent font-semibold text-on-accent" : "border-line bg-paper"}`}>
+            <input type="radio" name="preview-kind" checked={view === k} onChange={() => setView(k)} className="sr-only" />
+            {PREVIEW_LABEL[k]}
+          </label>
+        ))}
+      </div>
+      {view !== "fb" && <p className="text-small text-soft">{view === "ig" ? "인스타 피드에서는 제목이 거의 안 보여요. 본문 첫 줄이 중요해요." : "스토리에서는 제목이 안 보이고 본문도 한 줄만 보여요."}</p>}
+      <FeedPreview name={name} headline={draft.headline} text={draft.text} photo={photo} kind={view} />
       <div className="flex items-center justify-between gap-2">
         <label className="cursor-pointer text-caption font-semibold text-accent-ink underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">
           {photo ? "사진 바꾸기" : "내 상품 사진 넣어 보기"}

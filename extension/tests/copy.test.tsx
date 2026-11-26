@@ -1,9 +1,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import CopyStep from "../entrypoints/sidepanel/steps/CopyStep";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import CopyStep, { forgetCopyWork } from "../entrypoints/sidepanel/steps/CopyStep";
 import { initialState } from "../lib/flow";
 
 afterEach(() => vi.unstubAllGlobals());
+beforeEach(() => forgetCopyWork());   // 문구 화면 기억은 테스트마다 비운다
 
 const three = [1, 2, 3].map((i) => ({ primary_text: `본문 ${i}`, headline: `제목 ${i}` }));
 
@@ -125,6 +126,7 @@ describe("CopyStep", () => {
     await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
     fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
     fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "버터 듬뿍 쿠키" } });
+    fireEvent.click(screen.getByRole("radio", { name: "페이스북 피드" }));   // 제목이 보이는 자리
     expect(screen.getByText("버터 듬뿍 쿠키")).toBeTruthy();   // 미리 보기
     expect(screen.getByText("8/40자")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
@@ -285,5 +287,55 @@ describe("② 문구 칩 수·직접 적기·말투·손님 카드·다음 안�
     expect(screen.getByText("30–49세 · 여성만")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "문구를 직접 쓸게요" }));
     expect(screen.getByText(/다음: 광고 설정 질문 몇 개에 답하면/)).toBeTruthy();
+  });
+});
+
+describe("② 문구 기억 · 자리별 미리 보기 · 틀 문장 알림", () => {
+  const three = [1, 2, 3].map((i) => ({ primary_text: `본문 ${i}`, headline: `제목 ${i}` }));
+  const st = () => ({ ...initialState(), step: "copy" as const, product: "쿠키" });
+
+  it("leaving and coming back keeps the copies, the pick and the edit", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    const first = render(<CopyStep state={st()} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "2안: 제목 2" }));
+    fireEvent.click(screen.getByRole("radio", { name: "2안: 제목 2" }));
+    fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "고친 제목" } });
+    first.unmount();   // ① 찾기로 갔다가
+    render(<CopyStep state={st()} dispatch={() => {}} />);   // 돌아옴
+    expect((screen.getByRole("radio", { name: "2안: 제목 2" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("제목 (고쳐도 돼요)") as HTMLInputElement).value).toBe("고친 제목");
+  });
+
+  it("a different customer group starts fresh", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    const first = render(<CopyStep state={st()} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    first.unmount();
+    const seg = { intent: "선물·답례", label: "선물로 찾는 손님", keywords: [], total_qc: 1, lead: "", audience: null, trend: null, trend_source: null, line: "" } as never;
+    render(<CopyStep state={{ ...st(), segment: seg }} dispatch={() => {}} />);
+    expect(screen.queryByRole("radio", { name: "1안: 제목 1" })).toBeNull();
+  });
+
+  it("switches the preview between instagram feed, facebook feed and story", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    render(<CopyStep state={st()} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    expect((screen.getByRole("radio", { name: "인스타 피드" }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText(/인스타 피드에서는 제목이 거의 안 보여요/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "스토리" }));
+    expect(screen.getByText(/스토리에서는 제목이 안 보이고/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "페이스북 피드" }));
+    expect(screen.queryByText(/제목이 거의 안 보여요|제목이 안 보이고/)).toBeNull();
+  });
+
+  it("says when the copies came from the fallback template", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "template" }), { status: 200 })));
+    render(<CopyStep state={st()} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => expect(screen.getByText(/기본 문장 틀로 썼어요/)).toBeTruthy());
   });
 });
