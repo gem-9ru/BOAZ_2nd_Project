@@ -28,12 +28,13 @@ def word_of(p: float, better: str = "B") -> str:
     return "확실해요" if p >= ADOPT else f"{better} 쪽이에요" if p >= LIKELY else "아직 몰라요"
 
 
-def per_people(rate: Optional[float], base: int = 1000) -> str:
-    """1.73% → '약 17명' (base명 중). 100명 기준으로 차이가 안 보이면 1,000명 기준을 쓴다."""
+def per_people(rate: Optional[float], base: int = 1000, unit: str = "명") -> str:
+    """1.73% → '약 17명' (base명 중). 100명 기준으로 차이가 안 보이면 1,000명 기준을 쓴다.
+    노출 대비 클릭처럼 사람 수가 아닌 비율은 unit='번'."""
     if rate is None:
         return "?"
     n = rate * base
-    return f"약 {n:.0f}명" if n >= 1 else f"약 {n:.1f}명"
+    return f"약 {n:.0f}{unit}" if n >= 1 else f"약 {n:.1f}{unit}"
 
 
 def josa(word: str, pair: str = "이가") -> str:

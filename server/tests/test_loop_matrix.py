@@ -20,7 +20,7 @@ def test_ovenlog_change_is_vertical_creative_in_ad_media():
     assert c["tag"] == "테스트 제안" and c["tested"] is False
     assert c["certainty"]["level"] == "보류" and c["certainty"]["label"] == "아직 몰라요"
     assert c["rule"]["level"] == "유력"
-    assert "5,000원씩" in c["test"]
+    assert "6,000원씩" in c["test"]   # 5,000원 ÷ 4일은 메타 하루 최소보다 적어서 올림
     assert c["row"] == "5" and "릴스" in c["reason"]
     assert c["checklist"][-2:] == ["바꾸는 칸은 형식·미디어 1개만", "두 세트는 같은 날 같이 시작"]
     assert len(c["checklist"]) == 4 and not any("ALT" in t for t in c["checklist"])

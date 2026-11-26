@@ -53,6 +53,19 @@ def tested_field(names: List[str]) -> Optional[str]:
     return None
 
 
+def differing_fields(arms: List[Dict]) -> List[str]:
+    """세트 이름으로 보면 앞 두 세트가 다르게 둔 칸 이름들 (ALT-23). 2개 이상이면 어느 칸 덕인지 모른다."""
+    if len(arms) < 2:
+        return []
+    names = [_suffix(a["name"]) for a in arms[:2]]
+    out = []
+    for words, field in _NAME_HINTS:
+        hit = [frozenset(w for w in words if w in n) for n in names]
+        if any(hit) and hit[0] != hit[1]:
+            out.append(NAME_LABELS.get(field, field))
+    return out
+
+
 def _suffix(name: str) -> str:
     return name.split("_", 1)[1] if "_" in name else name
 
@@ -135,7 +148,14 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
         pct = 1 - cheap["cpm"] / dear["cpm"]
         rows.append(_row("1", "광고가 보이는 값", f"{arm_short(cheap['name'], ci)}가 {pct:.0%} 싸요 · 확실해요", "ok", field,
                          f"{arm_short(cheap['name'], ci)} 쪽을 유지하면 돼요"))
-        if field:
+        many = differing_fields(arms)
+        if field and len(many) >= 2:   # 여러 칸이 함께 달라서 한 칸 덕분이라고 말하지 않는다
+            keep.append({"field_id": field, "path": PATH.get(field, field),
+                         "value": f"{arm_short(cheap['name'], ci)} 세트 그대로 ({' · '.join(many)} 함께)",
+                         "title": f"{arm_short(cheap['name'], ci)} 세트 그대로 ({' · '.join(many)} 함께)",
+                         "reason": f"↓ 광고비 {pct:.0%} 싸요 · 확실해요 · {' · '.join(many)}이 같이 달라서 어느 칸 덕인지는 몰라요",
+                         "saving": pct, "arm": cheap["name"]})
+        elif field:
             keep.append({"field_id": field, "path": PATH.get(field, field), "value": _value(field, cheap["name"]),
                          "reason": f"↓ 광고비 {pct:.0%} 싸요 · 확실해요", "saving": pct, "arm": cheap["name"]})
     elif len(arms) == 1 and arms[0].get("cpm") and arms[0]["cpm"] > cfg["cpm_high"]:
@@ -150,11 +170,11 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     # 2 본 사람이 누르는 정도
     ctr = tot["link_clicks"] / tot["impressions"] if tot["impressions"] else None
     if ctr is not None and ctr < cfg["ctr_low"]:
-        rows.append(_row("2", "누르는 정도", f"1,000명이 보면 {per_people(ctr)}이 눌러요 · 기준({per_people(cfg['ctr_low'])})보다 적어요", "blocked", "meta.ad.media"))
+        rows.append(_row("2", "누르는 정도", f"1,000번 보여지면 {per_people(ctr, unit='번')} 눌려요 · 기준({per_people(cfg['ctr_low'], unit='번')})보다 적어요", "blocked", "meta.ad.media"))
         proposals["2"] = {"field_id": "meta.ad.media", "new": "소재 바꾸기 (세로형 추가, 첫 장면에 상품)", "short": "+ 새 소재 1개", "what": "새 소재",
                           "reason": "보는 사람은 많은데 누르는 사람이 적어요. 소재·문구가 눈길을 못 끌어요.", "level": "유력", "grade": "A"}
     else:
-        rows.append(_row("2", "누르는 정도", f"1,000명이 보면 {per_people(ctr)}이 눌러요 → 괜찮아요" if ctr is not None else "클릭 자료가 없어요",
+        rows.append(_row("2", "누르는 정도", f"1,000번 보여지면 {per_people(ctr, unit='번')} 눌려요 → 괜찮아요" if ctr is not None else "클릭 자료가 없어요",
                          "ok" if ctr is not None else "skip"))
 
     # 2b 소재 피로
@@ -237,13 +257,17 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     if pick:
         p = proposals[pick]
         label = PATH[p["field_id"]].split(" › ")[-1]
-        # 써 본 금액 안에서 천 원 단위로 내림 (올리면 '써 본 적 없는 금액'이 돼요)
+        # 써 본 금액 안에서 천 원 단위로 내림 (올리면 '써 본 적 없는 금액'이 돼요).
+        # 단, 하루 금액(총액 ÷ 기간)이 메타 하루 최소보다 적으면 광고가 안 나가니 그만큼은 올림. 기간은 AN-05 토글(4일/7일)과 같게
+        test_days = 7 if days == 7 else 4
+        floor = _loop().get("meta_daily_min") or 0
         per_set = max(5000, int(tot["spend"] / max(1, len(arms)) // 1000 * 1000)) if arms else 5000
+        per_set = max(per_set, -(-int(floor * test_days) // 1000) * 1000)
         what = p.get("what", f"{label} 변경")
         change = {"row": pick, "field_id": p["field_id"], "path": PATH[p["field_id"]], "label": label,
                   "now": settings.get(p["field_id"]), "new": p["new"], "new_short": p["short"], "reason": p["reason"],
                   # v4.2: 결론은 돌려 본 적 없는 선택지 → 판정 배지 대신 '테스트 제안' (효과는 아직 몰라요)
-                  "tag": "테스트 제안", "tested": False, "per_set": per_set, "what": what,
+                  "tag": "테스트 제안", "tested": False, "per_set": per_set, "days": test_days, "what": what,
                   "test": f"지금 세트와 {won(per_set)}씩 같이 돌려서 직접 비교해요.",
                   "unknown": f"{josa(what)} 손님을 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
                   "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
@@ -254,9 +278,10 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     if verdict and verdict["badge"]["level"] != "채택":
         mb = (verdict.get("min_budget") or {}).get("per_group")
         ss = next((a for a in alerts if a["kind"] == "small_sample"), None)
-        why = (f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요" if ss and ss.get("actions") is not None
-               else f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요" if ss
-               else f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요")
+        more = "같은 세팅으로 기간을 늘리거나 예산을 더 써야 알 수 있어요"
+        why = (f"{act_label}이 {int(ss['actions'])}건뿐이에요 → {more}" if ss and ss.get("actions") is not None
+               else f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모였어요 → {more}" if ss
+               else f"판정이 '{verdict['badge']['word']}'예요 → {more}")
         watch.insert(0, {"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"], "title": "기간 · 예산",
                          "text": why, "need_per_set": mb})
 

@@ -18,10 +18,10 @@ def test_lead_column_is_read_as_actions():
 def test_alt14_uses_set_sum_clicks_or_actions_like_the_spec():
     r = oven()
     ss = next(a for a in r["alerts"] if a["kind"] == "small_sample")
-    assert ss["text"] == "알림 신청이 1건뿐이라 ④단계는 아직 몰라요."   # 클릭은 세트 합 30이라 기준(30 미만) 밖
+    assert ss["text"] == "알림 신청이 1건뿐이라 '들어온 뒤 행동'은 아직 몰라요."   # 클릭은 세트 합 30이라 기준(30 미만) 밖
     row4 = next(x for x in r["matrix"]["rows"] if x["row"] == "4")
     assert row4["signal"] == "알림 신청 A 0건 · B 1건 → 아직 몰라요"
-    assert r["matrix"]["watch"][0]["text"] == "알림 신청이 1건뿐이라 아직 몰라요"
+    assert r["matrix"]["watch"][0]["text"].startswith("알림 신청이 1건뿐이에요 → ")
     assert r["verdict"]["badge"]["word"] == "B 쪽이에요"   # 표본 부족이라도 79%는 그대로 'B 쪽이에요'
 
 

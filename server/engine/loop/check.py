@@ -57,7 +57,9 @@ def run(bundle) -> Dict:
         safety.append({"ok": False, "text": "두 세트를 동시에 돌렸다면 같은 사람을 두고 경쟁했을 수 있어요. 메타 'A/B 테스트'로 만들면 사람을 나눠서 보여 줘요."})
 
     missing: List[str] = []
-    if "landing_page_views" not in daily.columns or float(daily["landing_page_views"].sum()) == 0:
+    if "landing_page_views" in daily.columns and float(daily["landing_page_views"].sum()) == 0:
+        missing.append("'랜딩 페이지 조회' 칸이 다 비어 있어요. 웹사이트에 메타 픽셀이 연결돼 있어야 채워져요. (없으면 '도착'은 계산하지 못해요)")
+    elif "landing_page_views" not in daily.columns:
         missing.append("랜딩 페이지 조회 열이 없어요. 내보낼 때 '랜딩 페이지 조회'를 넣어 주세요. (없으면 '도착'은 계산하지 못해요)")
 
     dates = sorted(daily["date"].unique())

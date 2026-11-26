@@ -20,6 +20,7 @@ def run(bundle, seed: int = 0, settings: Optional[Dict] = None) -> Dict:
     if v is not None:
         k = {x["kind"] for x in al}
         v = verdict.apply_caps(v, small_sample="small_sample" in k, spend_gap="spend_gap" in k)
+        replay = verdict.cap_replay(replay, v)
     m = matrix.run(s, c, v, al, settings=settings)
     diag = diagnose.analyze(bundle)
     return {

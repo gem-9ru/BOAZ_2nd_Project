@@ -1,20 +1,20 @@
 import { useEffect, useState } from "react";
 import { simulate, type Result, type Simulation } from "../api";
 import { armName, Lead } from "../steps/shared";
-import { AlertMark, band, Card, HowCalculated, won } from "../ui";
+import { AlertMark, band, Button, Card, HowCalculated, won } from "../ui";
 
 /** AN-05 예상 범위 (v4.2): 예산(세트당 총액)과 기간(4일/7일)을 고르면 '보통 ○명 (적게 ○명 ~ 많이 ○명)'.
  *  손님 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
  *  메타 하루 최소보다 적으면 ▲ (광고가 안 나갈 수 있어요).
  *  10번 중 8번은 이 안에 들어요(10~90%). 써 본 적 없는 금액은 점선 + '가설'. 보통 값은 진한 보라 점(주황은 주의 색). */
-export function Simulator({ r }: { r: Result }) {
+export function Simulator({ r, onReload }: { r: Result; onReload?: () => void }) {
   const arms = r.summary.arms;
   const bi = r.verdict?.badge.better === "A" || arms.length < 2 ? 0 : 1;
   const arm = arms[bi];
   const start = r.matrix.change?.per_set ?? 5000;
   const [budget, setBudget] = useState(start);
   const [total, setTotal] = useState(100000);
-  const [days, setDays] = useState(r.check.read.days === 7 ? 7 : 4);
+  const [days, setDays] = useState(r.matrix.change?.days ?? (r.check.read.days === 7 ? 7 : 4));
   const [sims, setSims] = useState<Simulation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const budgets = [budget, budget * 2, budget * 4];
@@ -32,6 +32,14 @@ export function Simulator({ r }: { r: Result }) {
 
   if (!arm) return null;
   const first = sims[0];
+  // 한 번도 계산을 못 받았으면(서버가 다시 켜져 결과가 지워진 경우 등) '계산하는 중…'에 멈추지 않고 이유와 다음 행동 하나
+  if (error && !first) {
+    return (
+      <Card title={error} summary="서버가 다시 켜지면 올려 둔 결과가 지워져요. 같은 파일을 다시 올리면 바로 이어서 볼 수 있어요.">
+        {onReload && <div><Button onClick={onReload}>파일 다시 올리기</Button></div>}
+      </Card>
+    );
+  }
   const max = Math.max(...sims.map((s) => s.visits.hi), 1);
   const nt = first?.next_test;
   const who = armName(arm.name, bi);
@@ -45,7 +53,7 @@ export function Simulator({ r }: { r: Result }) {
           <span>예산 <span className="text-soft">(세트당 총액)</span></span><b className="tabular-nums">{won(budget)}</b>
         </label>
         <input id="budget" type="range" min={5000} max={100000} step={5000} value={budget} aria-label="예산"
-          onChange={(e) => setBudget(Number(e.target.value))} className="w-full accent-action" />
+          onChange={(e) => setBudget(Number(e.target.value))} className="h-8 w-full accent-action" />
         <div className="flex flex-wrap items-center gap-2">
           <div role="radiogroup" aria-label="기간" className="flex gap-2">
             {[4, 7].map((d) => (
@@ -96,7 +104,7 @@ export function Simulator({ r }: { r: Result }) {
       </Card>
       {nt && (
         <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
-          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `이번처럼 세트당 총 ${won(start)}이면 적당해요`
+          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `세트당 총 ${won(start)}이면 적당해요`
             : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}

@@ -34,8 +34,8 @@ export function AN02({ r }: { r: Result }) {
   }
   const lines: Line[] = [
     first,
-    { n: "②", stage: "본 사람이 누르는 정도", suspect: ok("2") ? "—" : "소재 · 문구 · 형식", kind: ok("2") ? "ok" : "low",
-      meaning: `1,000명이 보면 ${both((a) => people(a.ctr))} → ${ok("2") ? "괜찮아요" : "기준보다 적어요"}` },
+    { n: "②", stage: "광고가 눌리는 정도", suspect: ok("2") ? "—" : "소재 · 문구 · 형식", kind: ok("2") ? "ok" : "low",
+      meaning: `1,000번 보여지면 ${both((a) => people(a.ctr, 1000, "번"))} 눌렸어요 → ${ok("2") ? "괜찮아요" : "기준보다 적어요"}` },
     { n: "③", stage: "누른 뒤 페이지에 들어오는 정도", suspect: ok("3") ? "—" : "웹사이트 URL · 페이지 속도", kind: ok("3") ? "ok" : "low",
       meaning: `누른 100명 중 ${both((a) => `${Math.round((a.click_to_visit ?? 0) * 100)}명`)} → ${ok("3") ? "괜찮아요" : "적어요"}` },
     { n: "④", stage: "들어온 뒤 행동", suspect: "—", kind: row("4")?.status === "ok" ? "ok" : "unknown",
@@ -44,7 +44,8 @@ export function AN02({ r }: { r: Result }) {
   ];
   const blocked = lines.find((l) => l.kind === "low");
   const lead = blocked ? `'${blocked.stage}'에서 처음 막혔어요`
-    : first.kind === "worse" ? `광고가 보이는 단계에서만 ${cpm?.better === "B" ? "A" : "B"}가 비쌌고, 그 아래는 괜찮아요`
+    // ①의 '유지' 카드와 이어지게: 보이는 값 차이는 싼 쪽을 유지하면 해결 (막힘이 아님)
+    : first.kind === "worse" ? `A·B 차이는 광고가 보이는 값뿐이에요. ${paren(armName(arms[cpm?.better === "B" ? 1 : 0]!.name, cpm?.better === "B" ? 1 : 0))}를 유지하면 되고, 그 아래는 괜찮아요`
     : "크게 막힌 곳은 없어요";
 
   return (
@@ -52,17 +53,17 @@ export function AN02({ r }: { r: Result }) {
       <Lead sub="위에서부터 처음 막힌 곳이 고칠 곳이에요 · 광고가 보이고 → 눌리고 → 페이지에 오고 → 행동하기까지">{lead}</Lead>
       <Card title="단계별 신호" summary="광고가 보이고 → 눌리고 → 페이지에 오고 → 행동하기까지, 사람 수로 풀어 봤어요">
         <div className="overflow-x-auto">
-          <table className="w-full text-body">
-            <thead><tr className="text-left text-caption text-soft">
+          <table className="w-full text-body max-sm:block">
+            <thead className="max-sm:sr-only"><tr className="text-left text-caption text-soft">
               <th className="w-8 py-2"><span className="sr-only">신호</span></th><th className="py-2 pr-3">단계</th><th className="pr-3">뜻</th><th>의심할 칸</th>
             </tr></thead>
-            <tbody>
+            <tbody className="max-sm:block">
               {lines.map((l) => (
-                <tr key={l.n} className="border-t border-line align-top">
-                  <td className="py-3"><Signal kind={l.kind} /></td>
-                  <th scope="row" className="py-3 pr-3 text-left font-semibold">{l.n} {l.stage}</th>
-                  <td className="py-3 pr-3"><span className="inline-flex flex-wrap items-center gap-1.5">{l.meaning}</span></td>
-                  <td className="py-3 text-soft">{l.suspect}</td>
+                <tr key={l.n} className="border-t border-line align-top max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1 max-sm:py-3">
+                  <td className="py-3 max-sm:p-0"><Signal kind={l.kind} /></td>
+                  <th scope="row" className="py-3 pr-3 text-left font-semibold max-sm:p-0">{l.n} {l.stage}</th>
+                  <td className="py-3 pr-3 max-sm:w-full max-sm:p-0"><span className="inline-flex flex-wrap items-center gap-1.5">{l.meaning}</span></td>
+                  <td className={`py-3 text-soft max-sm:w-full max-sm:p-0 ${l.suspect === "—" ? "max-sm:hidden" : ""}`}>{l.suspect !== "—" && <span className="sm:hidden">의심할 칸: </span>}{l.suspect}</td>
                 </tr>
               ))}
             </tbody>
@@ -91,7 +92,7 @@ export function AN02({ r }: { r: Result }) {
           <p>광고 1,000번 보여주는 데 드는 돈 (CPM): {both((a) => won(a.cpm))} (적게~많게 A {won(cpm.a_interval[0])}~{won(cpm.a_interval[1])} · B {won(cpm.b_interval[0])}~{won(cpm.b_interval[1])}, 95% 범위)</p>
         )}
         <p>본 사람 중 누른 비율 (CTR): {both((a) => `${((a.ctr ?? 0) * 100).toFixed(2)}%`)}</p>
-        <p>신호 기준값: 누르는 정도 1,000명 중 10명(1%) 미만 · 페이지 도착 누른 100명 중 60명 미만이면 ▲</p>
+        <p>신호 기준값: 누르는 정도 1,000번 보여질 때 10번(1%) 미만 · 페이지 도착 누른 100명 중 60명 미만이면 ▲</p>
         <p>메타 관련성 진단(품질·참여율·전환율 순위): {r.matrix.rankings
           ? "파일에 있어서 '평균 이하'인 것만 참고로 보여 드려요. 신호등과 결론은 우리 숫자로만 정해요."
           : "파일에 없거나 노출이 적어 비어 있어서 건너뛰었어요. 광고 관리자 열에 '품질 순위·참여율 순위·전환율 순위'를 넣어 내보내면 같이 봐요."}</p>

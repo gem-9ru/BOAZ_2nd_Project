@@ -28,7 +28,7 @@ export function AN04({ r }: { r: Result }) {
       {v && tab === "days" && <Days r={r} />}
       {tab === "places" && <Places r={r} />}
       {v && tab !== "places" && (
-        <HowCalculated easy="두 세트의 가능한 범위가 안 겹치면 '확실해요', 겹치면 확률로만 말해요. 판정: 90% 이상 확실해요 · 70~90% ○ 쪽이에요 · 70% 미만 아직 몰라요.">
+        <HowCalculated easy="두 세트의 가능한 범위가 안 겹치면 '확실해요', 겹치면 확률로만 말해요. 판정: 90% 이상 확실해요 · 70~90% A 쪽이에요 또는 B 쪽이에요 · 70% 미만 아직 몰라요.">
           <ul className="flex flex-col gap-4">
             {v.metrics.filter((m) => m.key === "cpc" || m.key === "ctr").map((m) => <MetricRow key={m.key} m={m} />)}
           </ul>
@@ -68,7 +68,7 @@ function CostPerCustomer({ r }: { r: Result }) {
       {/* 이긴 쪽 기준으로 말한다 (A가 이기면 'A가 나을 확률 95%') */}
       <p className="flex flex-wrap items-center gap-2 text-body">{v.badge.better}가 나을 확률 <b className="tabular-nums">{pct(betterProb(v.badge.better, m.prob_b_better))}</b> <VerdictBadge word={v.badge.word} small /></p>
       <ProbBar p={betterProb(v.badge.better, m.prob_b_better)} />
-      <p className="text-caption text-soft">점선: 70% 넘으면 '○ 쪽이에요' · 90% 넘으면 '확실해요'{v.badge.capped ? " · 클릭이 적거나 돈이 한쪽에 몰리면 한 단계 낮춰 보여 드려요" : ""}</p>
+      <p className="text-caption text-soft">점선: 70% 넘으면 '{v.badge.better} 쪽이에요' · 90% 넘으면 '확실해요'{v.badge.capped ? " · 클릭이 적거나 돈이 한쪽에 몰리면 한 단계 낮춰 보여 드려요" : ""}</p>
     </Card>
   );
 }
@@ -100,6 +100,7 @@ function AdCost({ r }: { r: Result }) {
           );
         })}
       </ul>
+      <p className="flex justify-between text-caption text-soft tabular-nums" aria-hidden="true"><span>{won(Math.round(lo / 10) * 10)}</span><span>{won(Math.round(hi / 10) * 10)}</span></p>
       <p className="flex justify-between text-caption text-soft"><span>{m.overlap ? "두 범위가 겹쳐요 → 아직 몰라요" : "두 범위가 안 겹쳐요 → 확실해요"}</span><span>← 쌈 · 비쌈 →</span></p>
     </Card>
   );
@@ -116,7 +117,7 @@ function Days({ r }: { r: Result }) {
   const of = (p: number) => (side === "B" ? p : 1 - p);
   const steady = days.length >= 2 && days.every((d, i) => i === 0 || of(d.prob) >= of(days[i - 1]!.prob) - 0.03);
   return (
-    <Card title={steady ? `하루씩 쌓일수록 ${side} 쪽으로 굳어지고 있어요` : "하루씩 더해 보면 아직 오락가락해요"}
+    <Card title={!steady ? "하루씩 더해 보면 아직 오락가락해요" : lastWord === "아직 몰라요" ? `하루씩 쌓일수록 ${side} 쪽으로 기울지만 아직 몰라요` : `하루씩 쌓일수록 ${side} 쪽으로 굳어지고 있어요`}
       summary={`손님 1명당 비용 기준 · ${side}가 나을 확률${lastWord === "확실해요" ? "" : " · 더 돌리면 '확실해요'까지 갈 수도 있지만 아직 장담은 못 해요"}`}>
       <ol className="flex flex-wrap items-center gap-2">
         {days.map((d, i) => (
@@ -160,12 +161,12 @@ function Places({ r }: { r: Result }) {
   const top = r.placements[0];
   return (
     <>
-      <Card title="어떤 노출 위치에서 잘 눌렸나요?" summary="1,000명이 보면 몇 명이 눌렀는지예요. 보여진 횟수가 적은 칸은 우연히 튀기 쉬워서 보정한 값을 먼저 보여 드려요">
+      <Card title="어떤 노출 위치에서 잘 눌렸나요?" summary="1,000번 보여지면 몇 번 눌렸는지예요. 보여진 횟수가 적은 칸은 우연히 튀기 쉬워서 보정한 값을 먼저 보여 드려요">
         <div className="overflow-x-auto">
           <table className="w-full text-body">
             <thead><tr className="text-left text-caption text-soft">
               <th className="py-2 pr-3">세트</th><th className="pr-3">노출 위치</th><th className="pr-3 text-right">보여진 횟수</th>
-              <th className="pr-3 text-right">1,000명 중 누른 사람 (보정)</th><th className="text-right">실제 그대로</th>
+              <th className="pr-3 text-right">1,000번 중 눌린 횟수 (보정)</th><th className="text-right">실제 그대로</th>
             </tr></thead>
             <tbody>
               {rows.map((p) => (
@@ -174,9 +175,9 @@ function Places({ r }: { r: Result }) {
                   <td className="pr-3">{short(p.label)}</td>
                   <td className={`pr-3 text-right tabular-nums ${p.reference_only ? "text-soft" : ""}`}>{p.impressions.toLocaleString()}</td>
                   <td className={`pr-3 text-right tabular-nums ${p.reference_only ? "text-soft" : "font-semibold"}`}>
-                    {people(p.ctr_adjusted)}{p.reference_only && <ReferenceBadge />}
+                    {people(p.ctr_adjusted, 1000, "번")}{p.reference_only && <ReferenceBadge />}
                   </td>
-                  <td className="text-right text-caption text-soft tabular-nums">{p.ctr == null ? "–" : `${Math.round(p.ctr * 1000)}명`}</td>
+                  <td className="text-right text-caption text-soft tabular-nums">{p.ctr == null ? "–" : `${Math.round(p.ctr * 1000)}번`}</td>
                 </tr>
               ))}
             </tbody>
@@ -189,7 +190,7 @@ function Places({ r }: { r: Result }) {
           <p className="text-body text-soft">Audience Network는 {won(an)}{tops.length > 1 ? " (두 세트 모두)" : ""}</p>
         </Card>
       )}
-      <HowCalculated title="보정이 뭔가요?" easy={`보여진 횟수가 적은 칸은 우연히 튀기 쉬워서, 전체 평균(1,000명 중 ${total ? Math.round((clicks / total) * 1000) : "–"}명) 쪽으로 당겨서 보여줘요.`}>
+      <HowCalculated title="보정이 뭔가요?" easy={`보여진 횟수가 적은 칸은 우연히 튀기 쉬워서, 전체 평균(1,000번 중 ${total ? Math.round((clicks / total) * 1000) : "–"}번) 쪽으로 당겨서 보여줘요.`}>
         <p>경험적 베이즈 축소 추정 (Efron & Morris 1975): (클릭 + 평균 클릭률 × 강도) ÷ (노출 + 강도). 강도는 칸 사이 실제 차이에서 추정해요.</p>
         <p>보여진 횟수 100 미만 칸은 '참고만'으로 표시하고, 판정(90/70%)에는 넣지 않아요. 평균이 나쁜 자리를 끄지 말라는 안내는 Breakdown effect 때문이에요.</p>
       </HowCalculated>

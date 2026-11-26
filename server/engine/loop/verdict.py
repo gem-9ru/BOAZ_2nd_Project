@@ -135,3 +135,21 @@ def apply_caps(v: Dict, small_sample: bool, spend_gap: bool) -> Dict:
     if reasons:
         badge.update(level=_ORDER[i], word=_word_for(_ORDER[i], badge["better"]), capped=reasons)
     return dict(v, badge=badge)
+
+
+def cap_replay(replay: List[Dict], v: Dict) -> List[Dict]:
+    """날짜별 판정도 큰 판정과 같은 이유로 낮춘다 (그래야 마지막 날 = 큰 판정). 낮춘 단계 수만큼 내린다."""
+    capped = v["badge"].get("capped")
+    if not capped:
+        return replay
+    steps = sum("돈이 몰려서" in c for c in capped)
+    small = any("클릭이 적어서" in c for c in capped)
+    out = []
+    for d in replay:
+        better = "B" if d["prob"] >= 0.5 else "A"
+        i = 2 if d["word"] == "확실해요" else 0 if d["word"] == "아직 몰라요" else 1
+        if small:
+            i = min(i, 1)
+        i = max(0, i - steps)
+        out.append(dict(d, word=_word_for(_ORDER[i], better)))
+    return out

@@ -9,7 +9,7 @@ import { AN04 } from "./steps/AN04";
 import { AN05 } from "./steps/AN05";
 import { AN06 } from "./steps/AN06";
 import { AlertLine, STEPS } from "./steps/shared";
-import { AlertMark, Button, Toast } from "./ui";
+import { AlertMark, Button, Card, Toast } from "./ui";
 
 /** 분석 페이지 (v4.2): [다음]으로 넘기는 7단계. 이 페이지는 크롬 탭에 펼쳐 두고, 오른쪽 광고 어시스턴트는
  *  크롬 확장 프로그램 사이드 패널이 맡는다 (페이지 안에 따로 띄우지 않음). 페이지는 주소 # 뒤에 코드·단계를 적어
@@ -72,17 +72,17 @@ export default function App() {
     <div className="mx-auto max-w-page-wide px-4 py-6 flex flex-col gap-4">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft">분석{fileName ? ` · ${fileName}` : ""}</span></p>
-          <p className="text-caption text-soft">궁금한 건 크롬 오른쪽 광고 어시스턴트(확장 프로그램 패널)에 물어보세요. 이 단계에 맞춰 설명해 드려요.</p>
+          <p className="text-lead font-bold"><span aria-hidden="true" className="text-accent">✦</span> 광고 어시스턴트 <span className="text-body font-normal text-soft break-all">분석{fileName ? ` · ${fileName}` : ""}</span></p>
+          <p className="text-caption text-soft max-sm:hidden">궁금한 건 크롬 오른쪽 광고 어시스턴트(확장 프로그램 패널)에 물어보세요. 이 단계에 맞춰 설명해 드려요.</p>
         </div>
-        <nav aria-label="단계" className="print:hidden">
-          <ol className="flex flex-wrap gap-1.5">
+        <nav aria-label="단계" className="print:hidden max-sm:w-full max-sm:min-w-0">
+          <ol className="flex flex-wrap gap-1.5 max-sm:-mx-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:px-4">
             {STEPS.map((x, i) => {
-              const can = i <= reached || i === STEPS.length - 1;
+              const can = i <= reached || (i === STEPS.length - 1 && !result.blocked);   // 차단이면 ⑥으로 건너뛰지 않음
               return (
                 <li key={x.id}>
                   <button type="button" disabled={!can} onClick={() => go(i)} aria-current={i === step ? "step" : undefined}
-                    className={`rounded-badge px-3 py-1 text-caption ${i === step ? "bg-accent text-on-action font-bold" : i <= reached ? "bg-accent-soft text-accent-ink" : can ? "bg-surface border border-line text-ink" : "text-soft opacity-(--state-disabled-opacity)"}`}>
+                    className={`inline-flex min-h-8 items-center whitespace-nowrap rounded-badge px-3 text-caption ${i === step ? "bg-accent text-on-action font-bold" : i <= reached ? "bg-accent-soft text-accent-ink" : can ? "bg-surface border border-line text-ink" : "text-soft opacity-(--state-disabled-opacity)"}`}>
                     {"①②③④⑤⑥"[i]} {x.short}
                   </button>
                 </li>
@@ -90,7 +90,9 @@ export default function App() {
             })}
           </ol>
         </nav>
-        <span className="print:hidden"><Button kind="secondary" onClick={() => setResult(null)}>다른 파일 올리기</Button></span>
+        {/* 결과를 지우는 일이라 한 번 묻는다. 자주 쓰는 버튼이 아니라 작은 글자 버튼으로 */}
+        <button type="button" onClick={() => { if (window.confirm("지금 결과를 닫고 다른 파일을 올릴까요? 지금 결과는 다시 볼 수 없어요.")) setResult(null); }}
+          className="print:hidden inline-flex min-h-11 items-center px-2 text-body text-soft underline hover:text-ink">다른 파일 올리기</button>
       </header>
 
       <AlertBar r={result} step={s.id} />
@@ -98,16 +100,22 @@ export default function App() {
       <div>
         <main className="flex min-w-0 flex-col gap-4">
           <p role="status" className="sr-only">결과를 다 계산했어요</p>
-          <h1 ref={title} tabIndex={-1} className="text-hero-sm font-bold leading-tight focus:outline-none">{s.title}</h1>
-          {step === 0 && <AN01 r={result} onApply={() => go(5)} onOpenSetting={(id) => { setFocusField(id); go(2); }} />}
+          <h1 ref={title} tabIndex={-1} className="text-hero-sm font-bold leading-tight focus:outline-none">{step === 0 && result.blocked ? "이 파일로는 아직 결론을 낼 수 없어요" : s.title}</h1>
+          {step === 0 && result.blocked && (
+            <Card title="이것부터 고쳐 주세요" summary="이 파일 숫자로는 비교가 틀릴 수 있어서 결론과 다음 테스트안을 보여 드리지 않아요.">
+              <ul className="flex flex-col gap-2">{result.alerts.filter((a) => a.level === "block").map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>
+            </Card>
+          )}
+          {step === 0 && !result.blocked && <AN01 r={result} onApply={() => go(5)} onOpenSetting={(id) => { setFocusField(id); go(2); }} />}
           {step === 1 && <AN02 r={result} />}
           {step === 2 && <AN03 r={result} focus={focusField} />}
           {step === 3 && <AN04 r={result} />}
-          {step === 4 && <AN05 r={result} />}
+          {step === 4 && <AN05 r={result} onReload={() => setResult(null)} />}
           {step === 5 && <AN06 r={result} onCopied={showToast} onSend={sendToExtension} />}
           <nav aria-label="이전 다음" className="flex items-center justify-between gap-3 pt-2 print:hidden">
             {step > 0 ? <Button kind="secondary" onClick={() => go(step - 1)}>◀ {STEPS[step - 1]!.short}</Button> : <span />}
-            {!last && <Button onClick={() => go(step + 1)} disabled={result.blocked}>{s.next} ▶</Button>}
+            {/* ①에는 [이 테스트 바로 준비]가 주 버튼이라 [다음]은 보조 (한 화면에 주 버튼 하나) */}
+            {!last && <Button kind={step === 0 && !result.blocked ? "secondary" : "primary"} onClick={() => go(step + 1)} disabled={result.blocked}>{s.next} ▶</Button>}
             {last && <Button kind="secondary" onClick={() => go(0)}>처음으로 ▶</Button>}
           </nav>
           {result.blocked && <p className="text-body text-block-ink">■ 차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요.</p>}
@@ -149,7 +157,7 @@ function AlertBar({ r, step }: { r: Result; step: string }) {
         <AlertMark level={top.level} />
         <b className="flex-1 min-w-48"><span className="font-normal">{NAME[top.level]} · </span>{text}</b>
         <span className="text-caption text-soft">{counts}</span>
-        <button type="button" onClick={() => setAll((x) => !x)} aria-expanded={all} className="text-caption underline">{all ? "접기" : "모두 보기"}</button>
+        <button type="button" onClick={() => setAll((x) => !x)} aria-expanded={all} className="inline-flex min-h-8 items-center px-2 text-caption underline">{all ? "접기" : "모두 보기"}</button>
       </div>
       {all && <ul className="mt-3 flex flex-col gap-2">{list.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
     </section>

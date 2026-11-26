@@ -6,7 +6,7 @@ const RATES: Row[] = [
   { label: "손님 1명당 비용", get: (a) => a.cost_per_visit ?? null, show: won, higher: false },
   { label: "클릭 1번에 드는 돈", term: "(CPC)", get: (a) => a.cpc, show: won, higher: false },
   { label: "광고 1,000번 보여주는 데 드는 돈", term: "(CPM)", get: (a) => a.cpm, show: won, higher: false },
-  { label: "본 사람 중 누른 비율", term: "(CTR)", get: (a) => a.ctr, show: (x) => `${(x * 100).toFixed(2)}% · 1,000명 중 약 ${Math.round(x * 1000)}명`, higher: true },
+  { label: "본 사람 중 누른 비율", term: "(CTR)", get: (a) => a.ctr, show: (x) => `${(x * 100).toFixed(2)}% · 1,000번 중 약 ${Math.round(x * 1000)}번`, higher: true },
 ];
 const TOTALS: Row[] = [
   { label: "쓴 돈", get: (a) => a.spend, show: won },

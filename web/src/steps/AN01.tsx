@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { Result } from "../api";
-import { Card, HowCalculated, md, TestTag, VerdictBadge, won } from "../ui";
+import { Card, GRADE_LABEL, HowCalculated, md, TestTag, VerdictBadge, won } from "../ui";
 import { CertaintyBadge } from "./Certainty";
 import { armName, Lead, sameMoney } from "./shared";
 
@@ -38,7 +38,7 @@ export function AN01({ r, onApply, onOpenSetting }: { r: Result; onApply: () => 
         <div><button type="button" onClick={onApply} className="h-button rounded-button bg-button px-5 text-body font-semibold text-button-fg hover:bg-button-hover">이 테스트 바로 준비 →</button></div>
       </section>
       <ul className="grid gap-3 sm:grid-cols-3" aria-label="나머지 칸">
-        <Mini tag="유지" field={keep?.field_id} onOpen={onOpenSetting} title={keep ? `${keep.path.split(" › ").pop()} = ${keep.value}` : "바꿀 이유가 없는 칸"}>
+        <Mini tag="유지" field={keep?.field_id} onOpen={onOpenSetting} title={keep ? keep.title ?? `${keep.path.split(" › ").pop()} = ${keep.value}` : "바꿀 이유가 없는 칸"}>
           {keep && same && badge
             ? <><span>같은 돈으로 손님 A {same.counts[0]}명 · B {same.counts[1]}명</span> <VerdictBadge word={badge.word} small /></>
             : keep ? keep.reason : "이번 결과로는 없어요"}
@@ -57,7 +57,7 @@ export function AN01({ r, onApply, onOpenSetting }: { r: Result; onApply: () => 
           ? <p>위에서부터 막힌 단계도, 돈이 몰린 자리도 없어서 문구 하나만 바꿔 비교하는 걸 제안해요.</p>
           : <p>진단 규칙 {c.rule?.row ?? c.row ?? "–"}번: {m.rows.find((x) => x.row === (c.rule?.row ?? c.row))?.signal ?? c.reason}</p>}
         <p>위에서부터(게재 → 보이는 값 → 누르는 정도 → 페이지 도착 → 행동) 처음 막힌 단계의 칸을 고르고, 막힌 곳이 없으면 돈이 몰린 자리에 맞는 소재를 제안해요.</p>
-        {c.rule && <p>근거: {c.rule.why}{c.grade ? ` (근거 ${c.grade})` : ""} · 자세한 확실도는 ⑥ 보내기의 근거 탭에 있어요</p>}
+        {c.rule && <p>근거: {c.rule.why}{c.grade && GRADE_LABEL[c.grade] ? ` (${GRADE_LABEL[c.grade]})` : ""} · 자세한 확실도는 ⑥ 보내기의 근거 탭에 있어요</p>}
         {c.meta_says && <p>메타 신호: {c.meta_says}</p>}
         {badge && <p>비교한 세트: {arms.map((a, i) => `${armName(a.name, i)} (${a.name})`).join(" · ")}</p>}
       </HowCalculated>

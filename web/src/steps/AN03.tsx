@@ -34,23 +34,23 @@ export function AN03({ r, focus }: { r: Result; focus?: string | null }) {
         <Tabs label="상태로 거르기" value={tab} onChange={setTab}
           items={tabs.map((t) => ({ id: t, label: <>{t} <span className="tabular-nums">{t === "전체" ? items.length : n(t)}</span></> }))} />
         <div className="overflow-x-auto">
-          <table className="w-full text-body">
-            <thead><tr className="text-left text-caption text-soft">
+          <table className="w-full text-body max-sm:block">
+            <thead className="max-sm:sr-only"><tr className="text-left text-caption text-soft">
               <th className="py-2 pl-3 pr-3">단계</th><th className="pr-3">칸</th><th className="pr-3">지금 값</th><th className="pr-3">상태</th><th>근거</th>
             </tr></thead>
-            <tbody>
+            <tbody className="max-sm:flex max-sm:flex-col">
               {shown.map((x) => {
                 const [stage, name] = x.path.split(" › ");
                 return (
                   <tr key={x.field_id + x.kind} onClick={() => setSel(x.field_id)} aria-selected={sel === x.field_id}
-                    className={`cursor-pointer border-t border-line align-top ${x.kind === "테스트" ? "border-l-4 border-l-accent" : "border-l-4 border-l-transparent"} ${sel === x.field_id ? "bg-accent-soft" : ""}`}>
-                    <td className="py-2 pl-3 pr-3 text-caption text-soft whitespace-nowrap">{stage}</td>
-                    <th scope="row" className="py-2 pr-3 text-left font-semibold">
+                    className={`cursor-pointer border-t border-line align-top max-sm:flex max-sm:flex-wrap max-sm:items-center max-sm:gap-x-2 max-sm:gap-y-1 max-sm:py-3 max-sm:pr-3 ${x.kind === "테스트" ? "border-l-4 border-l-accent" : "border-l-4 border-l-transparent"} ${sel === x.field_id ? "bg-accent-soft" : ""}`}>
+                    <td className="py-2 pl-3 pr-3 text-caption text-soft whitespace-nowrap max-sm:p-0 max-sm:pl-3">{stage}</td>
+                    <th scope="row" className="py-2 pr-3 text-left font-semibold max-sm:p-0">
                       <button type="button" onClick={() => setSel(x.field_id)} className="text-left">{name}</button>
                     </th>
-                    <td className="py-2 pr-3">{x.value ?? "—"}</td>
-                    <td className="py-2 pr-3"><span className={`rounded-badge px-2.5 py-0.5 text-caption font-bold whitespace-nowrap ${LOOK[x.kind]}`}>{x.kind}</span></td>
-                    <td className="py-2 text-caption text-soft">{x.text}</td>
+                    <td className="py-2 pr-3 max-sm:order-last max-sm:w-full max-sm:p-0 max-sm:pl-3"><span className="text-soft sm:hidden">지금 값: </span>{x.value ?? (full.length ? "—" : <span className="text-caption text-soft">확장에서 넘기면 보여요</span>)}</td>
+                    <td className="py-2 pr-3 max-sm:p-0"><span className={`rounded-badge px-2.5 py-0.5 text-caption font-bold whitespace-nowrap ${LOOK[x.kind]}`}>{x.kind}</span></td>
+                    <td className="py-2 text-caption text-soft max-sm:order-last max-sm:w-full max-sm:p-0 max-sm:pl-3">{x.text}</td>
                   </tr>
                 );
               })}

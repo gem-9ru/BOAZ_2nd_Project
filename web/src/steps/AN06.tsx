@@ -18,7 +18,7 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
   const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
   const [tab, setTab] = useState<(typeof EVIDENCE)[number]>("메타 공식 신호");
   const what = c.what ?? c.label;
-  const days = r.check.read.days;
+  const days = c.days ?? r.check.read.days;   // 서버가 하루 최소를 넘게 맞춘 기간
   // 옆 광고 어시스턴트(확장 프로그램 패널)로 바로 보낸다. 패널이 안 열려 있을 때를 위해 코드도 복사해 둔다.
   function send() {
     onSend?.();
@@ -53,7 +53,7 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
       <Card title="다음 테스트 체크리스트" summary={`${checklist.length}개만 지키면 다음 결과로 효과를 잴 수 있어요`}>
         <ul className="flex flex-col gap-2">
           {checklist.map((t) => (
-            <li key={t}><label className="flex items-start gap-2 text-body"><input type="checkbox" className="mt-1 accent-action" />{t}</label></li>
+            <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3 text-body"><input type="checkbox" className="size-5 shrink-0 accent-action" />{t}</label></li>
           ))}
         </ul>
       </Card>

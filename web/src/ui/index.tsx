@@ -79,10 +79,10 @@ export function ReferenceBadge() {
   );
 }
 
-/** 근거 등급: A 실측 · B 매체 추산 · D 우리 가정. */
+/** 근거 등급: A 실측 · B 매체 추산 · D 우리 가정. 글자(A·B)는 세트 이름과 헷갈려서 화면엔 말로만. */
+export const GRADE_LABEL: Record<string, string> = { A: "실측", B: "매체 추산", D: "가정" };
 export function Grade({ g }: { g: "A" | "B" | "D" }) {
-  const label = { A: "실측", B: "매체 추산", D: "가정" }[g];
-  return <span className="inline-block shrink-0 rounded-badge border border-line px-2 py-0.5 text-caption text-soft whitespace-nowrap">근거 {g} · {label}</span>;
+  return <span className="inline-block shrink-0 rounded-badge border border-line px-2 py-0.5 text-caption text-soft whitespace-nowrap">근거: {GRADE_LABEL[g]}</span>;
 }
 
 /** 🔎 접기: 기본은 사장님용, 펼치면 계산 방법·지표 숫자(CPM·CTR·CPC)·근거. 지표 숫자는 여기에만 (v4.2). */
@@ -151,11 +151,11 @@ export function won(x: number | null | undefined): string {
   const n = Math.round(x);
   return n >= 10000 && n % 10000 === 0 ? `${(n / 10000).toLocaleString()}만 원` : `${n.toLocaleString()}원`;
 }
-/** 비율을 사람 수로: 0.0173 → '약 17명' (1,000명 중). */
-export function people(rate: number | null | undefined, base = 1000): string {
+/** 비율을 사람 수로: 0.0173 → '약 17명' (1,000명 중). 노출 대비 클릭은 사람 수가 아니라 횟수라 unit '번'. */
+export function people(rate: number | null | undefined, base = 1000, unit = "명"): string {
   if (rate == null) return "–";
   const n = rate * base;
-  return n >= 1 ? `약 ${Math.round(n)}명` : `약 ${n.toFixed(1)}명`;
+  return n >= 1 ? `약 ${Math.round(n)}${unit}` : `약 ${n.toFixed(1)}${unit}`;
 }
 /** 범위 표기: '보통 13명 (적게 7명 ~ 많이 20명)'. */
 export function band(b: { median: number; lo: number; hi: number }, unit = "명", fmt: (x: number) => string = (x) => Math.round(x).toLocaleString()): string {

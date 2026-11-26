@@ -3,12 +3,12 @@ import { Simulator } from "../blocks/Simulator";
 import { Card, md } from "../ui";
 
 /** AN-05 이 칸을 바꾸면 (v4.2): 실측으로 맞춘 모델의 예상 범위 + 다음 테스트 예산(Test & Roll) + 예측 검증. */
-export function AN05({ r }: { r: Result }) {
+export function AN05({ r, onReload }: { r: Result; onReload?: () => void }) {
   const bt = r.backtest;
   const allIn = bt.arms?.every((a) => a.visits.inside && a.link_clicks.inside);
   return (
     <>
-      <Simulator r={r} />
+      <Simulator r={r} onReload={onReload} />
       {bt.ok && bt.arms && (
         <Card title="예측이 맞았나? (검증)"
           summary={`${bt.train_days?.length ? (bt.train_days.length > 1 ? `${md(bt.train_days[0])}~${md(bt.train_days[bt.train_days.length - 1])}` : md(bt.train_days[0])) : ""} 자료로 ${md(bt.test_day)}을 예측 → ${allIn ? "실제 A·B 모두 범위 안" : "범위를 벗어난 세트가 있어요"}`}>

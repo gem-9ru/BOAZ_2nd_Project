@@ -15,7 +15,7 @@ export type Level = "채택" | "유력" | "보류";   // 개발·근거 탭 값 
 export interface Change { field_id: string; label: string; new: string; note: string; path?: string; now?: string | null;
   reason?: string; certainty?: { level: Level; label: string; why: string }; grade?: string; meta_says?: string | null; checklist?: string[];
   /** v4.2: 돌려 본 적 없는 선택지 → '테스트 제안' 태그 (판정 배지 없음) */
-  tag?: string; tested?: boolean; what?: string; new_short?: string; test?: string; unknown?: string; per_set?: number; row?: string;
+  tag?: string; tested?: boolean; what?: string; new_short?: string; test?: string; unknown?: string; per_set?: number; days?: number; row?: string;
   rule?: { row: string; level: Level; why: string } }
 export type AlertLevel = "block" | "warn" | "info";
 export interface Alert { level: AlertLevel; mark: string; kind: string; text: string; todo: string; screen: string; date?: string;
@@ -24,7 +24,7 @@ export interface Alert { level: AlertLevel; mark: string; kind: string; text: st
 export interface MatrixRow { row: string; stage: string; signal: string; status: "ok" | "blocked" | "watch" | "skip" | "found"; field_id: string | null; path: string; detail: string }
 export type Kind = "테스트" | "다시 보기" | "그대로";
 export interface SettingRow { field_id: string; path: string; value: string; kind: Kind; note: string }
-export interface Matrix { settings?: SettingRow[]; rows: MatrixRow[]; change: Change | null; keep: { field_id: string; path: string; value: string; reason: string; arm?: string }[];
+export interface Matrix { settings?: SettingRow[]; rows: MatrixRow[]; change: Change | null; keep: { field_id: string; path: string; value: string; reason: string; arm?: string; title?: string }[];
   watch: { field_id: string; path: string; text: string; title?: string; need_per_set?: number | null }[]; dont: string[]; tested_field: string | null;
   /** 메타 광고 관련성 진단 (품질·참여율·전환율 순위) 중 '평균 이하'인 것: 퍼널 진단의 보조 신호. rankings = 파일에 순위 열이 있었는지 */
   meta_signals?: { row: string; key: string; text: string }[]; rankings?: boolean }
