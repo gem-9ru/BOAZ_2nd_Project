@@ -5,6 +5,12 @@ import AgeFigure from "./AgeFigure";
 import MonthBars from "./MonthBars";
 import { nowLine } from "./when";
 
+/** '은/는': 받침이 있으면 '은' */
+function topic(word: string): string {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  return c < 0 || c > 11171 ? "은(는)" : c % 28 ? "은" : "는";
+}
+
 /** 같은 분야 평균보다 눈에 띄게(1.2배 이상) 많이 찾는 나이대·성별 한 줄. 없으면 null. */
 export function vsCategory(aud: { index?: Record<string, number>; top_age: string } | null): string | null {
   const idx = aud?.index;
@@ -25,7 +31,7 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
   const who = stats.audience
     ? `${ageSpanLabel(ageSpan(stats.audience.ages).groups)}${(() => { const g = genderFrom(stats.audience!.female); return g === "all" ? "" : ` ${GENDER_LABEL[g]}`; })()}`
     : null;
-  const line = [`한 달 ${times(stats.total_qc, stats.under)}`, trend?.peak_month ? `${trend.peak_month}월에 가장 많이` : null, who ? `${who}${who.endsWith("대") ? "가" : "이"} 쇼핑에서 많이 클릭해요` : null]
+  const line = [`한 달 ${times(stats.total_qc, stats.under)}`, trend?.peak_month ? `'${stats.keyword}'${topic(stats.keyword)} ${trend.peak_month}월에 가장 많이` : null, who ? `${who}${who.endsWith("대") ? "가" : "이"} 쇼핑에서 많이 클릭해요` : null]
     .filter(Boolean).join(" · ");
   return (
     <details className="group flex flex-col gap-2.5 rounded-card border border-line bg-paper p-4">
@@ -72,7 +78,7 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
           </strong>
           {now && <p className="text-caption">{now}</p>}
           <MonthBars monthly={trend.monthly} />
-          <span className="text-small text-soft">지난 12달 네이버 쇼핑 클릭 기준 · 가장 많은 달을 100으로 본 비율</span>
+          <span className="text-small text-soft">'{stats.keyword}' 한 단어 · 지난 12달 {stats.trend_source === "shopping" ? "네이버 쇼핑 클릭" : "네이버 검색"} 기준 · 가장 많은 달을 100으로 본 비율. 손님 무리 카드는 무리의 검색어를 묶어 봐서 달이 다를 수 있어요.</span>
         </div>
       )}
       </div>

@@ -425,7 +425,7 @@ describe("타깃 확인·고치기", () => {
       audience: { female: 0.7, ages: { "30": 0.25, "40": 0.3, "50": 0.25 }, top_age: "40" },
       trend: { monthly: { "2026-12": 100 }, peak_month: 12, seasonal: true } };
     render(<FindStep state={{ ...state(), research: { ...withSegs, product_stats: stats } }} dispatch={() => {}} />);
-    expect(screen.getByText("한 달 13만번 · 12월에 가장 많이 · 30~50대 여성이 쇼핑에서 많이 클릭해요")).toBeTruthy();
+    expect(screen.getByText("한 달 13만번 · '수제쿠키'는 12월에 가장 많이 · 30~50대 여성이 쇼핑에서 많이 클릭해요")).toBeTruthy();
     expect(screen.getByText("자세히 ▾")).toBeTruthy();
   });
 
@@ -629,5 +629,36 @@ describe("10번 미만 검색 수", () => {
     render(<FindStep state={{ ...initialState(), research: r, product: "수제 버터 쿠키", dropped: ["르뱅쿠키"] }} dispatch={() => {}} />);
     expect(screen.getAllByText(/한 달 20번 미만/).length).toBeGreaterThan(0);
     expect(screen.getByText(/이름 그대로는 한 달 20번도 안 찾아요/)).toBeTruthy();
+  });
+});
+
+describe("추천 이유 · 달별 기준", () => {
+  it("the recommended target says why, and that the cut-offs are this tool's own", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={() => {}} />);
+    const why = screen.getByText(/추천 이유:/);
+    expect(why.textContent).toContain("30~40대가 80%");
+    expect(why.textContent).toContain("여성이 81%라 (60%를 넘으면 한쪽만) 여성만 추천해요");
+    expect(why.textContent).toContain("이 도구가 정한 값이에요");
+  });
+
+  it("the month box names its source", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const stats = { keyword: "텀블러", total_qc: 1000, mobile: 0.5, audience: null,
+      trend: { monthly: { "2026-04": 100 }, peak_month: 4, seasonal: true }, trend_source: "search" as const };
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
+    expect(screen.getByText(/지난 12달 네이버 검색 기준/)).toBeTruthy();
+  });
+});
+
+describe("달별 기준 표시", () => {
+  it("each month says what it is based on", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const stats = { keyword: "닭가슴살", total_qc: 1000, mobile: 0.5, audience: null,
+      trend: { monthly: { "2026-08": 100 }, peak_month: 8, seasonal: true }, trend_source: "search" as const };
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "닭가슴살" }} dispatch={() => {}} />);
+    expect(screen.getByText(/'닭가슴살'은 8월에 가장 많이/)).toBeTruthy();
+    expect(screen.getByText(/'닭가슴살' 한 단어 · 지난 12달 네이버 검색 기준/)).toBeTruthy();
+    expect(screen.getAllByText(/이 무리 검색어 \d개 묶음/).length).toBeGreaterThan(0);
   });
 });

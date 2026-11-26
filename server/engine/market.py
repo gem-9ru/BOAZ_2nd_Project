@@ -495,6 +495,17 @@ def _obj(word: str) -> str:
     return "을(를)"
 
 
+def _product_trend(word: str, aud: Optional[dict], online: bool) -> dict:
+    """몇 월에 많이 찾나: 손님 무리 카드와 같은 기준(검색어 트렌드)을 먼저 쓰고, 못 받으면 쇼핑인사이트 클릭.
+    (같은 화면에서 상품 카드는 1월·무리 카드는 4월처럼 기준이 달라 서로 다른 달이 나오던 문제)"""
+    t = trend_by_group({"상품": [word]}, online).get("상품")
+    if t:
+        return {"trend": t, "trend_source": "search"}
+    if aud and aud.get("monthly"):
+        return {"trend": _trend_of(aud["monthly"]), "trend_source": "shopping"}
+    return {"trend": None, "trend_source": None}
+
+
 def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: bool = True) -> Optional[dict]:
     """상품 이름 그대로(띄어쓰기 없앰)의 월 검색 수와, 분야가 있으면 그 말을 찾는 사람의 성별·연령.
     키워드 표에 그 말이 없으면 None. 연령·성별을 못 받으면 audience만 None."""
@@ -509,7 +520,7 @@ def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: 
     out = {"keyword": word, "total_qc": total, **({"under": under} if under else {}),
            "mobile": round(float(r["mobile_qc"]) / total, 3) if total > 0 and "mobile_qc" in row else None,
            "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
-           "trend": _trend_of(aud["monthly"]) if aud and aud.get("monthly") else None}   # 몇 월에 많이 찾나 (쇼핑인사이트 클릭)
+           **_product_trend(word, aud, online)}
     log.info("product stats keyword=%s qc=%d audience=%s", word, total, "yes" if aud else "no")
     return out
 

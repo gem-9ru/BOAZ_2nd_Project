@@ -58,7 +58,7 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                 {seg.trend?.peak_month && (
                   <span className="text-small text-soft">
                     {seg.trend.seasonal ? `${seg.trend.peak_month}월에 가장 많이 찾아요` : "달마다 비슷하게 찾아요"}
-                    {seg.trend_source ? ` (${TREND_SOURCE[seg.trend_source]} 기준)` : ""}
+                    {seg.trend_source ? ` (이 무리 검색어 ${Math.min(5, seg.keywords.length)}개 묶음, ${TREND_SOURCE[seg.trend_source]} 기준)` : ""}
                   </span>
                 )}
                 {segments.length > 1 && (

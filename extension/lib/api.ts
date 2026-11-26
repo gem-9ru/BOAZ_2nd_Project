@@ -35,6 +35,8 @@ export interface ProductStats {
   audience: { female: number; ages: Record<string, number>; top_age: string; index?: Record<string, number> } | null;
   /** 몇 월에 많이 찾나 (쇼핑인사이트 클릭, 가장 많은 달 = 100) */
   trend?: { monthly: Record<string, number>; peak_month: number | null; seasonal: boolean } | null;
+  /** 달별 자료 기준: search = 검색어 트렌드(손님 무리 카드와 같음), shopping = 쇼핑 클릭 */
+  trend_source?: "search" | "shopping" | null;
 }
 
 export interface Category { code: string; name: string }

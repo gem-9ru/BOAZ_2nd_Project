@@ -357,7 +357,8 @@ def test_build_without_category_makes_no_audience_calls(monkeypatch):
     """분야를 모르면 식품(기본 분야)으로 손님을 조회하지 않는다: 손님 없음 + 검색수 한 줄."""
     calls = _count_hub(monkeypatch)
     r = market.build(SEEDS, online=False, category=None)
-    assert calls == []
+    # 상품 카드의 '몇 월에 많이 찾나' 검색어 트렌드 한 번만 (손님 조회는 없음)
+    assert [c for c in calls if c[0] != "http"] == [("trend", ({"상품": ["휘낭시에"]},))]
     assert r.audiences == {} and r.segments == []
     qc = float(r.keywords.loc[r.keywords["keyword"] == r.recommended[0], "total_qc"].iloc[0])
     assert r.headline == market.headline(r.recommended[0], None, qc)
@@ -367,8 +368,8 @@ def test_build_with_category_but_no_kept_keywords_makes_no_audience_calls(monkey
     calls = _count_hub(monkeypatch)
     r = market.build(SEEDS, online=False, category=market.DEFAULT_CATEGORY, keep=[])
     # 상품 이름 그대로('휘낭시에')의 찾는 사람 카드만 조회한다 (무리·트렌드 조회는 없음)
-    assert all(kind == "si" and (a[2] in ("휘낭시에", None)) for kind, a in calls if kind != "http"), calls
-    assert not any(kind == "trend" for kind, _ in calls)
+    assert all(kind == "trend" or (kind == "si" and a[2] in ("휘낭시에", None)) for kind, a in calls if kind != "http"), calls
+    assert [a for kind, a in calls if kind == "trend"] == [({"상품": ["휘낭시에"]},)]   # 상품 카드 달별 한 번만
     assert r.audiences == {} and r.segments == []
     assert "번 검색돼요" in r.headline
 
@@ -436,3 +437,17 @@ def test_under_ten_counts_are_marked_not_hidden():
     f = market._frame(data).set_index("keyword")
     assert f.loc["수제버터쿠키", "under"] == 2 and f.loc["수제버터쿠키", "total_qc"] == 10
     assert f.loc["버터쿠키", "under"] == 1 and f.loc["쿠키", "under"] == 0
+
+
+def test_product_month_uses_the_same_search_trend_as_groups(monkeypatch):
+    """상품 카드와 손님 무리 카드가 같은 기준(검색어 트렌드)으로 '가장 많은 달'을 말한다. 못 받으면 쇼핑 클릭."""
+    import pandas as pd
+    from server.engine import market
+    kw = pd.DataFrame([{"keyword": "텀블러", "total_qc": 1000, "mobile_qc": 700, "under": 0}])
+    monkeypatch.setattr(market, "audience", lambda *a, **k: {"female": 0.6, "ages": {"40": 1.0}, "index": {}, "monthly": {"2026-01": 100.0, "2026-04": 50.0}})
+    monkeypatch.setattr(market, "trend_by_group", lambda groups, online=True: {"상품": market._trend_of({"2026-01": 40.0, "2026-04": 100.0})})
+    s = market.product_stats(kw, "텀블러", "50000008", online=False)
+    assert s["trend"]["peak_month"] == 4 and s["trend_source"] == "search"
+    monkeypatch.setattr(market, "trend_by_group", lambda groups, online=True: {})
+    s = market.product_stats(kw, "텀블러", "50000008", online=False)
+    assert s["trend"]["peak_month"] == 1 and s["trend_source"] == "shopping"

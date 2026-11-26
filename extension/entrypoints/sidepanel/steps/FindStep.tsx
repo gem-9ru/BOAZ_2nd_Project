@@ -378,6 +378,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       <div className="flex flex-col gap-3">
         <AgeFigure audience={selected.audience} caption="쇼핑에서 많이 클릭한 사람 (추천)" split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
         <TargetPick from={pick.from} to={pick.to} gender={pick.gender} rec={rec} female={selected.audience.female}
+          recShare={(() => { const g = ageSpan(selected.audience.ages).groups; return g.reduce((t, a) => t + (selected.audience!.ages[a] ?? 0), 0); })()}
           onChange={(v) => setCustom({ intent: selected.intent, ...v })} />
       </div>
     )

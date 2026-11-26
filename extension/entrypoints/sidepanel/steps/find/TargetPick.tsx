@@ -5,6 +5,9 @@ import { ageGroupToRange } from "../../../../lib/settings";
 const GROUPS = ["10", "20", "30", "40", "50", "60"];
 export const GENDER_WORD: Record<Target["gender"], string> = { female: "여성만", male: "남성만", all: "남녀 모두" };
 
+/** {from:'30', to:'50'} → '30~50대' */
+const ageWord = (r: { from: string; to: string }) => (r.from === r.to ? `${r.from}대` : `${r.from}~${r.to}대`);
+
 /** 나이대 묶음 + 성별 → 광고 관리자에 넣을 타깃 (10대는 18세부터, 60대는 65세 이상까지). */
 export function toTarget(from: string, to: string, gender: Target["gender"]): Target {
   return { ageMin: ageGroupToRange(from).ageMin, ageMax: ageGroupToRange(to).ageMax, gender };
@@ -17,10 +20,12 @@ export function targetLine(t: Target): string {
 }
 
 /** 추천 타깃을 보여 주고 [나이·성별 바꾸기]로 나이대(부터~까지)와 성별(여성만·남성만·모두)을 고친다. 고른 성별이 찾는 사람 중 몇 %인지도. */
-export default function TargetPick({ from, to, gender, rec, female, onChange }: {
+export default function TargetPick({ from, to, gender, rec, female, recShare, onChange }: {
   from: string; to: string; gender: Target["gender"];
   rec: { from: string; to: string; gender: Target["gender"] };
   female: number;
+  /** 추천 나이대가 클릭한 사람 중 차지하는 몫 (0~1) */
+  recShare?: number;
   onChange: (v: { from: string; to: string; gender: Target["gender"] }) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -38,6 +43,13 @@ export default function TargetPick({ from, to, gender, rec, female, onChange }: 
           {open ? "닫기" : "나이·성별 바꾸기"}
         </button>
       </div>
+      <p className="text-caption text-soft">
+        추천 이유: 쇼핑에서 클릭한 사람 중 {ageWord(rec)}가 {recShare != null ? `${Math.round(recShare * 100)}%` : "가장 많고"}
+        {rec.gender === "all"
+          ? `, 성별 차이가 크지 않아(여성 ${pct.female}%) 남녀 모두로 추천해요.`
+          : `, ${rec.gender === "female" ? "여성" : "남성"}이 ${pct[rec.gender]}%라 (60%를 넘으면 한쪽만) ${GENDER_WORD[rec.gender]} 추천해요.`}
+        <span className="block text-small">60%·15% 같은 기준은 이 도구가 정한 값이에요 (메타·네이버 기준 아님).</span>
+      </p>
       {open && (
         <div className="flex flex-col gap-3">
           <fieldset className="flex flex-col gap-2">
