@@ -1,7 +1,7 @@
 // 사이드 패널의 단계 상태 기계. 순수 함수만 둔다 (저장은 storage.ts).
 import type { Change, Copy, Research, Segment } from "./api";
 
-export type Step = "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan" | "fix";
+export type Step = "prep" | "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan" | "fix";
 
 /** 분석 페이지가 4자리 코드로 넘겨주는 '다음에 할 일' (서버 GET /plan/{code}). */
 export interface Plan {
@@ -50,6 +50,8 @@ export interface FlowState {
   startDate?: string;
   endDate?: string;
   plan?: Plan;
+  /** 시작 전 준비물에서 아직 안 된 꼭 필요한 것 (이름). 하나라도 있으면 [광고 관리자 열기]를 막는다 */
+  prepMissing?: string[];
 }
 
 export type FlowEvent =
@@ -74,10 +76,12 @@ export type FlowEvent =
   | { type: "planLoaded"; plan: Plan }
   | { type: "startFix" }
   | { type: "startNextTest"; fieldId: string; label: string; value: string }
+  | { type: "prepDone"; missing: string[] }
+  | { type: "openPrep" }
   | { type: "reset" };
 
 export function initialState(): FlowState {
-  return { step: "find", keywords: [], dropped: [], answers: {}, checks: {}, settings: [], guide: null };
+  return { step: "prep", keywords: [], dropped: [], answers: {}, checks: {}, settings: [], guide: null };
 }
 
 export function reduce(s: FlowState, ev: FlowEvent): FlowState {
@@ -135,6 +139,12 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
         : [...s.settings, { fieldId: ev.fieldId, label: ev.label, value: ev.value }];
       return { ...s, settings, step: "guide", guide: { mode: "create", index: 0, next: ev.fieldId } };
     }
+    case "prepDone":
+      // 처음이면 ① 찾기로, 광고 관리자 열기에서 돌아왔으면 하던 단계(② 세팅 목록)로
+      return { ...s, prepMissing: ev.missing, step: s.settings.length ? "guide" : "find",
+        guide: s.settings.length ? s.guide ?? { mode: "create", index: 0 } : s.guide };
+    case "openPrep":
+      return { ...s, step: "prep" };
     case "reset":
       return initialState();
     default:

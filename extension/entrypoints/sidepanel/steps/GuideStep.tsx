@@ -148,7 +148,14 @@ export default function GuideStep({ state, dispatch }: Props) {
         })}
       </ol>
       {error && <WarnLine message={error} onRetry={open} />}
-      <PrimaryButton onClick={open} busy={busy}>광고 관리자 열기</PrimaryButton>
+      {mode === "create" && (state.prepMissing?.length ?? 0) > 0 && (
+        <div role="status" className="flex flex-col gap-2 rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">
+          <span><span aria-hidden="true" className="font-bold">▲ </span><span className="sr-only">주의 </span>
+            {state.prepMissing!.join(" · ")}이(가) 아직 없어요 → 없으면 광고를 낼 수 없어요. 준비한 뒤 광고 관리자를 열어 주세요.</span>
+          <button type="button" onClick={() => dispatch({ type: "openPrep" })} className="self-start font-semibold underline">준비물 다시 보기</button>
+        </div>
+      )}
+      <PrimaryButton onClick={open} busy={busy} disabled={mode === "create" && (state.prepMissing?.length ?? 0) > 0}>광고 관리자 열기</PrimaryButton>
       <div className="flex gap-2">
         <button type="button" onClick={() => void move(-1)} disabled={index === 0}
           className="flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:opacity-(--state-disabled-opacity)">이전 칸</button>

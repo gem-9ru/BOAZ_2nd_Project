@@ -84,6 +84,10 @@ export interface Field {
   custom_for?: string[] | null;
   /** 고른 답 대신 세팅에 넣을 값 (예: 택배로 보내요 → 전국 (택배)) */
   answer_as?: Record<string, string> | null;
+  /** '사전 점검'이면 ① 찾기 앞 '시작 전 준비물' 화면에서 묻는다 */
+  stage?: string;
+  /** 꼭 있어야 하는 준비물 (첫 답이 아니면 광고 관리자 열기를 막음) */
+  required?: boolean;
 }
 
 /** 할 일 체크리스트 한 줄. hint: keywords → ① 찾기에서 고른 검색어 한 줄 */

@@ -4,6 +4,8 @@
 # kind
 #   question   사장님 상황에 따라 답이 달라짐 → 챗봇이 쉬운 말로 물음
 #   precheck   광고 만들기 전 준비 확인 (질문으로 물음)
+# stage '사전 점검' 칸은 ① 찾기 앞 '시작 전 준비물' 화면에서 묻는다 (② 세팅에서 다시 묻지 않음).
+# required: true → 이 칸이 첫 답(있어요 등)이 아니면 [광고 관리자 열기]를 막는다 (없으면 광고를 낼 수 없음)
 #   llm        사장님 답을 바탕으로 챗봇이 써서 고르게 함 (키 없으면 문장 틀)
 #   auto       규칙대로 앱이 만들어 넣음 (이름, 추적 링크, 일 예산)
 #   default    초보에게 정답이 거의 정해짐 → 묻지 않고 기본값 + 한 줄 설명
@@ -14,11 +16,30 @@
 media: meta
 title: 메타 (인스타그램·페이스북) 광고
 fields:
-  # ── 사전 점검 ──
+  # ── 사전 점검 (시작 전 준비물) ──
+  - id: meta.pre.fb_login
+    stage: 사전 점검
+    label: 페이스북 개인 계정
+    kind: precheck
+    required: true
+    ask: 컴퓨터 크롬에서 페이스북에 로그인할 수 있으세요? 메타 광고는 개인 페이스북 계정으로 만들어요.
+    options: [로그인할 수 있어요, 계정이 없어요]
+    default: 로그인할 수 있어요
+    why: 광고 관리자는 페이스북 계정으로 들어가요. 로그인은 사장님이 직접 해요 (비밀번호는 어디에도 넣지 않아요).
+    help:
+      계정이 없어요:
+        say: 아래 링크에서 페이스북 계정을 만든 뒤, 이 컴퓨터 크롬에서 로그인해 주세요. 다 하면 '만들었어요'를 눌러 주세요.
+        link: 페이스북 가입하기
+        url: https://www.facebook.com/r.php
+        done: 만들었어요
+        done_value: 로그인할 수 있어요
+        later: 나중에 만들게요
+
   - id: meta.pre.fb_page
     stage: 사전 점검
     label: 대표 계정 – Facebook 페이지
     kind: precheck
+    required: true
     ask: 페이스북 페이지가 있으세요? 인스타그램만 쓰셔도 광고를 내려면 꼭 있어야 해요.
     options: [있어요, 없어요]
     default: 있어요
@@ -31,6 +52,43 @@ fields:
         done: 만들었어요
         done_value: 있어요
         later: 나중에 만들게요
+
+  - id: meta.pre.payment
+    stage: 사전 점검
+    label: 광고 계정 결제 수단
+    kind: precheck
+    required: true
+    ask: 광고 계정에 결제 카드를 등록해 두셨어요?
+    options: [등록했어요, 아직이에요]
+    default: 등록했어요
+    why: 카드가 없으면 마지막 '게시'에서 막혀요. 광고비는 ② 세팅에서 정한 총예산까지만 나가게 맞춰요.
+    help:
+      아직이에요:
+        say: 아래 링크의 결제 설정에서 카드를 등록해 주세요. 카드 정보는 사장님이 직접 넣어요. 광고비는 정한 총예산까지만 나가요. 다 하면 '등록했어요'를 눌러 주세요.
+        link: 결제 설정 열기
+        url: https://business.facebook.com/billing_hub/payment_settings
+        done: 등록했어요
+        done_value: 등록했어요
+        later: 나중에 할게요
+
+  - id: meta.pre.media
+    stage: 사전 점검
+    label: 광고 사진·영상
+    kind: precheck
+    ask: 광고에 쓸 사진이나 영상이 있으세요?
+    options: [있어요, 아직이에요]
+    default: 있어요
+    why: 광고 만들 때 사진(또는 영상)을 1~3개 올려요. 휴대폰 사진도 상품이 크게 보이면 충분해요.
+    help:
+      아직이에요:
+        say: 이렇게 준비해 주세요. 다 하면 '준비했어요'를 눌러 주세요.
+        steps:
+          - text: 상품이 화면 가운데에 크게 보이는 사진 1~3장 (밝은 곳에서)
+          - text: 정사각형(1:1)이나 세로(4:5), 가로세로 1080픽셀 이상
+          - text: 사진 위 글자는 짧게 (가게 이름·할인 한 줄 정도)
+        done: 준비했어요
+        done_value: 있어요
+        later: 나중에 할게요
 
   - id: meta.pre.ig_account
     stage: 사전 점검
@@ -80,6 +138,23 @@ fields:
         올렸어요: 스마트스토어에서 안 팔아요
 
   # ── 캠페인 ──
+
+  - id: meta.pre.language
+    stage: 사전 점검
+    label: 광고 관리자 화면 언어
+    kind: precheck
+    ask: 페이스북·광고 관리자 화면이 한국어로 보이세요?
+    options: [한국어예요, 다른 말이에요]
+    default: 한국어예요
+    why: 뭉치는 한국어 화면에서만 칸을 찾아요.
+    help:
+      다른 말이에요:
+        say: 아래 링크에서 언어를 '한국어'로 바꿔 주세요. 다 하면 '바꿨어요'를 눌러 주세요.
+        link: 언어 설정 열기
+        url: https://www.facebook.com/settings?tab=language
+        done: 바꿨어요
+        done_value: 한국어예요
+        later: 나중에 할게요
   - id: meta.campaign.name
     stage: 캠페인
     label: 캠페인 이름

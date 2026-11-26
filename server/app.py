@@ -202,7 +202,8 @@ def fields() -> dict:
     asked = [{"id": f["id"], "kind": f["kind"], "label": f["label"], "ask": f["ask"],
               "options": f.get("options"), "default": f.get("default"), "why": f.get("why", ""), "help": f.get("help"),
               "then_ask": f.get("then_ask"), "default_if": f.get("default_if"), "note_if": f.get("note_if"),
-              "custom": f.get("custom"), "custom_for": f.get("custom_for"), "answer_as": f.get("answer_as")}
+              "custom": f.get("custom"), "custom_for": f.get("custom_for"), "answer_as": f.get("answer_as"),
+              "stage": f.get("stage", ""), "required": bool(f.get("required"))}
              for f in all_meta if f.get("kind") in ASKED_KINDS]
     preset = [{"id": f["id"], "label": f["label"], "default": str(f["default"]), "why": f["why"]}
               for f in all_meta if f.get("kind") in SET_KINDS and f.get("default") is not None and f.get("why")]

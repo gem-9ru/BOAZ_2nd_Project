@@ -11,11 +11,12 @@ import WaitStep from "./steps/WaitStep";
 import QuestionStep from "./steps/QuestionStep";
 import CodeStep from "./steps/CodeStep";
 import PlanStep from "./steps/PlanStep";
+import PrepStep from "./steps/PrepStep";
 import { ErrorLine } from "./ui/Coach";
 import { HomeSeat } from "./ui/HomeSeat";
 
 const STAGES: { label: string; steps: Step[] }[] = [
-  { label: "찾기", steps: ["find"] },
+  { label: "찾기", steps: ["prep", "find"] },
   { label: "세팅", steps: ["copy", "questions", "guide", "wait"] },
   { label: "분석", steps: ["upload", "plan", "fix"] },
 ];
@@ -55,7 +56,7 @@ export default function App() {
   const [specError, setSpecError] = useState<string | null>(null);
   const loadSpec = () => fetchFields().then(setSpec, (e: Error) => setSpecError(e.message));
   useEffect(() => {
-    if (state.step === "questions" && !spec) void loadSpec();
+    if ((state.step === "questions" || state.step === "prep") && !spec) void loadSpec();
   }, [state.step]);
 
   // 분석 페이지 탭을 보고 있으면 이 패널은 그 페이지 옆 광고 어시스턴트가 된다 (v4.2 AN-COM ④)
@@ -80,7 +81,7 @@ export default function App() {
             </li>
           ))}
         </ol>
-        {state.step !== "find" && (
+        {state.step !== "find" && state.step !== "prep" && (
           <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }} className="text-small text-soft underline">
             처음부터
           </button>
@@ -88,7 +89,7 @@ export default function App() {
       </header>
       {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} />}
       {!analysis && <>
-      {state.guide && <GuideStep state={state} dispatch={dispatch} />}
+      {state.guide && state.step !== "prep" && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}
       {state.step === "find" && <FindStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "upload" && <CodeStep state={state} dispatch={dispatch} />}
@@ -97,10 +98,11 @@ export default function App() {
       {state.step === "questions" && spec && (
         <QuestionStep state={state} dispatch={dispatch} fields={spec.fields} defaults={spec.defaults} />
       )}
-      {state.step === "questions" && !spec && !specError && (
+      {state.step === "prep" && spec && <PrepStep state={state} dispatch={dispatch} fields={spec.fields} />}
+      {(state.step === "questions" || state.step === "prep") && !spec && !specError && (
         <p role="status" className="text-caption text-soft">질문을 불러오는 중이에요…</p>
       )}
-      {state.step === "questions" && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
+      {(state.step === "questions" || state.step === "prep") && specError && <ErrorLine message={specError} onRetry={() => { setSpecError(null); void loadSpec(); }} />}
       </>}
     </main>
   );

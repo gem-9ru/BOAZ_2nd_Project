@@ -25,8 +25,10 @@ function toGuide(): FlowState {
 describe("flow", () => {
   beforeEach(() => fakeBrowser.reset());
 
-  it("goes find → copy → questions → guide", () => {
+  it("goes prep → find → copy → questions → guide", () => {
     let s = initialState();
+    expect(s.step).toBe("prep");
+    s = reduce(s, { type: "prepDone", missing: [] });
     expect(s.step).toBe("find");
     s = reduce(s, { type: "researched", research });
     expect(s.step).toBe("find");

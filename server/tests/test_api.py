@@ -59,18 +59,22 @@ def test_copies_without_strengths_still_three(monkeypatch):
 def test_fields_are_the_eleven_questions():
     fields = TestClient(app).get("/fields").json()["fields"]
     assert [f["id"] for f in fields] == [
-        "meta.pre.fb_page", "meta.pre.ig_account", "meta.pre.store_product", "meta.campaign.objective", "meta.campaign.special_category",
+        "meta.pre.fb_login", "meta.pre.fb_page", "meta.pre.payment", "meta.pre.media", "meta.pre.ig_account", "meta.pre.store_product",
+        "meta.pre.language", "meta.campaign.objective", "meta.campaign.special_category",
         "meta.adset.conversion_location", "meta.adset.end_date", "meta.adset.lifetime_budget", "meta.adset.location", "meta.adset.age_gender",
         "meta.ad.format", "meta.ad.website_url", "meta.ad.media"]
     end = next(f for f in fields if f["id"] == "meta.adset.end_date")
     assert end["kind"] == "question" and end["options"] == ["7일", "14일", "30일"] and end["ask"]
     assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why", "help", "then_ask", "default_if", "note_if", "custom",
-                         "custom_for", "answer_as"}
+                         "custom_for", "answer_as", "stage", "required"}
     assert end["custom"] == "dates" and end["ask"] == "광고를 언제부터 언제까지 할까요?"
     loc = next(f for f in fields if f["id"] == "meta.adset.location")
     assert loc["ask"] == "손님이 상품을 어떻게 받나요?" and loc["options"] == ["택배로 보내요", "가게에 와서 사요", "배달해요"]
     assert loc["default"] is None and loc["custom"] == "area" and loc["custom_for"] == ["가게에 와서 사요", "배달해요"]
     assert loc["answer_as"] == {"택배로 보내요": "전국 (택배)"}
+    # 시작 전 준비물: 꼭 있어야 하는 3개 (없으면 광고를 낼 수 없음)
+    assert [f["id"] for f in fields if f["required"]] == ["meta.pre.fb_login", "meta.pre.fb_page", "meta.pre.payment"]
+    assert all(f["stage"] == "사전 점검" for f in fields if f["id"].startswith("meta.pre."))
 
 
 def test_store_product_question():

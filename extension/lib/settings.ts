@@ -71,12 +71,24 @@ export const SETTING_ORDER = [
 const PREFILLED = new Set(["meta.campaign.objective", "meta.adset.age_gender"]);
 const OBJECTIVE = "트래픽";
 
+/** 시작 전 준비물 화면에서 묻는 칸 (meta_fields.yaml stage '사전 점검'). ② 세팅에서는 다시 묻지 않는다 */
+export const PREP_STAGE = "사전 점검";
+
+export function prepFields(fields: Field[]): Field[] {
+  return fields.filter((f) => f.stage === PREP_STAGE);
+}
+
+/** 꼭 있어야 하는 준비물 중 아직 안 된 것의 이름 (답이 없거나 첫 답 '있어요' 등이 아님) */
+export function prepMissing(fields: Field[], answers: Record<string, string>): string[] {
+  return prepFields(fields).filter((f) => f.required && answers[f.id] !== f.options?.[0]).map((f) => f.label);
+}
+
 export function askedFields(fields: Field[]): Field[] {
   const follow = new Set(fields.flatMap((f) => {                                   // 다른 질문에서 이어 받는 칸
     const to = f.then_ask?.field;
     return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
   }));
-  return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id));
+  return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id) && f.stage !== PREP_STAGE);
 }
 
 /** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */

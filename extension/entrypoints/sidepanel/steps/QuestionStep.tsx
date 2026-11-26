@@ -94,7 +94,7 @@ function byEarlier(map: Record<string, Record<string, string>> | null | undefine
   return undefined;
 }
 
-function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
+export function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
   field: Field; answers: Record<string, string>; keywords: string[]; checked: number[]; onCheck: (index: number) => void;
   onAnswer: (v: string, extra?: Record<string, string>) => void;
 }) {
