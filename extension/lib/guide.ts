@@ -19,6 +19,8 @@ export type FindStrategy = (
   inDialog?: boolean;
   /** 창이 없을 때만 찾는다 (예: '크리에이티브 설정' 버튼. 창 안 위쪽 단계 이름을 눌러 단계를 건너뛰지 않게) */
   pageOnly?: boolean;
+  /** 세팅값에 이 글자(정규식)가 있을 때만 쓰는 방법 (예: 형식 '여러 장 (슬라이드)' → '슬라이드' 선택지) */
+  whenValue?: string;
 };
 
 /** 자동 진행에서 이 칸을 어떻게 할지: 고르기·넣기는 대신 하고, 날짜·지역·사진처럼 복잡한 칸은 사장님을 기다리고, 게시 앞에선 멈춘다. */
@@ -62,6 +64,8 @@ export interface GuideEntry {
   /** 이 칸은 열린 창 밖(광고 화면)에 있다. 창이 열려 있으면 칸이 아직 안 그려졌어도 창을 마칠 때까지 기다린다
    *  (메타 '크리에이티브 설정' 창 뒤의 '웹사이트 URL': 창이 열린 동안에는 칸이 그려지지 않는다) */
   outsideDialog?: true;
+  /** 다른 칸의 세팅값에 따라 바꿔 쓰는 안내 (예: 형식이 슬라이드면 사진·제목은 사장님이 직접). set의 null은 그 값을 지운다 */
+  variants?: { when: { field: string; match: string }; set: Partial<Record<keyof GuideEntry, unknown>> }[];
 }
 
 export interface GuideStepItem {
@@ -107,7 +111,15 @@ export function stepsFor(mode: GuideEntry["mode"], entries: GuideEntry[], settin
   if (mode === "create") {
     return entries
       .filter((e) => e.mode === "create")
-      .map((entry) => ({ entry, value: settings.find((s) => s.fieldId === entry.id)?.value }));
+      .map((base) => {
+        const value = settings.find((s) => s.fieldId === base.id)?.value;
+        const variant = base.variants?.find((v) => new RegExp(v.when.match).test(settings.find((s) => s.fieldId === v.when.field)?.value ?? ""));
+        const entry = variant
+          ? (Object.fromEntries(Object.entries({ ...base, ...variant.set }).filter(([, x]) => x !== null)) as unknown as GuideEntry)
+          : base;
+        const find = entry.find.filter((f) => !f.whenValue || new RegExp(f.whenValue).test(value ?? ""));
+        return { entry: find.length === entry.find.length ? entry : { ...entry, find }, value };
+      });
   }
   if (mode === "edit") {
     return changes.flatMap((c) => {

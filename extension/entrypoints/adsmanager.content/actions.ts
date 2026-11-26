@@ -276,6 +276,8 @@ export async function setLifetimeBudget(doc: Document, value: string, pace: Pace
     opt.click();
     await pace.wait(800);
     b = readBudget(doc);
+    // 메타가 늦게 바뀔 때가 있다 (2026-11-26 실제 화면: 첫 확인에선 아직 일일, 조금 뒤 총 예산) → 한 번 더 기다려 읽는다
+    if (b.mode !== "lifetime") { await pace.wait(1500); b = readBudget(doc); }
     if (b.mode !== "lifetime") { note("budget mode did not stick"); return false; }
   }
   if (b.amount !== want) {

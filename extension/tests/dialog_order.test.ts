@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import { locateWith } from "../entrypoints/adsmanager.content/locate";
-import type { GuideEntry, GuideStepItem } from "../lib/guide";
+import { stepsFor, type GuideEntry, type GuideStepItem } from "../lib/guide";
 import { GUIDE } from "../lib/guideList";
 
 const create = GUIDE.filter((e) => e.mode === "create");
@@ -185,5 +185,59 @@ describe("문구 칸: 이름표 없이 안내 글자만 있는 화면", () => {
   it("열린 창 안에서는 이 방법으로 찾지 않는다", () => {
     document.body.innerHTML = `<div role="dialog" id="d"><span>간단하게 광고를 소개하세요</span><textarea id="t"></textarea></div>`;
     expect(locateWith(document.getElementById("d")!, copy().find)?.el.id).not.toBe("t");
+  });
+});
+
+// 2026-11-26 실제 화면 (초안 120257356838250583): 세팅값이 '여러 장 (슬라이드)'인데 뭉치는 늘 '단일 이미지 또는 동영상'을 짚었다
+describe("형식 칸: 세팅값에 맞는 선택지", () => {
+  const fmt = GUIDE.find((e) => e.mode === "create" && e.id === "meta.ad.format")!;
+  const page = `<span id="a">단일 이미지 또는 동영상</span><input type="radio" aria-labelledby="a" id="single">
+    <span id="b">슬라이드</span><input type="radio" aria-labelledby="b" id="slide">`;
+  const pick = (value: string) => {
+    document.body.innerHTML = page;
+    const item = stepsFor("create", [fmt], [{ fieldId: "meta.ad.format", label: "형식", value }], [])[0]!;
+    return locateWith(document, item.entry.find)?.el.id;
+  };
+  it("'여러 장 (슬라이드)'면 슬라이드를 짚는다", () => expect(pick("여러 장 (슬라이드)")).toBe("slide"));
+  it("'1장 (단일 이미지)'면 단일 이미지를 짚는다", () => expect(pick("1장 (단일 이미지)")).toBe("single"));
+});
+
+// 2026-11-26 실제 화면 (초안 120257356971480583): 형식이 슬라이드면 '크리에이티브 설정' 대신 '슬라이드 추가'(0/10개)가 있고,
+// 사진·제목을 장마다 넣는다. 뭉치는 사진 칸을 사진 없이 지나갔다 → 슬라이드면 사진·제목은 사장님이 직접 ('슬라이드 추가'를 짚고 기다림)
+describe("슬라이드: 사진·제목은 사장님이 직접", () => {
+  const settings = (format: string) => [
+    { fieldId: "meta.ad.format", label: "형식", value: format },
+    { fieldId: "meta.ad.media", label: "사진", value: "정사각형 사진" },
+    { fieldId: "meta.creative.copy.headline", label: "제목", value: "수제 쿠키" },
+  ];
+  const ids = ["meta.ad.media", "meta.creative.copy.headline"];
+  const items = (format: string) => stepsFor("create", create.filter((e) => ids.includes(e.id)), settings(format), []);
+
+  it("슬라이드면 두 칸 다 사장님 차례이고 '슬라이드 추가'를 짚는다 (하위 단계 없음)", () => {
+    for (const s of items("여러 장 (슬라이드)")) {
+      expect(s.entry.auto).toBe("owner");
+      expect(s.entry.stages).toBeUndefined();
+      expect(s.entry.doneWhen).toBeUndefined();
+      expect(s.entry.find).toEqual([{ role: "button", text: "슬라이드 추가" }]);
+      expect(s.entry.say).toMatch(/^여기는 사장님이 직접/);
+    }
+  });
+
+  it("단일 이미지면 지금 그대로", () => {
+    const [media, head] = items("1장 (단일 이미지)");
+    expect(media!.entry.stages?.length).toBe(3);
+    expect(head!.entry.auto).toBe("type");
+  });
+
+  it("슬라이드 화면에서 뭉치는 사진 칸에서 멈춰 기다린다 (지나가지 않음)", () => {
+    document.documentElement.lang = "ko";
+    document.body.innerHTML = `<div role="button">슬라이드 추가</div><div aria-label="간단하게 광고를 소개하세요" contenteditable="true"></div>`;
+    const seen: number[] = [];
+    const g = new Guide(document, items("여러 장 (슬라이드)"), 0, (i) => seen.push(i), 0);
+    g.skipSurvey();
+    g.setAuto(true);
+    for (let i = 1; i <= 10; i++) { g.tick(); g.autoStep(i * 5000); }
+    expect(seen).toEqual([]);
+    expect(g.view().waiting).toBe("owner");
   });
 });

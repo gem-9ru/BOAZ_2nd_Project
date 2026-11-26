@@ -267,7 +267,12 @@
   },
   "find": [
    {
-    "labelledBy": "단일 이미지 또는 동영상"
+    "labelledBy": "단일 이미지 또는 동영상",
+    "whenValue": "단일"
+   },
+   {
+    "labelledBy": "슬라이드",
+    "whenValue": "슬라이드"
    },
    {
     "heading": "광고 설정"
@@ -354,6 +359,26 @@
    {
     "aria": "간단하게 광고를 소개하세요",
     "pageOnly": true
+   }
+  ],
+  "variants": [
+   {
+    "when": {
+     "field": "meta.ad.format",
+     "match": "슬라이드"
+    },
+    "set": {
+     "find": [
+      {
+       "role": "button",
+       "text": "슬라이드 추가"
+      }
+     ],
+     "auto": "owner",
+     "stages": null,
+     "doneWhen": null,
+     "say": "여기는 사장님이 직접 해 주세요: 여러 장(슬라이드)이라 '슬라이드 추가'로 한 장씩 사진을 넣어 주세요 ({value}). 다 넣었으면 '다 했어요'"
+    }
    }
   ]
  },
@@ -450,7 +475,25 @@
    "text": "화면에서 '제목' 칸을 찾아 주세요"
   },
   "auto": "type",
-  "level": "ad"
+  "level": "ad",
+  "variants": [
+   {
+    "when": {
+     "field": "meta.ad.format",
+     "match": "슬라이드"
+    },
+    "set": {
+     "find": [
+      {
+       "role": "button",
+       "text": "슬라이드 추가"
+      }
+     ],
+     "auto": "owner",
+     "say": "여기는 사장님이 직접 해 주세요: 여러 장(슬라이드)은 장마다 제목 칸이 따로 있어요. 장마다 제목을 넣어 주세요 ({value}). 다 넣었으면 '다 했어요'"
+    }
+   }
+  ]
  },
  {
   "id": "meta.money_check",
