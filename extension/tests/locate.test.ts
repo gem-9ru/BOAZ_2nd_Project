@@ -543,23 +543,42 @@ describe("열린 창(크리에이티브 설정 등)이 있을 때", () => {
     expect(g.view().index).toBe(0);
   });
 
-  it("waits for the dialog to close even when Meta hasn't drawn the field behind it yet (13번 웹사이트 URL)", () => {
+  it("13번 웹사이트 URL: 창이 아직 열려 있으면 뭉치가 창의 '다음'을 끝까지 넘기고 '완료'로 닫은 뒤 칸을 짚는다", () => {
     document.body.innerHTML = `<div role="dialog" id="dlg"><div role="button" id="d-next">다음</div></div>`;
-    let presses = 0;
-    document.getElementById("d-next")!.addEventListener("click", () => presses++);
+    let nexts = 0, dones = 0;
+    document.getElementById("d-next")!.addEventListener("click", () => {
+      nexts++;
+      if (nexts === 2) document.getElementById("dlg")!.innerHTML = `<div role="button" id="d-done">완료</div>`;
+      if (nexts === 2) document.getElementById("d-done")!.addEventListener("click", () => {
+        dones++;
+        document.getElementById("dlg")!.remove();
+        document.body.insertAdjacentHTML("beforeend", `<input id="url" aria-label="웹사이트 URL">`);
+      });
+    });
     const g = new Guide(document, [step("meta.ad.website_url", [{ aria: "웹사이트 URL" }], { auto: "type", level: "ad", outsideDialog: true }, "https://x"),
                                    step("meta.publish", [{ role: "button", text: "게시" }], {})], 0, () => {}, 0);
     g.setAuto(true);
-    for (let i = 1; i <= 5; i++) { g.autoStep(i * 5000); g.tick(); }
-    expect(g.view().text).toMatch(/'완료'를 눌러 창을 닫아/);
-    g.apply();   // [다 했어요]를 눌러도 건너뛰지 않는다
-    expect(g.view().index).toBe(0);
-    expect(presses).toBe(0);
-    document.getElementById("dlg")!.remove();
-    document.body.insertAdjacentHTML("beforeend", `<input id="url" aria-label="웹사이트 URL">`);
+    expect(g.view().target?.id).toBe("d-next");   // 뭉치는 창의 '다음'을 가리킨다
+    expect(g.view().text).toMatch(/창/);
+    for (let i = 1; i <= 12 && !document.getElementById("url"); i++) { g.autoStep(i * 5000); g.tick(); }
+    expect(nexts).toBe(2);
+    expect(dones).toBe(1);
     g.tick();
     expect(g.view().target?.id).toBe("url");
     expect(g.view().waiting).toBeUndefined();
+  });
+
+  it("창을 마무리하는 단추는 몇 번까지만 누르고, 그래도 안 닫히면 사장님을 기다린다", () => {
+    document.body.innerHTML = `<div role="dialog" id="dlg"><div role="button" id="d-next">다음</div></div>`;
+    let nexts = 0;
+    document.getElementById("d-next")!.addEventListener("click", () => nexts++);
+    const g = new Guide(document, [step("meta.ad.website_url", [{ aria: "웹사이트 URL" }], { auto: "type", level: "ad", outsideDialog: true }, "https://x")], 0, () => {}, 0);
+    g.setAuto(true);
+    for (let i = 1; i <= 30; i++) { g.autoStep(i * 5000); g.tick(); }
+    expect(nexts).toBeLessThanOrEqual(6);
+    expect(g.view().waiting).toBe("owner");
+    g.apply();   // [다 했어요]를 눌러도 창 뒤 칸을 건너뛰지 않는다
+    expect(g.view().index).toBe(0);
   });
 
   it("a field inside the dialog is found normally", () => {
@@ -596,5 +615,49 @@ describe("글 편집기(문구)에 넣기", () => {
     expect(copied).toBe("바삭한 수제 쿠키");
     expect(g.view()).toMatchObject({ waiting: "owner" });
     expect(g.view().text).toMatch(/⌘V/);
+  });
+});
+
+describe("뭉치가 도착한 뒤에 누르고 넣기", () => {
+  it("뭉치를 따라가면, 칸에 도착하기 전에는 값을 넣지 않고 도착한 뒤에 넣는다", () => {
+    document.body.innerHTML = `<input id="head" aria-label="제목">`;
+    const g = new Guide(document, [step("meta.creative.copy.headline", [{ aria: "제목" }], { auto: "type", level: "ad" }, "맛있는 쿠키"),
+                                   step("meta.publish", [{ role: "button", text: "게시" }], {})], 0, () => {}, 0);
+    g.skipSurvey();
+    g.followBuddy();
+    g.setAuto(true);
+    const el = document.getElementById("head") as HTMLInputElement;
+    for (let t = 1000; t <= 5000; t += 500) g.autoStep(t);
+    expect(el.value).toBe("");   // 아직 걸어가는 중
+    g.arrived(el, 5000);
+    for (let t = 5500; t <= 9000; t += 500) g.autoStep(t);
+    expect(el.value).toBe("맛있는 쿠키");
+  });
+
+  it("다른 칸에 도착한 신호로는 누르지 않는다", () => {
+    document.body.innerHTML = `<div role="button" id="go">계속</div><div id="else"></div>`;
+    let clicks = 0;
+    document.getElementById("go")!.addEventListener("click", () => clicks++);
+    const g = new Guide(document, [step("meta.campaign.objective", [{ labelledBy: "트래픽" }, { role: "button", text: "계속", say: "계속을 누를게요" }], { auto: "click", level: "list" })], 0, () => {}, 0);
+    g.skipSurvey();
+    g.followBuddy();
+    g.setAuto(true);
+    g.arrived(document.getElementById("else"), 1000);
+    for (let t = 1500; t <= 4000; t += 500) g.autoStep(t);
+    expect(clicks).toBe(0);
+    g.arrived(document.getElementById("go"), 4000);
+    for (let t = 4500; t <= 8000; t += 500) g.autoStep(t);
+    expect(clicks).toBe(1);
+  });
+
+  it("뭉치가 끝내 도착 신호를 못 보내도(칸이 화면 밖 등) 한참 뒤엔 그대로 진행한다", () => {
+    document.body.innerHTML = `<input id="head" aria-label="제목">`;
+    const g = new Guide(document, [step("meta.creative.copy.headline", [{ aria: "제목" }], { auto: "type", level: "ad" }, "쿠키"),
+                                   step("meta.publish", [{ role: "button", text: "게시" }], {})], 0, () => {}, 0);
+    g.skipSurvey();
+    g.followBuddy();
+    g.setAuto(true);
+    for (let t = 1000; t <= 20000; t += 500) g.autoStep(t);
+    expect((document.getElementById("head") as HTMLInputElement).value).toBe("쿠키");
   });
 });
