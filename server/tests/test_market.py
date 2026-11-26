@@ -249,8 +249,9 @@ def test_headline_text():
     a = market.audience("답례품쿠키", online=False)
     text = market.headline("답례품쿠키", a)
     assert text.startswith("답례품쿠키를 찾는 사람은 ")
-    assert "30대 여성이 분야 평균의 2.8" in text
-    assert text.endswith("11월에 가장 많이 찾아요")
+    assert "30대 여성이 가장 많아요. 30대는 네이버 쇼핑 클릭이 같은 분야 평균의 2.8" in text
+    assert "30대 여성이 분야 평균" not in text   # 배수는 나이대만의 값
+    assert text.endswith("11월에 가장 많이 찾아요.")
 
 
 def test_headline_variants():

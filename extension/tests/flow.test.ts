@@ -5,7 +5,7 @@ import { loadState, saveState } from "../lib/storage";
 import type { Copy, Research, Segment } from "../lib/api";
 
 const research: Research = {
-  headline: "쿠키선물세트를 찾는 사람은 30대 여성이 분야 평균의 1.82배",
+  headline: "쿠키선물세트를 찾는 사람은 30대 여성이 가장 많아요. 30대는 네이버 쇼핑 클릭이 같은 분야 평균의 1.82배예요 (1.2배 이상만 · 이 도구 기준).",
   keywords: [{ keyword: "수제쿠키", total_qc: 1000 }],
   audience: { keyword: "쿠키선물세트", female: 0.82, ages: { "30": 0.3 }, top_age: "30" },
   fetched: "2026-11-15", source: "cache", notice: null,

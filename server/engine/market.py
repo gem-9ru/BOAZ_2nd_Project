@@ -396,7 +396,7 @@ def lead_audience(auds: Dict[str, dict]) -> Optional[str]:
 
 
 def headline(keyword: str, aud: Optional[dict], fallback_qc: Optional[float] = None) -> str:
-    """한 줄 요약. 예: "답례품쿠키를 찾는 사람은 30대 여성이 분야 평균의 2.8배, 11월에 가장 많이 찾아요"."""
+    """한 줄 요약. 예: "답례품쿠키를 찾는 사람은 30대 여성이 가장 많아요. 30대는 … 2.8배예요 (…). 11월에 가장 많이 찾아요."."""
     if not aud:
         if fallback_qc:
             return f"'{keyword}'은(는) 한 달에 약 {int(fallback_qc):,}번 검색돼요"
@@ -410,7 +410,8 @@ def _seasonal(monthly: Dict[str, float]) -> bool:
 
 
 def segment_line(aud: Optional[dict]) -> str:
-    """손님 무리 한 줄. 예: "30대 여성이 분야 평균의 2.8배, 12월에 가장 많이 찾아요"."""
+    """손님 무리 한 줄. 예: "30대 여성이 가장 많아요. 30대는 네이버 쇼핑 클릭이 같은 분야 평균의 2.8배예요 (…). 12월에 가장 많이 찾아요."
+    배수는 나이대 하나의 값이라 성별과 붙여 말하지 않는다."""
     if not aud:
         return "누가 찾는지 자료가 아직 없어요"
     idx = aud.get("index", {})
@@ -422,7 +423,8 @@ def segment_line(aud: Optional[dict]) -> str:
     seasonal = bool(aud.get("peak_month") and _seasonal(aud.get("monthly") or {}))
     when = f", {aud['peak_month']}월에 가장 많이 찾아요" if seasonal else ""
     if strong:
-        return f"{who} 분야 평균의 {mult:g}배" + (when or "예요")
+        line = f"{who} 가장 많아요. {best}대는 네이버 쇼핑 클릭이 같은 분야 평균의 {mult:g}배예요 ({HIGH_INDEX:g}배 이상만 · 이 도구 기준)."
+        return line + (f" {aud['peak_month']}월에 가장 많이 찾아요." if seasonal else "")
     return f"{who} 가장 많고{when}" if seasonal else f"{who} 가장 많아요"
 
 

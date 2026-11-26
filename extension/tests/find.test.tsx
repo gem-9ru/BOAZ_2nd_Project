@@ -5,7 +5,7 @@ import { initialState } from "../lib/flow";
 import type { Research, Segment } from "../lib/api";
 
 const research: Research = {
-  headline: "쿠키선물세트를 찾는 사람은 30대 여성이 분야 평균의 1.82배",
+  headline: "쿠키선물세트를 찾는 사람은 30대 여성이 가장 많아요. 30대는 네이버 쇼핑 클릭이 같은 분야 평균의 1.82배예요 (1.2배 이상만 · 이 도구 기준).",
   keywords: [{ keyword: "수제쿠키", total_qc: 12000 }, { keyword: "르뱅쿠키", total_qc: 5000 }],
   audience: { keyword: "쿠키선물세트", female: 0.82, ages: { "20": 0.09, "30": 0.31, "40": 0.34, "50": 0.21 }, top_age: "30" },
   fetched: "2026-11-15", source: "cache", notice: null,
@@ -160,7 +160,7 @@ const segs: Segment[] = [
     trend: { monthly: months(5), peak_month: 5, seasonal: false }, trend_source: "search", line: "20대 여성이 많이 찾아요" },
   { intent: "선물·답례", label: "선물로 찾는 손님", keywords: ["답례품쿠키", "쿠키선물세트"], total_qc: 5400, lead: "답례품쿠키",
     audience: { female: 0.81, ages: { "20": 0.1, "30": 0.5, "40": 0.3 }, top_age: "30" },
-    trend: { monthly: months(12), peak_month: 12, seasonal: true }, trend_source: "shopping", line: "30대 여성이 분야 평균의 2.8배, 12월에 가장 많이 찾아요" },
+    trend: { monthly: months(12), peak_month: 12, seasonal: true }, trend_source: "shopping", line: "30대 여성이 가장 많아요. 30대는 네이버 쇼핑 클릭이 같은 분야 평균의 2.8배예요 (1.2배 이상만 · 이 도구 기준). 12월에 가장 많이 찾아요." },
   { intent: "시즌", label: "시즌에 찾는 손님", keywords: ["크리스마스쿠키"], total_qc: 1200, lead: "크리스마스쿠키",
     audience: null, trend: null, trend_source: null, line: "누가 찾는지 자료가 아직 없어요" },
 ];
