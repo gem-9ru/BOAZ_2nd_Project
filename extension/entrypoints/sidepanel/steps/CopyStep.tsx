@@ -10,7 +10,7 @@ interface Props {
 }
 
 const GROUPS = ["포장", "맛·재료", "배송", "양"];
-const OTHER = "그 밖";   // 가게·브랜드 이름이 섞이기 쉬워서 맨 끝에 접어 둔다
+const OTHER = "그 밖";   // 맨 끝. 브랜드·가게 이름은 서버가 Claude로 걸러서 보낸다 (못 거른 것에 대비해 한 줄 안내)
 
 /** ② 문구: 좋은 점 한두 마디 → 문구 3안 → 하나 고르기. */
 export default function CopyStep({ state, dispatch }: Props) {
@@ -19,7 +19,6 @@ export default function CopyStep({ state, dispatch }: Props) {
   const [list, setList] = useState<Copy[] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showOther, setShowOther] = useState(false);
 
   const mods = state.research?.modifiers ?? [];
   const hasMods = mods.length > 0;
@@ -89,16 +88,9 @@ export default function CopyStep({ state, dispatch }: Props) {
       })}
       {hasMods && others.length > 0 && (
         <div className="flex flex-col gap-2">
-          <button type="button" aria-expanded={showOther} onClick={() => setShowOther((v) => !v)}
-            className="self-start text-caption font-semibold text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-            {showOther ? `${OTHER} 접기` : `${OTHER} ${others.length}개 더 보기`}
-          </button>
-          {showOther && (
-            <>
-              <p className="text-small text-soft">다른 가게·브랜드 이름은 고르지 마세요. 문구에 그대로 들어가요.</p>
-              {chips(others)}
-            </>
-          )}
+          <span className="text-caption font-semibold text-soft">{OTHER}</span>
+          {chips(others)}
+          <p className="text-small text-soft">다른 가게·브랜드 이름이 보이면 고르지 마세요. 문구에 그대로 들어가요.</p>
         </div>
       )}
       <div className="flex flex-col gap-2">

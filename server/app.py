@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from server.engine import analyze as analysis, copywriter, market, naver_api, specs
+from server.engine import analyze as analysis, brands, copywriter, market, naver_api, specs
 from server.engine.meta_export import read_export
 from server.engine.loop import run as loop_run, simulate as loop_simulate
 
@@ -40,6 +40,7 @@ _coach_log.setLevel(_log_level(os.environ.get("COACH_LOG_LEVEL")))
 log = logging.getLogger("coach.api")
 
 MAX_KEYWORDS = 10
+MAX_MODIFIERS = 15   # 좋은 점 칩 (브랜드·가게 이름을 거른 뒤)
 _NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
 
 app = FastAPI(title="광고 코치 v3")
@@ -82,6 +83,16 @@ def research(body: ResearchIn) -> dict:
     return out
 
 
+def _good_points(product: str, mods: List[dict]) -> List[dict]:
+    """좋은 점 칩: 다른 가게·브랜드 이름(스탠리·투썸…)을 Claude로 걸러 MAX_MODIFIERS개. 낱말만 보내고 숫자는 안 보낸다.
+    오프라인·LLM 끔이면 이미 물어본 낱말만 거른다."""
+    off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
+    drop = brands.brand_words(product, [m["word"] for m in mods], client=False if off else None)
+    if drop:
+        log.info("good points brands dropped n=%d", len(drop))
+    return [m for m in mods if m["word"] not in drop][:MAX_MODIFIERS]
+
+
 def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
     with _NAVER_LOCK:
@@ -91,6 +102,7 @@ def _research(body: ResearchIn) -> dict:
             cands = []
         report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
         why = naver_api.last_error()
+    mods = _good_points(body.product, report.modifiers if report else [])
     wide = {"category": _category_out(code, not given), "categories": [dict(c) for c in market.CATEGORIES],
             "category_candidates": [{"code": c, "name": _category_out(c, True)["name"]} for c in cands]}
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
@@ -100,7 +112,7 @@ def _research(body: ResearchIn) -> dict:
     if not report.recommended:
         return {"headline": report.headline, "keywords": [], "audience": None, "fetched": report.fetched,
                 "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요.",
-                **wide, "segments": [], "modifiers": report.modifiers, "product_stats": report.product_stats}
+                **wide, "segments": [], "modifiers": mods, "product_stats": report.product_stats}
     kw = report.keywords.set_index("keyword")["total_qc"]
     keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
     audience = None
@@ -113,7 +125,7 @@ def _research(body: ResearchIn) -> dict:
     live = report.fetched_parts.get("product", report.fetched) == today   # 이 상품 자료가 오늘 받은 것이면 실시간
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
             "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None,
-            **wide, "segments": report.segments, "modifiers": report.modifiers, "product_stats": report.product_stats}
+            **wide, "segments": report.segments, "modifiers": mods, "product_stats": report.product_stats}
 
 
 ASKED_KINDS = ("question", "precheck")

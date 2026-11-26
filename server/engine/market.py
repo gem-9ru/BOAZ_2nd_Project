@@ -229,6 +229,9 @@ def _modifier_of(keyword: str, seeds: List[str], strip: Optional[List[str]] = No
     return k if 2 <= len(k) <= 6 and not k.isdigit() and k not in MODIFIER_SKIP_EXACT else None
 
 
+MODIFIER_POOL = 30   # build가 뽑는 꾸밈말 수. 서버가 브랜드를 거르고 MAX_MODIFIERS개만 보낸다
+
+
 def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15, strip: Optional[List[str]] = None) -> List[dict]:
     """손님이 상품과 함께 검색하는 꾸밈말(좋은 점 후보). 뜻이 '상품'인 키워드만 보고, 같은 꾸밈말은 검색수를 더해
     검색수 순 limit개. strip은 더 지울 상품 낱말(strip_words). 각 항목: word, group(포장|맛·재료|배송|양|그 밖), total_qc, examples(최대 3)."""
@@ -511,7 +514,7 @@ def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
     kw = classify(table, words)
     rec = recommend(kw, seeds=words)
     segs = segments(kw, rec, category, online, keep) if category else []
-    mods = modifiers(kw, words, strip=strip_words(name, seeds))
+    mods = modifiers(kw, words, limit=MODIFIER_POOL, strip=strip_words(name, seeds))   # 넉넉히: 브랜드를 거른 뒤 화면에 15개
     stats = product_stats(kw, name, category, online)
     common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
                   negatives=negative_list(kw), category=category, segments=segs, modifiers=mods, product_stats=stats)
