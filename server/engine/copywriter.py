@@ -101,11 +101,11 @@ def _meta_templates(product: str, strengths: List[str]) -> List[Copy]:
         s = strengths[i % len(strengths)]
         shape = i % 3
         if shape == 0:
-            head, body = f"{product}, {s}", f"{product}, {s}. 스토어에서 자세히 확인해 보세요."
+            head, body = f"{product}, {s}", f"{product}, {s}. 아래 버튼을 눌러 자세히 확인해 보세요."
         elif shape == 1:
             head, body = f"{s}", f"{s}. {product} 지금 만나 보세요."
         else:
-            head, body = f"{product} 소개", f"{product} 어떠세요? {s}. 자세한 내용은 스토어에서 확인해 보세요."   # 사장님이 말하지 않은 후기는 쓰지 않음
+            head, body = f"{product} 소개", f"{product} 어떠세요? {s}. 아래 버튼을 눌러 자세히 확인해 보세요."   # 사장님이 말하지 않은 후기는 쓰지 않음
         out.append({"headline": _clip(tidy(head, 0), META_HEADLINE_MAX),
                     "text": _clip(tidy(body), META_TEXT_MAX)})
     return out
