@@ -265,7 +265,9 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     const intro = screen.getByText(/다음 테스트 세팅이에요/).textContent!;
     expect(intro).toMatch(/지난 광고 세트를 복제해 새 세트 2개/);
     expect(intro).toContain("바꿀 세트에서 '칸 meta.ad.media' 칸만 바꿔요");
-    expect(intro).toContain("두 세트 모두 총예산 5,400원 · 2026-11-27 ~ 2026-11-30");
+    expect(intro).toContain("두 세트 모두 총예산 5,400원 · 11월 27일 ~ 11월 30일");   // 다른 화면처럼 '11월 27일' (보이는 글자만)
+    expect(items.find((li) => li.textContent!.includes("meta.adset.start_date"))!.textContent).toContain("11월 27일");
+    expect(screen.queryByText(/2026-11-27/)).toBeNull();
     expect(intro).not.toMatch(/나머지 칸은 지난번 값 그대로예요\. 두 세트/);   // 금액·날짜는 새로 넣는다
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);

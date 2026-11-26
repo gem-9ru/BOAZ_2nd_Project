@@ -129,7 +129,7 @@ export default function GuideStep({ state, dispatch }: Props) {
   const target = next?.send.find((s) => !s.entry.publish && !s.entry.id.startsWith("next."));   // 복제 칸 다음의 바꿀 칸
   const targetLabel = target ? state.settings.find((x) => x.fieldId === target.entry.id)?.label ?? target.entry.fallback.text : "";
   const val = (id: string) => state.settings.find((x) => x.fieldId === id)?.value ?? "";
-  const money = `${val("meta.adset.lifetime_budget")} · ${val("meta.adset.start_date")} ~ ${val("meta.adset.end_date")}`;
+  const money = shownDates(`${val("meta.adset.lifetime_budget")} · ${val("meta.adset.start_date")} ~ ${val("meta.adset.end_date")}`);
   const intro = {
     create: next
       ? `다음 테스트 세팅이에요. 지난 광고는 끝났으니 ① 지난 광고 세트를 복제해 새 세트 2개를 만들어요 (하나는 지난번 그대로, 하나는 바꿀 세트). ② 바꿀 세트에서 '${targetLabel}' 칸만 바꿔요. ③ 두 세트 모두 총예산 ${money} 로 맞춰요 (돈이 정한 만큼만 나가게). 그 밖의 칸은 지난번 값 그대로예요. 뭉치가 차례로 짚고, '그대로' 세트의 금액·날짜는 사장님이 직접 맞춰요. '동의하고 게시'는 마지막에 직접 눌러 주세요.`
@@ -170,7 +170,7 @@ export default function GuideStep({ state, dispatch }: Props) {
               <span className="flex flex-col gap-1">
                 <span>
                   {state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text}
-                  {s.value ? ` · ${s.value}` : ""}
+                  {s.value ? ` · ${shownDates(s.value)}` : ""}
                   {next && now && !s.entry.publish && <span className="ml-1 rounded-badge bg-accent px-1.5 text-small text-on-accent">지금</span>}
                 </span>
                 {mode === "create" && !done && <InlineNotice id={s.entry.id} publish={Boolean(s.entry.publish)} state={state} />}
@@ -206,6 +206,11 @@ export default function GuideStep({ state, dispatch }: Props) {
       </div>
     </section>
   );
+}
+
+/** 패널에 보이는 글자만 다른 화면처럼 '2026-11-27' → '11월 27일' (뭉치가 칸에 넣는 값은 그대로 yyyy-mm-dd) */
+function shownDates(text: string): string {
+  return text.replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, (_, m: string, d: string) => `${Number(m)}월 ${Number(d)}일`);
 }
 
 /** EX-01 ④ 세팅 중 알림 (인라인, v4.2): 이유 → 할 일, 금액은 '원'.
