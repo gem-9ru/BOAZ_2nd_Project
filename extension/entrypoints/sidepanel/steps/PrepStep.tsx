@@ -2,7 +2,8 @@ import type { Field } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { prepFields, prepMissing } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
-import { Question } from "./QuestionStep";
+import { useState } from "react";
+import { Question, TEXT_BUTTON } from "./QuestionStep";
 
 /** 시작 전 준비물: ① 찾기 앞에서 광고에 꼭 필요한 것(로그인·페이지·결제 수단)과 있으면 좋은 것(사진·주소·언어)을 한 칸씩 확인.
  *  없다고 하면 그 자리에서 만드는 법·링크를 보여 준다 (질문 칸 사양은 meta_fields.yaml stage '사전 점검').
@@ -12,6 +13,7 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
   const next = items.find((f) => !(f.id in state.answers));
   const index = next ? items.indexOf(next) : items.length;
   const missing = prepMissing(fields, state.answers);
+  const [helpFirst, setHelpFirst] = useState<{ id: string; answer: string } | null>(null);   // [만드는 법 보기]로 돌아간 칸
 
   return (
     <section className="flex flex-col gap-5">
@@ -22,11 +24,11 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
         <>
           <p className="text-caption text-soft">준비물 {index + 1} / {items.length}{next.required ? " · 꼭 필요해요" : ""}</p>
           {index > 0 && (
-            <button type="button" onClick={() => dispatch({ type: "unanswer", id: items[index - 1]!.id })} className="self-start text-caption text-soft underline">
+            <button type="button" onClick={() => dispatch({ type: "unanswer", id: items[index - 1]!.id })} className={TEXT_BUTTON}>
               ← 이전 준비물
             </button>
           )}
-          <Question key={next.id} field={next} answers={state.answers} keywords={state.keywords} checked={state.checks?.[next.id] ?? []}
+          <Question key={next.id} field={next} startHelp={helpFirst?.id === next.id ? helpFirst.answer : undefined} answers={state.answers} keywords={state.keywords} checked={state.checks?.[next.id] ?? []}
             onCheck={(i) => dispatch({ type: "toggleCheck", key: next.id, index: i })}
             onAnswer={(value, extra = {}) => {
               dispatch({ type: "answer", id: next.id, value });
@@ -47,7 +49,12 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
                     {f.label}
                     <span className="block text-caption text-soft">{state.answers[f.id] || "비워 둠"}</span>
                   </span>
-                  <button type="button" onClick={() => dispatch({ type: "unanswer", id: f.id })} className="shrink-0 text-caption text-soft underline">다시 답하기</button>
+                  {!ok && f.required && f.help?.[state.answers[f.id] ?? ""] ? (
+                    <button type="button" onClick={() => { setHelpFirst({ id: f.id, answer: state.answers[f.id]! }); dispatch({ type: "unanswer", id: f.id }); }}
+                      className="inline-flex min-h-11 shrink-0 items-center rounded-button border border-accent px-3 text-caption font-semibold text-accent-ink">만드는 법 보기</button>
+                  ) : (
+                    <button type="button" onClick={() => dispatch({ type: "unanswer", id: f.id })} className={`shrink-0 ${TEXT_BUTTON}`}>다시 답하기</button>
+                  )}
                 </li>
               );
             })}

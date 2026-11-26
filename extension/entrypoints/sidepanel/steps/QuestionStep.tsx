@@ -1,10 +1,18 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Field, OptionHelp, PresetField } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { SETTING_ORDER, askedFields, buildSettings, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
+/** 글자 버튼(이전·다시 고르기·나중에)도 손가락으로 누를 수 있게 높이 44px */
+export const TEXT_BUTTON = "inline-flex min-h-11 items-center self-start text-caption text-soft underline";
+/** 돈과 바로 이어지는 질문: 설명을 본문 크기·진한 글자로 (작은 회색 글씨에 숨기지 않음) */
+const MONEY = new Set(["meta.adset.lifetime_budget", "meta.pre.payment"]);
+/** 글자 칸 이름·예시 (메타 화면 이름 대신 사장님 말로) */
+const INPUT: Record<string, { label: string; placeholder: string }> = {
+  "meta.pre.ig_account": { label: "인스타그램 아이디", placeholder: "예: ovenlog" },
+};
 
 interface Props {
   state: FlowState;
@@ -40,7 +48,7 @@ export default function QuestionStep({ state, dispatch, fields, defaults: all }:
       <p className="text-caption text-soft">질문 {Math.min(index + 1, asked.length)} / {asked.length}</p>
       {index > 0 && next && (
         <button type="button" onClick={() => dispatch({ type: "unanswer", id: asked[index - 1]!.id })}
-          className="self-start text-caption text-soft underline">
+          className={TEXT_BUTTON}>
           ← 이전 질문
         </button>
       )}
@@ -51,7 +59,7 @@ export default function QuestionStep({ state, dispatch, fields, defaults: all }:
       )}
       {defaults.length > 0 && (
         <details className="text-caption text-soft">
-          <summary className="cursor-pointer">묻지 않고 이렇게 두었어요 ({defaults.length}칸)</summary>
+          <summary className="flex min-h-11 cursor-pointer items-center">묻지 않고 이렇게 두었어요 ({defaults.length}칸)</summary>
           <ul className="mt-2 flex flex-col gap-2">
             {defaults.map((d) => (
               <li key={d.id}>
@@ -98,14 +106,18 @@ function byEarlier(map: Record<string, Record<string, string>> | null | undefine
   return undefined;
 }
 
-export function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
+export function Question({ field, answers, keywords, checked, onCheck, onAnswer, startHelp }: {
   field: Field; answers: Record<string, string>; keywords: string[]; checked: number[]; onCheck: (index: number) => void;
   onAnswer: (v: string, extra?: Record<string, string>) => void;
+  /** 처음부터 열어 둘 '만드는 법' (준비물 요약의 [만드는 법 보기]) */
+  startHelp?: string;
 }) {
+  const title = useRef<HTMLHeadingElement>(null);
+  useEffect(() => title.current?.focus(), []);   // 새 질문이 나오면 화면 읽기·키보드가 그 질문부터
   const note = byEarlier(field.note_if, answers);
   const [text, setText] = useState(field.default ?? "");
   const [bad, setBad] = useState(false);
-  const [helpFor, setHelpFor] = useState<string | null>(null);   // 할 일이 있는 답을 골랐을 때 (예: 페이지 없어요)
+  const [helpFor, setHelpFor] = useState<string | null>(startHelp ?? null);   // 할 일이 있는 답을 골랐을 때 (예: 페이지 없어요)
   const help = helpFor ? field.help?.[helpFor] : undefined;
   const [picked, setPicked] = useState<string | null>(null);     // 이어 받을 주소가 있는 답을 골랐을 때 (예: 스토어 상품 페이지)
   const [dates, setDates] = useState(false);                      // [날짜 직접 정하기]를 눌렀을 때
@@ -156,8 +168,8 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
   return (
     <div className="flex flex-col gap-3">
       <Coach>
-        <h2 className="text-lead font-semibold">{field.ask}</h2>
-        {field.why && <p className="text-caption text-soft mt-1">{field.why}</p>}
+        <h2 ref={title} tabIndex={-1} className="text-lead font-semibold outline-none">{field.ask}</h2>
+        {field.why && <p className={`mt-1 ${MONEY.has(field.id) ? "text-body text-ink" : "text-caption text-soft"}`}>{field.why}</p>}
         {note && <p className="text-caption text-ink mt-1">{note}</p>}
         {least > 0 && <p className="text-caption text-ink mt-1">광고 기간이 {days}일이라 적어도 약 {least.toLocaleString()}원 (하루 최소 약 1,336원 × {days}일)은 넣어야 광고가 나가요.</p>}
       </Coach>
@@ -173,16 +185,16 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
           <label htmlFor="then-url" className="text-caption text-soft">{then.say[picked] ?? "주소를 알려 주세요."}</label>
           <input id="then-url" value={url} onChange={(e) => setUrl(e.target.value)} inputMode="url" autoComplete="off"
             placeholder={picked.includes("인스타") || thenField(picked)?.includes("insta") ? "https://www.instagram.com/가게아이디" : "https://smartstore.naver.com/가게이름/products/…"}
-            aria-invalid={bad || undefined}
+            aria-invalid={bad || undefined} aria-describedby={bad ? "then-url-error" : undefined}
             className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
-          {bad && <p role="alert" className="text-caption text-block-ink">https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
+          {bad && <p id="then-url-error" role="alert" className="text-caption text-block-ink">https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
           <PrimaryButton onClick={submitThen} disabled={!url.trim()}>다음</PrimaryButton>
           {then.none?.[picked] && (
-            <button type="button" onClick={() => finish(then.none![picked]!)} className="self-start text-caption text-accent-ink underline">
+            <button type="button" onClick={() => finish(then.none![picked]!)} className="inline-flex min-h-11 items-center self-start text-caption text-accent-ink underline">
               상품 페이지 주소가 없어요 → 인스타그램 프로필로 보낼게요
             </button>
           )}
-          <button type="button" onClick={() => setPicked(null)} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+          <button type="button" onClick={() => setPicked(null)} className={TEXT_BUTTON}>← 다시 고르기</button>
         </div>
       ) : help && helpFor ? (
         <div className="flex flex-col gap-3 rounded-card border border-line bg-paper p-4">
@@ -193,10 +205,9 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
             <NewTabLink url={help.url}>{help.link}</NewTabLink>
           )}
           <PrimaryButton onClick={() => finish(help.done_value)}>{help.done}</PrimaryButton>
-          <div className="flex items-center justify-between gap-2">
-            <button type="button" onClick={() => setHelpFor(null)} className="text-caption text-soft underline">← 다시 고르기</button>
-            <button type="button" onClick={() => finish(helpFor)} className="text-caption text-soft underline">{help.later}</button>
-          </div>
+          {/* '나중에'도 같은 무게의 버튼으로 (UX 원칙 5) */}
+          <button type="button" onClick={() => finish(helpFor)} className="min-h-11 w-full rounded-button border border-line px-4 py-2.5 text-body">{help.later}</button>
+          <button type="button" onClick={() => setHelpFor(null)} className={TEXT_BUTTON}>← 다시 고르기</button>
         </div>
       ) : field.options ? (
         <div className="flex flex-col gap-2">
@@ -207,10 +218,10 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
                 key={o}
                 type="button"
                 onClick={() => pick(o)}
-                className={`rounded-button border px-4 py-3 text-left text-body ${o === recommended ? "border-ink bg-paper font-semibold" : "border-line"}`}
+                className="rounded-button border border-line px-4 py-3 text-left text-body"
               >
                 {o}
-                {o === recommended && !short && <span className="block text-caption font-normal text-soft">권장</span>}
+                {o === recommended && !short && <span className="block text-caption text-accent-ink">권장</span>}
                 {short && <span className="block text-caption font-normal text-warn"><span aria-hidden="true">▲ </span><span className="sr-only">주의 </span>{days}일 동안 쓰기엔 적어요</span>}
               </button>
             );
@@ -228,15 +239,16 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer 
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <label htmlFor={field.id} className="text-caption text-soft">{field.label}</label>
+          <label htmlFor={field.id} className="text-caption text-soft">{INPUT[field.id]?.label ?? field.label}</label>
           <input
             id={field.id}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            aria-invalid={bad || undefined}
+            placeholder={INPUT[field.id]?.placeholder}
+            aria-invalid={bad || undefined} aria-describedby={bad ? `${field.id}-error` : undefined}
             className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
           />
-          {bad && <p role="alert" className="text-caption text-block-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
+          {bad && <p id={`${field.id}-error`} role="alert" className="text-caption text-block-ink">가게 주소를 https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
           <PrimaryButton onClick={submit} disabled={REQUIRED_TEXT.has(field.id) && !text.trim()}>
             다음
           </PrimaryButton>
@@ -315,35 +327,35 @@ function DateRange({ onBack, onDone }: { onBack: () => void; onDone: (value: str
           <div className="flex flex-1 flex-col gap-1">
             <label htmlFor="date-start" className="text-caption text-soft">시작일</label>
             <input id="date-start" type="date" value={start} min={today} onChange={(e) => setStart(e.target.value)}
-              aria-invalid={(tried && startBad) || undefined} className={box} />
+              aria-invalid={(tried && startBad) || undefined} aria-describedby={tried && startBad ? "date-start-error" : undefined} className={box} />
           </div>
           <div className="flex w-28 flex-col gap-1">
             <label htmlFor="time-start" className="text-caption text-soft">시작 시각</label>
             <input id="time-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
-              aria-invalid={(tried && timeBad) || undefined} className={box} />
+              aria-invalid={(tried && timeBad) || undefined} aria-describedby={tried && timeBad ? "time-start-error" : undefined} className={box} />
           </div>
         </div>
-        {tried && startBad && <p role="alert" className="text-caption text-block-ink">오늘이나 그 뒤 날짜로 골라 주세요.</p>}
-        {tried && timeBad && <p role="alert" className="text-caption text-block-ink">오늘 시작하면 지금보다 뒤 시각으로 골라 주세요.</p>}
+        {tried && startBad && <p id="date-start-error" role="alert" className="text-caption text-block-ink">오늘이나 그 뒤 날짜로 골라 주세요.</p>}
+        {tried && timeBad && <p id="time-start-error" role="alert" className="text-caption text-block-ink">오늘 시작하면 지금보다 뒤 시각으로 골라 주세요.</p>}
       </div>
       <div className="flex flex-col gap-1">
         <div className="flex gap-2">
           <div className="flex flex-1 flex-col gap-1">
             <label htmlFor="date-end" className="text-caption text-soft">종료일</label>
             <input id="date-end" type="date" value={end} min={start || today} onChange={(e) => setEnd(e.target.value)}
-              aria-invalid={(tried && endBad) || undefined} className={box} />
+              aria-invalid={(tried && endBad) || undefined} aria-describedby={tried && !startBad && endBad ? "date-end-error" : undefined} className={box} />
           </div>
           <div className="flex w-28 flex-col gap-1">
             <label htmlFor="time-end" className="text-caption text-soft">종료 시각</label>
             <input id="time-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={box} />
           </div>
         </div>
-        {tried && !startBad && endBad && <p role="alert" className="text-caption text-block-ink">종료일을 시작일 다음 날 이후로 골라 주세요.</p>}
+        {tried && !startBad && endBad && <p id="date-end-error" role="alert" className="text-caption text-block-ink">종료일을 시작일 다음 날 이후로 골라 주세요.</p>}
       </div>
       <p className="text-caption text-soft">시각은 비워 두면 광고 관리자에 정해진 시각 그대로 둬요.</p>
       {ok && <p className="text-body">{monthDay(start, startTime)}부터 {monthDay(end, endTime)}까지, {days}일 동안 광고해요.</p>}
       <PrimaryButton onClick={() => (ok ? onDone(value) : setTried(true))} disabled={!start || !end}>다음</PrimaryButton>
-      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+      <button type="button" onClick={onBack} className={TEXT_BUTTON}>← 다시 고르기</button>
     </div>
   );
 }
@@ -353,13 +365,15 @@ function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void
   const [raw, setRaw] = useState("");
   const n = parseWon(raw);
   const short = n !== null && least > 0 && n < least;
+  const unread = raw.trim() !== "" && n === null;   // 숫자로 못 읽음 → 왜 [다음]이 안 눌리는지 알려 줌
   return (
     <div className="flex flex-col gap-2">
       <label htmlFor="budget-won" className="text-caption text-soft">기간 전체 총예산 (원)</label>
       <input id="budget-won" value={raw} onChange={(e) => setRaw(e.target.value)} inputMode="numeric" autoComplete="off"
-        placeholder="예: 25000" aria-describedby={short ? "budget-short" : undefined}
+        placeholder="예: 25000" aria-describedby={short ? "budget-short" : unread ? "budget-unread" : undefined} aria-invalid={unread || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
       {n !== null && <p className="text-caption text-ink">{n.toLocaleString()}원</p>}
+      {unread && <p id="budget-unread" role="alert" className="text-caption text-block-ink">숫자로 넣어 주세요 (예: 30000 또는 3만)</p>}
       {short && (
         <p id="budget-short" role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-caption text-warn">
           <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
@@ -367,7 +381,7 @@ function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void
         </p>
       )}
       <PrimaryButton onClick={() => n !== null && onDone(`${n.toLocaleString()}원`)} disabled={n === null}>다음</PrimaryButton>
-      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+      <button type="button" onClick={onBack} className={TEXT_BUTTON}>← 다시 고르기</button>
     </div>
   );
 }
@@ -399,7 +413,7 @@ function ShopArea({ way, onBack, onDone }: { way: string; onBack: () => void; on
         </div>
       </div>
       <PrimaryButton onClick={() => place && onDone(`가게 주변 ${radius} · ${place}`)} disabled={!place}>다음</PrimaryButton>
-      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+      <button type="button" onClick={onBack} className={TEXT_BUTTON}>← 다시 고르기</button>
     </div>
   );
 }
