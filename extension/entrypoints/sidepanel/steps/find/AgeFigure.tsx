@@ -81,7 +81,7 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
       )}
       {span.groups.length > 1 && (
         <p className="text-small text-soft">
-          {top}대가 가장 많이 찾고, 옆 나이대도 많이 찾아서 함께 넣었어요 (전체의 {Math.round(span.groups.reduce((t, a) => t + (aud.ages[a] ?? 0), 0) * 100)}%).
+          {top}대가 가장 많이 찾고, 옆 나이대도 많이 찾아서 함께 넣었어요 (전체의 {Math.round(span.groups.reduce((t, a) => t + (aud.ages[a] ?? 0), 0) * 100)}%). 옆 나이대가 15% 이상이고 가장 많은 나이대의 절반 이상일 때 넣어요 (이 도구 기준).
         </p>
       )}
       {headline && (
