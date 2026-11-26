@@ -437,10 +437,10 @@ describe("② 문구 제목 잘림 · 상품 이름 · 지난번 문구", () => 
   it("says Meta's recommended lengths without claiming the text gets cut", async () => {
     await pick();
     fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "가".repeat(30) } });
-    expect(screen.getByText(/메타 권장 제목 길이는 27자예요 \(지금 30자\)/)).toBeTruthy();
+    expect(screen.getByText(/메타 권장 제목 길이는 페이스북 피드 27자, 인스타 피드 40자예요 \(지금 30자\)/)).toBeTruthy();
     fireEvent.click(screen.getByRole("radio", { name: "페이스북 피드" }));
     expect(screen.getByText("가".repeat(30))).toBeTruthy();   // 미리 보기에서 자르지 않음
-    expect(screen.getByText(/메타 권장 본문 길이는 50~150자예요/)).toBeTruthy();   // 본문 '수제 쿠키 본문 1'은 50자 미만
+    expect(screen.getByText(/메타 권장 본문 길이는 페이스북 피드 50~150자, 인스타 125자예요/)).toBeTruthy();   // 본문 '수제 쿠키 본문 1'은 50자 미만
     expect(screen.queryByText(/피드에서 바로 보이는 부분/)).toBeNull();
   });
 

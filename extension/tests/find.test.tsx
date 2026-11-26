@@ -409,7 +409,7 @@ describe("타깃 확인·고치기", () => {
     const dispatch = vi.fn();
     render(<FindStep state={state()} dispatch={dispatch} />);
     fireEvent.click(screen.getByRole("button", { name: "나이·성별 바꾸기" }));
-    expect(screen.getByText(/남성 19%에게는 광고가 안 보여요/)).toBeTruthy();
+    expect(screen.getByText(/성과가 나을 것 같으면 남성에게도 보여 줄 수 있어요/)).toBeTruthy();
     fireEvent.change(screen.getByLabelText("나이 까지"), { target: { value: "30" } });
     fireEvent.click(screen.getByRole("radio", { name: /남녀 모두/ }));
     expect(screen.getByText(/광고 관리자에는/).textContent).toContain("30–39세 · 남녀 모두로 넣고");

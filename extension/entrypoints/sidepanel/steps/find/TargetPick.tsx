@@ -82,7 +82,7 @@ export default function TargetPick({ from, to, gender, rec, female, recShare, on
                 </label>
               ))}
             </div>
-            {gender !== "all" && <p className="text-caption text-soft">{gender === "female" ? "남성" : "여성"} {pct[gender === "female" ? "male" : "female"]}%에게는 광고가 안 보여요.</p>}
+            {gender !== "all" && <p className="text-caption text-soft">메타는 이 성별을 출발점으로 삼고, 성과가 나을 것 같으면 {gender === "female" ? "남성" : "여성"}에게도 보여 줄 수 있어요 (어드밴티지+ 타겟). %는 네이버 쇼핑 클릭 기준이에요.</p>}
           </fieldset>
           {changed && (
             <button type="button" onClick={() => onChange(rec)} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">추천대로 되돌리기</button>

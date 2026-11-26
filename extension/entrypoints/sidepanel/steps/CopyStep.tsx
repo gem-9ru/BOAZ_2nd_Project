@@ -18,7 +18,7 @@ interface Props {
 const OTHER = "그 밖";   // 맨 끝. 묶음 이름은 서버가 상품에 맞게(재질·기능…) 붙이고 브랜드·가게 이름은 거른다
 /** 메타 글자 수 기준 (server/engine/copywriter.py와 같게) */
 export const HEADLINE_MAX = 40;
-export const TEXT_MAX = 150;   // 메타 권장 기본 문구 50~150자 (copy/FeedPreview.tsx 출처 참고)
+export const TEXT_MAX = 150;   // 이 도구가 정한 상한 (페이스북 피드 권장 50~150자의 위 끝; 광고 관리자 칸에는 제한 없음, 2026-11-26 확인)
 type Choice = number | "own" | null;
 
 /** 문구 화면에서 한 일을 상품·손님 무리별로 기억 (① 찾기에 갔다 와도 그대로). 패널이 열려 있는 동안만. 사진은 기억하지 않음. */
@@ -319,7 +319,7 @@ export default function CopyStep({ state, dispatch }: Props) {
         <div className="flex flex-col gap-2">
           <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
           <p className="text-small text-soft">다음: 광고 설정 질문 몇 개에 답하면, 광고 관리자에 넣을 값을 만들어 드려요.</p>
-          {(!headOk || !textOk) && <p className="text-caption text-warn">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요</p>}
+          {(!headOk || !textOk) && <p className="text-caption text-warn">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요 (이 도구가 정한 범위예요)</p>}
         </div>
       )}
       {list && (
@@ -383,10 +383,10 @@ function Editor({ draft, setDraft, banned, original, product }: {
         aria-invalid={draft.text.length > TEXT_MAX || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2 text-body" />
       {draft.headline.length > HEAD_REC && draft.headline.length <= HEADLINE_MAX && (
-        <p className="text-caption text-soft">메타 권장 제목 길이는 {HEAD_REC}자예요 (지금 {draft.headline.length}자). 줄여도 되면 중요한 말을 앞에 두세요.</p>
+        <p className="text-caption text-soft">메타 권장 제목 길이는 페이스북 피드 {HEAD_REC}자, 인스타 피드 40자예요 (지금 {draft.headline.length}자). 줄여도 되면 중요한 말을 앞에 두세요.</p>
       )}
       {draft.text.trim() && draft.text.length < TEXT_REC_MIN && (
-        <p className="text-caption text-soft">메타 권장 본문 길이는 {TEXT_REC_MIN}~{TEXT_MAX}자예요 (지금 {draft.text.length}자).</p>
+        <p className="text-caption text-soft">메타 권장 본문 길이는 페이스북 피드 {TEXT_REC_MIN}~150자, 인스타 125자예요 (지금 {draft.text.length}자).</p>
       )}
       {noName && <p className="text-caption text-warn">▲ 문구에 상품 이름('{product}')이 없어요. 무엇을 파는지 알 수 있게 넣어 주세요.</p>}
       <div className="flex flex-wrap items-center gap-3">
