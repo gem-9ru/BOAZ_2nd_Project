@@ -41,7 +41,7 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
       </figcaption>
       <div className="flex flex-col gap-1.5">
         <div className="flex h-28 items-end gap-2 border-b border-line" role="img"
-          aria-label={`연령대별 검색 비중: ${ages.map((a) => `${a}대 ${Math.round((aud.ages[a] ?? 0) * 100)}%${a in fem ? ` (여성 ${Math.round(fem[a]! * 100)}%)` : ""}`).join(", ")}`}>
+          aria-label={`연령대별 쇼핑 클릭 비중: ${ages.map((a) => `${a}대 ${Math.round((aud.ages[a] ?? 0) * 100)}%${a in fem ? ` (여성 ${Math.round(fem[a]! * 100)}%)` : ""}`).join(", ")}`}>
           {ages.map((a) => {
             const share = aud.ages[a] ?? 0;
             const isTop = inSpan(a);

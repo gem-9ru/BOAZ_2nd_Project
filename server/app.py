@@ -136,7 +136,9 @@ def _research(body: ResearchIn) -> dict:
                 **wide, "segments": [], "modifiers": mods, "product_stats": report.product_stats,
                 "suggestions": _similar_words(body.product, report.keywords)}
     kw = report.keywords.set_index("keyword")["total_qc"]
-    keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
+    under = report.keywords.set_index("keyword")["under"] if "under" in report.keywords else None
+    keywords = [{"keyword": k, "total_qc": int(kw[k]), **({"under": int(under[k])} if under is not None and under[k] else {})}
+                for k in report.recommended[:MAX_KEYWORDS] if k in kw]   # under: "< 10"이던 칸 수 (화면이 미만·약으로)
     audience = None
     if report.audiences:
         name, aud = next(iter(report.audiences.items()))

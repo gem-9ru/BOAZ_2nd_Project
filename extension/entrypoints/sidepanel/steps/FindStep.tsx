@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { research as fetchResearch, type Research, type Segment } from "../../../lib/api";
 import type { FlowEvent, FlowState, Target } from "../../../lib/flow";
-import { compact } from "../../../lib/format";
+import { compact, times } from "../../../lib/format";
 import { ageGroupToRange, ageSpan, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import AgeFigure from "./find/AgeFigure";
@@ -90,7 +90,7 @@ export default function FindStep({ state, dispatch }: Props) {
 
   return (
     <section className="flex flex-col gap-5">
-      <Coach>어떤 상품을 파세요? 네이버에서 손님이 어떤 말로, 언제, 누가 찾는지 알아볼게요.</Coach>
+      <Coach>어떤 상품을 파세요? 네이버에서 손님이 어떤 말로, 언제 찾고, 누가 쇼핑에서 클릭하는지 알아볼게요.</Coach>
       <div className="flex flex-col gap-2">
         <label htmlFor="product" className="text-caption font-semibold text-soft">파는 상품</label>
         <form
@@ -144,7 +144,7 @@ export default function FindStep({ state, dispatch }: Props) {
           <span className="text-caption font-semibold text-soft">찾아보면 이렇게 알려 드려요</span>
           <ul className="flex flex-col gap-1 text-caption text-soft">
             <li>· 한 달에 몇 번 찾는지</li>
-            <li>· 누가 찾는지 (나이·성별)</li>
+            <li>· 누가 쇼핑에서 클릭하는지 (나이·성별)</li>
             <li>· 언제 많이 찾는지 (달별)</li>
             <li>· 손님이 어떤 말로 찾는지, 어떤 손님 무리가 있는지</li>
           </ul>
@@ -173,7 +173,7 @@ export default function FindStep({ state, dispatch }: Props) {
 }
 
 /** 결과 자리 스켈레톤: 결과 카드와 같은 모양. */
-const SEARCH_STEPS = ["네이버에서 검색 수를 보는 중이에요…", "누가 찾는지 보는 중이에요…", "손님을 무리로 나누는 중이에요…", "좋은 점 낱말을 고르는 중이에요…"];
+const SEARCH_STEPS = ["네이버에서 검색 수를 보는 중이에요…", "누가 클릭하는지 보는 중이에요…", "손님을 무리로 나누는 중이에요…", "좋은 점 낱말을 고르는 중이에요…"];
 
 function ResultSkeleton() {
   // 실제 진행을 받지 않으니 시간으로만 넘긴다 (마지막 단계에서 멈춤)
@@ -228,7 +228,7 @@ function KeywordChips({ research: r, dropped, kept, title, hint, dispatch }: {
                 {off ? "" : "✓"}
               </span>
               <span className={off ? "line-through" : "font-medium"}>{k.keyword}</span>
-              <span className="text-small text-soft tabular-nums">한 달 {compact(k.total_qc)}번</span>
+              <span className="text-small text-soft tabular-nums">한 달 {times(k.total_qc, k.under)}</span>
             </button>
           );
         })}
@@ -376,7 +376,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const detail = selected?.audience && pick && rec
     ? (
       <div className="flex flex-col gap-3">
-        <AgeFigure audience={selected.audience} caption="많이 찾는 사람 (추천)" split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
+        <AgeFigure audience={selected.audience} caption="쇼핑에서 많이 클릭한 사람 (추천)" split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
         <TargetPick from={pick.from} to={pick.to} gender={pick.gender} rec={rec} female={selected.audience.female}
           onChange={(v) => setCustom({ intent: selected.intent, ...v })} />
       </div>
@@ -398,7 +398,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
       {topWord && (!r.product_stats || (r.product_stats.total_qc * 10 < topWord.total_qc && topWord.keyword !== r.product_stats.keyword)) && (
         <p className="rounded-card border border-line bg-paper px-4 py-3 text-caption">
-          '{product}' 이름 그대로는 {r.product_stats ? `한 달 ${compact(r.product_stats.total_qc)}번만 찾아요` : "찾는 사람이 적어요"}. 손님은 <span className="font-semibold">'{topWord.keyword}'</span>{euro(topWord.keyword)} 가장 많이 찾아요 (한 달 {compact(topWord.total_qc)}번).
+          '{product}' 이름 그대로는 {r.product_stats ? ((r.product_stats.under ?? 0) >= 2 ? "한 달 20번도 안 찾아요" : `한 달 ${times(r.product_stats.total_qc, r.product_stats.under)}만 찾아요`) : "찾는 사람이 적어요"}. 손님은 <span className="font-semibold">'{topWord.keyword}'</span>{euro(topWord.keyword)} 가장 많이 찾아요 (한 달 {times(topWord.total_qc, topWord.under)}).
         </p>
       )}
       {!r.category ? (
@@ -549,7 +549,7 @@ function CopySummary({ product, research: r, selected, target, kept }: {
   const st = r.product_stats;
   const lines = [
     `상품: ${product}${r.category ? ` (${r.category.name})` : ""}`,
-    st ? `한 달에 찾는 횟수: ${st.total_qc.toLocaleString()}번` : null,
+    st ? `한 달에 찾는 횟수: ${st.under ? times(st.total_qc, st.under) : `${st.total_qc.toLocaleString()}번`}` : null,
     st?.trend?.peak_month ? `가장 많이 찾는 달: ${st.trend.peak_month}월` : null,
     selected ? `고른 손님: ${selected.label}${selected.line ? ` — ${selected.line}` : ""}` : null,
     target ? `광고 대상: ${targetLine(target)}` : null,

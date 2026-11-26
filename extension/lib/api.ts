@@ -2,7 +2,8 @@
 
 export interface Research {
   headline: string;
-  keywords: { keyword: string; total_qc: number }[];
+  /** under: 네이버가 "< 10"으로 준 칸 수 (있을 때만) */
+  keywords: { keyword: string; total_qc: number; under?: number }[];
   audience: { keyword: string; female: number; ages: Record<string, number>; top_age: string } | null;
   fetched: string;
   source: "live" | "cache";
@@ -27,6 +28,7 @@ export interface Research {
 export interface ProductStats {
   keyword: string;
   total_qc: number;
+  under?: number;
   /** 모바일 비중 0~1 */
   mobile: number | null;
   /** index: 같은 분야 평균 대비 배수 (female·male·나이대) */

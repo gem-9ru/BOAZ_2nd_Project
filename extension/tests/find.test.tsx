@@ -368,7 +368,7 @@ describe("FindStep — 이 상품 검색 카드", () => {
     const r: Research = { ...withSegs, category: null, segments: [], product_stats: { ...stats, audience: null } };
     render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키" }} dispatch={() => {}} />);
     expect(screen.getByText("9,320번")).toBeTruthy();
-    expect(screen.getByText("분야를 고르면 누가 찾는지도 보여 드릴게요.")).toBeTruthy();
+    expect(screen.getByText("분야를 고르면 누가 클릭하는지도 보여 드릴게요.")).toBeTruthy();
   });
 });
 
@@ -425,7 +425,7 @@ describe("타깃 확인·고치기", () => {
       audience: { female: 0.7, ages: { "30": 0.25, "40": 0.3, "50": 0.25 }, top_age: "40" },
       trend: { monthly: { "2026-12": 100 }, peak_month: 12, seasonal: true } };
     render(<FindStep state={{ ...state(), research: { ...withSegs, product_stats: stats } }} dispatch={() => {}} />);
-    expect(screen.getByText("한 달 13만번 · 12월에 가장 많이 · 30~50대 여성이 많이 찾아요")).toBeTruthy();
+    expect(screen.getByText("한 달 13만번 · 12월에 가장 많이 · 30~50대 여성이 쇼핑에서 많이 클릭해요")).toBeTruthy();
     expect(screen.getByText("자세히 ▾")).toBeTruthy();
   });
 
@@ -440,7 +440,7 @@ describe("타깃 확인·고치기", () => {
   it("the empty screen says what the search will show", () => {
     render(<FindStep state={initialState()} dispatch={() => {}} />);
     expect(screen.getByText("찾아보면 이렇게 알려 드려요")).toBeTruthy();
-    expect(screen.getByText("· 누가 찾는지 (나이·성별)")).toBeTruthy();
+    expect(screen.getByText("· 누가 쇼핑에서 클릭하는지 (나이·성별)")).toBeTruthy();
   });
 });
 
@@ -530,8 +530,8 @@ describe("지금 시기 · 무리 크기 · 휴대폰 · 단계 안내 · 분야
     const stats = { keyword: "텀블러", total_qc: 128900, mobile: 0.7,
       audience: { female: 0.66, ages: { "30": 0.2, "40": 0.4, "50": 0.25 }, top_age: "40", index: { female: 1.36, "40": 1.25 } } };
     render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
-    expect(screen.getByText("휴대폰으로 많이 찾아요 (70%) → 세로(9:16) 사진·영상이 잘 맞아요.")).toBeTruthy();
-    expect(screen.getByText("같은 분야 평균보다 40대가 1.3배, 여성이 1.4배 많이 찾아요.")).toBeTruthy();
+    expect(screen.getByText("휴대폰으로 많이 찾아요 (70%) → 피드에는 4:5 세로 사진이 권장돼요 (메타 광고 가이드).")).toBeTruthy();
+    expect(screen.getByText("네이버 쇼핑 클릭으로 보면 같은 분야 평균보다 40대가 1.3배, 여성이 1.4배 많아요.")).toBeTruthy();
   });
 
   it("search waiting message moves through steps", async () => {
@@ -588,7 +588,7 @@ describe("돌아와도 고친 타깃 · 그림 제목 · 거의 안 찾는 이�
       target: { ageMin: 30, ageMax: 39, gender: "all" } }} dispatch={dispatch} />);
     expect(screen.getByText(/광고 관리자에는/).textContent).toContain("30–39세 · 남녀 모두");
     expect(screen.getByText("직접 고침")).toBeTruthy();
-    expect(screen.getByText("많이 찾는 사람 (추천)")).toBeTruthy();
+    expect(screen.getByText("쇼핑에서 많이 클릭한 사람 (추천)")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
     expect(dispatch.mock.calls.at(-1)![0].target).toEqual({ ageMin: 30, ageMax: 39, gender: "all" });
   });
@@ -612,5 +612,22 @@ describe("① 찾기 그래프 구분·누르는 크기", () => {
     render(<FindStep state={initialState()} dispatch={() => {}} />);
     expect(screen.getByRole("button", { name: "립밤" }).className).toContain("min-h-11");
     localStorage.clear();
+  });
+});
+
+describe("10번 미만 검색 수", () => {
+  it("formats counts Naver gave as '< 10'", async () => {
+    const { times } = await import("../lib/format");
+    expect(times(10, 2)).toBe("20번 미만");
+    expect(times(305, 1)).toBe("약 305번");
+    expect(times(12000)).toBe("1.2만번");
+  });
+
+  it("shows '20번 미만' on a chip and on the product card", () => {
+    const r = { ...withSegs, keywords: [{ keyword: "수제버터쿠키", total_qc: 10, under: 2 }, ...withSegs.keywords],
+      product_stats: { keyword: "수제버터쿠키", total_qc: 10, under: 2, mobile: null, audience: null } };
+    render(<FindStep state={{ ...initialState(), research: r, product: "수제 버터 쿠키", dropped: ["르뱅쿠키"] }} dispatch={() => {}} />);
+    expect(screen.getAllByText(/한 달 20번 미만/).length).toBeGreaterThan(0);
+    expect(screen.getByText(/이름 그대로는 한 달 20번도 안 찾아요/)).toBeTruthy();
   });
 });

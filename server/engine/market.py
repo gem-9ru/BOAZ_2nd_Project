@@ -69,6 +69,9 @@ def _frame(data: dict) -> pd.DataFrame:
         "comp": df["compIdx"],
     })
     out["total_qc"] = out["pc_qc"] + out["mobile_qc"]
+    # 네이버는 10 미만을 "< 10" 글자로 준다 (데이터_수집_전처리_가이드.md 응답 필드 표). 그 칸 수 0·1·2 → 화면이 '20번 미만'·'약 N번'으로
+    is_few = lambda v: str(v).strip().startswith("<")   # noqa: E731
+    out["under"] = df["monthlyPcQcCnt"].map(is_few).astype(int) + df["monthlyMobileQcCnt"].map(is_few).astype(int)
     out["tier"] = out["total_qc"].map(tier_of)
     return out
 
@@ -88,7 +91,7 @@ def keyword_table(seeds: List[str], online: bool = True) -> Optional[pd.DataFram
         return None
     df = pd.concat(frames, ignore_index=True).drop_duplicates("keyword")
     df = df.sort_values("total_qc", ascending=False).reset_index(drop=True)
-    return df[["keyword", "total_qc", "mobile_qc", "pc_qc", "mobile_clicks", "mobile_ctr", "comp", "tier"]]
+    return df[["keyword", "total_qc", "mobile_qc", "pc_qc", "mobile_clicks", "mobile_ctr", "comp", "tier", "under"]]
 
 
 def intent_of(keyword: str, seeds: List[str]) -> str:
@@ -502,7 +505,8 @@ def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: 
     r = row.iloc[0]
     total = int(r["total_qc"])
     aud = audience(word, category, online) if category else None
-    out = {"keyword": word, "total_qc": total,
+    under = int(r["under"]) if "under" in row else 0
+    out = {"keyword": word, "total_qc": total, **({"under": under} if under else {}),
            "mobile": round(float(r["mobile_qc"]) / total, 3) if total > 0 and "mobile_qc" in row else None,
            "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
            "trend": _trend_of(aud["monthly"]) if aud and aud.get("monthly") else None}   # 몇 월에 많이 찾나 (쇼핑인사이트 클릭)

@@ -66,7 +66,7 @@ export default function TargetPick({ from, to, gender, rec, female, onChange }: 
                     gender === g ? "border-accent bg-accent font-semibold text-on-accent" : "border-line"}`}>
                   <input type="radio" name="target-gender" value={g} checked={gender === g}
                     onChange={() => onChange({ from, to, gender: g })} className="sr-only" />
-                  {GENDER_WORD[g]} <span className="font-normal">(찾는 사람의 {pct[g]}%)</span>
+                  {GENDER_WORD[g]} <span className="font-normal">(클릭한 사람의 {pct[g]}%)</span>
                 </label>
               ))}
             </div>

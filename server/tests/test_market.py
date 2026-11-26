@@ -424,3 +424,15 @@ def test_audience_split_endpoint(monkeypatch):
     b = c.post("/audience/split", json={"keyword": "텀블러", "category": "50000008", "ages": {"40": 0.3, "99": 0.1}}).json()
     assert b == {"female_by_age": {"40": 0.5}}
     assert c.post("/audience/split", json={"keyword": "x", "category": "nope", "ages": {"40": 1}}).json() == {"female_by_age": {}}
+
+
+def test_under_ten_counts_are_marked_not_hidden():
+    """네이버는 10 미만을 "< 10"으로 준다. 숫자로는 5로 두되, 몇 칸이 그랬는지 남겨 화면이 '20번 미만'·'약 N번'으로 쓰게."""
+    data = {"keywordList": [
+        {"relKeyword": "수제버터쿠키", "monthlyPcQcCnt": "< 10", "monthlyMobileQcCnt": "< 10", "monthlyAveMobileClkCnt": 0, "monthlyAveMobileCtr": 0, "compIdx": "낮음"},
+        {"relKeyword": "버터쿠키", "monthlyPcQcCnt": "< 10", "monthlyMobileQcCnt": 300, "monthlyAveMobileClkCnt": 0, "monthlyAveMobileCtr": 0, "compIdx": "낮음"},
+        {"relKeyword": "쿠키", "monthlyPcQcCnt": 900, "monthlyMobileQcCnt": 2000, "monthlyAveMobileClkCnt": 0, "monthlyAveMobileCtr": 0, "compIdx": "높음"},
+    ]}
+    f = market._frame(data).set_index("keyword")
+    assert f.loc["수제버터쿠키", "under"] == 2 and f.loc["수제버터쿠키", "total_qc"] == 10
+    assert f.loc["버터쿠키", "under"] == 1 and f.loc["쿠키", "under"] == 0
