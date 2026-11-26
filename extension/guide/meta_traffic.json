@@ -176,7 +176,7 @@
     "heading": "타겟"
    }
   ],
-  "say": "위치를 {value}(으)로 맞춰 주세요. 전국이면 '대한민국' 그대로, 가게 주변이면 지도에서 주소를 찾아 반경을 정한 뒤 '다음 칸'",
+  "say": "위치를 {value}(으)로 맞출게요. 전국이면 '대한민국' 그대로 둬요. 가게 주변이면 여기는 사장님이 직접 지도에서 주소를 찾아 반경을 정해 주세요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.location.png",
@@ -227,7 +227,7 @@
     "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
    }
   ],
-  "say": "가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기') — 고른 뒤 '다음 칸'",
+  "say": "여기는 사장님이 직접 눌러 주세요: 가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기').",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.pre.fb_page.png",
@@ -250,7 +250,7 @@
     "heading": "대표 계정"
    }
   ],
-  "say": "'Instagram 프로필'에서 가게 인스타그램 계정을 고르세요 ({value}). 페이스북 페이지를 먼저 고르면 나와요",
+  "say": "여기는 사장님이 직접 눌러 주세요: 'Instagram 프로필'에서 가게 인스타그램 계정({value})을 고르세요. 페이스북 페이지를 먼저 고르면 나와요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.pre.ig_account.png",
@@ -294,7 +294,7 @@
     "textStarts": "크리에이티브 설정"
    }
   ],
-  "say": "사진을 고르세요 ({value})",
+  "say": "여기는 사장님이 직접 골라 주세요: 광고에 쓸 사진 ({value})",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.ad.media.png",
@@ -340,17 +340,40 @@
      {
       "role": "button",
       "text": "다음",
-      "say": "사진을 골랐으면 오른쪽 아래 '다음'을 눌러 '문구'까지 가세요"
+      "say": "사진을 골랐으면(왼쪽 아래 '1개 선택됨') 오른쪽 아래 '다음'을 눌러 주세요. 위쪽 단계 이름은 누르지 마세요"
      }
     ],
-    "say": "사진을 고르거나 '업로드'로 올리세요 ({value})"
+    "say": "여기는 사장님이 직접 골라 주세요: 사진을 누르거나 '업로드'로 올리세요 ({value})"
    }
   ],
   "doneWhen": [
    {
-    "aria": "간단하게 광고를 소개하세요"
+    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
    }
   ]
+ },
+ {
+  "id": "meta.ad.website_url",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "labelledBy": "웹사이트 URL"
+   },
+   {
+    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
+   }
+  ],
+  "say": "② 세팅에서 알려 주신 스토어 주소를 넣을게요: {value}",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.ad.website_url.png",
+   "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
+  },
+  "auto": "type",
+  "level": "ad"
  },
  {
   "id": "meta.creative.copy.text",
@@ -364,12 +387,14 @@
    },
    {
     "role": "button",
-    "text": "문구",
-    "say": "창 위쪽 단계 표시에서 '문구'를 눌러 문구 칸으로 갈게요"
+    "text": "다음",
+    "inDialog": true,
+    "say": "창 오른쪽 아래 '다음'으로 한 단계씩 넘겨 '문구'까지 갈게요 (위쪽 단계 이름은 누르지 않아요)"
    },
    {
     "role": "button",
     "textStarts": "크리에이티브 설정",
+    "pageOnly": true,
     "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
    }
   ],
@@ -397,12 +422,14 @@
    },
    {
     "role": "button",
-    "text": "문구",
-    "say": "창 위쪽 단계 표시에서 '문구'를 눌러 문구 칸으로 갈게요"
+    "text": "다음",
+    "inDialog": true,
+    "say": "창 오른쪽 아래 '다음'으로 한 단계씩 넘겨 '문구'까지 갈게요 (위쪽 단계 이름은 누르지 않아요)"
    },
    {
     "role": "button",
     "textStarts": "크리에이티브 설정",
+    "pageOnly": true,
     "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
    }
   ],
@@ -414,30 +441,6 @@
   },
   "auto": "type",
   "level": "ad"
- },
- {
-  "id": "meta.ad.website_url",
-  "mode": "create",
-  "page": {
-   "urlIncludes": "adsmanager"
-  },
-  "find": [
-   {
-    "labelledBy": "웹사이트 URL"
-   },
-   {
-    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
-   }
-  ],
-  "say": "② 세팅에서 알려 주신 스토어 주소를 넣을게요: {value}",
-  "done": "value",
-  "fallback": {
-   "image": "guide/meta.ad.website_url.png",
-   "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
-  },
-  "auto": "type",
-  "level": "ad",
-  "outsideDialog": true
  },
  {
   "id": "meta.money_check",
@@ -457,7 +460,8 @@
    "text": "광고 세트 화면의 '예산 및 일정'을 열어 주세요. 돈 설정을 확인해야 게시로 넘어가요"
   },
   "auto": "moneyCheck",
-  "level": "adset"
+  "level": "adset",
+  "outsideDialog": true
  },
  {
   "id": "meta.publish",

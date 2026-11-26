@@ -13,7 +13,13 @@ export type FindStrategy = (
   | { role: string; text: string }
   | { role: string; textStarts: string }
   | { role: string; textPattern: string }   // 정규식 (예: "^연령\\d" → '연령18 - 65+'만, 도움말 링크 제외)
-) & { say?: string };
+) & {
+  say?: string;
+  /** 열린 창 안에서만 찾는다 (예: 창의 [다음]. 창이 없으면 편집 화면의 [다음]을 잘못 누르지 않게) */
+  inDialog?: boolean;
+  /** 창이 없을 때만 찾는다 (예: '크리에이티브 설정' 버튼. 창 안 위쪽 단계 이름을 눌러 단계를 건너뛰지 않게) */
+  pageOnly?: boolean;
+};
 
 /** 자동 진행에서 이 칸을 어떻게 할지: 고르기·넣기는 대신 하고, 날짜·지역·사진처럼 복잡한 칸은 사장님을 기다리고, 게시 앞에선 멈춘다. */
 /** 돈이 걸린 칸 (2026-11-26 사장님: "돈이 설정한 대로 잘 나가는지, 추가 지출은 없는지가 제일 중요"):

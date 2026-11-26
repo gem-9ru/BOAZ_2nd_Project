@@ -4,7 +4,7 @@ import { fakeBrowser } from "wxt/testing/fake-browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import CodeStep from "../entrypoints/sidepanel/steps/CodeStep";
-import GuideStep from "../entrypoints/sidepanel/steps/GuideStep";
+import GuideStep, { isLoginPage } from "../entrypoints/sidepanel/steps/GuideStep";
 import PlanStep from "../entrypoints/sidepanel/steps/PlanStep";
 import { initialState, reduce, type FlowState, type Plan } from "../lib/flow";
 import { nextTestSteps, type GuideStepItem } from "../lib/guide";
@@ -269,5 +269,29 @@ describe("EX-01 ④ 세팅 중 알림 · EX-02 ④ 세팅 요약 (v4.2)", () => 
     const card = screen.getByRole("region", { name: "이번 광고 세팅" });
     expect(within(card).getByText("트래픽 · 30–39세 · 여성")).toBeTruthy();
     expect(within(card).getByText("소재: 정사각 이미지")).toBeTruthy();
+  });
+});
+
+describe("처음 쓰는 사장님: 로그인 화면", () => {
+  it("광고 관리자 대신 페이스북 로그인 화면이 뜨면 직접 로그인하라고 알리고, 로그인 뒤 광고 관리자가 뜨면 뭉치를 이어서 부른다", async () => {
+    vi.restoreAllMocks();   // 앞 테스트가 바꿔 둔 탭 찾기(query) 흉내를 지운다
+    const tab = await fakeBrowser.tabs.create({ url: "https://www.facebook.com/login.php?next=https%3A%2F%2Fadsmanager.facebook.com%2F", active: true });
+    const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } };
+    render(<GuideStep state={state} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
+    expect(await screen.findByText(/페이스북에 로그인해 주세요/)).toBeTruthy();
+    expect(send).not.toHaveBeenCalled();
+    await fakeBrowser.tabs.update(tab.id!, { url: "https://adsmanager.facebook.com/adsmanager/manage/campaigns" });
+    await waitFor(() => expect(send).toHaveBeenCalled(), { timeout: 4000 });
+    expect(send.mock.calls[0]![0]).toBe(tab.id);
+    expect(screen.queryByText(/페이스북에 로그인해 주세요/)).toBeNull();
+  });
+
+  it("로그인 화면 주소를 알아본다 (광고 관리자 주소는 아님)", () => {
+    expect(isLoginPage("https://www.facebook.com/login.php?next=x")).toBe(true);
+    expect(isLoginPage("https://business.facebook.com/business/loginpage/?next=x")).toBe(true);
+    expect(isLoginPage("https://www.facebook.com/checkpoint/1501092823525282/")).toBe(true);
+    expect(isLoginPage("https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1")).toBe(false);
   });
 });

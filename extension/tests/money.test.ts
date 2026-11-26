@@ -87,6 +87,19 @@ describe("돈 칸 화면 조작", () => {
     expect(document.querySelector<HTMLInputElement>("input[type=checkbox]")!.checked).toBe(false);   // 예산 공유(최대 20%)는 끔
   });
 
+  it("budget share: Meta asks '예산 공유를 해제하시겠어요?' → presses '예산 공유 해제' (2026-11-26 실제 화면에서 멈춘 곳)", async () => {
+    campaign(true);
+    const box = document.querySelector<HTMLInputElement>("input[type=checkbox]")!;
+    box.addEventListener("click", (e) => {
+      e.preventDefault();   // 메타는 바로 끄지 않고 확인 창을 띄운다
+      document.body.insertAdjacentHTML("beforeend", `<div role="dialog"><div role="button" id="keep">예산 공유 계속 사용</div><div role="button" id="off">예산 공유 해제</div></div>`);
+      document.getElementById("off")!.addEventListener("click", () => { box.checked = false; document.querySelector("[role=dialog]")!.remove(); });
+    });
+    expect(await useAdsetBudget(document, fast)).toBe(true);
+    expect(box.checked).toBe(false);
+    expect(document.querySelector("[role=dialog]")).toBeNull();
+  });
+
   it("fails when the budget share box will not turn off", async () => {
     campaign(true);
     document.querySelector<HTMLInputElement>("input[type=checkbox]")!.addEventListener("click", (e) => e.preventDefault());

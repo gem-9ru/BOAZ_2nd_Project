@@ -61,9 +61,9 @@ export const SETTING_ORDER = [
   "meta.pre.ig_account",
   "meta.ad.format",
   "meta.ad.media",
+  "meta.ad.website_url",   // 광고 만들기 창 '크리에이티브 설정' 단계의 '소스 URL' (문구보다 앞, 2026-11-26 실제 화면)
   "meta.creative.copy.text",
   "meta.creative.copy.headline",
-  "meta.ad.website_url",
   "meta.money_check",   // 게시 앞 돈 확인 (총예산 종류·금액·종료 날짜를 화면에서 다시 읽음)
 ];
 

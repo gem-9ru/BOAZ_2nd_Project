@@ -70,8 +70,11 @@ function find(doc: Root, s: FindStrategy): HTMLElement | null {
 /** 앞에서부터 처음 찾은 칸과 그 방법의 순서. */
 /** root를 주면 그 안에서만 찾는다 (열린 창 안). */
 export function locateWith(doc: Document | Element, strategies: FindStrategy[]): { el: HTMLElement; index: number } | null {
+  const page = doc.nodeType === 9;   // Document = 창이 없을 때, Element = 열린 창 안
   for (let i = 0; i < strategies.length; i += 1) {
-    const el = find(doc, strategies[i]!);
+    const s = strategies[i]!;
+    if ((s.inDialog && page) || (s.pageOnly && !page)) continue;
+    const el = find(doc, s);
     if (el) return { el, index: i };
   }
   return null;

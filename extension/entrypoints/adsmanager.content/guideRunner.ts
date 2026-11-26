@@ -66,6 +66,8 @@ export class Guide {
   /** 칸 위치 지도: 칸 id → 어느 편집 화면의 어느 높이에 있었는지 (처음 편집 화면에 들어올 때 한 번 훑어 만든다) */
   private map: Record<string, { level: Level; scrollTop: number }> = {};
   private surveyed = false;
+  /** 끝까지 훑어 본 편집 화면. 여기서 못 찾은 칸은 접힌 구역 안에 있다 (예: 연령은 '타겟 추천' › '설정 표시' 안) */
+  private surveyedLevels = new Set<Level>();
   private surveying: string | null = null;
   private jumped = -1;   // 지도로 점프한 단계 (한 단계에 한 번만)
   private shown = -1;   // 이 단계 칸을 이미 가리켜 보여 줬는지
@@ -111,7 +113,7 @@ export class Guide {
       text: "문구를 칸에 넣지 못했어요. 복사해 두었으니 칸을 누르고 붙여 넣어(⌘V) 주세요. 다 했으면 '다 했어요'." };
     if (this.behindDialog) return { ...v, auto: this.auto, waiting: this.waiting,
       text: this.finishBtn && this.auto && this.waiting !== "owner"
-        ? "창 안 칸은 다 넣었어요. 창 오른쪽 아래 '다음'으로 끝까지 넘기고 '완료'로 창을 닫을게요. 창이 닫히면 웹사이트 칸을 짚을게요."
+        ? "창 안 칸은 다 넣었어요. 창 오른쪽 아래 '다음'으로 끝까지 넘기고 '완료'로 창을 닫을게요. 창이 닫히면 다음 칸을 짚을게요."
         : "열린 창 안의 남은 단계는 그대로 두고 오른쪽 아래 '다음'으로 끝까지 넘긴 뒤 '완료'를 눌러 창을 닫아 주세요. 창이 닫히면 이 칸을 짚을게요." };
     if (this.surveying) return { ...v, found: false, target: undefined, auto: this.auto, text: `화면을 먼저 둘러보고 칸 위치를 적어 둘게요 (${this.surveying})` };
     return { ...v, auto: this.auto, waiting: this.waiting,
@@ -202,8 +204,17 @@ export class Guide {
     }
     if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return true; }
     if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return true; }
+    if (!dialog && this.foldedField()) return false;   // 훑어 봐도 없던 칸 + 여는 버튼이 보임 → 또 끝까지 내려 보지 않고 그 버튼부터
     if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return true; }
     return false;
+  }
+
+  /** 이 화면을 끝까지 훑었는데도 칸이 지도에 없고, 지금 여는 버튼(힌트)이 보이면 true: 칸이 접힌 구역 안에 있다 */
+  private foldedField(): boolean {
+    const item = this.steps[this.index];
+    const level = item?.entry.level;
+    if (!item || !level || !this.surveyedLevels.has(level) || this.map[item.entry.id] || currentLevel(this.doc) !== level) return false;
+    return Boolean(this.target && item.entry.find[this.matched]?.say);
   }
 
   /** 칸이 다른 편집 화면(캠페인·광고 세트·광고)에 있으면 왼쪽 목록으로 그 화면에 간다. 갔으면 true.
@@ -248,6 +259,7 @@ export class Guide {
     for (const level of ["campaign", "adset", "ad"] as const) {
       const items = this.steps.filter((s) => s.entry.level === level && !s.entry.publish);
       if (!items.length || !goToLevel(this.doc, level)) continue;
+      this.surveyedLevels.add(level);
       this.surveying = NAMES[level]!;
       await pace.wait(SURVEY_LEVEL_WAIT);
       const sc = mainScroller(this.doc);
@@ -332,7 +344,15 @@ export class Guide {
   apply(): void {
     const item = this.steps[this.index];
     const el = this.target;
-    if (this.behindDialog) { this.seek(); return; }   // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않고 창이 닫혔는지만 다시 본다
+    if (this.behindDialog) {
+      // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않는다. 사장님이 창 안을 고쳤을 수 있으니 창 마무리([다음]·[완료])를 처음부터 다시 해 본다
+      this.finishPresses = 0;
+      this.dialogWait = false;
+      if (this.waiting === "owner") this.waiting = undefined;
+      this.nextAt = 0;
+      this.seek();
+      return;
+    }
     // 돈 칸: [다 했어요]·[다음 칸]도 화면에서 다시 읽어 맞을 때만 넘어간다 (칸이 다른 편집 화면이면 먼저 그 화면으로)
     if (this.languageOk && item && MONEY.has(item.entry.auto ?? "")) {
       if (!el && this.ensureLevel()) return;

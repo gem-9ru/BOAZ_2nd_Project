@@ -46,11 +46,11 @@ beforeEach(() => { document.documentElement.lang = "ko"; history.pushState({}, "
 describe("사진 칸 하위 단계", () => {
   it("guide JSON: media has 3 stages (buddy, buddy, owner) and a done signal, and passes validation", () => {
     expect(media.stages?.map((s) => s.by)).toEqual(["buddy", "buddy", "owner"]);
-    expect(media.doneWhen).toEqual([{ aria: "간단하게 광고를 소개하세요" }]);
+    expect(media.doneWhen).toEqual([{ placeholder: "광고 후 사람들이 방문하는 URL을 입력하세요" }]);   // 사진을 고르고 [다음]을 눌러야 보이는 칸
     expect(validateGuide(GUIDE.filter((e) => e.id === "meta.ad.media"), ["meta.ad.media"])).toEqual([]);
   });
 
-  it("① 열기 → ② 이미지 광고 → ③ 사장님이 사진 → ④ 문구 칸이 뜨면 바로 다음 칸 (각 버튼은 한 번만)", () => {
+  it("① 열기 → ② 이미지 광고 → ③ 사장님이 사진 → ④ '소스 URL' 칸이 뜨면 바로 다음 칸 (각 버튼은 한 번만)", () => {
     const { clicks } = fakeMeta();
     const seen: number[] = [];
     const g = new Guide(document, steps(), 0, (i) => seen.push(i), 0);
@@ -67,10 +67,10 @@ describe("사진 칸 하위 단계", () => {
     expect(clicks.image).toBe(1);
     expect(g.view()).toMatchObject({ waiting: "owner" });
     expect(g.view().target?.id).toBe("up");
-    expect(g.view().text).toMatch(/^3\/3 · 사진을 고르거나 '업로드'로 올리세요 \(세로 9:16 사진\)/);
+    expect(g.view().text).toMatch(/^3\/3 · 여기는 사장님이 직접 골라 주세요: 사진을 누르거나 '업로드'로 올리세요 \(세로 9:16 사진\)/);
 
-    // 사장님이 사진을 고름 → 창이 문구 단계로 바뀜
-    document.getElementById("dlg")!.innerHTML = `<div contenteditable="true" aria-label="간단하게 광고를 소개하세요"></div>`;
+    // 사장님이 사진을 고르고 [다음] → 창이 크리에이티브 설정 단계(소스 URL)로 바뀜
+    document.getElementById("dlg")!.innerHTML = `<input placeholder="광고 후 사람들이 방문하는 URL을 입력하세요">`;
     run(g, t, 1);
     expect(seen).toEqual([1]);
     expect(clicks).toEqual({ cs: 1, image: 1 });

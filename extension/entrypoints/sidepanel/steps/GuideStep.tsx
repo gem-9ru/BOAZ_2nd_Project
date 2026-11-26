@@ -27,13 +27,33 @@ export function daysUntil(end: string | undefined, today: Date = new Date()): nu
   return d > 0 ? d : null;
 }
 
-const isAds = (url?: string) => /^https:\/\/(adsmanager|business)\.facebook\.com\//.test(url ?? "");
+/** 페이스북 로그인·본인 확인 화면: 처음 쓰는 사장님이 광고 관리자를 열면 메타가 먼저 이리로 보낸다 */
+export const isLoginPage = (url?: string) =>
+  /^https:\/\/([a-z]+\.)?facebook\.com\/(login|business\/loginpage|checkpoint|two_step_verification|recover)/.test(url ?? "");
+const isAds = (url?: string) => /^https:\/\/(adsmanager|business)\.facebook\.com\//.test(url ?? "") && !isLoginPage(url);
+const LOGIN_WAIT_MS = 15 * 60 * 1000;   // 로그인(본인 확인 포함)을 기다리는 가장 긴 시간
+
+/** 탭이 광고 관리자 화면이 될 때까지 기다린다. 로그인 화면이면 onLogin을 한 번 부르고 계속 기다린다. 탭이 닫히거나 너무 오래면 false */
+async function waitForAds(tab: { id?: number; url?: string; status?: string }, onLogin: () => void): Promise<boolean> {
+  const end = Date.now() + LOGIN_WAIT_MS;
+  let told = false;
+  for (let first = true; Date.now() < end; first = false) {
+    // 처음 한 번은 방금 찾은 탭 정보로도 본다 (탭을 다시 못 읽으면). 그 뒤 못 읽으면 탭이 닫힌 것
+    const t = (await browser.tabs.get(tab.id!).catch(() => null)) ?? (first ? tab : null);
+    if (!t) return false;
+    if (isAds(t.url) && t.status !== "loading") return true;
+    if (!told && isLoginPage(t.url)) { told = true; onLogin(); }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
+}
 
 /** 뭉치를 보낼 광고 관리자 탭: 지금 창에서 보고 있는 탭 → 다른 광고 관리자 탭 (반쯤 채운 초안을 떠나지 않게). */
 async function findAdsTab() {
   const [active] = await browser.tabs.query({ active: true, currentWindow: true }).catch(() => []);
   if (active && isAds(active.url)) return active;
-  const all = (await browser.tabs.query({})).filter((t) => isAds(t.url));
+  if (active && isLoginPage(active.url)) return active;   // 아까 연 광고 관리자가 로그인 화면으로 넘어가 있음
+  const all = (await browser.tabs.query({})).filter((t) => isAds(t.url) || isLoginPage(t.url));
   return all.find((t) => t.active) ?? all[0];
 }
 
@@ -56,12 +76,22 @@ export default function GuideStep({ state, dispatch }: Props) {
   const index = state.guide?.index ?? 0;
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [login, setLogin] = useState(false);   // 로그인 화면에서 사장님을 기다리는 중
 
   async function open() {
     setBusy(true);
     setError(null);
     dispatch({ type: "guideOpened" });   // 뭉치가 집을 나선다
     const tab = await adsTab();
+    // 처음 쓰는 사장님: 메타가 로그인 화면으로 보낸다 → 로그인은 사장님이 직접, 광고 관리자가 뜨면 이어서 부른다
+    if (tab.id && !(await waitForAds(tab, () => { setLogin(true); setBusy(false); }))) {
+      setLogin(false);
+      setBusy(false);
+      setError("광고 관리자 화면이 뜨지 않았어요 → 로그인한 뒤 '광고 관리자 열기'를 다시 눌러 주세요.");
+      return;
+    }
+    setLogin(false);
+    setBusy(true);
     const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index, ...(next ? { focus: true } : {}) } satisfies GuideMsg);
     let ok = await sendWithRetry(send, 2, 800);
     if (!ok && tab.id) {
@@ -147,6 +177,12 @@ export default function GuideStep({ state, dispatch }: Props) {
           );
         })}
       </ol>
+      {login && (
+        <p role="status" className="rounded-button bg-info-bg px-3 py-2 text-caption text-ink">
+          <span aria-hidden="true" className="font-bold text-info">● </span><span className="sr-only">참고 </span>
+          광고 관리자 대신 페이스북 로그인 화면이 열렸어요. 그 탭에서 페이스북에 로그인해 주세요 (비밀번호는 사장님이 직접 넣어요). 로그인이 끝나 광고 관리자가 뜨면 뭉치가 이어서 시작해요.
+        </p>
+      )}
       {error && <WarnLine message={error} onRetry={open} />}
       {mode === "create" && (state.prepMissing?.length ?? 0) > 0 && (
         <div role="status" className="flex flex-col gap-2 rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">

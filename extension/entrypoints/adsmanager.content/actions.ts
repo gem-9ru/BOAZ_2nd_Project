@@ -211,7 +211,13 @@ export async function useAdsetBudget(doc: Document, pace: Pace = real): Promise<
   // '예산 일부를 다른 광고 세트와 공유하기'(최대 20%)는 새 캠페인에서 기본으로 켜져 있다 (2026-11-26 새 초안에서 확인).
   // 켜 두면 A·B 중 한 세트가 자기 총예산보다 더 쓸 수 있다 → 끈다. 누르면 0.5초쯤 뒤에 반영된다
   const share = () => doc.querySelector<HTMLInputElement>(`input[type=checkbox][aria-label="${SHARE}"]`);
-  if (share()?.checked) { share()!.click(); await pace.wait(1200); }
+  if (share()?.checked) {
+    share()!.click();
+    await pace.wait(1200);
+    // 메타는 바로 끄지 않고 '예산 공유를 해제하시겠어요?' 창을 띄운다 (2026-11-26 실제 화면) → '예산 공유 해제'
+    const off = byRoleText(doc, "button", (t) => t === "예산 공유 해제");
+    if (off) { off.click(); await pace.wait(1200); }
+  }
   if (share()?.checked) { note("budget share did not turn off"); return false; }
   return true;
 }
