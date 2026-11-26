@@ -256,10 +256,12 @@ describe("7단계 결과 (v4.2)", () => {
     fireEvent.click(screen.getByRole("tab", { name: "가상 케이스" }));
     const table = screen.getByRole("table", { name: "가상 케이스 6개 결과" });
     expect(within(table).getAllByRole("row")).toHaveLength(7);   // 머리 1 + 케이스 6
-    const c3 = within(table).getByRole("row", { name: /C3 좁게·길게 인지도/ });
-    expect(within(c3).getByText("13,999원")).toBeTruthy();
-    expect(within(c3).getByText("100,370원")).toBeTruthy();
-    expect(within(within(table).getByRole("row", { name: /C0 광고 안 함/ })).getAllByText("–")).toHaveLength(3);
+    const v5 = within(table).getByRole("row", { name: /V5 B 웹사이트 주소 잘못/ });
+    expect(within(v5).getByText("광고 › 웹사이트 URL: 주소·속도 점검")).toBeTruthy();
+    expect(within(v5).getByText("페이지 도착 적음")).toBeTruthy();
+    expect(within(table).getByRole("row", { name: /V6 좁은 지역/ }).textContent).toContain("반복 노출");
+    expect(table.textContent).not.toMatch(/네이버/);   // 네이버 광고는 돌리지 않음 → 메타 설정 케이스만
+    expect(screen.getByText(/같은 설정 두 세트\(V2\)를 40번 만들어 보면/)).toBeTruthy();
     expect(screen.getByText(/판정에는 쓰지 않아요/)).toBeTruthy();
   });
 });

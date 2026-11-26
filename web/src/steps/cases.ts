@@ -1,15 +1,82 @@
-/** AN-06 근거 탭 '가상 케이스' 6개 (v4 4-1장: 근거 탭·발표 자료만, 판정에는 안 씀).
- *  원본: server/data/demo/소연베이크_가상광고데이터.xlsx '케이스 요약' 시트의 '가상 실제' 줄
- *  (시뮬레이션 · 2026-11-12 · gen.py 시드 20261112 · 예산 30만 원 · 객단가 2.6만 원 · 광고 기간 + 잔존 7일).
- *  주문 = 광고 덕분 주문 합계(직접 클릭 + 광고를 보고 나중에 검색해서 산 주문, 시뮬레이터만 아는 정답).
- *  주문 1건당 비용(실제) = 지출 ÷ 그 합계, 마지막 클릭만 = 지출 ÷ 직접 클릭 주문. 숫자는 원 단위 반올림. */
-export interface VirtualCase { id: string; name: string; spend: number; orders: number | null; cost: number | null; lastClick: number | null; roas: number | null }
+// scripts/virtual_cases.py 가 만든 파일 (손으로 고치지 않음). 원본: server/engine/loop/virtual.py, 시드 20261126
+/** AN-06 근거 탭 '가상 케이스' 6개: 메타 설정 하나만 다르게 한 A/B를 오븐로그 실측 비율로 만들어 분석 엔진에 넣은 결과. 판정에는 안 씀. */
+export interface VirtualCase { id: string; setting: string; basis: string; conclusion: string;
+  word: "확실해요" | "A 쪽이에요" | "B 쪽이에요" | "아직 몰라요" | null; prob: number | null; better: "A" | "B" | null; alerts: string[] }
 
 export const VIRTUAL_CASES: VirtualCase[] = [
-  { id: "C1", name: "추천 경로 (메타 + 네이버)", spend: 287868, orders: 28.44, cost: 10122, lastClick: 23989, roas: 2.57 },
-  { id: "C2", name: "플랫폼 기본값 (메타 자동)", spend: 299461, orders: 29.34, cost: 10207, lastClick: 18716, roas: 2.55 },
-  { id: "C3", name: "좁게·길게 인지도", spend: 301111, orders: 21.51, cost: 13999, lastClick: 100370, roas: 1.86 },
-  { id: "C4", name: "네이버만", spend: 250835, orders: 15, cost: 16722, lastClick: 16722, roas: 1.55 },
-  { id: "C0", name: "광고 안 함", spend: 0, orders: 0, cost: null, lastClick: null, roas: null },
-  { id: "C1b", name: "개선 사이클 (C1을 한 번 고침)", spend: 304891, orders: 26.49, cost: 11510, lastClick: 25408, roas: 2.26 },
+  {
+    "id": "V1",
+    "setting": "노출 위치: 자동 vs 직접 고르기",
+    "basis": "실측",
+    "conclusion": "광고 › 형식·미디어: + 세로(9:16) 1개",
+    "word": "B 쪽이에요",
+    "prob": 0.74,
+    "better": "B",
+    "alerts": [
+      "small_sample"
+    ]
+  },
+  {
+    "id": "V2",
+    "setting": "같은 설정 두 세트 (차이 없음)",
+    "basis": "실측",
+    "conclusion": "광고 › 형식·미디어: + 세로(9:16) 1개",
+    "word": "확실해요",
+    "prob": 0.93,
+    "better": "B",
+    "alerts": []
+  },
+  {
+    "id": "V3",
+    "setting": "총예산이 '하루 최소 × 기간'보다 적음 (두 세트 모두 2,000원)",
+    "basis": "실측 (11/17 안 나간 날)",
+    "conclusion": "광고 세트 › 예산: 총예산 넉넉하게",
+    "word": "B 쪽이에요",
+    "prob": 0.81,
+    "better": "B",
+    "alerts": [
+      "no_delivery",
+      "underspent",
+      "small_sample"
+    ]
+  },
+  {
+    "id": "V4",
+    "setting": "예산 공유(최대 20%) 켬 → 한 세트에 돈이 몰림",
+    "basis": "실측 (희수 실험 28 : 72)",
+    "conclusion": "광고 › 형식·미디어: + 세로(9:16) 1개",
+    "word": "아직 몰라요",
+    "prob": 0.88,
+    "better": "B",
+    "alerts": [
+      "spend_gap"
+    ]
+  },
+  {
+    "id": "V5",
+    "setting": "B 웹사이트 주소 잘못 (페이지가 늦게 열림)",
+    "basis": "가정: 도착 비율 45%",
+    "conclusion": "광고 › 웹사이트 URL: 주소·속도 점검",
+    "word": "A 쪽이에요",
+    "prob": 0.72,
+    "better": "A",
+    "alerts": [
+      "low_visit_rate"
+    ]
+  },
+  {
+    "id": "V6",
+    "setting": "좁은 지역 + 14일 (같은 사람에게 반복)",
+    "basis": "가정: 빈도 3번 · 뒤 절반 클릭 30%↓",
+    "conclusion": "광고 › 형식·미디어: + 새 소재 1개",
+    "word": "아직 몰라요",
+    "prob": 0.67,
+    "better": "B",
+    "alerts": [
+      "high_frequency"
+    ]
+  }
 ];
+
+/** 같은 설정 두 세트(V2)를 시드만 바꿔 돌렸을 때 판정 횟수: 우연한 차이를 차이로 본 비율 */
+export const SAME_SETTING_RUNS = {"runs": 40, "sure": 6, "lean": 19, "unknown": 15};
