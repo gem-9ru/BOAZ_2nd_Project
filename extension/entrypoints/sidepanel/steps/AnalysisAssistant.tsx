@@ -17,6 +17,7 @@ const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: 
 export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab; dispatch: (ev: FlowEvent) => void }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);   // 단계 첫 말을 기다리는 중
   const seen = useRef(new Set<string>());
   const sent = useRef<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
@@ -29,7 +30,8 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
   useEffect(() => {
     if (!code || !step || seen.current.has(step)) return;
     seen.current.add(step);
-    askAssistant(code, step).then((o) => {
+    setLoading(true);
+    askAssistant(code, step).finally(() => setLoading(false)).then((o) => {
       setBubbles((b) => [...b, ...(o.alerts ?? []).map((a) => ({ from: "assistant" as const, text: `${a.text} ${a.todo}`, alert: a })), { from: "assistant", text: o.message }]);
       setSuggestions(o.suggestions ?? []);
     }, () => setBubbles((b) => [...b, { from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 분석 페이지의 내용은 그대로 보실 수 있어요." }]));
@@ -78,6 +80,7 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
         ) : (
           <p key={i} className={bubbleClass(b.from)}>{b.text}</p>
         ))}
+        {loading && <p role="status" className="text-caption text-soft">이 단계 설명을 불러오는 중…</p>}
         {busy && <p role="status" className="text-caption text-soft">생각하는 중…</p>}
         <div ref={end} />
       </div>

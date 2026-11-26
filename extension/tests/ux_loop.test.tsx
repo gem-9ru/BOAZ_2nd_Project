@@ -90,3 +90,40 @@ describe("6. 코드 칸은 '보내기가 안 되면'으로 접어 둔다", () =>
   });
 });
 
+
+describe("7. 다음 테스트 세팅에서 결과 화면으로 돌아가기", () => {
+  it("backToPlan returns to the result screen and undoes the new value, dates and amount", async () => {
+    const { reduce } = await import("../lib/flow");
+    const before = { ...initialState(), step: "plan" as const, plan, startDate: "2026-11-17", endDate: "2026-11-20",
+      settings: [...budget, { fieldId: "meta.ad.media", label: "형식·미디어", value: "가로 사진" }] };
+    const next = reduce(before, { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "세로 소재",
+      startDate: "2026-11-27", endDate: "2026-11-30", budget: "5,400원" });
+    expect(next.step).toBe("guide");
+    const back = reduce(next, { type: "backToPlan" });
+    expect(back.step).toBe("plan");
+    expect(back.guide).toBeNull();
+    expect(back.settings).toEqual(before.settings);
+    expect([back.startDate, back.endDate]).toEqual(["2026-11-17", "2026-11-20"]);
+    // 게시까지 끝내면(guideDone) 되돌릴 값은 버린다
+    const done = reduce(next, { type: "guideDone" });
+    expect(reduce(done, { type: "backToPlan" }).step).toBe("wait");
+  });
+});
+
+describe("8. 어시스턴트 첫 답을 기다리는 동안", () => {
+  it("shows a loading line (not an empty box)", async () => {
+    const { default: AnalysisAssistant } = await import("../entrypoints/sidepanel/steps/AnalysisAssistant");
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-01", send: null }} dispatch={() => {}} />);
+    expect(screen.getByRole("status").textContent).toMatch(/불러오는 중/);
+  });
+});
+
+describe("9. 묻기 칸 이름이 보인다", () => {
+  it("the ask box has a visible label (not only a placeholder)", async () => {
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
+    const label = document.querySelector('label[for="ex-ask"]')!;
+    expect(label.textContent).toBe("어시스턴트에게 묻기");
+    expect(label.className).not.toContain("sr-only");
+  });
+});

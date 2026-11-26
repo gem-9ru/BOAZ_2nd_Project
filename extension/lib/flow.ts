@@ -50,6 +50,8 @@ export interface FlowState {
   startDate?: string;
   endDate?: string;
   plan?: Plan;
+  /** [다음 테스트 세팅]을 누르기 전 값 — [결과 화면으로 돌아가기]면 되돌린다. 게시까지 끝내면(guideDone) 버린다 */
+  beforeNext?: { settings: Setting[]; startDate?: string; endDate?: string };
   /** 시작 전 준비물에서 아직 안 된 꼭 필요한 것 (이름). 하나라도 있으면 [광고 관리자 열기]를 막는다 */
   prepMissing?: string[];
 }
@@ -77,6 +79,7 @@ export type FlowEvent =
   | { type: "startFix" }
   /** startDate·endDate·budget: 다음 테스트의 새 날짜(YYYY-MM-DD)와 세트당 총예산('5,400원'). 지난 날짜·금액을 그대로 쓰지 않게 */
   | { type: "startNextTest"; fieldId: string; label: string; value: string; startDate?: string; endDate?: string; budget?: string }
+  | { type: "backToPlan" }
   | { type: "prepDone"; missing: string[] }
   | { type: "openPrep" }
   | { type: "reset" };
@@ -123,7 +126,7 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
     case "guideClosed":
       return s.guide ? { ...s, guide: { ...s.guide, away: false } } : s;
     case "guideDone":
-      return { ...s, step: "wait", guide: null };
+      return { ...s, step: "wait", guide: null, beforeNext: undefined };
     case "startExport":
       return { ...s, guide: { mode: "export", index: 0 } };
     case "startUpload":
@@ -140,8 +143,11 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       const settings = (has ? s.settings : [...s.settings, { fieldId: ev.fieldId, label: ev.label, value: ev.value }])
         .map((x) => (x.fieldId === ev.fieldId ? { ...x, value: ev.value } : fresh[x.fieldId] ? { ...x, value: fresh[x.fieldId]! } : x));
       return { ...s, settings, startDate: ev.startDate ?? s.startDate, endDate: ev.endDate ?? s.endDate,
+        beforeNext: s.beforeNext ?? { settings: s.settings, startDate: s.startDate, endDate: s.endDate },
         step: "guide", guide: { mode: "create", index: 0, next: ev.fieldId } };
     }
+    case "backToPlan":
+      return s.beforeNext ? { ...s, ...s.beforeNext, beforeNext: undefined, step: "plan", guide: null } : s;
     case "prepDone":
       // 처음이면 ① 찾기로, 광고 관리자 열기에서 돌아왔으면 하던 단계(② 세팅 목록)로
       return { ...s, prepMissing: ev.missing, step: s.settings.length ? "guide" : "find",
