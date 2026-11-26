@@ -18,7 +18,7 @@ const won = (n: number) => `${Math.round(n).toLocaleString()}원`;
 
 /** 종료 날짜까지 며칠 (오늘 포함). 날짜가 아니면 null. */
 export function daysUntil(end: string | undefined, today: Date = new Date()): number | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(end ?? "");
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?: \d{2}:\d{2})?$/.exec(end ?? "");   // 시각이 붙어 있어도 날짜로 셈
   if (!m) return null;
   const a = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   const b = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
@@ -163,7 +163,10 @@ export default function GuideStep({ state, dispatch }: Props) {
  *  - 게시 직전 확인: 꼭 채워야 할 칸이 비어 있으면 ▲ */
 function InlineNotice({ id, publish, state }: { id: string; publish: boolean; state: FlowState }) {
   if (id === "meta.adset.end_date") {
-    const days = daysUntil(state.settings.find((x) => x.fieldId === id)?.value);
+    // 기간은 시작일부터 (예약 광고면 시작일, 아니면 오늘)
+    const start = /^(\d{4})-(\d{2})-(\d{2})$/.exec(state.startDate ?? "");
+    const from = start ? new Date(Number(start[1]), Number(start[2]) - 1, Number(start[3])) : new Date();
+    const days = daysUntil(state.settings.find((x) => x.fieldId === id)?.value, from > new Date() ? from : new Date());
     if (!days) return null;
     return (
       <span className="flex gap-1.5 rounded-button bg-info-bg px-2 py-1 text-ink">

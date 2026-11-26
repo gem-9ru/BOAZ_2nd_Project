@@ -12,7 +12,7 @@ describe("GuideStep", () => {
     const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 2 } };
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(14);
+    expect(items).toHaveLength(15);
     expect(items[2]!.getAttribute("aria-current")).toBe("step");
     expect(screen.getByRole("button", { name: "광고 관리자 열기" })).toBeTruthy();
   });
@@ -23,5 +23,11 @@ describe("WaitStep", () => {
     render(<WaitStep state={{ ...initialState(), step: "wait", endDate: "2026-12-06" }} dispatch={() => {}} />);
     expect(screen.getByText(/2026-12-07에 결과를 보러 오세요/)).toBeTruthy();
     expect(screen.getByRole("button", { name: "결과 분석하기" })).toBeTruthy();
+    expect(screen.queryByText(/에 시작해요/)).toBeNull();
+  });
+
+  it("a start date in the future is said in one line", () => {
+    render(<WaitStep state={{ ...initialState(), step: "wait", startDate: "2099-12-01", endDate: "2099-12-14" }} dispatch={() => {}} />);
+    expect(screen.getByText(/광고는 12월 1일에 시작해요/)).toBeTruthy();
   });
 });

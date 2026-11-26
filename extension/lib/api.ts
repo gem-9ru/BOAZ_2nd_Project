@@ -70,11 +70,20 @@ export interface Field {
     say: Record<string, string>;
     /** 답 → 미리 채울 값 틀. 목록이면 다 채워지는 첫 틀 */
     prefill?: Record<string, string | string[]>;
+    /** 상품 페이지 주소가 없을 때 바꿀 답 (예: 스토어 상품 페이지 → 인스타그램 프로필) */
+    none?: Record<string, string>;
   } | null;
   /** 앞 답에 따라 권장 답을 바꿈: {앞 칸 id: {앞 답: 권장 답}} */
   default_if?: Record<string, Record<string, string>> | null;
   /** 앞 답에 따라 질문 아래에 붙일 한 줄: {앞 칸 id: {앞 답: 안내}} */
   note_if?: Record<string, Record<string, string>> | null;
+  /** 선택지 밖 직접 정하기. dates: 시작일·종료일 (답 'yyyy-mm-dd~yyyy-mm-dd'),
+   *  area: custom_for 답을 고르면 가게 주소·반경 (답 '가게 주변 5km · 서울 마포구 망원동') */
+  custom?: "dates" | "area" | null;
+  /** custom 칸을 여는 답 (area). 없으면 [날짜 직접 정하기]처럼 따로 버튼 */
+  custom_for?: string[] | null;
+  /** 고른 답 대신 세팅에 넣을 값 (예: 택배로 보내요 → 전국 (택배)) */
+  answer_as?: Record<string, string> | null;
 }
 
 /** 할 일 체크리스트 한 줄. hint: keywords → ① 찾기에서 고른 검색어 한 줄 */

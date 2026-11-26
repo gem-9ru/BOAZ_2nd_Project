@@ -16,7 +16,7 @@ export type FindStrategy = (
 ) & { say?: string };
 
 /** 자동 진행에서 이 칸을 어떻게 할지: 고르기·넣기는 대신 하고, 날짜·지역·사진처럼 복잡한 칸은 사장님을 기다리고, 게시 앞에선 멈춘다. */
-export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "endDate" | "ageGender" | "location";
+export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "startDate" | "endDate" | "ageGender" | "location";
 
 /** 칸이 있는 화면: list = 캠페인 목록(만들기 창), 나머지는 편집 화면 왼쪽 목록의 세 줄 */
 export type Level = "list" | "campaign" | "adset" | "ad";

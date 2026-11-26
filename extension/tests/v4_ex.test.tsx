@@ -40,13 +40,13 @@ describe("EX-01 ② 세팅", () => {
     expect(g.view().index).toBe(0);
   });
 
-  it("panel shows progress like 8/14 with a bar", () => {
+  it("panel shows progress like 8/15 with a bar", () => {
     const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 7 } };
     render(<GuideStep state={state} dispatch={() => {}} />);
-    expect(screen.getByText("8 / 14")).toBeTruthy();
+    expect(screen.getByText("8 / 15")).toBeTruthy();
     const bar = screen.getByRole("progressbar");
     expect(bar.getAttribute("aria-valuenow")).toBe("7");
-    expect(bar.getAttribute("aria-valuemax")).toBe("14");
+    expect(bar.getAttribute("aria-valuemax")).toBe("15");
   });
 
   it("panel has [이전 칸] [다음 칸] that move the character on the Ads Manager tab", async () => {
@@ -222,12 +222,12 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
       { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(14);
+    expect(items).toHaveLength(15);
     const now = items.filter((li) => li.getAttribute("aria-current") === "step");
     expect(now).toHaveLength(1);
     expect(now[0]!.textContent).toContain("+ 세로(9:16) 1개");
     expect(now[0]!.textContent).toContain("지금");
-    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(12);   // 나머지 12칸은 끝난 칸, 게시 확인만 남음
+    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(13);   // 나머지 13칸은 끝난 칸, 게시 확인만 남음
     expect(screen.getByText(/복제한 세트에서 '칸 meta.ad.media' 칸만 바꾸면 돼요/)).toBeTruthy();
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);

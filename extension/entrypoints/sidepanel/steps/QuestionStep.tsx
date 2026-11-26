@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Field, OptionHelp, PresetField } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { askedFields, buildSettings, endDateFrom } from "../../../lib/settings";
+import { askedFields, buildSettings, isoDate, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
@@ -25,8 +25,9 @@ export default function QuestionStep({ state, dispatch, fields, defaults }: Prop
     for (const [k, v] of Object.entries(extra)) dispatch({ type: "answer", id: k, value: v });
     const answers = { ...state.answers, [id]: value, ...extra };
     if (asked.every((f) => f.id in answers) && state.target && state.copy) {
-      const endDate = endDateFrom(answers["meta.adset.end_date"] ?? "14일");
-      dispatch({ type: "questionsDone", settings: buildSettings(fields, answers, state.target, state.copy, endDate), endDate });
+      const when = scheduleFrom(answers["meta.adset.end_date"] ?? "14일");
+      dispatch({ type: "questionsDone", settings: buildSettings(fields, answers, state.target, state.copy, when),
+        startDate: when.start, endDate: when.end });
     }
   }
 
@@ -104,6 +105,8 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
   const [helpFor, setHelpFor] = useState<string | null>(null);   // 할 일이 있는 답을 골랐을 때 (예: 페이지 없어요)
   const help = helpFor ? field.help?.[helpFor] : undefined;
   const [picked, setPicked] = useState<string | null>(null);     // 이어 받을 주소가 있는 답을 골랐을 때 (예: 스토어 상품 페이지)
+  const [dates, setDates] = useState(false);                      // [날짜 직접 정하기]를 눌렀을 때
+  const [areaFor, setAreaFor] = useState<string | null>(null);    // 가게·배달을 골랐을 때 (가게 주소·반경)
   const [url, setUrl] = useState("");
   const then = picked ? field.then_ask : undefined;
   /** 이 답을 고르면 주소를 이어 받을 칸 (없으면 바로 넘어감) */
@@ -119,7 +122,12 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
     // 미리 채우기: 틀 → (같은 답을 골랐던 적이 있으면) 그때 넣은 주소. 다른 답의 주소는 쓰지 않음 (인스타 주소가 상품 주소로 새지 않게)
     setPicked(o); setUrl(fill(field.then_ask?.prefill?.[o], answers) || (answers[field.id] === o ? answers[to] ?? "" : "")); setBad(false);
   };
-  const pick = (o: string) => (field.help?.[o] ? setHelpFor(o) : finish(o));
+  const pick = (o: string) => {
+    if (field.help?.[o]) return setHelpFor(o);
+    if (field.custom === "area" && field.custom_for?.includes(o)) return setAreaFor(o);
+    if (field.answer_as?.[o]) return onAnswer(field.answer_as[o]!);
+    finish(o);
+  };
   function submitThen() {
     const u = webAddress(url);
     const to = picked ? thenField(picked) : undefined;
@@ -141,7 +149,11 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
         {field.why && <p className="text-caption text-soft mt-1">{field.why}</p>}
         {note && <p className="text-caption text-ink mt-1">{note}</p>}
       </Coach>
-      {then && picked ? (
+      {areaFor ? (
+        <ShopArea way={areaFor} onBack={() => setAreaFor(null)} onDone={(v) => onAnswer(v)} />
+      ) : dates ? (
+        <DateRange onBack={() => setDates(false)} onDone={(v) => onAnswer(v)} />
+      ) : then && picked ? (
         <div className="flex flex-col gap-2">
           <p className="text-caption"><span className="font-semibold">{picked}</span>로 보낼게요.</p>
           <label htmlFor="then-url" className="text-caption text-soft">{then.say[picked] ?? "주소를 알려 주세요."}</label>
@@ -151,6 +163,11 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
             className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
           {bad && <p role="alert" className="text-caption text-block-ink">https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
           <PrimaryButton onClick={submitThen} disabled={!url.trim()}>다음</PrimaryButton>
+          {then.none?.[picked] && (
+            <button type="button" onClick={() => finish(then.none![picked]!)} className="self-start text-caption text-accent-ink underline">
+              상품 페이지 주소가 없어요 → 인스타그램 프로필로 보낼게요
+            </button>
+          )}
           <button type="button" onClick={() => setPicked(null)} className="self-start text-caption text-soft underline">← 다시 고르기</button>
         </div>
       ) : help && helpFor ? (
@@ -180,6 +197,11 @@ function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
               {o === recommended && <span className="block text-caption font-normal text-soft">권장</span>}
             </button>
           ))}
+          {field.custom === "dates" && (
+            <button type="button" onClick={() => setDates(true)} className="rounded-button border border-line px-4 py-3 text-left text-body">
+              날짜 직접 정하기
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -232,6 +254,105 @@ function HelpChecklist({ steps, checked, keywords, onCheck }: {
           </li>
         ))}
       </ul>
+    </div>
+  );
+}
+
+/** '2026-12-01' → '12월 1일', 시각이 있으면 '12월 1일 오전 9시' */
+function monthDay(iso: string, time = ""): string {
+  const [, m, d] = iso.split("-").map(Number);
+  if (!time) return `${m}월 ${d}일`;
+  const [h, min] = time.split(":").map(Number);
+  const half = h! < 12 ? "오전" : "오후";
+  const h12 = h! % 12 === 0 ? 12 : h! % 12;
+  return `${m}월 ${d}일 ${half} ${h12}시${min ? ` ${min}분` : ""}`;
+}
+
+/** 시작일·종료일 고르기 (시각은 선택). 시작일은 오늘부터, 종료일은 시작일 다음 날부터. 기간은 시작일·종료일을 모두 셈 */
+function DateRange({ onBack, onDone }: { onBack: () => void; onDone: (value: string) => void }) {
+  const now = new Date();
+  const today = isoDate(now);
+  const [start, setStart] = useState(today);
+  const [end, setEnd] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [tried, setTried] = useState(false);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const startBad = Boolean(start) && start < today;
+  const timeBad = !startBad && start === today && Boolean(startTime) && startTime <= `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const endBad = Boolean(start && end) && end <= start;
+  const ok = Boolean(start && end) && !startBad && !timeBad && !endBad;
+  const days = ok ? Math.round((Date.parse(end) - Date.parse(start)) / 86400000) + 1 : 0;
+  const box = "rounded-button border border-field-line bg-paper px-3 py-2.5 text-body";
+  const value = `${start}${startTime ? ` ${startTime}` : ""}~${end}${endTime ? ` ${endTime}` : ""}`;
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <div className="flex flex-1 flex-col gap-1">
+            <label htmlFor="date-start" className="text-caption text-soft">시작일</label>
+            <input id="date-start" type="date" value={start} min={today} onChange={(e) => setStart(e.target.value)}
+              aria-invalid={(tried && startBad) || undefined} className={box} />
+          </div>
+          <div className="flex w-28 flex-col gap-1">
+            <label htmlFor="time-start" className="text-caption text-soft">시작 시각</label>
+            <input id="time-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+              aria-invalid={(tried && timeBad) || undefined} className={box} />
+          </div>
+        </div>
+        {tried && startBad && <p role="alert" className="text-caption text-block-ink">오늘이나 그 뒤 날짜로 골라 주세요.</p>}
+        {tried && timeBad && <p role="alert" className="text-caption text-block-ink">오늘 시작하면 지금보다 뒤 시각으로 골라 주세요.</p>}
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <div className="flex flex-1 flex-col gap-1">
+            <label htmlFor="date-end" className="text-caption text-soft">종료일</label>
+            <input id="date-end" type="date" value={end} min={start || today} onChange={(e) => setEnd(e.target.value)}
+              aria-invalid={(tried && endBad) || undefined} className={box} />
+          </div>
+          <div className="flex w-28 flex-col gap-1">
+            <label htmlFor="time-end" className="text-caption text-soft">종료 시각</label>
+            <input id="time-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={box} />
+          </div>
+        </div>
+        {tried && !startBad && endBad && <p role="alert" className="text-caption text-block-ink">종료일을 시작일 다음 날 이후로 골라 주세요.</p>}
+      </div>
+      <p className="text-caption text-soft">시각은 비워 두면 광고 관리자에 정해진 시각 그대로 둬요.</p>
+      {ok && <p className="text-body">{monthDay(start, startTime)}부터 {monthDay(end, endTime)}까지, {days}일 동안 광고해요.</p>}
+      <PrimaryButton onClick={() => (ok ? onDone(value) : setTried(true))} disabled={!start || !end}>다음</PrimaryButton>
+      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+    </div>
+  );
+}
+
+const RADII = ["3km", "5km", "10km"];
+
+/** 가게·배달: 가게 주소(시·구·동)와 반경. 값은 세팅 목록·뭉치 안내에 그대로 보인다 (지도에서 고르는 건 사장님) */
+function ShopArea({ way, onBack, onDone }: { way: string; onBack: () => void; onDone: (value: string) => void }) {
+  const [address, setAddress] = useState("");
+  const [radius, setRadius] = useState("5km");
+  const place = address.trim().replace(/\s+/g, " ");
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-caption"><span className="font-semibold">{way}</span> → 가게 주변 손님에게만 보여 줄게요.</p>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="shop-address" className="text-caption text-soft">가게 주소 (시·구·동)</label>
+        <input id="shop-address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="off"
+          placeholder="예: 서울 마포구 망원동" className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <p id="shop-radius" className="text-caption text-soft">가게에서 얼마나 멀리까지</p>
+        <div role="group" aria-labelledby="shop-radius" className="flex gap-2">
+          {RADII.map((r) => (
+            <button key={r} type="button" aria-pressed={r === radius} onClick={() => setRadius(r)}
+              className={`rounded-button border px-4 py-2 text-body ${r === radius ? "border-ink bg-paper font-semibold" : "border-line"}`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+      <PrimaryButton onClick={() => place && onDone(`가게 주변 ${radius} · ${place}`)} disabled={!place}>다음</PrimaryButton>
+      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
     </div>
   );
 }

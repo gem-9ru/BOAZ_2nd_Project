@@ -46,6 +46,8 @@ export interface FlowState {
   /** away: 뭉치가 광고 관리자에 나가 있음 (패널 제목 왼쪽 집이 빔). 닫으면 false → 집으로 돌아옴 */
   /** next: EX-03 [다음 테스트 세팅] — 이 칸만 '지금', 나머지는 이전 값으로 끝난 칸 (v4.2) */
   guide: { mode: "create" | "edit" | "export"; index: number; away?: boolean; next?: string } | null;
+  /** 광고 시작일 (YYYY-MM-DD). 오늘보다 뒤면 예약 광고 */
+  startDate?: string;
   endDate?: string;
   plan?: Plan;
 }
@@ -62,7 +64,7 @@ export type FlowEvent =
   | { type: "answer"; id: string; value: string }
   | { type: "unanswer"; id: string }
   | { type: "toggleCheck"; key: string; index: number }
-  | { type: "questionsDone"; settings: Setting[]; endDate?: string }
+  | { type: "questionsDone"; settings: Setting[]; startDate?: string; endDate?: string }
   | { type: "guideProgress"; index: number }
   | { type: "guideOpened" }
   | { type: "guideClosed" }
@@ -107,7 +109,8 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, checks: { ...s.checks, [ev.key]: next } };
     }
     case "questionsDone":
-      return { ...s, settings: ev.settings, endDate: ev.endDate ?? s.endDate, step: "guide", guide: { mode: "create", index: 0 } };
+      return { ...s, settings: ev.settings, startDate: ev.startDate ?? s.startDate, endDate: ev.endDate ?? s.endDate,
+        step: "guide", guide: { mode: "create", index: 0 } };
     case "guideProgress":
       return s.guide ? { ...s, guide: { ...s.guide, index: ev.index } } : s;
     case "guideOpened":

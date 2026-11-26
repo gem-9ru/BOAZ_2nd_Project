@@ -51,6 +51,7 @@ export const SETTING_ORDER = [
   "meta.campaign.objective",
   "meta.campaign.special_category",
   "meta.adset.conversion_location",
+  "meta.adset.start_date",
   "meta.adset.end_date",
   "meta.adset.location",
   "meta.adset.age_gender",
@@ -75,24 +76,39 @@ export function askedFields(fields: Field[]): Field[] {
   return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id));
 }
 
-/** "7일" → 오늘부터 7일 뒤 날짜 (YYYY-MM-DD). */
-export function endDateFrom(choice: string, today: Date = new Date()): string {
-  const days = parseInt(choice, 10) || 14;
-  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
+/** 날짜 → YYYY-MM-DD (그 컴퓨터 날짜 기준). */
+export function isoDate(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, endDate: string): Setting[] {
+/** "7일" → 오늘부터 7일 뒤 날짜 (YYYY-MM-DD). */
+export function endDateFrom(choice: string, today: Date = new Date()): string {
+  const days = parseInt(choice, 10) || 14;
+  return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days));
+}
+
+/** 시작일·종료일 (YYYY-MM-DD). 시각(HH:MM)은 사장님이 정했을 때만 — 없으면 광고 관리자 기본 시각 그대로 */
+export interface Schedule { start: string; end: string; startTime?: string; endTime?: string }
+
+/** 광고 기간 답 → 시작일·종료일. "14일"은 오늘부터, "2026-12-01 09:00~2026-12-14"는 사장님이 직접 고른 그대로 (시각은 선택). */
+export function scheduleFrom(choice: string, today: Date = new Date()): Schedule {
+  const m = /^(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?~(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?$/.exec(choice.trim());
+  if (m) return { start: m[1]!, end: m[3]!, ...(m[2] ? { startTime: m[2] } : {}), ...(m[4] ? { endTime: m[4] } : {}) };
+  return { start: isoDate(today), end: endDateFrom(choice, today) };
+}
+
+export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, schedule: Schedule): Setting[] {
   const label = (id: string) => fields.find((f) => f.id === id)?.label ?? id;
   const value: Record<string, string> = {
     ...answers,
     "meta.campaign.objective": OBJECTIVE,
     "meta.adset.age_gender": `${target.ageMin}–${target.ageMax}세 · ${GENDER_LABEL[target.gender]}`,
-    "meta.adset.end_date": endDate,
+    "meta.adset.start_date": schedule.startTime ? `${schedule.start} ${schedule.startTime}` : schedule.start,
+    "meta.adset.end_date": schedule.endTime ? `${schedule.end} ${schedule.endTime}` : schedule.end,
     "meta.creative.copy.text": copy.primary_text,
     "meta.creative.copy.headline": copy.headline,
   };
-  const extra: Record<string, string> = { "meta.creative.copy.text": "기본 문구", "meta.creative.copy.headline": "제목" };
+  const extra: Record<string, string> = { "meta.creative.copy.text": "기본 문구", "meta.creative.copy.headline": "제목", "meta.adset.start_date": "시작 날짜" };
   return SETTING_ORDER.map((id) => ({ fieldId: id, label: extra[id] ?? label(id), value: value[id] ?? "" }));
 }

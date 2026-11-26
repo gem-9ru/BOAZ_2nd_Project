@@ -64,19 +64,29 @@ def test_fields_are_the_eleven_questions():
         "meta.ad.format", "meta.ad.website_url", "meta.ad.media"]
     end = next(f for f in fields if f["id"] == "meta.adset.end_date")
     assert end["kind"] == "question" and end["options"] == ["7일", "14일", "30일"] and end["ask"]
-    assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why", "help", "then_ask", "default_if", "note_if"}
+    assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why", "help", "then_ask", "default_if", "note_if", "custom",
+                         "custom_for", "answer_as"}
+    assert end["custom"] == "dates" and end["ask"] == "광고를 언제부터 언제까지 할까요?"
+    loc = next(f for f in fields if f["id"] == "meta.adset.location")
+    assert loc["ask"] == "손님이 상품을 어떻게 받나요?" and loc["options"] == ["택배로 보내요", "가게에 와서 사요", "배달해요"]
+    assert loc["default"] is None and loc["custom"] == "area" and loc["custom_for"] == ["가게에 와서 사요", "배달해요"]
+    assert loc["answer_as"] == {"택배로 보내요": "전국 (택배)"}
 
 
 def test_store_product_question():
     fields = {f["id"]: f for f in TestClient(app).get("/fields").json()["fields"]}
     q = fields["meta.pre.store_product"]
-    assert q["kind"] == "precheck" and q["options"] == ["올렸어요", "아직이에요"] and q["default"] == "올렸어요"
+    assert q["kind"] == "precheck" and q["options"][:2] == ["올렸어요", "아직이에요"] and q["default"] == "올렸어요"
     steps = q["help"]["아직이에요"]["steps"]
     assert len(steps) == 3 and steps[1]["hint"] == "keywords"
     assert all(s["url"].startswith("https://sell.smartstore.naver.com/") for s in steps[:2])
-    assert q["then_ask"]["field"] == {"올렸어요": "meta.pre.store_url", "아직이에요": "meta.pre.insta_url"}
+    assert q["options"][2] == "스마트스토어에서 안 팔아요"
+    assert q["then_ask"]["field"] == {"올렸어요": "meta.pre.store_url", "아직이에요": "meta.pre.insta_url",
+                                      "스마트스토어에서 안 팔아요": "meta.pre.insta_url"}
+    assert q["then_ask"]["none"] == {"올렸어요": "스마트스토어에서 안 팔아요"}
     loc = fields["meta.adset.conversion_location"]
-    assert loc["default_if"] == {"meta.pre.store_product": {"아직이에요": "인스타그램 프로필"}}
+    assert loc["default_if"] == {"meta.pre.store_product": {"아직이에요": "인스타그램 프로필", "스마트스토어에서 안 팔아요": "인스타그램 프로필"}}
+    assert loc["then_ask"]["none"] == {"스토어 상품 페이지": "인스타그램 프로필"}
     assert loc["note_if"]["meta.pre.store_product"]["아직이에요"]
 
 

@@ -1,6 +1,6 @@
 // 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
 import type { GuideStepItem } from "../../lib/guide";
-import { checkLocation, setAgeGender, setEndDate, type Pace } from "./actions";
+import { checkLocation, setAgeGender, setEndDate, setStartDate, type Pace } from "./actions";
 import type { Level } from "../../lib/guide";
 import { currentLevel, goToLevel, hasValue, openDialog, isChecked, isChoice, isKorean, isPublishLike, isTextField, locateWith, mainScroller, typeInto } from "./locate";
 
@@ -299,10 +299,11 @@ export class Guide {
     const next = () => { if (this.index === at) this.advance(); };
     const kind = item.entry.auto;
     if (kind === "skip" || kind === "owner") return next();   // 그대로 두는 칸 / 사장님이 맞춘 칸
-    if (kind === "endDate" || kind === "ageGender" || kind === "location") {
+    if (kind === "startDate" || kind === "endDate" || kind === "ageGender" || kind === "location") {
       // 여러 번 눌러야 하는 칸: 끝나면 다음, 못 하면 사장님께 (자동 진행은 기다림)
       const value = item.value ?? "";
-      const run = kind === "endDate" ? setEndDate(this.doc, value)
+      const run = kind === "startDate" ? setStartDate(this.doc, value)
+        : kind === "endDate" ? setEndDate(this.doc, value)
         : kind === "ageGender" ? setAgeGender(this.doc, value)
         : Promise.resolve(checkLocation(this.doc, value));
       this.busy = true;
