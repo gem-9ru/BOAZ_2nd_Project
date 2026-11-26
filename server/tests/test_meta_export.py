@@ -93,3 +93,13 @@ def test_real_korean_export_daily_and_audience_network_share():
     assert d["link_clicks"].sum() == 23                                # 합계 행은 빠진다
     m = metrics.case_metrics(b)
     assert m["an_click_share"] > 0.3                                   # 23번 중 8번이 Audience Network
+
+
+def test_export_with_no_data_says_so(tmp_path):
+    """결과가 없는 기간을 내보내면 메타는 머리글 + 'No data available.' 한 줄을 준다 (2026-11-25 실제 파일).
+    '합계 행을 뺐어요' 대신 이 기간에 결과가 없다고 알려야 사장님이 기간을 다시 고른다."""
+    p = tmp_path / "empty.csv"
+    p.write_text('"보고 시작","보고 종료","광고 세트 이름","노출 위치","지출 금액 (KRW)",노출,"링크 클릭"\n"No data available."\n', encoding="utf-8")
+    b = read_export(str(p))
+    assert "meta_daily" not in b.tables
+    assert b.problems and "결과가 없어요" in b.problems[0] and "합계" not in " ".join(b.problems)

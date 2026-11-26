@@ -18,6 +18,7 @@ from .ingest import Bundle, clean
 
 OBJECTIVE = "트래픽"
 LONG_COLUMNS = {"section", "ad_set", "metric", "value"}
+NO_DATA = "이 파일에는 광고 결과가 없어요 (메타가 'No data available'로 내보냈어요). 광고가 실제로 나간 기간을 골라 다시 내보내 주세요."
 NEED_CLICKS = "링크 클릭 열이 없어요. 광고 관리자에서 열에 '링크 클릭'을 넣어 다시 내보내 주세요."
 METRIC_NAMES = {"지출(원)": "spend", "노출": "impressions", "링크 클릭": "link_clicks", "랜딩 페이지 조회": "landing_page_views",
                 "오픈 알림(Lead)": "actions"}   # 들어온 뒤 행동 (알림 신청)
@@ -160,6 +161,8 @@ def read_export(src: Source) -> Bundle:
         df = _read_csv(src)
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         return Bundle(problems=["파일이 비어 있거나 CSV가 아니에요. 광고 관리자에서 CSV로 내보내 주세요."])
+    if df.empty or df.iloc[:, 0].astype(str).str.contains("No data available", case=False).all():
+        return Bundle(problems=[NO_DATA])
     if LONG_COLUMNS <= set(df.columns):
         if "date" not in df.columns:
             return Bundle(problems=["날짜(date) 열이 없어요. 일별 숫자가 든 파일을 올려 주세요."])
