@@ -261,7 +261,7 @@ describe("7단계 결과 (v4.2)", () => {
     expect(within(v5).getByText("페이지 도착 적음")).toBeTruthy();
     expect(within(table).getByRole("row", { name: /V6 좁은 지역/ }).textContent).toContain("반복 노출");
     expect(table.textContent).not.toMatch(/네이버/);   // 네이버 광고는 돌리지 않음 → 메타 설정 케이스만
-    expect(screen.getByText(/같은 설정 두 세트\(V2\)를 40번 만들어 보면/)).toBeTruthy();
+    expect(screen.queryByText(/같은 설정 두 세트\(V2\)를 40번/)).toBeNull();
     expect(screen.getByText(/판정에는 쓰지 않아요/)).toBeTruthy();
   });
 });

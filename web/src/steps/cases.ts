@@ -77,6 +77,3 @@ export const VIRTUAL_CASES: VirtualCase[] = [
     ]
   }
 ];
-
-/** 같은 설정 두 세트(V2)를 시드만 바꿔 돌렸을 때 판정 횟수: 우연한 차이를 차이로 본 비율 */
-export const SAME_SETTING_RUNS = {"runs": 40, "sure": 6, "lean": 19, "unknown": 15};

@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Result } from "../api";
 import { Button, Card, josa, Tabs, TestTag, won } from "../ui";
 import { DEV_LABEL } from "./Certainty";
-import { SAME_SETTING_RUNS, VIRTUAL_CASES } from "./cases";
+import { VIRTUAL_CASES } from "./cases";
 import { Lead } from "./shared";
 
 const EVIDENCE = ["메타 공식 신호", "우리 실측 2건", "논문", "가상 케이스", "한계"] as const;
@@ -104,8 +104,6 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
                 </tbody>
               </table>
             </div>
-            <p>· 같은 설정 두 세트(V2)를 {SAME_SETTING_RUNS.runs}번 만들어 보면 '확실'이 {SAME_SETTING_RUNS.sure}번, '유력'이 {SAME_SETTING_RUNS.lean}번 나와요.
-              소액·짧은 기간엔 우연한 차이도 차이로 보일 수 있어서, 한 번의 결과로 결정하지 않고 테스트를 이어 가요.</p>
             <p>· 실측: 오븐로그 A(자동)·B(직접 고르기)의 광고비·누르는 비율·도착 비율 · 가정: 실측에 없는 값(V5·V6) · 시드 고정이라 다시 돌려도 같은 숫자</p>
           </>}
           {tab === "한계" && <p>소액·짧은 기간이라 범위가 넓어요. 예산을 크게 늘릴 때 단가가 오르는 효과는 넣지 않았어요. 광고 전후 비교로는 효과를 말하지 않고, 같은 기간에 동시에 돌린 A/B 비교로만 말해요.</p>}
