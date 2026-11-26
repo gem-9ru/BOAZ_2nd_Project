@@ -18,6 +18,7 @@ PATH = {
     "meta.adset.location": "광고 세트 › 위치",
     "meta.adset.daily_budget": "광고 세트 › 예산",
     "meta.adset.end_date": "광고 세트 › 시작·종료 날짜",
+    "meta.adset.start_date": "광고 세트 › 시작·종료 날짜",
     "meta.ad.media": "광고 › 형식·미디어",
     "meta.ad.format": "광고 › 형식·미디어",
     "meta.creative.copy": "광고 › 기본 문구·제목",
@@ -156,8 +157,20 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
                          "ok" if ctr is not None else "skip"))
 
     # 2b 소재 피로
-    if days < cfg["fatigue_days"] or "reach" not in check.get("columns", []):
-        rows.append(_row("2b", "누르는 정도 (같은 소재 피로)", f"기간 {days}일 · 본 사람 수(도달) 열 없음 → 해당 없음", "skip"))
+    # 빈도↑(적어도 기준 넘게 봄) + 클릭률↓(기간 뒤 절반이 앞 절반보다 기준 넘게 떨어짐), 기간이 짧거나 도달 열이 없으면 건너뜀
+    freq_max = _loop()["alerts"]["frequency_max"]
+    tired = [a for a in arms if (a.get("frequency_min") or 0) > freq_max and a.get("ctr_first") and a.get("ctr_last") is not None
+             and a["ctr_last"] <= a["ctr_first"] * (1 - cfg["fatigue_ctr_drop"])]
+    if days < cfg["fatigue_days"] or not any(a.get("frequency_min") is not None for a in arms):
+        why = f"기간 {days}일이라 아직 해당 없음 ({cfg['fatigue_days']}일 이상일 때 봐요)" if days < cfg["fatigue_days"] else "본 사람 수(도달) 열이 없어 해당 없음"
+        rows.append(_row("2b", "누르는 정도 (같은 소재 피로)", why, "skip"))
+    elif tired:
+        a = tired[0]
+        drop = 1 - a["ctr_last"] / a["ctr_first"]
+        rows.append(_row("2b", "누르는 정도 (같은 소재 피로)",
+                         f"한 사람이 적어도 {a['frequency_min']:.1f}번 봤고, 뒤 절반에 누르는 사람이 {drop:.0%} 줄었어요", "blocked", "meta.ad.media"))
+        proposals["2b"] = {"field_id": "meta.ad.media", "new": "새 소재로 바꾼 세트를 하나 더 만들어 보세요", "short": "+ 새 소재 1개",
+                           "what": "새 소재", "reason": "같은 사람이 같은 광고를 여러 번 봐서 누르는 사람이 줄었어요.", "level": "유력", "grade": "A"}
     else:
         rows.append(_row("2b", "누르는 정도 (같은 소재 피로)", "같은 사람에게 너무 자주 보이지 않았어요", "ok"))
 

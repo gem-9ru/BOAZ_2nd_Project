@@ -35,9 +35,9 @@ describe("guide list", () => {
 describe("stepsFor", () => {
   it("create carries each setting's value, publish has none", () => {
     const steps = stepsFor("create", entries, settings, []);
-    expect(steps).toHaveLength(14);
+    expect(steps).toHaveLength(15);
     expect(steps[0]!.value).toBe("값-meta.campaign.objective");
-    expect(steps[13]!.value).toBeUndefined();
+    expect(steps[14]!.value).toBeUndefined();
   });
 
   it("edit returns only entries for the changed fields, with the new value", () => {

@@ -1,12 +1,9 @@
 // 캐릭터 진행을 저장소에 쓰는 일 (사이드 패널이 닫혀 있어도 배경 스크립트가 한다) + 안내 시작 재시도.
 import { reduce } from "./flow";
+import type { GuideMsg } from "./guide";
 import { loadState, saveState } from "./storage";
 
-export interface ProgressMessage {
-  type: "guide:progress";
-  index: number;
-  total: number;
-}
+export type ProgressMessage = Extract<GuideMsg, { type: "guide:progress" }>;
 
 export async function handleProgress(msg: ProgressMessage): Promise<void> {
   const s = await loadState();

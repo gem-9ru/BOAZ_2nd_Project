@@ -111,7 +111,7 @@ def test_claude_degraded_logged_without_message(caplog):
             def create(**kw):
                 raise RuntimeError(f"leak {SECRET}")
     with caplog.at_level(logging.INFO, logger="coach"):
-        assert copywriter._ask_claude(Boom, "meta", "쿠키", ["버터"], 3) == []
+        assert copywriter._ask_claude(Boom, "쿠키", ["버터"], 3) == []
     rec = records(caplog, "claude degraded")[0]
     assert rec.levelno == logging.WARNING and "err=RuntimeError" in rec.getMessage()
     assert SECRET not in caplog.text

@@ -1,5 +1,5 @@
 // 공통 부품. 색은 토큰 이름(bg-surface, text-soft …)으로만 쓴다. 이름은 UX_설계원칙.md의 부품 이름을 따른다.
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 /** 카드: 블록 하나 = 메시지 하나 (v4.2). 제목 바로 아래 한 줄 요약(summary) → 그 아래 차트·표.
  *  번호는 화면 순서(0~7)라 실제 순서가 있는 곳에만 붙인다. */
@@ -51,6 +51,14 @@ export function VerdictBadge({ word, small }: { word: Word | string; small?: boo
 }
 
 /** 나은 쪽 확률 → 판정 3단어 (90% 이상 / 70~90% / 70% 미만). 기준은 서버 verdict.py와 같다. */
+/** 'B가 나을 확률'을 나은 쪽 기준 확률로 (B가 낫다 → p, A가 낫다 → 1 − p). */
+export function betterProb(better: "A" | "B" | string, probB: number): number {
+  return better === "B" ? probB : 1 - probB;
+}
+
+/** A/B 세트 색 (A = 회색, B = 바이올렛) */
+export const seriesBg = (b: boolean | number) => (b ? "bg-series-b" : "bg-series-a");
+
 export function wordOf(probB: number): Word {
   const p = Math.max(probB, 1 - probB);
   const better = probB >= 0.5 ? "B" : "A";
@@ -113,17 +121,17 @@ export function AlertMark({ level }: { level: Level }) {
   );
 }
 
-/** 배너: 계속 알고 있어야 하는 알림. 사용자가 닫을 수 있다 (차단은 닫을 수 없음). */
-export function Banner({ children, level = "warn" }: { children: ReactNode; level?: Level }) {
-  const [open, setOpen] = useState(true);
-  if (!open) return null;
+/** 탭 단추 줄 (같은 화면 안에서 보기 바꾸기). big: 화면의 주 탭 (AN-04 비교 기준) */
+export function Tabs<T extends string>({ label, items, value, onChange, big = false }:
+  { label: string; items: { id: T; label: ReactNode }[]; value: T; onChange: (id: T) => void; big?: boolean }) {
   return (
-    <div role="status" className={`flex items-start gap-3 rounded-button px-4 py-3 text-body ${LEVEL[level].box}`}>
-      <span className="mt-0.5"><AlertMark level={level} /></span>
-      <div className="flex-1"><b className="mr-1">{LEVEL[level].name}</b>{children}</div>
-      {level !== "block" && (
-        <button type="button" onClick={() => setOpen(false)} aria-label="알림 닫기" className="text-caption underline">닫기</button>
-      )}
+    <div role="tablist" aria-label={label} className="flex flex-wrap gap-2">
+      {items.map((t) => (
+        <button key={t.id} role="tab" type="button" aria-selected={value === t.id} onClick={() => onChange(t.id)}
+          className={`rounded-badge border ${big ? "px-4 py-1.5 text-body" : "px-3 py-1 text-caption"} ${value === t.id ? "border-accent bg-accent text-on-accent font-semibold" : "border-line bg-surface"}`}>
+          {t.label}
+        </button>
+      ))}
     </div>
   );
 }

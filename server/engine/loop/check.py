@@ -6,9 +6,11 @@
 """
 from typing import Dict, List
 
+from ..specs import loop as _loop
+
 TOTAL_METRICS = ("spend", "impressions", "link_clicks")
-UNEVEN = 0.5        # 한 세트가 다른 세트 지출의 이 비율보다 적게 썼으면 경고
-SKEW = 0.5          # 한 세트 지출의 이 비율 이상이 Audience Network로 가면 경고 (오븐로그 1차: 100%)
+_ALERTS = _loop()["alerts"]
+SKEW = _ALERTS["an_share_max"]   # 한 세트 지출의 이 비율 이상이 Audience Network로 가면 경고 (오븐로그 1차: 100%)
 
 
 def _md(date) -> str:
@@ -25,7 +27,7 @@ def run(bundle) -> Dict:
         for m in TOTAL_METRICS:
             if m in daily.columns and m in place.columns:
                 d, p = float(daily[m].sum()), float(place[m].sum())
-                totals.append({"metric": m, "daily": d, "placement": p, "match": abs(d - p) <= max(1.0, 0.01 * abs(d))})
+                totals.append({"metric": m, "daily": d, "placement": p, "match": abs(d - p) <= max(1.0, _ALERTS["sum_mismatch"] * abs(d))})
 
     warnings: List[Dict] = []
     by_day = daily.groupby(["date", "adset"])[["spend", "impressions"]].sum().reset_index()
@@ -39,11 +41,6 @@ def run(bundle) -> Dict:
                              "later": f"{_md(date)}은 광고가 안 나가서 비교에서 뺐어요"})
         else:
             warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에 {', '.join(off)}만 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산"})
-    if len(adsets) >= 2:
-        spend = daily.groupby("adset")["spend"].sum()
-        low, high = spend.idxmin(), spend.idxmax()
-        if spend[high] > 0 and spend[low] / spend[high] < UNEVEN:
-            warnings.append({"kind": "uneven_spend", "text": f"{low}가 {high} 지출의 {spend[low] / spend[high]:.0%}만 썼어요. 예산이 고르게 쓰이지 않았어요."})
 
     if place is not None and len(place):
         for name, g in place.groupby("adset"):

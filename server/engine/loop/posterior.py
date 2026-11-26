@@ -11,7 +11,7 @@ import numpy as np
 from ..specs import loop as _loop
 
 DRAWS = int(_loop()["simulation"]["runs"])   # rules.yaml loop.simulation.runs
-MIN_IMPRESSIONS = 100     # 이보다 노출이 적은 노출 위치는 '참고만'
+MIN_IMPRESSIONS = _loop()["alerts"]["placement_min_impressions"]   # 이보다 노출이 적은 노출 위치는 '참고만'
 
 
 def draws(a: Dict, n: int = DRAWS, seed: int = 0) -> Dict[str, np.ndarray]:

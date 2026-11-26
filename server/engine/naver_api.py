@@ -351,14 +351,17 @@ def hub_raw(path: str, body: dict) -> Optional[dict]:
 
 
 def shopping_insight(path: str, category: str, keyword: Optional[str] = None, online: bool = True,
-                     time_unit: str = "month", start: Optional[str] = None, end: Optional[str] = None) -> Optional[dict]:
+                     time_unit: str = "month", start: Optional[str] = None, end: Optional[str] = None,
+                     ages: Optional[List[str]] = None) -> Optional[dict]:
     """쇼핑 인사이트 (분야 또는 분야+키워드). path 예: /shopping/v1/category/keyword/gender.
     저장본 이름은 (경로, 분야, 키워드)로만 정하고 기간은 넣지 않음 → 시연 저장본이 날짜와 상관없이 맞음."""
-    key = f"{path}|{category}|{keyword or ''}|{time_unit}"
+    key = f"{path}|{category}|{keyword or ''}|{time_unit}" + (f"|ages={','.join(ages)}" if ages else "")
     body = {"startDate": start or _default_start(), "endDate": end or _default_end(), "timeUnit": time_unit,
             "category": category}
     if keyword:
         body["keyword"] = keyword
+    if ages:   # 이 나이대만 (예: 40대 안에서 여성·남성 비중)
+        body["ages"] = ages
     _set_error(None)
     return _guarded("hub", key, online and hub_available(), lambda: hub_raw(path, body))
 

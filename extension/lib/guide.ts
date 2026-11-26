@@ -16,7 +16,7 @@ export type FindStrategy = (
 ) & { say?: string };
 
 /** 자동 진행에서 이 칸을 어떻게 할지: 고르기·넣기는 대신 하고, 날짜·지역·사진처럼 복잡한 칸은 사장님을 기다리고, 게시 앞에선 멈춘다. */
-export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "endDate" | "ageGender" | "location";
+export type AutoKind = "click" | "type" | "skip" | "owner" | "stop" | "startDate" | "endDate" | "ageGender" | "location";
 
 /** 칸이 있는 화면: list = 캠페인 목록(만들기 창), 나머지는 편집 화면 왼쪽 목록의 세 줄 */
 export type Level = "list" | "campaign" | "adset" | "ad";
@@ -49,12 +49,22 @@ export interface GuideEntry {
   stages?: GuideStage[];
   /** 이게 화면에 나타나면 이 칸은 끝 → 바로 다음 칸 (예: 사진을 넣어야 생기는 '기본 문구' 칸) */
   doneWhen?: FindStrategy[];
+  /** 이 칸은 열린 창 밖(광고 화면)에 있다. 창이 열려 있으면 칸이 아직 안 그려졌어도 창을 마칠 때까지 기다린다
+   *  (메타 '크리에이티브 설정' 창 뒤의 '웹사이트 URL': 창이 열린 동안에는 칸이 그려지지 않는다) */
+  outsideDialog?: true;
 }
 
 export interface GuideStepItem {
   entry: GuideEntry;
   value?: string;
 }
+
+/** 패널 ↔ 광고 관리자(캐릭터) ↔ 배경 스크립트가 주고받는 메시지. 이름을 틀리면 타입 검사에서 걸린다. */
+export type GuideMsg =
+  | { type: "guide:start"; steps: GuideStepItem[]; startIndex: number }   // 패널 → 캐릭터: 안내 시작
+  | { type: "guide:move"; delta: number }                                  // 패널 → 캐릭터: [이전 칸]·[다음 칸]
+  | { type: "guide:progress"; index: number; total: number }               // 캐릭터 → 배경: 몇 번째 칸까지 왔나
+  | { type: "guide:closed" };                                              // 캐릭터 → 배경: 집에 돌아감
 
 export function validateGuide(entries: GuideEntry[], settingIds: string[]): string[] {
   const problems: string[] = [];

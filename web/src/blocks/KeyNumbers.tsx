@@ -1,5 +1,5 @@
 import type { Arm, Result } from "../api";
-import { Card, Grade, won } from "../ui";
+import { Card, Grade, seriesBg, won } from "../ui";
 
 type Row = { label: string; term?: string; get: (a: Arm) => number | null; show: (x: number) => string; higher?: boolean };
 const RATES: Row[] = [
@@ -47,7 +47,7 @@ export function KeyNumbers({ r }: { r: Result }) {
               <th className="text-left font-normal pb-2" />
               {arms.map((a, i) => (
                 <th key={a.name} className="text-right font-semibold pb-2 px-3">
-                  <span className="inline-block size-2.5 rounded-badge mr-1.5 align-middle" style={{ background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
+                  <span className={`inline-block size-2.5 rounded-badge mr-1.5 align-middle ${seriesBg(i)}`} />
                   {"AB"[i]} · {a.name}
                 </th>
               ))}

@@ -2,7 +2,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { fields as fetchFields, type Field, type PresetField } from "../../lib/api";
 import { initialState, reduce, type FlowEvent, type FlowState, type Step } from "../../lib/flow";
 import { useAnalysisTab } from "../../lib/analysisTab";
-import { loadState, saveState } from "../../lib/storage";
+import { loadState, saveState, STATE_KEY } from "../../lib/storage";
 import AnalysisAssistant from "./steps/AnalysisAssistant";
 import CopyStep from "./steps/CopyStep";
 import FindStep from "./steps/FindStep";
@@ -44,7 +44,7 @@ export default function App() {
   latest.current = state;
   useEffect(() => {
     const onChanged = (changes: Record<string, { newValue?: unknown }>) => {
-      const next = changes["coach.v3.state"]?.newValue as FlowState | undefined;
+      const next = changes[STATE_KEY]?.newValue as FlowState | undefined;
       if (next && JSON.stringify(next) !== JSON.stringify(latest.current)) dispatch({ type: "__load", state: next });
     };
     browser.storage.onChanged.addListener(onChanged);

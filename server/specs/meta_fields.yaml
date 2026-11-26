@@ -23,6 +23,14 @@ fields:
     options: [있어요, 없어요]
     default: 있어요
     why: 페이지가 없으면 광고를 만들 수 없어요. 없다면 '페이지 만들기'부터 하세요 (무료, 5분).
+    help:                     # 이 답을 고르면 바로 넘어가지 않고 할 일을 보여 줌 (링크는 새 탭)
+      없어요:
+        say: 광고를 내려면 페이스북 페이지가 꼭 있어야 해요. 아래 링크에서 가게 이름으로 만들어 주세요 (무료, 5분). 만든 뒤 '만들었어요'를 눌러 주세요.
+        link: 페이스북 페이지 만들기
+        url: https://www.facebook.com/pages/create
+        done: 만들었어요
+        done_value: 있어요
+        later: 나중에 만들게요
 
   - id: meta.pre.ig_account
     stage: 사전 점검
@@ -32,6 +40,44 @@ fields:
     input: text
     default: ""
     why: 개인 계정과 가게 계정이 여러 개면 가게 계정을 골라야 해요.
+
+  - id: meta.pre.store_product
+    stage: 사전 점검
+    label: 스마트스토어 상품 페이지
+    kind: precheck
+    ask: 이 상품을 스마트스토어에 올리셨어요?
+    options: [올렸어요, 아직이에요, 스마트스토어에서 안 팔아요]
+    default: 올렸어요
+    why: 광고를 누른 손님이 바로 살 수 있게 상품 페이지 주소가 있어야 해요.
+    help:
+      아직이에요:
+        say: 스토어를 열고 상품을 올려 주세요. 다 하면 '다 했어요'를 눌러 주세요.
+        steps:                # 할 일 체크리스트 (링크는 새 탭). hint: keywords → ① 찾기의 검색어 한 줄
+          - text: 판매자 가입 (스토어 이름도 이때 정해요)
+            link: 가입하기
+            url: https://sell.smartstore.naver.com/#/join
+          - text: 상품 등록
+            link: 상품 등록하기
+            url: https://sell.smartstore.naver.com/#/products/create
+            hint: keywords
+          - text: 올린 상품 페이지를 열어 주소 복사하기
+        done: 다 했어요
+        done_value: 올렸어요
+        later: 나중에 할게요
+    then_ask:                 # 답에 따라 같은 자리에서 주소를 받음 (광고 관리자 칸이 아니라 '클릭 주소'에서 미리 채움)
+      field:
+        올렸어요: meta.pre.store_url
+        아직이에요: meta.pre.insta_url
+        스마트스토어에서 안 팔아요: meta.pre.insta_url
+      say:
+        올렸어요: 올린 상품 페이지 주소를 붙여 넣어 주세요.
+        아직이에요: 그동안은 인스타그램 프로필로 보낼게요. 주소가 맞는지 확인해 주세요.
+        스마트스토어에서 안 팔아요: 광고를 누르면 인스타그램 프로필로 보낼게요. 프로필 주소가 맞는지 확인해 주세요.
+      prefill:
+        아직이에요: https://www.instagram.com/{meta.pre.ig_account}
+        스마트스토어에서 안 팔아요: https://www.instagram.com/{meta.pre.ig_account}
+      none:                   # 주소 칸 아래 '상품 페이지 주소가 없어요' → 이 답으로 바꿔 인스타 프로필 주소를 받음
+        올렸어요: 스마트스토어에서 안 팔아요
 
   # ── 캠페인 ──
   - id: meta.campaign.name
@@ -113,6 +159,22 @@ fields:
     options: [스토어 상품 페이지, 인스타그램 프로필]
     default: 스토어 상품 페이지
     why: 스토어로 보내야 한 달 뒤 스토어 주문으로 결과를 확인할 수 있어요. (DM으로 문의를 받으려면 트래픽이 아니라 참여 목표를 써야 해요)
+    then_ask:                 # 고른 뒤 같은 자리에서 그 주소까지 받음 → '웹사이트 URL'은 따로 다시 묻지 않음
+      field: meta.ad.website_url
+      say:
+        스토어 상품 페이지: 광고를 누르면 열릴 상품 페이지 주소를 붙여 넣어 주세요.
+        인스타그램 프로필: 광고를 누르면 열릴 인스타그램 프로필 주소예요. 맞는지 확인해 주세요.
+      prefill:                # {칸 id} 자리에 앞에서 받은 답을 넣음. 목록이면 채워지는 첫 값
+        스토어 상품 페이지: "{meta.pre.store_url}"
+        인스타그램 프로필: ["{meta.pre.insta_url}", "https://www.instagram.com/{meta.pre.ig_account}"]
+      none:
+        스토어 상품 페이지: 인스타그램 프로필
+    default_if:               # 앞 답에 따라 권장 답을 바꿈
+      meta.pre.store_product: {아직이에요: 인스타그램 프로필, 스마트스토어에서 안 팔아요: 인스타그램 프로필}
+    note_if:
+      meta.pre.store_product:
+        아직이에요: 스토어가 준비되면 스토어 상품 페이지로 바꿀 수 있어요.
+        스마트스토어에서 안 팔아요: 스마트스토어 상품이 없으니 인스타그램 프로필로 보내요. 프로필에 상품 사진과 문의 방법을 올려 두세요.
 
   - id: meta.adset.performance_goal
     stage: 광고 세트
@@ -177,8 +239,9 @@ fields:
     stage: 광고 세트
     label: 종료 날짜
     kind: question
-    ask: 광고를 얼마 동안 하실 건가요?
-    options: [7일, 14일, 30일]
+    ask: 광고를 언제부터 언제까지 할까요?
+    options: [7일, 14일, 30일]   # 오늘부터
+    custom: dates             # [날짜 직접 정하기] → 시작일·종료일 (답: 2026-12-01~2026-12-14). 시작일은 광고 관리자 '시작 날짜'에 넣음
     default: 14일
     next_cycle: [rule.awareness_freq_low]
     why: 종료 날짜는 기본으로 비어 있어서, 끄지 않으면 계속 돈이 나가요. 소액이면 짧고 굵게(7~14일)가 사람들에게 더 기억돼요.
@@ -187,11 +250,14 @@ fields:
     stage: 광고 세트
     label: 타겟 – 위치
     kind: question
-    ask: 어느 지역 손님까지 받을 수 있나요?
-    options: [전국 (택배), 내 지역만]
-    default: 전국 (택배)
+    ask: 손님이 상품을 어떻게 받나요?
+    options: [택배로 보내요, 가게에 와서 사요, 배달해요]
+    default: null             # 권장 없음: 판매 방식은 가게마다 정해져 있음 (동네 가게가 전국으로 나가지 않게)
+    answer_as: {택배로 보내요: 전국 (택배)}      # 고른 답 대신 이 값을 세팅에 넣음 (광고 관리자 기본 '대한민국' 그대로)
+    custom: area              # 아래 답이면 같은 자리에서 가게 주소(시·구·동)와 반경(3·5·10km, 기본 5km)을 받음
+    custom_for: [가게에 와서 사요, 배달해요]   # 값 예: '가게 주변 5km · 서울 마포구 망원동' (지도는 사장님이 직접)
     next_cycle: [rule.target_saturation]
-    why: 택배로 보낼 수 있으면 전국으로 둬야 새 손님이 계속 생겨요.
+    why: 택배면 전국, 가게·배달이면 가게 주변만 보여야 광고비가 헛되이 나가지 않아요.
 
   - id: meta.adset.age_gender
     stage: 광고 세트

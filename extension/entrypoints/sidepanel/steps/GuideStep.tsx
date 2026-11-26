@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { nextTestSteps, stepsFor } from "../../../lib/guide";
+import { nextTestSteps, stepsFor, type GuideMsg } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
 import { sendWithRetry } from "../../../lib/progress";
 import { Coach, PrimaryButton, WarnLine } from "../ui/Coach";
@@ -18,7 +18,7 @@ const won = (n: number) => `${Math.round(n).toLocaleString()}원`;
 
 /** 종료 날짜까지 며칠 (오늘 포함). 날짜가 아니면 null. */
 export function daysUntil(end: string | undefined, today: Date = new Date()): number | null {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(end ?? "");
+  const m = /^(\d{4})-(\d{2})-(\d{2})(?: \d{2}:\d{2})?$/.exec(end ?? "");   // 시각이 붙어 있어도 날짜로 셈
   if (!m) return null;
   const a = Date.UTC(today.getFullYear(), today.getMonth(), today.getDate());
   const b = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
@@ -61,7 +61,7 @@ export default function GuideStep({ state, dispatch }: Props) {
     setError(null);
     dispatch({ type: "guideOpened" });   // 뭉치가 집을 나선다
     const tab = await adsTab();
-    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index });
+    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index } satisfies GuideMsg);
     let ok = await sendWithRetry(send, 2, 800);
     if (!ok && tab.id) {
       // 확장을 다시 불러오기 전에 열린 탭은 뭉치 스크립트가 없다 → 새로고침해서 넣고 다시 부른다
@@ -77,7 +77,7 @@ export default function GuideStep({ state, dispatch }: Props) {
   async function move(delta: 1 | -1) {
     const tab = await findAdsTab();
     if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
-    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta }).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
+    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
   // 수정 안내 목록에 없는 칸만 바뀌었으면: 탭을 열지 않고 글로 알려 준다.
@@ -163,7 +163,10 @@ export default function GuideStep({ state, dispatch }: Props) {
  *  - 게시 직전 확인: 꼭 채워야 할 칸이 비어 있으면 ▲ */
 function InlineNotice({ id, publish, state }: { id: string; publish: boolean; state: FlowState }) {
   if (id === "meta.adset.end_date") {
-    const days = daysUntil(state.settings.find((x) => x.fieldId === id)?.value);
+    // 기간은 시작일부터 (예약 광고면 시작일, 아니면 오늘)
+    const start = /^(\d{4})-(\d{2})-(\d{2})$/.exec(state.startDate ?? "");
+    const from = start ? new Date(Number(start[1]), Number(start[2]) - 1, Number(start[3])) : new Date();
+    const days = daysUntil(state.settings.find((x) => x.fieldId === id)?.value, from > new Date() ? from : new Date());
     if (!days) return null;
     return (
       <span className="flex gap-1.5 rounded-button bg-info-bg px-2 py-1 text-ink">

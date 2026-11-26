@@ -1,7 +1,7 @@
 import { useState } from "react";
-import type { Field, PresetField } from "../../../lib/api";
+import type { Field, OptionHelp, PresetField } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { askedFields, buildSettings, endDateFrom } from "../../../lib/settings";
+import { askedFields, buildSettings, isoDate, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
@@ -19,12 +19,15 @@ export default function QuestionStep({ state, dispatch, fields, defaults }: Prop
   const next = asked.find((f) => !(f.id in state.answers));
   const index = next ? asked.indexOf(next) : asked.length;
 
-  function answer(id: string, value: string) {
+  /** extra: 같은 자리에서 이어 받은 칸 (예: 갈 곳 → 그 주소) */
+  function answer(id: string, value: string, extra: Record<string, string> = {}) {
     dispatch({ type: "answer", id, value });
-    const answers = { ...state.answers, [id]: value };
+    for (const [k, v] of Object.entries(extra)) dispatch({ type: "answer", id: k, value: v });
+    const answers = { ...state.answers, [id]: value, ...extra };
     if (asked.every((f) => f.id in answers) && state.target && state.copy) {
-      const endDate = endDateFrom(answers["meta.adset.end_date"] ?? "14일");
-      dispatch({ type: "questionsDone", settings: buildSettings(fields, answers, state.target, state.copy, endDate), endDate });
+      const when = scheduleFrom(answers["meta.adset.end_date"] ?? "14일");
+      dispatch({ type: "questionsDone", settings: buildSettings(fields, answers, state.target, state.copy, when),
+        startDate: when.start, endDate: when.end });
     }
   }
 
@@ -37,7 +40,11 @@ export default function QuestionStep({ state, dispatch, fields, defaults }: Prop
           ← 이전 질문
         </button>
       )}
-      {next && <Question key={next.id} field={next} onAnswer={(v) => answer(next.id, v)} />}
+      {next && (
+        <Question key={next.id} field={next} answers={state.answers} keywords={state.keywords} checked={state.checks?.[next.id] ?? []}
+          onCheck={(index) => dispatch({ type: "toggleCheck", key: next.id, index })}
+          onAnswer={(v, extra) => answer(next.id, v, extra)} />
+      )}
       {defaults.length > 0 && (
         <details className="text-caption text-soft">
           <summary className="cursor-pointer">묻지 않고 이렇게 두었어요 ({defaults.length}칸)</summary>
@@ -61,9 +68,72 @@ export function webAddress(raw: string): string | null {
   return /^https?:\/\//i.test(v) ? v : `https://${v}`;
 }
 
-function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => void }) {
+/** '…{meta.pre.ig_account}' → 앞에서 받은 답을 넣는다 (인스타 아이디의 @·공백은 뺌). 빈 답이 들어가면 빈 칸으로.
+ *  틀이 여러 개면 다 채워지는 첫 틀. */
+function fill(template: string | string[] | undefined, answers: Record<string, string>): string {
+  if (Array.isArray(template)) {
+    for (const t of template) { const v = fill(t, answers); if (v) return v; }
+    return "";
+  }
+  if (!template) return "";
+  let empty = false;
+  const out = template.replace(/\{([^}]+)\}/g, (_, id: string) => {
+    const v = (answers[id] ?? "").replace(/^@/, "").replace(/\s+/g, "");
+    if (!v) empty = true;
+    return v;
+  });
+  return empty ? "" : out;
+}
+
+/** 앞 답에 따라 정해지는 값 (default_if·note_if): 맞는 게 없으면 undefined */
+function byEarlier(map: Record<string, Record<string, string>> | null | undefined, answers: Record<string, string>): string | undefined {
+  for (const [id, byAnswer] of Object.entries(map ?? {})) {
+    const got = answers[id];
+    if (got !== undefined && byAnswer[got]) return byAnswer[got];
+  }
+  return undefined;
+}
+
+function Question({ field, answers, keywords, checked, onCheck, onAnswer }: {
+  field: Field; answers: Record<string, string>; keywords: string[]; checked: number[]; onCheck: (index: number) => void;
+  onAnswer: (v: string, extra?: Record<string, string>) => void;
+}) {
+  const recommended = byEarlier(field.default_if, answers) ?? field.default;
+  const note = byEarlier(field.note_if, answers);
   const [text, setText] = useState(field.default ?? "");
   const [bad, setBad] = useState(false);
+  const [helpFor, setHelpFor] = useState<string | null>(null);   // 할 일이 있는 답을 골랐을 때 (예: 페이지 없어요)
+  const help = helpFor ? field.help?.[helpFor] : undefined;
+  const [picked, setPicked] = useState<string | null>(null);     // 이어 받을 주소가 있는 답을 골랐을 때 (예: 스토어 상품 페이지)
+  const [dates, setDates] = useState(false);                      // [날짜 직접 정하기]를 눌렀을 때
+  const [areaFor, setAreaFor] = useState<string | null>(null);    // 가게·배달을 골랐을 때 (가게 주소·반경)
+  const [url, setUrl] = useState("");
+  const then = picked ? field.then_ask : undefined;
+  /** 이 답을 고르면 주소를 이어 받을 칸 (없으면 바로 넘어감) */
+  const thenField = (o: string): string | undefined => {
+    const t = field.then_ask;
+    if (!t?.say[o]) return undefined;
+    return typeof t.field === "string" ? t.field : t.field[o];
+  };
+  /** 답을 정함: 이어 받을 주소가 있으면 주소 칸을 열고, 없으면 바로 넘어감 */
+  const finish = (o: string) => {
+    const to = thenField(o);
+    if (!to) return onAnswer(o);
+    // 미리 채우기: 틀 → (같은 답을 골랐던 적이 있으면) 그때 넣은 주소. 다른 답의 주소는 쓰지 않음 (인스타 주소가 상품 주소로 새지 않게)
+    setPicked(o); setUrl(fill(field.then_ask?.prefill?.[o], answers) || (answers[field.id] === o ? answers[to] ?? "" : "")); setBad(false);
+  };
+  const pick = (o: string) => {
+    if (field.help?.[o]) return setHelpFor(o);
+    if (field.custom === "area" && field.custom_for?.includes(o)) return setAreaFor(o);
+    if (field.answer_as?.[o]) return onAnswer(field.answer_as[o]!);
+    finish(o);
+  };
+  function submitThen() {
+    const u = webAddress(url);
+    const to = picked ? thenField(picked) : undefined;
+    if (!u || !to || !picked) return setBad(true);
+    onAnswer(picked, { [to]: u });
+  }
   const isUrl = field.id === "meta.ad.website_url";
   function submit() {
     if (!isUrl) return onAnswer(text.trim());
@@ -77,20 +147,61 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
       <Coach>
         <h2 className="text-lead font-semibold">{field.ask}</h2>
         {field.why && <p className="text-caption text-soft mt-1">{field.why}</p>}
+        {note && <p className="text-caption text-ink mt-1">{note}</p>}
       </Coach>
-      {field.options ? (
+      {areaFor ? (
+        <ShopArea way={areaFor} onBack={() => setAreaFor(null)} onDone={(v) => onAnswer(v)} />
+      ) : dates ? (
+        <DateRange onBack={() => setDates(false)} onDone={(v) => onAnswer(v)} />
+      ) : then && picked ? (
+        <div className="flex flex-col gap-2">
+          <p className="text-caption"><span className="font-semibold">{picked}</span>로 보낼게요.</p>
+          <label htmlFor="then-url" className="text-caption text-soft">{then.say[picked] ?? "주소를 알려 주세요."}</label>
+          <input id="then-url" value={url} onChange={(e) => setUrl(e.target.value)} inputMode="url" autoComplete="off"
+            placeholder={picked.includes("인스타") || thenField(picked)?.includes("insta") ? "https://www.instagram.com/가게아이디" : "https://smartstore.naver.com/가게이름/products/…"}
+            aria-invalid={bad || undefined}
+            className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
+          {bad && <p role="alert" className="text-caption text-block-ink">https:// 로 시작하는 주소로 넣어 주세요. 예: https://smartstore.naver.com/가게이름</p>}
+          <PrimaryButton onClick={submitThen} disabled={!url.trim()}>다음</PrimaryButton>
+          {then.none?.[picked] && (
+            <button type="button" onClick={() => finish(then.none![picked]!)} className="self-start text-caption text-accent-ink underline">
+              상품 페이지 주소가 없어요 → 인스타그램 프로필로 보낼게요
+            </button>
+          )}
+          <button type="button" onClick={() => setPicked(null)} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+        </div>
+      ) : help && helpFor ? (
+        <div className="flex flex-col gap-3 rounded-card border border-line bg-paper p-4">
+          <p className="text-body">{help.say}</p>
+          {help.steps ? (
+            <HelpChecklist steps={help.steps} checked={checked} keywords={keywords} onCheck={onCheck} />
+          ) : help.url && (
+            <NewTabLink url={help.url}>{help.link}</NewTabLink>
+          )}
+          <PrimaryButton onClick={() => finish(help.done_value)}>{help.done}</PrimaryButton>
+          <div className="flex items-center justify-between gap-2">
+            <button type="button" onClick={() => setHelpFor(null)} className="text-caption text-soft underline">← 다시 고르기</button>
+            <button type="button" onClick={() => finish(helpFor)} className="text-caption text-soft underline">{help.later}</button>
+          </div>
+        </div>
+      ) : field.options ? (
         <div className="flex flex-col gap-2">
           {field.options.map((o) => (
             <button
               key={o}
               type="button"
-              onClick={() => onAnswer(o)}
-              className={`rounded-button border px-4 py-3 text-left text-body ${o === field.default ? "border-ink bg-paper font-semibold" : "border-line"}`}
+              onClick={() => pick(o)}
+              className={`rounded-button border px-4 py-3 text-left text-body ${o === recommended ? "border-ink bg-paper font-semibold" : "border-line"}`}
             >
               {o}
-              {o === field.default && <span className="block text-caption font-normal text-soft">권장</span>}
+              {o === recommended && <span className="block text-caption font-normal text-soft">권장</span>}
             </button>
           ))}
+          {field.custom === "dates" && (
+            <button type="button" onClick={() => setDates(true)} className="rounded-button border border-line px-4 py-3 text-left text-body">
+              날짜 직접 정하기
+            </button>
+          )}
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -108,6 +219,140 @@ function Question({ field, onAnswer }: { field: Field; onAnswer: (v: string) => 
           </PrimaryButton>
         </div>
       )}
+    </div>
+  );
+}
+
+function NewTabLink({ url, children }: { url: string; children: React.ReactNode }) {
+  return (
+    <a href={url} target="_blank" rel="noopener noreferrer"
+      className="self-start rounded-button border border-accent bg-paper px-4 py-2 text-label font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      {children} <span aria-hidden>↗</span><span className="sr-only"> (새 탭)</span>
+    </a>
+  );
+}
+
+/** 할 일 체크리스트: 사장님이 직접 체크 (다 체크하지 않아도 넘어갈 수 있음). 남은 일을 'n / 전체'로 보여 줌 */
+function HelpChecklist({ steps, checked, keywords, onCheck }: {
+  steps: NonNullable<OptionHelp["steps"]>; checked: number[]; keywords: string[]; onCheck: (index: number) => void;
+}) {
+  const words = keywords.slice(0, 3);
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="self-end text-caption text-soft">{checked.filter((i) => i < steps.length).length} / {steps.length}</p>
+      <ul className="flex flex-col gap-3">
+        {steps.map((st, i) => (
+          <li key={st.text} className="flex flex-col gap-2">
+            <label className="flex items-start gap-2 text-body">
+              <input type="checkbox" checked={checked.includes(i)} onChange={() => onCheck(i)} className="mt-1 accent-accent" />
+              <span className={checked.includes(i) ? "text-soft line-through" : ""}>{st.text}</span>
+            </label>
+            {st.hint === "keywords" && words.length > 0 && (
+              <p className="pl-6 text-caption text-soft">상품명에 이 말을 넣으면 네이버에서 잘 찾아져요: <span className="text-ink">{words.join(" · ")}</span></p>
+            )}
+            {st.url && <div className="pl-6"><NewTabLink url={st.url}>{st.link ?? "열기"}</NewTabLink></div>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** '2026-12-01' → '12월 1일', 시각이 있으면 '12월 1일 오전 9시' */
+function monthDay(iso: string, time = ""): string {
+  const [, m, d] = iso.split("-").map(Number);
+  if (!time) return `${m}월 ${d}일`;
+  const [h, min] = time.split(":").map(Number);
+  const half = h! < 12 ? "오전" : "오후";
+  const h12 = h! % 12 === 0 ? 12 : h! % 12;
+  return `${m}월 ${d}일 ${half} ${h12}시${min ? ` ${min}분` : ""}`;
+}
+
+/** 시작일·종료일 고르기 (시각은 선택). 시작일은 오늘부터, 종료일은 시작일 다음 날부터. 기간은 시작일·종료일을 모두 셈 */
+function DateRange({ onBack, onDone }: { onBack: () => void; onDone: (value: string) => void }) {
+  const now = new Date();
+  const today = isoDate(now);
+  const [start, setStart] = useState(today);
+  const [end, setEnd] = useState("");
+  const [startTime, setStartTime] = useState("");
+  const [endTime, setEndTime] = useState("");
+  const [tried, setTried] = useState(false);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const startBad = Boolean(start) && start < today;
+  const timeBad = !startBad && start === today && Boolean(startTime) && startTime <= `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  const endBad = Boolean(start && end) && end <= start;
+  const ok = Boolean(start && end) && !startBad && !timeBad && !endBad;
+  const days = ok ? Math.round((Date.parse(end) - Date.parse(start)) / 86400000) + 1 : 0;
+  const box = "rounded-button border border-field-line bg-paper px-3 py-2.5 text-body";
+  const value = `${start}${startTime ? ` ${startTime}` : ""}~${end}${endTime ? ` ${endTime}` : ""}`;
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <div className="flex flex-1 flex-col gap-1">
+            <label htmlFor="date-start" className="text-caption text-soft">시작일</label>
+            <input id="date-start" type="date" value={start} min={today} onChange={(e) => setStart(e.target.value)}
+              aria-invalid={(tried && startBad) || undefined} className={box} />
+          </div>
+          <div className="flex w-28 flex-col gap-1">
+            <label htmlFor="time-start" className="text-caption text-soft">시작 시각</label>
+            <input id="time-start" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)}
+              aria-invalid={(tried && timeBad) || undefined} className={box} />
+          </div>
+        </div>
+        {tried && startBad && <p role="alert" className="text-caption text-block-ink">오늘이나 그 뒤 날짜로 골라 주세요.</p>}
+        {tried && timeBad && <p role="alert" className="text-caption text-block-ink">오늘 시작하면 지금보다 뒤 시각으로 골라 주세요.</p>}
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex gap-2">
+          <div className="flex flex-1 flex-col gap-1">
+            <label htmlFor="date-end" className="text-caption text-soft">종료일</label>
+            <input id="date-end" type="date" value={end} min={start || today} onChange={(e) => setEnd(e.target.value)}
+              aria-invalid={(tried && endBad) || undefined} className={box} />
+          </div>
+          <div className="flex w-28 flex-col gap-1">
+            <label htmlFor="time-end" className="text-caption text-soft">종료 시각</label>
+            <input id="time-end" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} className={box} />
+          </div>
+        </div>
+        {tried && !startBad && endBad && <p role="alert" className="text-caption text-block-ink">종료일을 시작일 다음 날 이후로 골라 주세요.</p>}
+      </div>
+      <p className="text-caption text-soft">시각은 비워 두면 광고 관리자에 정해진 시각 그대로 둬요.</p>
+      {ok && <p className="text-body">{monthDay(start, startTime)}부터 {monthDay(end, endTime)}까지, {days}일 동안 광고해요.</p>}
+      <PrimaryButton onClick={() => (ok ? onDone(value) : setTried(true))} disabled={!start || !end}>다음</PrimaryButton>
+      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
+    </div>
+  );
+}
+
+const RADII = ["3km", "5km", "10km"];
+
+/** 가게·배달: 가게 주소(시·구·동)와 반경. 값은 세팅 목록·뭉치 안내에 그대로 보인다 (지도에서 고르는 건 사장님) */
+function ShopArea({ way, onBack, onDone }: { way: string; onBack: () => void; onDone: (value: string) => void }) {
+  const [address, setAddress] = useState("");
+  const [radius, setRadius] = useState("5km");
+  const place = address.trim().replace(/\s+/g, " ");
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="text-caption"><span className="font-semibold">{way}</span> → 가게 주변 손님에게만 보여 줄게요.</p>
+      <div className="flex flex-col gap-1">
+        <label htmlFor="shop-address" className="text-caption text-soft">가게 주소 (시·구·동)</label>
+        <input id="shop-address" value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="off"
+          placeholder="예: 서울 마포구 망원동" className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body" />
+      </div>
+      <div className="flex flex-col gap-1">
+        <p id="shop-radius" className="text-caption text-soft">가게에서 얼마나 멀리까지</p>
+        <div role="group" aria-labelledby="shop-radius" className="flex gap-2">
+          {RADII.map((r) => (
+            <button key={r} type="button" aria-pressed={r === radius} onClick={() => setRadius(r)}
+              className={`rounded-button border px-4 py-2 text-body ${r === radius ? "border-ink bg-paper font-semibold" : "border-line"}`}>
+              {r}
+            </button>
+          ))}
+        </div>
+      </div>
+      <PrimaryButton onClick={() => place && onDone(`가게 주변 ${radius} · ${place}`)} disabled={!place}>다음</PrimaryButton>
+      <button type="button" onClick={onBack} className="self-start text-caption text-soft underline">← 다시 고르기</button>
     </div>
   );
 }

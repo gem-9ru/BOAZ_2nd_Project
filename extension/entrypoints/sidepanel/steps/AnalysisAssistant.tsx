@@ -1,15 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { askAssistant, plan as fetchPlan } from "../../../lib/api";
+import { askAssistant, plan as fetchPlan, type AssistantAlert } from "../../../lib/api";
 import { ANALYSIS_STEPS, type AnalysisTab } from "../../../lib/analysisTab";
 import type { FlowEvent } from "../../../lib/flow";
+import { AskForm, bubbleClass, useAsk, type Bubble } from "../ui/Chat";
 import { Coach } from "../ui/Coach";
 
-type Level = "block" | "warn" | "info";
-interface Alert { level: Level; text: string; todo: string }
-interface Bubble { from: "assistant" | "me"; text: string; alert?: Alert }
-type Reply = { message: string; suggestions?: string[]; alerts?: Alert[] };
-
-const SHAPE: Record<Level, { mark: string; name: string; box: string }> = {
+const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: string }> = {
   block: { mark: "■", name: "차단", box: "bg-block-bg text-block-ink" },
   warn: { mark: "▲", name: "주의", box: "bg-warn-bg text-warn" },
   info: { mark: "●", name: "참고", box: "bg-info-bg text-ink" },
@@ -21,12 +17,11 @@ const SHAPE: Record<Level, { mark: string; name: string; box: string }> = {
 export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab; dispatch: (ev: FlowEvent) => void }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [text, setText] = useState("");
-  const [busy, setBusy] = useState(false);
   const seen = useRef(new Set<string>());
   const sent = useRef<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
   const { code, step } = tab;
+  const { busy, ask } = useAsk(code, step, (b) => setBubbles((all) => [...all, b]));
 
   // 다른 결과(코드)로 바뀌면 대화를 새로 시작
   useEffect(() => { seen.current = new Set(); setBubbles([]); setSuggestions([]); }, [code]);
@@ -34,7 +29,7 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
   useEffect(() => {
     if (!code || !step || seen.current.has(step)) return;
     seen.current.add(step);
-    (askAssistant(code, step) as Promise<Reply>).then((o) => {
+    askAssistant(code, step).then((o) => {
       setBubbles((b) => [...b, ...(o.alerts ?? []).map((a) => ({ from: "assistant" as const, text: `${a.text} ${a.todo}`, alert: a })), { from: "assistant", text: o.message }]);
       setSuggestions(o.suggestions ?? []);
     }, () => setBubbles((b) => [...b, { from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 분석 페이지의 내용은 그대로 보실 수 있어요." }]));
@@ -51,21 +46,6 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
   }, [code, tab.send, dispatch]);
 
   useEffect(() => { end.current?.scrollIntoView?.({ block: "end" }); }, [bubbles]);
-
-  async function ask(q: string) {
-    if (!q.trim() || busy || !code || !step) return;
-    setBubbles((b) => [...b, { from: "me", text: q }]);
-    setText("");
-    setBusy(true);
-    try {
-      const a = await askAssistant(code, step, q);
-      setBubbles((b) => [...b, { from: "assistant", text: a.message }]);
-    } catch (e) {
-      setBubbles((b) => [...b, { from: "assistant", text: (e as Error).message }]);
-    } finally {
-      setBusy(false);
-    }
-  }
 
   if (!code) {
     // AN-00 업로드: 아직 결과가 없으면 정해진 안내만
@@ -96,24 +76,12 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
             <span><span className="sr-only">{SHAPE[b.alert.level].name} </span>{b.text}</span>
           </p>
         ) : (
-          <p key={i} className={b.from === "me" ? "self-end max-w-[85%] rounded-button bg-accent px-3 py-2 text-caption text-on-accent" : "max-w-[95%] rounded-button bg-paper px-3 py-2 text-caption"}>{b.text}</p>
+          <p key={i} className={bubbleClass(b.from)}>{b.text}</p>
         ))}
         {busy && <p role="status" className="text-caption text-soft">생각하는 중…</p>}
         <div ref={end} />
       </div>
-      {suggestions.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {suggestions.map((s) => (
-            <button key={s} type="button" onClick={() => void ask(s)} className="rounded-badge border border-accent bg-paper px-2.5 py-1 text-caption text-accent-ink">{s}</button>
-          ))}
-        </div>
-      )}
-      <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); void ask(text); }}>
-        <label htmlFor="an-ask" className="sr-only">광고 어시스턴트에게 묻기</label>
-        <input id="an-ask" value={text} onChange={(e) => setText(e.target.value)} placeholder="궁금한 걸 물어보세요 (예: CPM이 뭐예요?)"
-          className="min-w-0 flex-1 rounded-button border border-field-line bg-paper px-3 py-2 text-caption" />
-        <button type="submit" disabled={!text.trim() || busy} className="rounded-button bg-accent px-3 text-caption font-semibold text-on-accent disabled:opacity-(--state-disabled-opacity)">묻기</button>
-      </form>
+      <AskForm id="an-ask" label="광고 어시스턴트에게 묻기" suggestions={suggestions} busy={busy} onAsk={(q) => void ask(q)} />
     </section>
   );
 }

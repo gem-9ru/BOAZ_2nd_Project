@@ -16,7 +16,6 @@ log = logging.getLogger("coach.market")
 
 DEFAULT_CATEGORY = "50000006"  # 쇼핑 인사이트 분야: 식품
 HUB = "/shopping/v1/category"
-SOURCE = "네이버 검색광고 키워드 도구 · 네이버 데이터랩 쇼핑인사이트"   # 화면에 보일 자료 출처
 AGE_GROUPS = ("10", "20", "30", "40", "50", "60")
 MIN_AGE_SHARE = 0.25           # 헤드라인에 쓸 연령은 비중이 이 이상일 때만 (작은 집단의 큰 배수는 잡음)
 HIGH_INDEX = 1.2               # 이 배수 이상일 때만 "분야 평균의 N배"라고 말함
@@ -229,6 +228,9 @@ def _modifier_of(keyword: str, seeds: List[str], strip: Optional[List[str]] = No
     return k if 2 <= len(k) <= 6 and not k.isdigit() and k not in MODIFIER_SKIP_EXACT else None
 
 
+MODIFIER_POOL = 30   # build가 뽑는 꾸밈말 수. 서버가 브랜드를 거르고 MAX_MODIFIERS개만 보낸다
+
+
 def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15, strip: Optional[List[str]] = None) -> List[dict]:
     """손님이 상품과 함께 검색하는 꾸밈말(좋은 점 후보). 뜻이 '상품'인 키워드만 보고, 같은 꾸밈말은 검색수를 더해
     검색수 순 limit개. strip은 더 지울 상품 낱말(strip_words). 각 항목: word, group(포장|맛·재료|배송|양|그 밖), total_qc, examples(최대 3)."""
@@ -329,6 +331,22 @@ def audience_index(female: float, ages: Dict[str, float], baseline: Optional[dic
         if base > 0:
             idx[age] = round(share / base, 2)
     return idx
+
+
+BY_AGE_MIN = 0.05   # 이보다 적게 찾는 나이대는 성별을 따로 묻지 않음 (호출 수를 줄임)
+
+
+def female_by_age(keyword: str, category: str, ages: Dict[str, float], online: bool = True) -> Dict[str, float]:
+    """나이대마다 그 안의 여성 비중 (쇼핑인사이트 성별 + ages 필터). 막대를 여성·남성으로 나눠 그리는 데 씀. 못 받은 나이대는 빠짐.
+    /research에서는 부르지 않는다 (호출 수 한도): 화면에 그림이 열릴 때 /audience/split으로 따로 받는다."""
+    out: Dict[str, float] = {}
+    for age, share in ages.items():
+        if share < BY_AGE_MIN:
+            continue
+        g = _shares(_sums(api.shopping_insight(f"{HUB}/keyword/gender", category, keyword, online, ages=[age])), ("f", "m"))
+        if g:
+            out[age] = round(g["f"], 3)
+    return out
 
 
 def audience(keyword: str, category: str = DEFAULT_CATEGORY, online: bool = True) -> Optional[dict]:
@@ -456,11 +474,22 @@ def _obj(word: str) -> str:
     return "을(를)"
 
 
-def audience_targets(kw: pd.DataFrame, rec: List[str], n: int = 3) -> List[str]:
-    """손님을 조회할 키워드 n개: 추천 중 선물·답례 → 시즌 → 상품 순 (같은 묶음 안에서는 추천 순서)."""
-    rank = {"선물·답례": 0, "시즌": 1, "상품": 2}
-    intent = dict(zip(kw["keyword"], kw["intent"]))
-    return sorted(rec, key=lambda k: rank.get(intent.get(k), 3))[:n]
+def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: bool = True) -> Optional[dict]:
+    """상품 이름 그대로(띄어쓰기 없앰)의 월 검색 수와, 분야가 있으면 그 말을 찾는 사람의 성별·연령.
+    키워드 표에 그 말이 없으면 None. 연령·성별을 못 받으면 audience만 None."""
+    word = name.replace(" ", "")
+    row = kw[kw["keyword"] == word]
+    if not word or row.empty:
+        return None
+    r = row.iloc[0]
+    total = int(r["total_qc"])
+    aud = audience(word, category, online) if category else None
+    out = {"keyword": word, "total_qc": total,
+           "mobile": round(float(r["mobile_qc"]) / total, 3) if total > 0 and "mobile_qc" in row else None,
+           "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
+           "trend": _trend_of(aud["monthly"]) if aud and aud.get("monthly") else None}   # 몇 월에 많이 찾나 (쇼핑인사이트 클릭)
+    log.info("product stats keyword=%s qc=%d audience=%s", word, total, "yes" if aud else "no")
+    return out
 
 
 @dataclass
@@ -477,6 +506,7 @@ class MarketReport:
     category: Optional[str] = None                                # 쇼핑인사이트 분야 code (없으면 None)
     segments: List[dict] = field(default_factory=list)            # 손님 무리 (분야가 없으면 비어 있음)
     modifiers: List[dict] = field(default_factory=list)           # 꾸밈말
+    product_stats: Optional[dict] = None                          # 상품 이름 그대로의 검색 수·찾는 사람
 
 
 def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
@@ -493,9 +523,10 @@ def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
     kw = classify(table, words)
     rec = recommend(kw, seeds=words)
     segs = segments(kw, rec, category, online, keep) if category else []
-    mods = modifiers(kw, words, strip=strip_words(name, seeds))
+    mods = modifiers(kw, words, limit=MODIFIER_POOL, strip=strip_words(name, seeds))   # 넉넉히: 브랜드를 거른 뒤 화면에 15개
+    stats = product_stats(kw, name, category, online)
     common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
-                  negatives=negative_list(kw), category=category, segments=segs, modifiers=mods)
+                  negatives=negative_list(kw), category=category, segments=segs, modifiers=mods, product_stats=stats)
     stamp = lambda: dict(fetched=api.oldest_fetched() or "", fetched_parts=api.fetched_parts())
     if segs:   # 무리의 대표 검색어가 손님 조회의 대표 (첫 무리가 대표)
         auds = {s["lead"]: {**s["audience"]} for s in segs if s["audience"]}

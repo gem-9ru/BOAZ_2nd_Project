@@ -25,7 +25,7 @@ def test_basis_without_segment_and_no_duplicates():
 def test_gift_segment_template_first():
     cs, _ = copywriter.meta_copies_with_source("수제 쿠키", ["개별포장"], n=3, client=False, segment=GIFT)
     assert cs[0]["text"].startswith("고마운 분께")
-    assert all(not copywriter.check_copy("meta", c) for c in cs)
+    assert all(not copywriter.check_copy(c) for c in cs)
 
 
 def test_season_segment_template_first():
@@ -67,3 +67,38 @@ def test_copies_api_backfill_has_basis(monkeypatch):
     b = TestClient(app).post("/copies", json={"product": "수제 쿠키", "strengths": ["개별포장"], "keywords": [],
                                               "avoid": ["고마운"], "segment": GIFT}).json()
     assert len(b["copies"]) == 3 and all(isinstance(c["basis"], list) for c in b["copies"])
+
+
+def test_claude_gets_strengths_and_search_words_apart_with_room_to_answer():
+    """검색어(노트북대여)를 장점으로 보내면 '대여 가능'처럼 없는 사실을 쓴다: 따로 보낸다.
+    생각이 토큰을 먼저 쓰므로 max_tokens는 넉넉히, 답은 JSON 틀로 받는다."""
+    seen = {}
+
+    class Msgs:
+        def create(self, **kw):
+            seen.update(kw)
+            body = {"copies": [{"headline": "가볍게 들고 다니는 노트북",
+                                "text": "카페에서도 도서관에서도 가볍게 꺼내 쓰세요. 무게 부담 없는 노트북, 프로필 링크에서 만나 보세요."}]}
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text=json.dumps(body, ensure_ascii=False))],
+                                   stop_reason="end_turn")
+
+    client = SimpleNamespace(messages=Msgs())
+    cs, used = copywriter.meta_copies_with_source("노트북", ["가벼움"], n=3, client=client,
+                                                 keywords=["노트북대여", "가성비노트북"])
+    sent = json.loads(seen["messages"][0]["content"])
+    assert sent["장점"] == ["가벼움"] and sent["검색어"] == ["노트북대여", "가성비노트북"]
+    assert seen["max_tokens"] >= 8000 and seen["output_config"]["format"]["type"] == "json_schema"
+    assert used and cs[0]["headline"] == "가볍게 들고 다니는 노트북" and len(cs) == 3
+
+
+def test_basis_catches_changed_word_endings_and_claude_paraphrase():
+    c = {"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북이라 하나씩 따로 포장해 드려요."}
+    assert copywriter.basis(c, ["가벼움", "개별포장", "버터 듬뿍"], None) == ["가벼움"]
+    c2 = {**c, "basis": ["개별포장", "버터 듬뿍"]}   # Claude가 썼다고 한 말: 조각이라도 보이면 믿고, 안 보이면 안 믿음
+    assert copywriter.basis(c2, ["가벼움", "개별포장", "버터 듬뿍"], {"label": "선물로 찾는 손님"}) == ["가벼움", "개별포장", "선물로 찾는 손님"]
+
+
+def test_claude_copies_keep_their_basis_list():
+    body = {"copies": [{"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북, 프로필 링크에서 만나 보세요.", "basis": ["가벼움"]}]}
+    out = copywriter._parse(json.dumps(body, ensure_ascii=False))
+    assert out[0]["basis"] == ["가벼움"]

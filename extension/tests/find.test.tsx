@@ -37,13 +37,13 @@ describe("FindStep", () => {
   it("shows the top group from top_age, the cache source line, and confirms the target", () => {
     const dispatch = vi.fn();
     render(<FindStep state={{ ...initialState(), research, product: "수제 쿠키" }} dispatch={dispatch} />);
-    expect(screen.getByText("30대 여성")).toBeTruthy();
+    expect(screen.getByText("30~50대 여성")).toBeTruthy();   // 40대가 가장 많고 30·50대도 많이 찾음
     expect(screen.getByText(/저장된 자료/)).toBeTruthy();
     expect(screen.getByText(/2026-11-15/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "이 사람들로 할게요" }));
     expect(dispatch).toHaveBeenCalledWith({
       type: "confirmTarget",
-      target: { ageMin: 30, ageMax: 39, gender: "female" },
+      target: { ageMin: 30, ageMax: 59, gender: "female" },
       keywords: ["수제쿠키", "르뱅쿠키"],
     });
   });
@@ -249,13 +249,14 @@ describe("FindStep — 분야·손님 무리", () => {
     fireEvent.click(within(group).getAllByRole("radio")[1]!);
     expect(dispatch).toHaveBeenCalledWith({ type: "pickSegment", segment: segs[1] });
     rerender(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={dispatch} />);
-    expect(screen.getByText(/대표 검색어: 답례품쿠키 · 월 5,400회/)).toBeTruthy();
-    expect(screen.getByText(/쇼핑인사이트 클릭/)).toBeTruthy();
+    expect(screen.getByText(/주로 찾는 말: 답례품쿠키 · 이 무리 전체 한 달 5,400회/)).toBeTruthy();
+    expect(screen.getByText(/네이버 쇼핑 클릭 기준/)).toBeTruthy();
+    expect(screen.queryByText(/대표 검색어|달별 자료|쇼핑인사이트/)).toBeNull();   // 개발자 말 없음
     fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
     const ev = dispatch.mock.calls.at(-1)![0];
     expect(ev.type).toBe("confirmTarget");
     expect(ev.segment.intent).toBe("선물·답례");
-    expect(ev.target).toEqual({ ageMin: 30, ageMax: 39, gender: "female" });
+    expect(ev.target).toEqual({ ageMin: 30, ageMax: 49, gender: "female" });   // 30대 50% · 40대 30% → 30~40대
     expect(ev.keywords).toEqual(withSegs.keywords.map((k) => k.keyword));
   });
 
@@ -348,5 +349,97 @@ describe("FindStep — 분야·손님 무리", () => {
     expect(screen.getByText(/'수제 쿠키'는 '식품'\(으\)로 볼게요/)).toBeTruthy();
     const picked = within(screen.getByRole("radiogroup", { name: "광고를 보여 줄 손님" })).getAllByRole("radio")[1] as HTMLInputElement;
     expect(picked.checked).toBe(true);
+  });
+});
+
+describe("FindStep — 이 상품 검색 카드", () => {
+  const stats = { keyword: "수제쿠키", total_qc: 9320, mobile: 0.526,
+    audience: { female: 0.7, ages: { "20": 0.2, "30": 0.45, "40": 0.35 }, top_age: "30" } };
+
+  it("shows the product's monthly searches, device split and who searches it", () => {
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText("'수제쿠키' 검색")).toBeTruthy();
+    expect(screen.getByText("9,320회")).toBeTruthy();
+    expect(screen.getByText("모바일 53% · PC 47%")).toBeTruthy();
+    expect(screen.getByRole("img", { name: /30대 45%/ })).toBeTruthy();
+  });
+
+  it("without a category shows the count and asks for the category", () => {
+    const r: Research = { ...withSegs, category: null, segments: [], product_stats: { ...stats, audience: null } };
+    render(<FindStep state={{ ...initialState(), research: r, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText("9,320회")).toBeTruthy();
+    expect(screen.getByText("분야를 고르면 누가 찾는지도 보여 드릴게요.")).toBeTruthy();
+  });
+});
+
+describe("나이대마다 여성·남성 · 몇 월에 많이 찾나", () => {
+  const stats = { keyword: "텀블러", total_qc: 128900, mobile: 0.7,
+    audience: { female: 0.66, ages: { "20": 0.08, "30": 0.19, "40": 0.39, "50": 0.26 }, top_age: "40" },
+    trend: { monthly: { "2026-01": 40, "2026-05": 100, "2026-09": 30 }, peak_month: 5, seasonal: true } };
+
+  it("asks the split for the product word and draws the legend once it arrives", async () => {
+    const f = vi.fn().mockResolvedValue(new Response(JSON.stringify({ female_by_age: { "30": 0.64, "40": 0.67 } }), { status: 200 }));
+    vi.stubGlobal("fetch", f);
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
+    await waitFor(() => expect(screen.getAllByText("막대 안에서 아래가 여성, 위가 남성이에요").length).toBeGreaterThan(0));
+    const call = f.mock.calls.find((c) => String(c[0]).endsWith("/audience/split"))!;
+    expect(JSON.parse((call[1] as RequestInit).body as string)).toMatchObject({ keyword: "텀블러", category: "50000006" });
+    expect(screen.getAllByRole("img", { name: /40대 39% \(여성 67%\)/ }).length).toBeGreaterThan(0);
+  });
+
+  it("shows the busiest month separately", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
+    expect(screen.getByText("언제 많이 찾나요?")).toBeTruthy();
+    expect(screen.getByText("5월에 가장 많이 찾아요")).toBeTruthy();
+  });
+});
+
+describe("타깃 확인·고치기", () => {
+  const state = () => ({ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] });
+
+  it("shows what goes into Ads Manager above the button", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    render(<FindStep state={state()} dispatch={() => {}} />);
+    expect(screen.getByText(/30–49세 · 여성만 · 검색어 5개/)).toBeTruthy();
+  });
+
+  it("the owner can change ages and gender; the confirm sends the changed target", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const dispatch = vi.fn();
+    render(<FindStep state={state()} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "나이·성별 바꾸기" }));
+    expect(screen.getByText(/남성 19%에게는 광고가 안 보여요/)).toBeTruthy();
+    fireEvent.change(screen.getByLabelText("나이 까지"), { target: { value: "30" } });
+    fireEvent.click(screen.getByRole("radio", { name: /남녀 모두/ }));
+    expect(screen.getByText(/30–39세 · 남녀 모두 · 검색어 5개/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "이 손님들로 할게요" }));
+    expect(dispatch.mock.calls.at(-1)![0].target).toEqual({ ageMin: 30, ageMax: 39, gender: "all" });
+    fireEvent.click(screen.getByRole("button", { name: "추천대로 되돌리기" }));
+    expect(screen.getByText(/30–49세 · 여성만 · 검색어 5개/)).toBeTruthy();
+  });
+
+  it("the product card is one line, details folded", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const stats = { keyword: "수제쿠키", total_qc: 129000, mobile: 0.5,
+      audience: { female: 0.7, ages: { "30": 0.25, "40": 0.3, "50": 0.25 }, top_age: "40" },
+      trend: { monthly: { "2026-12": 100 }, peak_month: 12, seasonal: true } };
+    render(<FindStep state={{ ...state(), research: { ...withSegs, product_stats: stats } }} dispatch={() => {}} />);
+    expect(screen.getByText("한 달 13만회 · 12월에 가장 많이 · 30~50대 여성이 많이 찾아요")).toBeTruthy();
+    expect(screen.getByText("자세히 ▾")).toBeTruthy();
+  });
+
+  it("keyword chips sit below the customer groups, folded with a count", () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
+    const { container } = render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: segs[1] }} dispatch={() => {}} />);
+    expect(screen.getByText("검색어 5개를 넣어요")).toBeTruthy();
+    const order = [...container.querySelectorAll("[role=radiogroup], details")].map((e) => e.getAttribute("role") ?? "details");
+    expect(order.indexOf("radiogroup")).toBeLessThan(order.lastIndexOf("details"));
+  });
+
+  it("the empty screen says what the search will show", () => {
+    render(<FindStep state={initialState()} dispatch={() => {}} />);
+    expect(screen.getByText("찾아보면 이렇게 알려 드려요")).toBeTruthy();
+    expect(screen.getByText("· 누가 찾는지 (나이·성별)")).toBeTruthy();
   });
 });

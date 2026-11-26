@@ -79,6 +79,26 @@
   "level": "adset"
  },
  {
+  "id": "meta.adset.start_date",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산 및 일정"
+   }
+  ],
+  "say": "시작 날짜를 {value}(으)로 맞춘 뒤 '다음 칸'을 누르세요. 시각은 시간·분 칸을 눌러 직접 입력해 주세요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "화면에서 '시작 날짜' 칸을 찾아 주세요"
+  },
+  "auto": "startDate",
+  "level": "adset"
+ },
+ {
   "id": "meta.adset.end_date",
   "mode": "create",
   "page": {
@@ -92,7 +112,7 @@
     "heading": "예산 및 일정"
    }
   ],
-  "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '다음 칸'을 누르세요",
+  "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '다음 칸'을 누르세요. 시각이 있으면 시간·분 칸에 직접 입력해 주세요",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.end_date.png",
@@ -116,7 +136,7 @@
     "heading": "타겟"
    }
   ],
-  "say": "위치는 {value}(으)로 두세요",
+  "say": "위치를 {value}(으)로 맞춰 주세요. 전국이면 '대한민국' 그대로, 가게 주변이면 지도에서 주소를 찾아 반경을 정한 뒤 '다음 칸'",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.location.png",
@@ -376,7 +396,8 @@
    "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
   },
   "auto": "type",
-  "level": "ad"
+  "level": "ad",
+  "outsideDialog": true
  },
  {
   "id": "meta.publish",

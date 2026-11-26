@@ -1,5 +1,5 @@
 import type { Result } from "../api";
-import { Card, HowCalculated, pct } from "../ui";
+import { Card, HowCalculated, pct, seriesBg } from "../ui";
 
 /** 5 퍼널: 본 사람 → 누른 사람 → 들어온 사람. 세트별 막대 + 단계 사이 비율(범위). */
 export function Funnel({ r }: { r: Result }) {
@@ -13,14 +13,14 @@ export function Funnel({ r }: { r: Result }) {
           return (
             <div key={arm.name} className="flex flex-col gap-3">
               <p className="text-body font-semibold">
-                <span className="inline-block size-2.5 rounded-badge mr-1.5" style={{ background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
+                <span className={`inline-block size-2.5 rounded-badge mr-1.5 ${seriesBg(i)}`} />
                 {"AB"[i]} · {arm.name}
               </p>
               {arm.stages.map((s) => (
                 <div key={s.key} className="flex flex-col gap-1">
                   <div className="flex justify-between text-body"><span className="text-soft">{s.label}</span><b className="tabular-nums">{s.count.toLocaleString()}</b></div>
                   <div className="h-2 rounded bg-sunk" aria-hidden="true">
-                    <div className="h-2 rounded" style={{ width: `${Math.max((s.count / top) * 100, s.count ? 1 : 0)}%`, background: i ? "var(--tone-series-b)" : "var(--tone-series-a)" }} />
+                    <div className={`h-2 rounded ${seriesBg(i)}`} style={{ width: `${Math.max((s.count / top) * 100, s.count ? 1 : 0)}%` }} />
                   </div>
                   {s.per100 && (
                     <p className="text-caption text-soft">

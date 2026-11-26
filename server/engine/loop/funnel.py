@@ -7,6 +7,10 @@ from typing import Dict, List
 
 import numpy as np
 
+from ..specs import loop as _loop
+
+_MATRIX = _loop()["matrix"]   # 다음 세팅(matrix)과 같은 기준으로 힌트를 준다
+
 FEW = 10
 STAGES = [("impressions", "보여진 횟수"), ("link_clicks", "클릭"), ("landing_page_views", "손님 (페이지 방문)")]
 VERB = {"link_clicks": "눌렀어요", "landing_page_views": "들어왔어요"}
@@ -43,8 +47,8 @@ def run(arms: List[Dict]) -> Dict:
     clicks = sum(a["link_clicks"] for a in arms)
     imps = sum(a["impressions"] for a in arms)
     visits = sum(a["landing_page_views"] for a in arms)
-    if clicks >= 5 and visits / clicks < 0.7:
+    if clicks >= 5 and visits / clicks < _MATRIX["visit_rate_min"]:
         hint = f"누른 사람 중 {visits / clicks:.0%}만 들어왔어요. 클릭은 했는데 도착이 적으면 페이지가 늦게 열리는지 점검해 보세요."
-    elif imps >= 300 and clicks / imps < 0.01:
+    elif imps >= 300 and clicks / imps < _MATRIX["ctr_low"]:
         hint = f"1,000명이 보면 {clicks / imps * 1000:.0f}명만 눌러요. 사진과 첫 문장을 바꿔 보는 게 먼저예요."
     return {"arms": out, "hint": hint}

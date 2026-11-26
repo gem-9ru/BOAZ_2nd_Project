@@ -11,6 +11,33 @@ export function ageGroupToRange(group: string): { ageMin: number; ageMax: number
   return { ageMin: Math.max(start, META_MIN_AGE), ageMax: Math.min(start + 9, META_MAX_AGE) };
 }
 
+/** 광고를 보여 줄 나이대: 가장 많이 찾는 나이대에서 시작해, 바로 옆 나이대가 AGE_SPAN_MIN 이상이면서
+ *  가장 많은 나이대의 절반 이상이면 넓힌다 (30대 23% · 40대 29% · 50대 25% → 30~50대). 두 옆 중 큰 쪽부터. */
+export const AGE_SPAN_MIN = 0.15;
+const AGE_GROUPS = ["10", "20", "30", "40", "50", "60"];
+
+export function ageSpan(ages: Record<string, number>): { groups: string[]; ageMin: number; ageMax: number } {
+  const have = AGE_GROUPS.filter((a) => a in ages);
+  if (have.length === 0) return { groups: ["30"], ...ageGroupToRange("30") };
+  const share = (a?: string) => (a ? ages[a] ?? 0 : 0);
+  const top = have.reduce((b, a) => (share(a) > share(b) ? a : b));
+  const ok = (a?: string) => !!a && share(a) >= AGE_SPAN_MIN && share(a) >= share(top) / 2;
+  let lo = AGE_GROUPS.indexOf(top), hi = lo;
+  for (;;) {
+    const left = AGE_GROUPS[lo - 1], right = AGE_GROUPS[hi + 1];
+    const pick = [left, right].filter(ok).sort((x, y) => share(y) - share(x))[0];
+    if (!pick) break;
+    if (pick === left) lo -= 1; else hi += 1;
+  }
+  const groups = AGE_GROUPS.slice(lo, hi + 1);
+  return { groups, ageMin: ageGroupToRange(groups[0]!).ageMin, ageMax: ageGroupToRange(groups[groups.length - 1]!).ageMax };
+}
+
+/** ['30','40','50'] → '30~50대', ['40'] → '40대' */
+export function ageSpanLabel(groups: string[]): string {
+  return groups.length > 1 ? `${groups[0]}~${groups[groups.length - 1]}대` : `${groups[0]}대`;
+}
+
 /** 여성 비중 → 성별 타겟 (60% 이상이면 여성, 40% 이하면 남성, 그 사이는 전체). */
 export function genderFrom(female: number): Target["gender"] {
   return female >= 0.6 ? "female" : female <= 0.4 ? "male" : "all";
@@ -24,6 +51,7 @@ export const SETTING_ORDER = [
   "meta.campaign.objective",
   "meta.campaign.special_category",
   "meta.adset.conversion_location",
+  "meta.adset.start_date",
   "meta.adset.end_date",
   "meta.adset.location",
   "meta.adset.age_gender",
@@ -41,27 +69,46 @@ const PREFILLED = new Set(["meta.campaign.objective", "meta.adset.age_gender"]);
 const OBJECTIVE = "트래픽";
 
 export function askedFields(fields: Field[]): Field[] {
-  return fields.filter((f) => !PREFILLED.has(f.id));
+  const follow = new Set(fields.flatMap((f) => {                                   // 다른 질문에서 이어 받는 칸
+    const to = f.then_ask?.field;
+    return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
+  }));
+  return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id));
+}
+
+/** 날짜 → YYYY-MM-DD (그 컴퓨터 날짜 기준). */
+export function isoDate(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 /** "7일" → 오늘부터 7일 뒤 날짜 (YYYY-MM-DD). */
 export function endDateFrom(choice: string, today: Date = new Date()): string {
   const days = parseInt(choice, 10) || 14;
-  const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() + days);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days));
 }
 
-export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, endDate: string): Setting[] {
+/** 시작일·종료일 (YYYY-MM-DD). 시각(HH:MM)은 사장님이 정했을 때만 — 없으면 광고 관리자 기본 시각 그대로 */
+export interface Schedule { start: string; end: string; startTime?: string; endTime?: string }
+
+/** 광고 기간 답 → 시작일·종료일. "14일"은 오늘부터, "2026-12-01 09:00~2026-12-14"는 사장님이 직접 고른 그대로 (시각은 선택). */
+export function scheduleFrom(choice: string, today: Date = new Date()): Schedule {
+  const m = /^(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?~(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?$/.exec(choice.trim());
+  if (m) return { start: m[1]!, end: m[3]!, ...(m[2] ? { startTime: m[2] } : {}), ...(m[4] ? { endTime: m[4] } : {}) };
+  return { start: isoDate(today), end: endDateFrom(choice, today) };
+}
+
+export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, schedule: Schedule): Setting[] {
   const label = (id: string) => fields.find((f) => f.id === id)?.label ?? id;
   const value: Record<string, string> = {
     ...answers,
     "meta.campaign.objective": OBJECTIVE,
     "meta.adset.age_gender": `${target.ageMin}–${target.ageMax}세 · ${GENDER_LABEL[target.gender]}`,
-    "meta.adset.end_date": endDate,
+    "meta.adset.start_date": schedule.startTime ? `${schedule.start} ${schedule.startTime}` : schedule.start,
+    "meta.adset.end_date": schedule.endTime ? `${schedule.end} ${schedule.endTime}` : schedule.end,
     "meta.creative.copy.text": copy.primary_text,
     "meta.creative.copy.headline": copy.headline,
   };
-  const extra: Record<string, string> = { "meta.creative.copy.text": "기본 문구", "meta.creative.copy.headline": "제목" };
+  const extra: Record<string, string> = { "meta.creative.copy.text": "기본 문구", "meta.creative.copy.headline": "제목", "meta.adset.start_date": "시작 날짜" };
   return SETTING_ORDER.map((id) => ({ fieldId: id, label: extra[id] ?? label(id), value: value[id] ?? "" }));
 }

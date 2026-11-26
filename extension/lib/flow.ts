@@ -40,10 +40,14 @@ export interface FlowState {
   segment?: Segment;          // 고른 손님 무리
   strengths?: string[];       // 고른 좋은 점
   answers: Record<string, string>;
+  /** 할 일 체크리스트에서 사장님이 체크한 줄 (질문 id → 줄 번호). 스토어 개설은 며칠 걸릴 수 있어 저장해 둔다 */
+  checks: Record<string, number[]>;
   settings: Setting[];
   /** away: 뭉치가 광고 관리자에 나가 있음 (패널 제목 왼쪽 집이 빔). 닫으면 false → 집으로 돌아옴 */
   /** next: EX-03 [다음 테스트 세팅] — 이 칸만 '지금', 나머지는 이전 값으로 끝난 칸 (v4.2) */
   guide: { mode: "create" | "edit" | "export"; index: number; away?: boolean; next?: string } | null;
+  /** 광고 시작일 (YYYY-MM-DD). 오늘보다 뒤면 예약 광고 */
+  startDate?: string;
   endDate?: string;
   plan?: Plan;
 }
@@ -59,7 +63,8 @@ export type FlowEvent =
   | { type: "editFind" }
   | { type: "answer"; id: string; value: string }
   | { type: "unanswer"; id: string }
-  | { type: "questionsDone"; settings: Setting[]; endDate?: string }
+  | { type: "toggleCheck"; key: string; index: number }
+  | { type: "questionsDone"; settings: Setting[]; startDate?: string; endDate?: string }
   | { type: "guideProgress"; index: number }
   | { type: "guideOpened" }
   | { type: "guideClosed" }
@@ -72,7 +77,7 @@ export type FlowEvent =
   | { type: "reset" };
 
 export function initialState(): FlowState {
-  return { step: "find", keywords: [], dropped: [], answers: {}, settings: [], guide: null };
+  return { step: "find", keywords: [], dropped: [], answers: {}, checks: {}, settings: [], guide: null };
 }
 
 export function reduce(s: FlowState, ev: FlowEvent): FlowState {
@@ -98,8 +103,14 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       const { [ev.id]: _drop, ...rest } = s.answers;
       return { ...s, answers: rest };
     }
+    case "toggleCheck": {
+      const got = s.checks[ev.key] ?? [];
+      const next = got.includes(ev.index) ? got.filter((i) => i !== ev.index) : [...got, ev.index].sort((a, b) => a - b);
+      return { ...s, checks: { ...s.checks, [ev.key]: next } };
+    }
     case "questionsDone":
-      return { ...s, settings: ev.settings, endDate: ev.endDate ?? s.endDate, step: "guide", guide: { mode: "create", index: 0 } };
+      return { ...s, settings: ev.settings, startDate: ev.startDate ?? s.startDate, endDate: ev.endDate ?? s.endDate,
+        step: "guide", guide: { mode: "create", index: 0 } };
     case "guideProgress":
       return s.guide ? { ...s, guide: { ...s.guide, index: ev.index } } : s;
     case "guideOpened":

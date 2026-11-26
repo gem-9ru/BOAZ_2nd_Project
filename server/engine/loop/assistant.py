@@ -7,6 +7,7 @@
 import json
 from typing import Dict, List, Optional
 
+from .. import copywriter
 from ..copywriter import MODEL
 from .words import arm_short, won
 
@@ -150,7 +151,7 @@ def answer(result: Dict, step: str, question: str, client=None) -> Dict:
                 model=MODEL, max_tokens=2000, system=SYSTEM,   # 생각 + 3문장
                 messages=[{"role": "user", "content": json.dumps({"화면": step, "결과": context(result, step), "질문": question},
                                                                  ensure_ascii=False, default=str)}])
-            text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), "").strip()
+            text = copywriter.reply_text(resp).strip()
             if text:
                 return {"message": text, "source": "llm"}
         except Exception:  # noqa: BLE001 (키·네트워크 문제 → 정해진 설명)

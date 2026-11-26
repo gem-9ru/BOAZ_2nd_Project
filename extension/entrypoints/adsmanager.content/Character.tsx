@@ -10,6 +10,8 @@ interface Props {
   onBack: () => void;
   onClose: () => void;
   onToggleAuto?: () => void;
+  /** 뭉치가 칸 옆에 도착해 가리키면 그 칸, 다시 걷기 시작하면 null (자동 진행은 도착한 뒤에 누르고 넣는다) */
+  onArrive?: (el: HTMLElement | null) => void;
 }
 
 const BUBBLE_GAP = 4;
@@ -39,8 +41,9 @@ function num(el: Element | null, name: string, fallback: number): number {
 /** 광고 관리자 위의 뭉치(3D) + 말풍선.
  *  집(화면 오른쪽 위, 사이드 패널 쪽)에서 걸어 나와 칸 옆까지 걷거나(가까우면) 뛰어가서(멀면) 팔로 가리킨다.
  *  닫으면 집으로 돌아간 뒤 사라진다. 크기·속도·색은 design-system 토큰(--character-*). */
-export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props) {
+export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArrive }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
+  const rectFor = useRef<HTMLElement | null>(null);   // rect가 어느 칸의 상자인지
   const host = useRef<HTMLDivElement>(null);
   const size = num(host.current, "--character-size", 120);
   const vp = () => ({ width: window.innerWidth, height: window.innerHeight });
@@ -61,6 +64,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
       if (target.getClientRects().length === 0) shown = false;
       if (!shown) shown = reveal(target);
       const r = targetBox(target);
+      rectFor.current = target;
       setRect(shown && r.width > 0 ? r : null);
     };
     update();
@@ -121,6 +125,12 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
     return () => cancelAnimationFrame(raf);
   }, [key]);
 
+  // 도착 신호: 지금 칸 옆에 서서 가리키는 중일 때만 그 칸을 알린다 (걷는 중·다른 칸 상자면 null)
+  useEffect(() => {
+    const here = mode === "point" && rect && view.target && rectFor.current === view.target ? view.target : null;
+    onArrive?.(here);
+  }, [mode, view.target, rect !== null]);
+
   // 말풍선: 가리키는 칸을 덮지 않는 자리 (오른쪽 → 왼쪽 → 아래 → 위)
   const bubbleEl = useRef<HTMLDivElement>(null);
   const bubble = { width: num(host.current, "--coach-width", 340), height: bubbleEl.current?.offsetHeight || 170 };
@@ -147,10 +157,11 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto }: Props
             {view.image && !view.found && <img src={browser.runtime.getURL(`/${view.image}` as never)} alt="이 칸이 있는 화면" className="coach-shot" />}
             <div className="coach-actions">
               <button type="button" onClick={onBack} disabled={view.index === 0}>이전 칸</button>
-              {/* [다음 칸]: 페이지에서 대신 고르기·넣기·누르기 (게시는 안 함). 직접 맞출 칸에선 [다 했어요] */}
-              {view.waiting !== "publish" && (
-                <button type="button" className="coach-primary" onClick={onDone}>{view.waiting === "owner" ? "다 했어요" : "다음 칸"}</button>
-              )}
+              {/* [다음 칸]: 페이지에서 대신 고르기·넣기·누르기 (게시는 안 함). 직접 맞출 칸에선 [다 했어요].
+                  게시 칸에선 [게시했어요]: 사장님이 직접 게시한 뒤 누르면 다음으로 (뭉치는 게시 버튼을 누르지 않음) */}
+              <button type="button" className="coach-primary" onClick={onDone}>
+                {view.waiting === "publish" || view.publish ? "게시했어요" : view.waiting === "owner" ? "다 했어요" : "다음 칸"}
+              </button>
               {onToggleAuto && view.waiting !== "publish" && (
                 <button type="button" onClick={onToggleAuto} aria-pressed={Boolean(view.auto)}>{view.auto ? "멈추기" : "자동 진행"}</button>
               )}

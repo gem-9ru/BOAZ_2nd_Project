@@ -1,6 +1,6 @@
 // 사장님 대신 맞추는 복잡한 칸 (2026-11-25 실제 메타 화면에서 확인한 구조를 흉내 냄)
 import { beforeEach, describe, expect, it } from "vitest";
-import { parseAgeGender, setAgeGender, setEndDate, checkLocation } from "../entrypoints/adsmanager.content/actions";
+import { parseAgeGender, setAgeGender, setEndDate, setStartDate, checkLocation } from "../entrypoints/adsmanager.content/actions";
 
 const fast = { wait: () => Promise.resolve() };
 
@@ -16,6 +16,73 @@ describe("종료 날짜", () => {
     expect((document.getElementById("cb") as HTMLInputElement).checked).toBe(true);
     expect((document.getElementById("end") as HTMLInputElement).value).toBe("2026-12-09");
     expect((document.getElementById("start") as HTMLInputElement).value).toBe("2026년 11월 25일");
+  });
+});
+
+describe("시작 날짜", () => {
+  const page = `
+      <input placeholder="yyyy-mm-dd" id="start" value="2026년 11월 25일">
+      <span id="l">종료 날짜 설정</span><input type="checkbox" id="cb" aria-labelledby="l">
+      <input placeholder="yyyy-mm-dd" id="end" value="">`;
+  const today = new Date(2026, 10, 25);
+
+  it("today (or empty) leaves the start box alone", async () => {
+    document.body.innerHTML = page;
+    expect(await setStartDate(document, "2026-11-25", fast, today)).toBe(true);
+    expect(await setStartDate(document, "", fast, today)).toBe(true);
+    expect((document.getElementById("start") as HTMLInputElement).value).toBe("2026년 11월 25일");
+  });
+
+  it("a later day goes into the date box before '종료 날짜 설정' (not the end date)", async () => {
+    document.body.innerHTML = page;
+    expect(await setStartDate(document, "2026-12-01", fast, today)).toBe(true);
+    expect((document.getElementById("start") as HTMLInputElement).value).toBe("2026-12-01");
+    expect((document.getElementById("end") as HTMLInputElement).value).toBe("");
+  });
+
+  it("a locked start box (ad set already started) → false, untouched", async () => {
+    document.body.innerHTML = page.replace('id="start"', 'id="start" disabled');
+    expect(await setStartDate(document, "2026-12-01", fast, today)).toBe(false);
+    expect((document.getElementById("start") as HTMLInputElement).value).toBe("2026년 11월 25일");
+  });
+
+  it("no date box → false (the owner does it)", async () => {
+    document.body.innerHTML = `<span>예산 및 일정</span>`;
+    expect(await setStartDate(document, "2026-12-01", fast, today)).toBe(false);
+  });
+});
+
+describe("시작·종료 시각", () => {
+  /** 메타처럼: 날짜 칸 뒤에 '시간'(0~23)·'분'(0~59) 스핀 버튼 */
+  const spins = (p: string) => `<input role="spinbutton" aria-label="시간" id="${p}h" aria-valuenow="0"><input role="spinbutton" aria-label="분" id="${p}m" aria-valuenow="32">`;
+  const page = `
+      <input placeholder="yyyy-mm-dd" id="start" value="2026년 11월 25일">${spins("s")}
+      <span id="l">종료 날짜 설정</span><input type="checkbox" id="cb" aria-labelledby="l">
+      <input placeholder="yyyy-mm-dd" id="end" value="">${spins("e")}`;
+  const val = (id: string) => (document.getElementById(id) as HTMLInputElement).value;
+  beforeEach(() => {
+    document.body.innerHTML = page;
+    for (const el of Array.from(document.querySelectorAll<HTMLInputElement>("[role=spinbutton]")))
+      el.addEventListener("input", () => el.setAttribute("aria-valuenow", String(Number(el.value))));
+  });
+
+  it("end date with a time also sets the hour and minute right after the end date box", async () => {
+    expect(await setEndDate(document, "2026-12-09 21:30", fast)).toBe(true);
+    expect(val("end")).toBe("2026-12-09");
+    expect([val("eh"), val("em")]).toEqual(["21", "30"]);
+    expect([val("sh"), val("sm")]).toEqual(["", ""]);
+  });
+
+  it("start today with a time sets only the start hour and minute", async () => {
+    expect(await setStartDate(document, "2026-11-25 09:05", fast, new Date(2026, 10, 25))).toBe(true);
+    expect(val("start")).toBe("2026년 11월 25일");
+    expect([val("sh"), val("sm")]).toEqual(["09", "05"]);
+    expect(val("eh")).toBe("");
+  });
+
+  it("no time boxes → false (the owner does it)", async () => {
+    document.body.innerHTML = page.replace(/<input role="spinbutton"[^>]*>/g, "");
+    expect(await setEndDate(document, "2026-12-09 21:30", fast)).toBe(false);
   });
 });
 
@@ -48,6 +115,21 @@ describe("연령·성별", () => {
     const name = (n: string) => document.querySelector(`[data-name="${n}"]`)!.textContent;
     expect([name("최소 연령"), name("최대 연령")]).toEqual(["30", "39"]);
     expect((document.getElementById("f") as HTMLInputElement).checked).toBe(true);
+  });
+});
+
+describe("연령·성별: 실제로 바뀌었는지 확인", () => {
+  it("returns false when the page ignores the option click (values stay 18 / 65+), so the guide does not move on", async () => {
+    document.body.innerHTML = `<span id="amin">최소 연령</span><div role="combobox" aria-labelledby="amin" id="min">18</div>
+      <span id="amax">최대 연령</span><div role="combobox" aria-labelledby="amax" id="max">65+</div>
+      <span id="g3">여성</span><input type="radio" name="g" aria-labelledby="g3">`;
+    for (const c of Array.from(document.querySelectorAll<HTMLElement>("[role=combobox]"))) {
+      c.addEventListener("click", () => {
+        document.querySelectorAll("[role=listbox]").forEach((x) => x.remove());
+        document.body.insertAdjacentHTML("beforeend", `<div role="listbox">${["18", "30", "39", "65+"].map((v) => `<div role="option">${v}</div>`).join("")}</div>`);
+      });
+    }
+    expect(await setAgeGender(document, "30–39세 · 여성", fast)).toBe(false);
   });
 });
 
