@@ -59,6 +59,42 @@ export interface Field {
   options: string[] | null;
   default: string | null;
   why: string;
+  /** 이 답을 고르면 바로 넘어가지 않고 보여 줄 할 일 (예: 페이스북 페이지가 없어요 → 만들기 링크) */
+  help?: Record<string, OptionHelp> | null;
+  /** 고른 뒤 같은 자리에서 이어 받는 주소 칸 (그 칸은 따로 묻지 않음). say·prefill은 고른 답별 */
+  then_ask?: {
+    /** 받은 주소를 넣을 칸 (답별로 다르면 답 → 칸) */
+    field: string | Record<string, string>;
+    say: Record<string, string>;
+    /** 답 → 미리 채울 값 틀. 목록이면 다 채워지는 첫 틀 */
+    prefill?: Record<string, string | string[]>;
+  } | null;
+  /** 앞 답에 따라 권장 답을 바꿈: {앞 칸 id: {앞 답: 권장 답}} */
+  default_if?: Record<string, Record<string, string>> | null;
+  /** 앞 답에 따라 질문 아래에 붙일 한 줄: {앞 칸 id: {앞 답: 안내}} */
+  note_if?: Record<string, Record<string, string>> | null;
+}
+
+/** 할 일 체크리스트 한 줄. hint: keywords → ① 찾기에서 고른 검색어 한 줄 */
+export interface HelpStep {
+  text: string;
+  link?: string;
+  url?: string;
+  hint?: "keywords";
+}
+
+export interface OptionHelp {
+  say: string;
+  /** 링크 하나 (steps가 없을 때) */
+  link?: string;
+  url?: string;
+  /** 할 일이 여러 개면 체크리스트 */
+  steps?: HelpStep[];
+  /** 다 했을 때 누를 버튼과 그때 기록할 답 */
+  done: string;
+  done_value: string;
+  /** 나중에 할게요: 고른 답 그대로 넘어감 */
+  later: string;
 }
 
 export interface PresetField {

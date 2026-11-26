@@ -41,7 +41,11 @@ const PREFILLED = new Set(["meta.campaign.objective", "meta.adset.age_gender"]);
 const OBJECTIVE = "트래픽";
 
 export function askedFields(fields: Field[]): Field[] {
-  return fields.filter((f) => !PREFILLED.has(f.id));
+  const follow = new Set(fields.flatMap((f) => {                                   // 다른 질문에서 이어 받는 칸
+    const to = f.then_ask?.field;
+    return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
+  }));
+  return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id));
 }
 
 /** "7일" → 오늘부터 7일 뒤 날짜 (YYYY-MM-DD). */

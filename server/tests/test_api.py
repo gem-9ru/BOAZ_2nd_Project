@@ -59,12 +59,25 @@ def test_copies_without_strengths_still_three(monkeypatch):
 def test_fields_are_the_eleven_questions():
     fields = TestClient(app).get("/fields").json()["fields"]
     assert [f["id"] for f in fields] == [
-        "meta.pre.fb_page", "meta.pre.ig_account", "meta.campaign.objective", "meta.campaign.special_category",
+        "meta.pre.fb_page", "meta.pre.ig_account", "meta.pre.store_product", "meta.campaign.objective", "meta.campaign.special_category",
         "meta.adset.conversion_location", "meta.adset.end_date", "meta.adset.location", "meta.adset.age_gender",
         "meta.ad.format", "meta.ad.website_url", "meta.ad.media"]
     end = next(f for f in fields if f["id"] == "meta.adset.end_date")
     assert end["kind"] == "question" and end["options"] == ["7일", "14일", "30일"] and end["ask"]
-    assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why"}
+    assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why", "help", "then_ask", "default_if", "note_if"}
+
+
+def test_store_product_question():
+    fields = {f["id"]: f for f in TestClient(app).get("/fields").json()["fields"]}
+    q = fields["meta.pre.store_product"]
+    assert q["kind"] == "precheck" and q["options"] == ["올렸어요", "아직이에요"] and q["default"] == "올렸어요"
+    steps = q["help"]["아직이에요"]["steps"]
+    assert len(steps) == 3 and steps[1]["hint"] == "keywords"
+    assert all(s["url"].startswith("https://sell.smartstore.naver.com/") for s in steps[:2])
+    assert q["then_ask"]["field"] == {"올렸어요": "meta.pre.store_url", "아직이에요": "meta.pre.insta_url"}
+    loc = fields["meta.adset.conversion_location"]
+    assert loc["default_if"] == {"meta.pre.store_product": {"아직이에요": "인스타그램 프로필"}}
+    assert loc["note_if"]["meta.pre.store_product"]["아직이에요"]
 
 
 def test_defaults_lists_fields_not_asked():
