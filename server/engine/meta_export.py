@@ -2,14 +2,15 @@
 
 받는 형식 두 가지:
 1. 광고 관리자 내보내기 (분석 기준 '일 × 노출 위치'): 머리글 한 줄, 행 = 날짜·광고 세트·노출 위치.
-   일별 표는 날짜·광고 세트로 더해서 만든다 (도달은 더할 수 없어 뺀다 → 빈도 규칙은 '데이터 없음').
+   일별 표는 날짜·광고 세트로 더해서 만든다 (도달도 더한다 → 겹치는 사람을 두 번 세므로 빈도는 '적어도 ○번'으로만 쓴다).
+   광고 세트 예산·유형 열이 있으면 기간 총예산도 읽는다 (Bundle.budget → ALT-12 예산 덜 씀).
 2. 팀 실측 정리본 (오븐로그, 세로형): section·ad_set·date·platform·position·metric·value 열.
    '5_부록_일자별' → 일별 표, '3_노출위치' → 노출 위치별 표.
 캠페인 목표 열이 없으면 이번 범위(트래픽)로 채운다.
 """
 import io
 from pathlib import Path
-from typing import Union
+from typing import Optional, Union
 
 import pandas as pd
 
@@ -102,11 +103,56 @@ def _from_export(df: pd.DataFrame) -> Bundle:
     if daily is not None:   # 합계 행처럼 광고 세트가 빈 행은 뺀다 (날짜가 있어도)
         daily.df = daily.df[daily.df["adset"].notna()].reset_index(drop=True)
     if daily is not None and len(daily.df):
-        if has_placement:   # 일×노출 위치 → 날짜·광고 세트로 더함 (비율·도달은 다시 계산하거나 뺀다)
-            keep = ["date", "adset", "campaign_objective"] + [c for c in SUMMABLE + ["actions"] if c in daily.df.columns]
+        if has_placement:   # 일×노출 위치 → 날짜·광고 세트로 더함 (비율은 다시 계산하므로 뺀다)
+            # 도달(reach_daily)도 더한다: 겹치는 사람을 두 번 세므로 '본 사람 수'의 최댓값이 된다
+            # → 노출 ÷ 이 합 = 빈도의 최솟값 ('적어도 ○번'). 이 값이 기준을 넘으면 실제 빈도도 넘는다.
+            keep = ["date", "adset", "campaign_objective"] + [c for c in SUMMABLE + ["actions", "reach_daily"] if c in daily.df.columns]
             daily.df = daily.df[keep].groupby(["date", "adset", "campaign_objective"], as_index=False).sum()
         b.tables["meta_daily"] = daily
+        b.budget = _budget(df, daily.df)
     return b
+
+
+BUDGET_COLUMNS = [("광고 세트 예산", "광고 세트 예산 유형", "adset"), ("Ad set budget", "Ad set budget type", "adset"),
+                  ("캠페인 예산", "캠페인 예산 유형", "campaign"), ("Campaign budget", "Campaign budget type", "campaign")]
+
+
+def _budget_kind(text) -> Optional[str]:
+    """예산 유형 글자 → 'daily'(하루 예산) / 'lifetime'(기간 총예산). 모르는 글자면 None (추측하지 않음)."""
+    t = str(text).strip().lower()
+    if any(w in t for w in ("일일", "하루", "daily")):
+        return "daily"
+    if any(w in t for w in ("총", "기간", "lifetime")):
+        return "lifetime"
+    return None
+
+
+def _budget(raw: pd.DataFrame, daily: pd.DataFrame) -> Optional[dict]:
+    """메타 내보내기에 들어 있는 예산 열 → 이 기간에 쓰기로 한 총예산 (ALT-12 예산 덜 씀).
+    광고 세트 예산이 세트마다 있으면 그 합, 없으면(캠페인 예산 사용) 캠페인 예산. 금액·유형을 못 읽으면 None."""
+    days = int(daily["date"].nunique()) if "date" in daily.columns else 0
+    set_col = next((c for c in ("광고 세트 이름", "광고 세트", "Ad set name") if c in raw.columns), None)
+    for amount_col, kind_col, level in BUDGET_COLUMNS:
+        if amount_col not in raw.columns or kind_col not in raw.columns:
+            continue
+        rows = raw[[amount_col, kind_col] + ([set_col] if set_col and level == "adset" else [])].copy()
+        rows["amount"] = pd.to_numeric(rows[amount_col].astype(str).str.replace(",", "").str.replace("원", ""), errors="coerce")
+        rows["kind"] = rows[kind_col].map(_budget_kind)
+        rows = rows[(rows["amount"] > 0) & rows["kind"].notna()]
+        if level == "adset":
+            if not set_col or rows.empty:
+                continue
+            per_set = rows.groupby(set_col).first()
+            if len(per_set) < int(daily["adset"].nunique()):   # 예산을 못 읽은 세트가 있으면 합이 틀려진다
+                continue
+        else:
+            if rows.empty:
+                continue
+            per_set = rows.head(1)
+        total = float(sum(a * (days if k == "daily" else 1) for a, k in zip(per_set["amount"], per_set["kind"])))
+        if total > 0 and (days or set(per_set["kind"]) == {"lifetime"}):
+            return {"total": total, "level": level, "kinds": sorted(set(per_set["kind"]))}
+    return None
 
 
 def read_export(src: Source) -> Bundle:

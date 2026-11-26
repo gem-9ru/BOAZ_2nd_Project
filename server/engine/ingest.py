@@ -28,6 +28,7 @@ class Bundle:
     """한 번에 올린 결과 묶음. tables: 표 이름 → Table, problems: 사장님에게 보여 줄 문제 (고치는 법 포함)."""
     tables: Dict[str, Table] = field(default_factory=dict)
     problems: List[str] = field(default_factory=list)
+    budget: Optional[Dict] = None   # 메타 내보내기의 예산 열에서 읽은 기간 총예산 {"total": 원, "kind": ...} (없으면 None)
 
     def get(self, name: str) -> Optional[pd.DataFrame]:
         t = self.tables.get(name)

@@ -30,6 +30,7 @@ loop:
     visit_rate_min: 0.60
     placement_share: 0.60   # 한 노출 위치에 지출 집중
     fatigue_days: 7         # 소재 피로는 이 기간 이상일 때만
+    fatigue_ctr_drop: 0.15  # 소재 피로: 뒤 절반 클릭률이 앞 절반보다 이만큼 넘게 떨어짐 (업계 가이드 주간 15~25% 하락)
     learning_events: 50     # 학습 단계: 7일에 최적화 이벤트 약 50회
   meta_daily_min: 1336      # 메타가 받는 하루 최소 예산(원) 약값 — 오븐로그 11/17 사례 (설계서 v4.2 EX-01 ④). AN-05 기간 토글 경고
   test_and_roll:            # Feit & Berman 2019, 오븐로그 실측 기준

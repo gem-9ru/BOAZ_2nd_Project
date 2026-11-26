@@ -50,13 +50,16 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
 
     arms = summary["arms"]
     spend = sum(a["spend"] for a in arms)
+    # ALT-12 예산 덜 씀: 설정 예산은 결과 파일의 예산 열(광고 세트 예산·유형)이 먼저, 없으면 세팅값의 하루 예산 × 기간 × 세트 수
+    expected = float((getattr(bundle, "budget", None) or {}).get("total") or 0)
     budget = (settings or {}).get("meta.adset.daily_budget")
-    if budget:
+    if not expected and budget:
         try:
             expected = float(str(budget).replace(",", "").replace("원", "")) * daily["date"].nunique() * len(arms)
         except ValueError:
             expected = 0
-        if expected and spend / expected < cfg["spend_used_min"]:
+    if expected:
+        if spend / expected < cfg["spend_used_min"]:
             out.append(_a("warn", "underspent", f"예산의 절반도 못 썼어요 (쓴 돈 {_won(spend)} / 설정 {_won(expected)}) → 타깃 범위가 너무 좁을 수 있어요.",
                           "타깃을 넓히거나 총예산을 '하루 최소 × 기간'보다 넉넉하게 잡아 주세요.", "AN-01"))
     if len(arms) >= 2 and spend > 0:
@@ -81,10 +84,14 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
         if r is not None and a["link_clicks"] > 0 and r < cfg["visit_rate_min"]:
             out.append(_a("warn", "low_visit_rate", f"{a['name']}: 누른 10명 중 페이지에 들어온 사람이 {r * 10:.0f}명뿐이에요 → 링크 주소 · 페이지 속도",
                           "휴대폰으로 광고 주소를 열어 주소가 맞는지, 빨리 열리는지 확인해 주세요.", "AN-02"))
-    if "reach" in daily.columns and float(daily["reach"].sum()) > 0:
-        freq = float(daily["impressions"].sum()) / float(daily["reach"].sum())
+    # ALT-16 반복 노출: 세트마다 빈도의 최솟값(노출 ÷ 도달 합)이 기준을 넘으면 → 실제 빈도도 넘는다
+    freqs = [(a, a["frequency_min"]) for a in arms if a.get("frequency_min") is not None]
+    if freqs:
+        top, freq = max(freqs, key=lambda x: x[1])
         if freq > cfg["frequency_max"]:
-            out.append(_a("warn", "high_frequency", f"한 사람이 평균 {cfg['frequency_max']:g}번 넘게 봤어요 ({freq:.1f}번) → 소재를 바꿀 때예요.", "새 소재를 준비하거나 타깃을 넓혀 보세요.", "AN-02"))
+            who = f"{top['name']}: " if len(arms) > 1 else ""
+            out.append(_a("warn", "high_frequency", f"{who}한 사람이 평균 {cfg['frequency_max']:g}번 넘게 봤어요 (적어도 {freq:.1f}번) → 소재를 바꿀 때예요.",
+                          "새 소재를 준비하거나 타깃을 넓혀 보세요.", "AN-02", frequency=freq))
 
     # ● 참고: 메타 추천 ≠ 실측 (메타는 자동 노출 위치를 권장)
     auto = [a for a in arms if "자동" in a["name"]]
