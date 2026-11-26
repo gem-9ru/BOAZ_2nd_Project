@@ -1,9 +1,8 @@
 import { useState } from "react";
 import type { Result } from "../api";
-import { Button, Card, josa, Tabs, TestTag, won } from "../ui";
+import { Tabs } from "../ui";
 import { DEV_LABEL } from "./Certainty";
 import { VIRTUAL_CASES } from "./cases";
-import { Lead } from "./shared";
 
 const EVIDENCE = ["메타 공식 신호", "우리 실측 2건", "논문", "가상 케이스", "한계"] as const;
 /** 근거 탭은 개발 표기 (v4.2: 확실 / 유력 / 보류) */
@@ -11,61 +10,15 @@ const DEV_WORD = { "확실해요": "확실", "A 쪽이에요": "유력", "B 쪽�
 const ALERT_WORD: Record<string, string> = { no_delivery: "안 나간 날", underspent: "예산 덜 씀", spend_gap: "돈 쏠림", small_sample: "클릭 적음",
   low_visit_rate: "페이지 도착 적음", high_frequency: "반복 노출", an_skew: "Audience Network 쏠림", missing_column: "열 빠짐", sum_mismatch: "합계 안 맞음" };
 
-/** AN-06 보내기 + 근거 (v4.2): '이 테스트를 준비' · 지금 세트(그대로) → 새 세트(바꿀 값) · 체크리스트 4개(ALT 번호 숨김)
- *  · 확장 프로그램으로 보내기 · 근거 탭(근거 탭만 확실 / 유력 / 보류 표기). */
-export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: string) => void; onSend?: () => void }) {
+/** 근거 (기존 AN-06 근거 탭): 메타 공식 신호 · 우리 실측 2건 · 논문 · 가상 케이스 · 한계. 근거 탭만 확실 / 유력 / 보류 표기.
+ *  ③ 준비하기의 접기 '근거' 안에 들어간다. */
+export function Evidence({ r }: { r: Result }) {
   const c = r.matrix.change ?? r.next.change;
-  const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
   const [tab, setTab] = useState<(typeof EVIDENCE)[number]>("메타 공식 신호");
-  const what = c.what ?? c.label;
-  const days = c.days ?? r.check.read.days;   // 서버가 하루 최소를 넘게 맞춘 기간
-  // 옆 광고 어시스턴트(확장 프로그램 패널)로 바로 보낸다. 패널이 안 열려 있을 때를 위해 코드도 복사해 둔다.
-  function send() {
-    onSend?.();
-    const done = `오른쪽 광고 어시스턴트로 보냈어요. 패널이 안 열려 있으면 확장 프로그램 ③ 분석에 코드 ${r.code}를 넣어 주세요`;
-    navigator.clipboard.writeText(r.code).then(() => onCopied(`${done} (코드 복사됨)`), () => onCopied(done));
-  }
-  function download() {
-    const blob = new Blob([JSON.stringify({ code: r.code, change: c, keep: r.matrix.keep, dont: r.matrix.dont, checklist }, null, 2)], { type: "application/json" });
-    const a = Object.assign(document.createElement("a"), { href: URL.createObjectURL(blob), download: `광고어시스턴트_계획_${r.code}.json` });
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
   const ok = r.matrix.keep[0];
   return (
     <>
-      <Lead>{c.tested === false
-        ? (what.endsWith("소재") ? `${josa(what, "을를")} 넣은 세트 하나만 더 만들면 돼요` : `${c.label} 칸만 바꾼 세트 하나만 더 만들면 돼요`)
-        : `${c.label} 칸 하나만 바꾸면 돼요`}</Lead>
-      <Card title="테스트안" summary={c.path ?? c.label}>
-        <div className="flex flex-col gap-2 rounded-button border-2 border-accent px-5 py-4">
-          <p className="flex flex-wrap items-center gap-2 text-lead font-bold">
-            <span>지금 세트: {c.now ? <>{c.now} <span className="font-normal text-soft">(그대로)</span></> : "그대로"}</span>
-            <span aria-hidden="true">·</span>
-            <span>새 세트: {c.new_short ?? c.new}</span>
-            {c.tag && <TestTag text={c.tag} />}
-          </p>
-          <p className="text-body">이유: {c.reason ?? c.note}</p>
-          {c.tested === false && <p className="text-body">{what} 효과: 아직 몰라요 → 이번 테스트로 확인</p>}
-          <p className="text-body text-soft">세트당 총 {won(c.per_set ?? 5000)}, {days}일{c.test_roll ? " (Test & Roll 권장 범위 안)" : ""} · 두 세트 같은 날 같이 시작</p>
-        </div>
-      </Card>
-      <Card title="다음 테스트 체크리스트" summary={`${checklist.length}개만 지키면 다음 결과로 효과를 잴 수 있어요`}>
-        <ul className="flex flex-col gap-2">
-          {checklist.map((t) => (
-            <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3 text-body"><input type="checkbox" className="size-5 shrink-0 accent-action" />{t}</label></li>
-          ))}
-        </ul>
-      </Card>
-      <Card title="확장 프로그램으로 보내기" summary="누르면 오른쪽 광고 어시스턴트가 테스트안을 받아요. 패널의 [다음 테스트 세팅] → [광고 관리자 열기]를 누르면 이 칸을 짚어 드려요. 게시는 사장님이 직접 해요">
-        <p className="text-body text-soft">패널이 안 열려 있으면 확장 프로그램 ③ 분석에 이 코드를 넣어도 돼요: <b className="text-title tracking-[0.3em] tabular-nums text-ink">{r.code}</b></p>
-        <div className="flex flex-wrap gap-3 print:hidden">
-          <Button onClick={send}>확장 프로그램으로 보내기</Button>
-          <Button kind="secondary" onClick={download}>계획 파일 내려받기</Button>
-          <Button kind="secondary" onClick={() => window.print()}>결과 PDF</Button>
-        </div>
-      </Card>
-      <Card title="근거" summary="이 결론이 어디서 나왔는지예요. 근거 탭은 확실 / 유력 / 보류로 적어요">
+      <p className="text-soft">이 결론이 어디서 나왔는지예요. 근거 탭은 확실 / 유력 / 보류로 적어요</p>
         <Tabs label="근거" value={tab} onChange={setTab} items={EVIDENCE.map((t) => ({ id: t, label: t }))} />
         <div className="flex flex-col gap-2 text-body" role="tabpanel">
           {tab === "메타 공식 신호" && <>
@@ -106,9 +59,8 @@ export function AN06({ r, onCopied, onSend }: { r: Result; onCopied: (msg: strin
             </div>
             <p>· 실측: 오븐로그 A(자동)·B(직접 고르기)의 광고비·누르는 비율·도착 비율 · 가정: 실측에 없는 값(V5·V6) · 시드 고정이라 다시 돌려도 같은 숫자</p>
           </>}
-          {tab === "한계" && <p>소액·짧은 기간이라 범위가 넓어요. 예산을 크게 늘릴 때 단가가 오르는 효과는 넣지 않았어요. 광고 전후 비교로는 효과를 말하지 않고, 같은 기간에 동시에 돌린 A/B 비교로만 말해요.</p>}
+          {tab === "한계" && <p>세트를 복제하면 같은 사람에게 두 세트가 겹쳐 보일 수 있어요. 소액·짧은 기간이라 범위가 넓어요. 예산을 크게 늘릴 때 단가가 오르는 효과는 넣지 않았어요. 광고 전후 비교로는 효과를 말하지 않고, 같은 기간에 동시에 돌린 A/B 비교로만 말해요.</p>}
         </div>
-      </Card>
     </>
   );
 }

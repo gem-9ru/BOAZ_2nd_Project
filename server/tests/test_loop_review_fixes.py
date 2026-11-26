@@ -123,7 +123,7 @@ def test_click_rate_is_told_in_times_not_people():
 # 점검 L: 화면설계서 v4.2 AN-06 ② — 끝이 있는 '그대로 두기'
 def test_checklist_wait_item_has_an_end_like_the_spec():
     c = run(read_export(OVEN))["matrix"]["change"]
-    assert "4일 동안 그대로 두기 → 4일 뒤 클릭 30번 미만이면 하루 연장(예산 추가) 또는 '아직 몰라요'로 마무리" in c["checklist"]
+    assert "4일 동안 그대로 두기 → 클릭 30번 미만이면 딱 하루만 연장, 그래도 모자라면 '아직 몰라요'로 마무리" in c["checklist"]
     assert not any("모일 때까지" in t for t in c["checklist"])
 
 

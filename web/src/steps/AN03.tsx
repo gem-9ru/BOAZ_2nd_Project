@@ -1,15 +1,13 @@
 import { useState } from "react";
 import type { Kind, Result } from "../api";
 import { Card, Tabs } from "../ui";
-import { Lead } from "./shared";
 
 const ORDER = ["캠페인", "광고 세트", "광고"];
 const LOOK: Record<Kind, string> = { 테스트: "bg-accent text-on-accent", "다시 보기": "bg-warn-bg text-warn", 그대로: "bg-sunk text-soft" };
 type Item = { field_id: string; path: string; kind: Kind; text: string; value?: string };
 
-/** AN-03 내 세팅 카드 (v4.2): 광고 관리자 순서(캠페인 → 광고 세트 → 광고) 표 + 상태 탭(전체/테스트/다시 보기/그대로).
- *  테스트 행 = 바이올렛 왼쪽 테두리, 선택 행 = 연보라. 근거는 사장님 말로, 증감은 ↑↓. 행을 누르면 아래에 상세. */
-export function AN03({ r, focus }: { r: Result; focus?: string | null }) {
+/** 내 세팅 칸 목록: 확장 프로그램이 넘긴 세팅이 있으면 전부, 없으면 결과 파일로 알 수 있는 칸만. 광고 관리자 순서. */
+export function settingItems(r: Result): Item[] {
   const m = r.matrix;
   const full = m.settings ?? [];
   const items: Item[] = full.map((x) => ({ field_id: x.field_id, path: x.path, kind: x.kind, text: x.note, value: x.value }));
@@ -19,8 +17,23 @@ export function AN03({ r, focus }: { r: Result; focus?: string | null }) {
     m.watch.forEach((w) => { if (!items.some((x) => x.path === w.path)) items.push({ field_id: w.field_id, path: w.path, kind: "다시 보기", text: w.text }); });
   }
   items.sort((a, b) => ORDER.indexOf(a.path.split(" › ")[0]!) - ORDER.indexOf(b.path.split(" › ")[0]!));
+  return items;
+}
+
+/** 접기 줄 미리보기: '테스트 1 · 다시 보기 2 · 그대로 1' */
+export const settingPreview = (r: Result) => {
+  const items = settingItems(r);
+  return (["테스트", "다시 보기", "그대로"] as Kind[]).map((k) => `${k} ${items.filter((x) => x.kind === k).length}`).join(" · ");
+};
+
+/** 내 세팅 칸별 상태 (기존 AN-03): 광고 관리자 순서(캠페인 → 광고 세트 → 광고) 표 + 상태 탭(전체/테스트/다시 보기/그대로).
+ *  테스트 행 = 바이올렛 왼쪽 테두리, 선택 행 = 연보라. 근거는 사장님 말로. 행을 누르면 아래에 상세. */
+export function SettingsDetail({ r }: { r: Result }) {
+  const m = r.matrix;
+  const full = m.settings ?? [];
+  const items = settingItems(r);
   const [tab, setTab] = useState<"전체" | Kind>("전체");
-  const [sel, setSel] = useState<string | null>(focus ?? m.keep[0]?.field_id ?? null);
+  const [sel, setSel] = useState<string | null>(m.keep[0]?.field_id ?? null);
   const n = (k: Kind) => items.filter((x) => x.kind === k).length;
   const shown = tab === "전체" ? items : items.filter((x) => x.kind === tab);
   const meta = r.alerts.find((a) => a.kind === "meta_vs_measured");
@@ -28,8 +41,6 @@ export function AN03({ r, focus }: { r: Result; focus?: string | null }) {
   const tabs: ("전체" | Kind)[] = ["전체", "테스트", "다시 보기", "그대로"];
   return (
     <>
-      <Lead>{[`테스트할 칸 ${n("테스트")}개`, n("다시 보기") ? `다시 볼 칸 ${n("다시 보기")}개` : null,
-        n("그대로") ? `나머지 ${n("그대로")}개는 그대로 두세요` : "나머지는 그대로 두세요"].filter(Boolean).join(", ")}</Lead>
       <Card title="광고 관리자 순서로 본 내 세팅" summary="광고 관리자 칸 이름 그대로, 위에서부터 캠페인 → 광고 세트 → 광고 순서예요">
         <Tabs label="상태로 거르기" value={tab} onChange={setTab}
           items={tabs.map((t) => ({ id: t, label: <>{t} <span className="tabular-nums">{t === "전체" ? items.length : n(t)}</span></> }))} />

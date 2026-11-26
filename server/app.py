@@ -407,7 +407,8 @@ def simulate(body: SimulateIn):
     out = loop_simulate.run(arm, budget)
     # 써 본 적 없는 금액은 '가설' (화면에서 점선). Test & Roll은 따로 받은 전체 예산 기준.
     return {**out, **loop_simulate.tried(arm, budget, body.days if body.days and body.days > 0 else None),
-            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0), body.days or 4)}
+            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0), body.days or 4),
+            "judge": loop_simulate.judge_chance(arm, budget)}   # 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩)
 
 
 @app.get("/plan/{code}")

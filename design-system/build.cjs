@@ -62,6 +62,12 @@ const EXTENSION_COLORS = [
   ["accent", "semantic.tone.accent"],
   ["accent-ink", "semantic.tone.accent-ink"],
   ["accent-soft", "semantic.tone.accent-soft"],
+  ["accent-faint", "semantic.tone.accent-faint"],
+  ["accent-line", "semantic.tone.accent-line"],
+  ["/* 뭉치 배 색: 장식 포인트 (강조 밑줄·진행 점·테스트 제안 태그). 상태 표시에 쓰지 않는다 */"],
+  ["belly", "semantic.tone.belly"],
+  ["belly-strong", "semantic.tone.belly-strong"],
+  ["belly-ink", "semantic.tone.belly-ink"],
   ["/* 알림 4색 고정: 메인과 섞지 않고, 모양(■ ▲ ● ✓)과 함께만 쓴다 */"],
   ["block", "semantic.tone.block"],
   ["block-ink", "semantic.tone.block-ink"],
@@ -105,9 +111,12 @@ const EXTENSION_THEME = [
   ["--container-page", "semantic.layout.page"],
   ["--container-page-wide", "semantic.layout.page-wide"],
   ["--container-measure", "semantic.layout.measure"],
-  ["/* 그림자 두 단계: shadow-raised (sticky 칸) · shadow-float (토스트·말풍선) */"],
+  ["/* 그림자: shadow-raised (sticky 칸) · shadow-float (토스트·말풍선) · shadow-card (카드) · shadow-press (주 버튼 아래 눌림) · shadow-hero (주인공 카드) */"],
   ["--shadow-raised", "semantic.elevation.raised"],
   ["--shadow-float", "semantic.elevation.float"],
+  ["--shadow-card", "semantic.elevation.card"],
+  ["--shadow-press", "semantic.elevation.press"],
+  ["--shadow-hero", "semantic.elevation.hero"],
   ["/* 움직임: transition 기본 시간 (hover 등 색 바뀜) */"],
   ["--default-transition-duration", "semantic.motion.hover"],
 ];
@@ -124,9 +133,9 @@ function buildExtensionTheme() {
     `  --focus-offset: ${resolve("component.focus.offset")};`,
     `  --motion-expand: ${resolve("semantic.motion.expand")};`,
     `  --motion-easing: ${resolve("semantic.motion.easing")};`,
-    // 패널 제목 왼쪽 '캐릭터 집'도 광고 관리자 위 캐릭터와 같은 값으로 그린다
-    ...Object.keys(tokens.component.character).filter((k) => !k.startsWith("$"))
-      .map((k) => `  --character-${k}: ${resolve(`component.character.${k}`)};`),
+    // 패널 제목 왼쪽 '캐릭터 집'도 광고 관리자 위 캐릭터와 같은 값으로 그린다. panel = 사이드 패널 머리·진행 막대
+    ...["character", "panel"].flatMap((g) => Object.keys(tokens.component[g]).filter((k) => !k.startsWith("$"))
+      .map((k) => `  --${g}-${k}: ${resolve(`component.${g}.${k}`)};`)),
   ];
   return (
     HEADER("확장 프로그램 Tailwind 테마 (색·글자·움직임).") +
@@ -192,6 +201,13 @@ const PAIRS = [
   ["semantic.tone.on-accent", "semantic.tone.accent", "text", "메인 바탕 위 흰 글자"],
   ["semantic.tone.on-accent", "semantic.tone.accent-ink", "text", "메인 진하게 위 흰 글자"],
   ["semantic.tone.hold", "semantic.tone.surface", "text", "보류 글자 (흰 바탕)"],
+  ["semantic.tone.belly-ink", "semantic.tone.belly", "text", "테스트 제안 태그 (배 색 바탕)"],
+  ["semantic.tone.ink-soft", "semantic.tone.bg", "text", "보조 글자 (크림 바탕)"],
+  ["component.coach.chip-fg", "component.coach.chip-bg", "text", "말풍선 단계 칩"],
+  ["component.coach.ghost-fg", "component.coach.ghost-bg", "text", "말풍선 작은 보조 버튼"],
+  ["component.coach.emphasis-fg", "component.coach.bubble-bg", "text", "말풍선 안 굵은 값"],
+  ["component.panel.head-fg", "component.panel.head-from", "text", "패널 머리 흰 글자 (그라데이션 밝은 쪽)"],
+  ["component.panel.head-fg", "component.panel.head-to", "text", "패널 머리 흰 글자 (그라데이션 어두운 쪽)"],
   ["semantic.tone.accent", "semantic.tone.surface", "ui", "초점 링·현재 단계 테두리"],
   ["component.coach.ring", "semantic.tone.on-meta", "ui", "메타 화면 위 칸 테두리"],
   ["semantic.tone.warn-mark", "semantic.tone.surface", "ui", "▲ 주의 모양"],

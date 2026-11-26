@@ -64,3 +64,12 @@ def next_test_budget(total: float, days: int = 4) -> Dict:
     return {"total": float(total), "share_lo": t["share_lo"], "share_hi": t["share_hi"],
             "per_set_lo": per_lo, "per_set_hi": max(_thousand(hi / 2), per_lo), "per_set_least": least,
             "source": "Feit & Berman 2019 Test & Roll (오븐로그 실측으로 맞춘 몫)"}
+
+
+def judge_chance(arm: Dict, budget: float, sets: int = 2, runs: int = RUNS, seed: int = 0) -> float:
+    """세트마다 budget을 쓰면 두 세트 합쳐 링크 클릭이 판정 최소(rules.yaml min_clicks, 30번) 넘게 모일 가능성 (축소안 v5 ③).
+    새 세트도 지금 세트처럼 반응한다고 가정: 세트마다 사후 분포에서 따로 뽑고, 실제 클릭 수의 우연(포아송)도 더한다.
+    테스트가 '성공'할 확률이 아니라 '판단할 수 있을' 가능성이다."""
+    rng = np.random.default_rng(seed)
+    clicks = sum(budget / d["cpm"] * 1000 * d["ctr"] for d in (posterior.draws(arm, n=runs, seed=seed + i) for i in range(sets)))
+    return float((rng.poisson(clicks) >= _loop()["alerts"]["min_clicks"]).mean())

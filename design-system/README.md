@@ -34,7 +34,7 @@ component (부품, 예: button.bg, coach.ring)
 | 파일 | 누가 읽나 | 변수 이름 |
 |---|---|---|
 | `web/src/tokens.css` | 분석 페이지. `web/src/styles.css`의 `@theme inline`이 Tailwind 색으로 연결 | `--primitive-*`, `--tone-*`, `--card-*`·`--button-*` 등 |
-| `extension/assets/tokens.css` | 확장 사이드 패널. `extension/assets/tailwind.css`가 `@import` | `@theme`: `--color-*`(바탕·글자·메인·알림 4색과 연한 바탕·`reference`·판정·`on-accent`), `--font-sans`, `--text-caption/body/lead/title/number` · `:root`: `--state-disabled-opacity`, `--focus-width/offset`, `--motion-*` |
+| `extension/assets/tokens.css` | 확장 사이드 패널. `extension/assets/tailwind.css`가 `@import` | `@theme`: `--color-*`(바탕·글자·메인·뭉치 배·알림 4색과 연한 바탕·`reference`·판정·`on-accent`), `--font-sans`, `--text-*`, `--radius-*`, `--container-*`, `--shadow-raised/float/card/press/hero` · `:root`: `--state-disabled-opacity`, `--focus-width/offset`, `--motion-*`, `--character-*`, `--panel-*`(사이드 패널 머리·진행 막대) |
 | `extension/assets/overlay-tokens.css` | 광고 관리자 위 오버레이(shadow root). `overlay.css`가 `@import`, `Character.tsx`가 `var()`로 씀 | `--coach-*`, `--character-*` |
 
 세 파일 모두 머리에 "자동 생성" 주석이 있어요. 직접 고치면 다음 빌드에서 덮어써요.
@@ -50,13 +50,15 @@ component (부품, 예: button.bg, coach.ring)
 | `semantic.motion.hover / expand / move / walk` | 150 / 250 / 350 / 500ms | 색 바뀜 / 펼치기 / 테두리 이동 / 캐릭터 걸음. 모두 `prefers-reduced-motion`이면 끔 |
 | `semantic.state.disabled-opacity` | 0.4 | 못 누르는 버튼: `disabled:opacity-(--state-disabled-opacity)` + `disabled` 속성 |
 | `component.focus.width / offset` | 2px / 2px | 초점 링 (`outline-2 outline-offset-2 outline-accent`) |
-| `component.button/card/badge/alert-mark.radius` | 12 / 16 / 9999 / 2px | 모서리. 두 앱 모두 `rounded-button` · `rounded-card` · `rounded-badge` · `rounded-mark`(■ 차단 모양)로 써요. `rounded-xl`처럼 Tailwind 기본 이름을 쓰지 않아요 |
+| `component.button/card/badge/alert-mark.radius` | 16 / 20 / 9999 / 2px | 모서리. 두 앱 모두 `rounded-button` · `rounded-card` · `rounded-badge` · `rounded-mark`(■ 차단 모양)로 써요. `rounded-xl`처럼 Tailwind 기본 이름을 쓰지 않아요. 모서리 단계: md 12 · lg 16 · bubble 18 · xl 20 (꾸미기안_뭉치 2026-11-26: '둥글고 말랑하게, 모서리 16~18px'). 오버레이 말풍선은 `--coach-radius` 18, 말풍선 버튼은 `--coach-button-radius` 12 |
 | `semantic.state.disabled-opacity` (잠긴 단계) | 0.4 | 아직 못 가는 단계 표시도 `text-soft opacity-(--state-disabled-opacity)`로 (`text-soft/50` 금지) |
 | `semantic.layout.page / page-wide / measure` | 960px / 1040px / 60ch | 화면 너비. 두 앱 모두 `max-w-page` · `max-w-page-wide` · `max-w-measure`로 써요. `max-w-[960px]`처럼 숫자를 직접 쓰지 않아요. 말풍선 `max-w-[85%]`처럼 부모 대비 비율은 그대로 둬요 |
-| `semantic.elevation.raised / float` | 작은 그림자 / 큰 그림자 | 떠 있는 높이는 두 단계뿐이에요. `shadow-raised`는 스크롤 중 위에 붙는 칸(sticky), `shadow-float`는 토스트·말풍선. `shadow-sm`·`shadow-lg` 같은 Tailwind 기본 이름은 쓰지 않아요. 그림자 색은 회색 대신 `ink`·`accent-ink`를 투명하게 써요 |
+| `semantic.elevation.raised / float / card / press / hero` | 그림자 다섯 이름 | 떠 있는 높이 세 단계 + 눌림 하나예요 (꾸미기안_뭉치 2026-11-26에서 card·press·hero 추가). `shadow-raised`는 스크롤 중 위에 붙는 칸(sticky), `shadow-card`는 보통 카드(살짝 뜸), `shadow-float`는 토스트·말풍선, `shadow-hero`는 결론 카드처럼 화면의 주인공 한 개. `shadow-press`(`0 4px 0` 진한 보라)는 높이가 아니라 주 버튼 아래 '눌리는 느낌' 그림자로, 주 버튼과 선택된 칩에만 써요. `shadow-sm`·`shadow-lg` 같은 Tailwind 기본 이름은 쓰지 않아요. 그림자 색은 회색 대신 `ink`·`accent-ink`를 투명하게 써요 |
 | `component.field.border / bg / radius` | `field-line` / `surface` / 12px | 입력칸·선택칸: `rounded-button border border-field-line bg-surface`(확장은 `bg-paper`) |
 
 ## 색 표
+
+아래 값은 꾸미기안_뭉치 2026-11-26 기준이에요 (뭉치 몸 색에서 가져옴: 보라 몸통 = 메인, 베이지 배 = 포인트, 아주 옅은 크림 = 바탕).
 
 ### 메인 (바이올렛)
 
@@ -65,23 +67,34 @@ component (부품, 예: button.bg, coach.ring)
 | `tone.accent` · 확장 `accent` | `#5B3FD9` | 현재 단계, 로고, 초점 링, 칸 테두리, 주 버튼(`tone.action`), 캐릭터 몸 | 흰 바탕 6.5:1 |
 | `tone.accent-ink` · 확장 `accent-ink` | `#4528B0` | 메인 글자·링크, 버튼 눌림(`tone.action-hover`), '확실해요' 배지 바탕, 차트의 보통 값 점 | 흰 바탕 9.5:1 |
 | `tone.accent-soft` · 확장 `accent-soft` | `#EFEBFF` | 연한 바탕: 어시스턴트 패널, 말풍선, 선택 행, '○ 쪽이에요' 배지 바탕(`likely-bg`) | (바탕색) |
-| `tone.accent-line` | `#B3A5F0` | 오버레이 보조 버튼 테두리 (장식) | — |
+| `tone.accent-faint` · 확장 `accent-faint` | `#F7F4FF` | 아주 옅은 보라: 칸 경로 알약, 새 세트 카드 바탕, 열린 접기 칸 | (바탕색) |
+| `tone.accent-line` · 확장 `accent-line` | `#B3A5F0` | 메인 계열 옅은 테두리 (장식) | — |
 
 ### 바탕·글자
 
 | 이름 | 값 | 쓰는 곳 | 대비 |
 |---|---|---|---|
-| `tone.ink` · 확장 `ink` | `#16213A` | 본문, 숫자 | 15.7:1 |
-| `tone.ink-soft` · 확장 `soft` | `#4A5568` | 보조 글자 | 7.4:1 |
-| `tone.bg` · 확장 `cream` | `#F7F5F0` | 페이지 바탕 | — |
-| `tone.surface` · 확장 `paper` | `#FFFDF8` | 카드 바탕, 주 버튼 글자 | — |
-| `tone.surface-sunk` · 확장 `sunk` | `#EFEAE0` | 막대 빈 부분, 눌린 칸 | — |
-| `tone.line` · 확장 `line` | `#E2DCD0` | 구분선·카드 테두리 (장식). **입력칸 테두리에는 쓰지 않아요** | 1.3:1 (장식이라 기준 없음) |
-| `tone.field-line` · 확장 `field-line` | `#767E8C` | 입력칸·선택칸 테두리. 칸이 어디 있는지 보여야 해서 3:1 이상이 필요해요 (WCAG 1.4.11) | 카드 4.0:1 · 바탕 3.8:1 · 눌린 칸 3.4:1 |
+| `tone.ink` · 확장 `ink` | `#2A1F5C` | 본문, 숫자 (보라 기운 남색) | 14.5:1 |
+| `tone.ink-soft` · 확장 `soft` | `#6B6590` | 보조 글자 | 카드 5.4:1 · 눌린 칸 4.8:1 |
+| `tone.bg` · 확장 `cream` | `#FFFAF2` | 페이지 바탕 (아주 옅은 크림) | — |
+| `tone.surface` · 확장 `paper` | `#FFFFFF` | 카드 바탕, 주 버튼 글자 | — |
+| `tone.surface-sunk` · 확장 `sunk` | `#F3F0FB` | 막대 빈 부분, 눌린 칸, 단계 탭 바탕, 말풍선 보조 버튼 바탕 | — |
+| `tone.line` · 확장 `line` | `#E8E2F4` | 구분선·카드 테두리 (장식). **입력칸 테두리에는 쓰지 않아요** | 1.3:1 (장식이라 기준 없음) |
+| `tone.field-line` · 확장 `field-line` | `#767E8C` | 입력칸·선택칸 테두리. 칸이 어디 있는지 보여야 해서 3:1 이상이 필요해요 (WCAG 1.4.11) | 카드 4.1:1 · 바탕 3.9:1 · 눌린 칸 3.6:1 |
 | `tone.hold` / `hold-bg` | `#5F6672` / `#F1F1EF` | '아직 몰라요' 배지. **글자·배지의 회색은 이것에만** 써요 (`field-line`은 테두리 전용) | 5.1:1 |
 | `tone.series-a` | `#8A92A0` | 차트의 나머지 쪽 (회색) | 3.1:1 (모양) |
 | `tone.series-b` | `#5B3FD9` | 차트의 추천 쪽 (메인) | 6.5:1 (모양) |
 | `tone.on-meta` | `#FFFFFF` | 메타 흰 화면 위 버튼 바탕, 알림 모양 안 기호 | — |
+
+### 뭉치 배 (장식 전용)
+
+꾸미기안_뭉치 2026-11-26에서 더했어요. 뭉치의 베이지 배 색이에요. **장식 전용이라 상태 표시(알림·판정·정상/오류)에는 쓰지 않아요.** 부리·발의 빨강은 차단 빨강과 겹쳐서 화면에 쓰지 않아요.
+
+| 이름 | 값 | 쓰는 곳 | 대비 |
+|---|---|---|---|
+| `tone.belly` · 확장 `belly` | `#F6E4CB` | 강조 밑줄(형광펜), 테스트 제안 태그 바탕, 뭉치 얼굴 동그라미 바탕 | (바탕색) |
+| `tone.belly-strong` · 확장 `belly-strong` | `#D2AD81` | 진행 막대 끝 점(흰 테두리 3px), 차트 기준선 같은 장식 선 | 흰 바탕 2.1:1 → 글자·필수 모양에 쓰지 않아요 |
+| `tone.belly-ink` · 확장 `belly-ink` | `#7A5320` | `belly` 위 글자 (테스트 제안 태그) | 5.5:1 |
 
 ### 알림 4색 (고정)
 
@@ -151,8 +164,8 @@ component (부품, 예: button.bg, coach.ring)
 
 돌려 본 적 없는 선택지(예: 세로 9:16 소재)에는 판정 배지를 달지 않고 **'테스트 제안' 태그**를 달아요. 판정 배지는 실측이 있는 카드에만 써요.
 
-- 모양: **보라 점선 테두리**(`accent`, `border-dashed`) + 카드 바탕(`surface`) + 진한 보라 글자(`accent-ink`), 기호 없음.
-- 판정 배지는 채움(●)·실선 테두리(◐)·회색(○)이에요. 점선은 "아직 돌려 보지 않은 것"이라는 뜻이라, 'B 쪽이에요' 배지(실선 테두리)와 헷갈리지 않아요. 시뮬레이터의 "써 본 적 없는 금액 = 점선"과 같은 뜻이에요.
+- 모양: **뭉치 배 바탕**(`belly`) + 갈색 글자(`belly-ink`), 테두리·기호 없음 (꾸미기안_뭉치 2026-11-26. 예전: 보라 점선 테두리).
+- 판정 배지는 모두 보라·회색(● 채움 · ◐ 실선 테두리 · ○ 회색)이라, 베이지 태그는 판정과 헷갈리지 않아요. 태그 안에 '테스트 제안' 글자를 꼭 써요.
 - 구현: 분석 페이지 `web/src/ui/index.tsx`의 `TestTag`, 확장 `extension/entrypoints/sidepanel/steps/PlanStep.tsx`의 태그.
 
 ### 테스트할 칸 표시
@@ -176,8 +189,9 @@ component (부품, 예: button.bg, coach.ring)
 **발표 자료·디자인 툴** — 아래 값을 쓰면 돼요.
 
 ```
-메인 #5B3FD9 · 눌림 #4528B0 · 연한 바탕 #EFEBFF
-글자 #16213A · 보조 글자 #4A5568 · 바탕 #F7F5F0 · 카드 #FFFDF8
+메인 #5B3FD9 · 눌림 #4528B0 · 연한 바탕 #EFEBFF · 아주 옅은 보라 #F7F4FF
+글자 #2A1F5C · 보조 글자 #6B6590 · 바탕 #FFFAF2 · 카드 #FFFFFF · 선 #E8E2F4
+뭉치 배(장식) #F6E4CB · #D2AD81 · 배 위 글자 #7A5320
 차단 #D93025 · 주의 #E8710A(글자 #B35300) · 참고 #1A73E8 · 정상 #1E8E3E
 ```
 
@@ -193,24 +207,24 @@ component (부품, 예: button.bg, coach.ring)
 
 | 쓰는 곳 | 글자/모양 | 바탕 | 대비 | 기준 | 결과 |
 |---|---|---|---|---|---|
-| 본문 (페이지 바탕) | #16213A | #F7F5F0 | 14.68:1 | 4.5:1 | 통과 |
-| 본문 (카드) | #16213A | #FFFDF8 | 15.74:1 | 4.5:1 | 통과 |
-| 보조 글자 (카드) | #4A5568 | #FFFDF8 | 7.40:1 | 4.5:1 | 통과 |
-| 보조 글자 (눌린 칸) | #4A5568 | #EFEAE0 | 6.28:1 | 4.5:1 | 통과 |
-| 메인 글자·링크 | #4528B0 | #FFFDF8 | 9.46:1 | 4.5:1 | 통과 |
+| 본문 (페이지 바탕) | #2A1F5C | #FFFAF2 | 13.95:1 | 4.5:1 | 통과 |
+| 본문 (카드) | #2A1F5C | #FFFFFF | 14.49:1 | 4.5:1 | 통과 |
+| 보조 글자 (카드) | #6B6590 | #FFFFFF | 5.40:1 | 4.5:1 | 통과 |
+| 보조 글자 (눌린 칸) | #6B6590 | #F3F0FB | 4.80:1 | 4.5:1 | 통과 |
+| 메인 글자·링크 | #4528B0 | #FFFFFF | 9.62:1 | 4.5:1 | 통과 |
 | 연한 바탕 위 메인 글자 | #4528B0 | #EFEBFF | 8.24:1 | 4.5:1 | 통과 |
-| 말풍선 본문 | #16213A | #EFEBFF | 13.71:1 | 4.5:1 | 통과 |
-| 주 버튼 글자 | #FFFDF8 | #5B3FD9 | 6.54:1 | 4.5:1 | 통과 |
-| 주 버튼 글자 (눌림) | #FFFDF8 | #4528B0 | 9.46:1 | 4.5:1 | 통과 |
+| 말풍선 본문 | #2A1F5C | #EFEBFF | 12.42:1 | 4.5:1 | 통과 |
+| 주 버튼 글자 | #FFFFFF | #5B3FD9 | 6.65:1 | 4.5:1 | 통과 |
+| 주 버튼 글자 (눌림) | #FFFFFF | #4528B0 | 9.62:1 | 4.5:1 | 통과 |
 | ● 확실해요 배지 (진한 보라 바탕 + 흰 글자) | #FFFFFF | #4528B0 | 9.62:1 | 4.5:1 | 통과 |
 | ◐ ○ 쪽이에요 배지 (연한 보라 바탕, 두 앱 같음) | #4528B0 | #EFEBFF | 8.24:1 | 4.5:1 | 통과 |
 | ◐ ○ 쪽이에요 배지 테두리 | #5B3FD9 | #EFEBFF | 5.70:1 | 3:1 | 통과 |
 | ○ 아직 몰라요 배지 (회색) | #5F6672 | #F1F1EF | 5.12:1 | 4.5:1 | 통과 |
 | ▲ 주의 글자 | #B35300 | #FEF3E6 | 4.62:1 | 4.5:1 | 통과 |
 | ■ 차단 상자 글자 | #B3261E | #FCE8E6 | 5.55:1 | 4.5:1 | 통과 |
-| ■ 차단 오류 한 줄 (흰 바탕) | #D93025 | #FFFDF8 | 4.70:1 | 4.5:1 | 통과 |
-| ● 참고 상자 글자 | #16213A | #E8F0FE | 13.96:1 | 4.5:1 | 통과 |
-| ✓ 정상 상자 글자 | #16213A | #E6F4EA | 14.09:1 | 4.5:1 | 통과 |
+| ■ 차단 오류 한 줄 (흰 바탕) | #D93025 | #FFFFFF | 4.77:1 | 4.5:1 | 통과 |
+| ● 참고 상자 글자 | #2A1F5C | #E8F0FE | 12.65:1 | 4.5:1 | 통과 |
+| ✓ 정상 상자 글자 | #2A1F5C | #E6F4EA | 12.76:1 | 4.5:1 | 통과 |
 | ■ 모양 안 ✕ | #FFFFFF | #D93025 | 4.77:1 | 4.5:1 | 통과 |
 | ● 모양 안 i | #FFFFFF | #1A73E8 | 4.51:1 | 4.5:1 | 통과 |
 | ● 참고만 배지 글자 (ALT-22) | #FFFFFF | #1A73E8 | 4.51:1 | 4.5:1 | 통과 |
@@ -219,19 +233,26 @@ component (부품, 예: button.bg, coach.ring)
 | ✓ 정상 모양 (연한 바탕) | #1E8E3E | #E6F4EA | 3.70:1 | 3:1 | 통과 |
 | ✓ 모양 안 체크 | #FFFFFF | #1E8E3E | 4.21:1 | 3:1 | 통과 |
 | ▲ 모양 안 ! | #FFFFFF | #E8710A | 3.09:1 | 3:1 | 통과 |
-| 오버레이 안내 글자 | #4A5568 | #EFEBFF | 6.45:1 | 4.5:1 | 통과 |
-| 오버레이 보조 버튼 | #4528B0 | #FFFFFF | 9.62:1 | 4.5:1 | 통과 |
+| 오버레이 안내 글자 | #6B6590 | #EFEBFF | 4.63:1 | 4.5:1 | 통과 |
+| 오버레이 보조 버튼 | #6B6590 | #F3F0FB | 4.80:1 | 4.5:1 | 통과 |
 | 오버레이 주 버튼 | #FFFFFF | #5B3FD9 | 6.65:1 | 4.5:1 | 통과 |
 | 메인 바탕 위 흰 글자 | #FFFFFF | #5B3FD9 | 6.65:1 | 4.5:1 | 통과 |
 | 메인 진하게 위 흰 글자 | #FFFFFF | #4528B0 | 9.62:1 | 4.5:1 | 통과 |
-| 보류 글자 (흰 바탕) | #5F6672 | #FFFDF8 | 5.69:1 | 4.5:1 | 통과 |
-| 초점 링·현재 단계 테두리 | #5B3FD9 | #FFFDF8 | 6.54:1 | 3:1 | 통과 |
+| 보류 글자 (흰 바탕) | #5F6672 | #FFFFFF | 5.78:1 | 4.5:1 | 통과 |
+| 테스트 제안 태그 (배 색 바탕) | #7A5320 | #F6E4CB | 5.47:1 | 4.5:1 | 통과 |
+| 보조 글자 (크림 바탕) | #6B6590 | #FFFAF2 | 5.20:1 | 4.5:1 | 통과 |
+| 말풍선 단계 칩 | #5B3FD9 | #EFEBFF | 5.70:1 | 4.5:1 | 통과 |
+| 말풍선 작은 보조 버튼 | #6B6590 | #F3F0FB | 4.80:1 | 4.5:1 | 통과 |
+| 말풍선 안 굵은 값 | #5B3FD9 | #EFEBFF | 5.70:1 | 4.5:1 | 통과 |
+| 패널 머리 흰 글자 (그라데이션 밝은 쪽) | #FFFFFF | #6A4FE6 | 5.42:1 | 4.5:1 | 통과 |
+| 패널 머리 흰 글자 (그라데이션 어두운 쪽) | #FFFFFF | #4A2FC4 | 8.42:1 | 4.5:1 | 통과 |
+| 초점 링·현재 단계 테두리 | #5B3FD9 | #FFFFFF | 6.65:1 | 3:1 | 통과 |
 | 메타 화면 위 칸 테두리 | #5B3FD9 | #FFFFFF | 6.65:1 | 3:1 | 통과 |
-| ▲ 주의 모양 | #E8710A | #FFFDF8 | 3.04:1 | 3:1 | 통과 |
-| 차트 비교 막대 | #8A92A0 | #FFFDF8 | 3.08:1 | 3:1 | 통과 |
-| 입력칸 테두리 (카드) | #767E8C | #FFFDF8 | 4.02:1 | 3:1 | 통과 |
-| 입력칸 테두리 (페이지 바탕) | #767E8C | #F7F5F0 | 3.75:1 | 3:1 | 통과 |
-| 입력칸 테두리 (눌린 칸) | #767E8C | #EFEAE0 | 3.41:1 | 3:1 | 통과 |
+| ▲ 주의 모양 | #E8710A | #FFFFFF | 3.09:1 | 3:1 | 통과 |
+| 차트 비교 막대 | #8A92A0 | #FFFFFF | 3.13:1 | 3:1 | 통과 |
+| 입력칸 테두리 (카드) | #767E8C | #FFFFFF | 4.09:1 | 3:1 | 통과 |
+| 입력칸 테두리 (페이지 바탕) | #767E8C | #FFFAF2 | 3.94:1 | 3:1 | 통과 |
+| 입력칸 테두리 (눌린 칸) | #767E8C | #F3F0FB | 3.64:1 | 3:1 | 통과 |
 
 ## 검토 기록 (2026-11-25, ui-ux-pro-max 기준)
 
@@ -279,3 +300,19 @@ ui-ux-pro-max 기준으로 다시 보고 빈 곳을 채웠어요. 색 값은 하
   - 토스트 → `shadow-float`
   - `PlanStep` sticky 칸 → `shadow-raised`
   - 오버레이 말풍선 → `--coach-shadow`. `coach.bubble-shadow` 색 토큰 대신 `coach.shadow`가 `elevation.float`를 써요
+
+## 꾸미기안_뭉치 2026-11-26 반영
+
+사용자가 준 꾸미기안 두 개(분석 페이지·확장 프로그램 `광고어시스턴트_*_꾸미기안_뭉치.html`)에 맞췄어요. 구조는 그대로, 분위기만 뭉치에 맞춰요.
+
+| 바꾼 것 | 값 | 꾸미기안 근거 |
+|---|---|---|
+| 바탕·글자 색 | ink `#2A1F5C`, ink-soft `#6B6590`, bg `#FFFAF2`, surface `#FFFFFF`, sunk `#F3F0FB`, line `#E8E2F4` | `:root` 변수 `--ink` `--sub` `--cream` `--line` |
+| 새 색 | `accent-faint` `#F7F4FF`, `belly` 3단계 | `--v-ll`, `--belly` `--tan`, 메모 '색은 뭉치 몸에서' |
+| 모서리 | card 20 · button 16 · 말풍선 18(`radius.bubble`) · 말풍선 버튼 12 | 메모 '모서리 16~18px', `.card` 18, `.btns` 12 |
+| 그림자 | `card` · `press` · `hero` 추가 (확장 `shadow-card/press/hero`) | `.card`, `.big`·`.btns .p`의 `0 4px 0 var(--v2)`, `.hero` |
+| 오버레이 말풍선 | `--coach-chip-*`(단계 칩), `--coach-dot` `--coach-dot-on` `--coach-dot-height` `--coach-dot-gap`(14칸 진행 점), `--coach-primary-shadow`, `--coach-emphasis-fg` + `--coach-mark-bg`(굵은 값 + 배 색 밑줄), `--coach-ghost-bg/fg`(작은 보조 버튼), 보조 버튼은 회보라 바탕(`sunk`) + 보조 글자, 테두리 없음 | `.chip` `.dots` `.btns` `.tx b`, 메모 '다 했어요만 크게, 이전·멈추기는 작게' |
+| 사이드 패널 | `--panel-head-from/to`(머리 135° 그라데이션 `#6A4FE6`→`#4A2FC4`), `--panel-head-radius` 26px, `--panel-progress-from/to`(`#7C63F0`→메인), `--panel-progress-dot`(배 색), `--panel-avatar-bg` | `.top` `.bar` `.bar .dot` `.brand .av` |
+
+꾸미기안의 칩 글자 11.5px·말풍선 본문 15px·버튼 높이 40px는 최소 기준(글자 12px, 본문 16px, 누르는 곳 44px)에 맞춰 올려 썼어요. 꾸미기안의 `#ECE8F6`·`#EAE4F7` 같은 아주 비슷한 옅은 보라는 새 값을 만들지 않고 `line`으로 썼어요.
+

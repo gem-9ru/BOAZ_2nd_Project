@@ -5,45 +5,24 @@ import { MetricRow, ProbBar } from "../blocks/Trust";
 import { band, Card, HowCalculated, md, pct, people, betterProb, probText, ReferenceBadge, Tabs, VerdictBadge, won, wordOf } from "../ui";
 import { armName, Lead, sameMoney } from "./shared";
 
-/** AN-04 ★ 세팅 값별 비교 (v4.2): 맨 앞에 '방문 1명당 비용' (사장님이 궁금한 숫자) + B가 나을 확률,
- *  광고비 범위(CPM)는 기본 화면에 사장님 말로, CPC·CTR 막대는 🔎 안. 색은 추천 쪽 = 바이올렛, 나머지 = 회색. */
-export function AN04({ r }: { r: Result }) {
-  const [tab, setTab] = useState<"ab" | "places" | "days">("ab");
+/** 계산 방법 · 근거 (기존 AN-04 🔎): 판정 기준과 계산 방법. ② 접기 '계산 방법 · 근거' 안에 들어간다. */
+export function Method({ r }: { r: Result }) {
   const v = r.verdict;
-  const arms = r.summary.arms.slice(0, 2);
-  const title = arms.length === 2 ? `${armName(arms[0]!.name, 0)} vs ${armName(arms[1]!.name, 1)}` : "세트 비교";
-  const tabs = [["ab", title], ["places", "노출 위치별"], ["days", "날짜별"]] as const;
   return (
-    <>
-      {tab !== "places" && v && (
-        <Lead badge={<VerdictBadge word={v.badge.word} />}>
-          {v.badge.word === "아직 몰라요" ? "어느 쪽이 방문자를 더 데려왔는지는 아직 몰라요" : `${paren(armName(v.badge.better === "B" ? arms[1]!.name : arms[0]!.name, v.badge.better === "B" ? 1 : 0))}가 같은 돈으로 방문자를 더 데려왔어요`}
-        </Lead>
-      )}
-      {tab === "places" && <PlacesLead r={r} />}
-      <Tabs big label="비교 기준" value={tab} onChange={setTab} items={tabs.map(([id, t]) => ({ id, label: t }))} />
-      {!v && tab !== "places" && <><Lead>비교할 세트가 하나라 값 비교는 없어요</Lead>
-        <Card title="비교할 세트가 하나예요" summary="세트가 두 개 이상이어야 값을 비교할 수 있어요. 다음엔 칸 1개만 다르게 두 세트를 같은 날 같이 돌려 보세요" /></>}
-      {v && tab === "ab" && <><CostPerCustomer r={r} /><AdCost r={r} /><Days r={r} /></>}
-      {v && tab === "days" && <Days r={r} />}
-      {tab === "places" && <Places r={r} />}
-      {v && tab !== "places" && (
-        <HowCalculated easy="두 세트의 가능한 범위가 안 겹치면 '확실해요', 겹치면 확률로만 말해요. 판정: 90% 이상 확실해요 · 70~90% A 쪽이에요 또는 B 쪽이에요 · 70% 미만 아직 몰라요.">
-          <ul className="flex flex-col gap-4">
-            {v.metrics.filter((m) => m.key === "cpc" || m.key === "ctr").map((m) => <MetricRow key={m.key} m={m} />)}
-          </ul>
-          {v.badge.capped && <p>판정을 낮춘 이유: {v.badge.capped.join(" · ")}</p>}
-          <p>계산 방법: 비율은 베타-이항, 돈 대비 횟수는 감마-포아송 분포에서 반복 시뮬레이션으로 뽑아 비교해요. 근거: Lewis & Rao (2015), Scott (2010)</p>
-        </HowCalculated>
-      )}
-    </>
+    <div className="flex flex-col gap-2 text-soft">
+      <p><b className="text-ink">쉽게 말하면:</b> 두 세트의 가능한 범위가 안 겹치면 '확실해요', 겹치면 확률로만 말해요. 판정: 90% 이상 확실해요 · 70~90% A 쪽이에요 또는 B 쪽이에요 · 70% 미만 아직 몰라요.</p>
+      {v && <ul className="flex flex-col gap-4">{v.metrics.filter((m) => m.key === "cpc" || m.key === "ctr").map((m) => <MetricRow key={m.key} m={m} />)}</ul>}
+      {v?.badge.capped && <p>판정을 낮춘 이유: {v.badge.capped.join(" · ")}</p>}
+      <p>계산 방법: 비율은 베타-이항, 돈 대비 횟수는 감마-포아송 분포에서 반복 시뮬레이션으로 뽑아 비교해요 (베이지안). 근거: Lewis & Rao (2015), Scott (2010)</p>
+      <p>한계: 소액·짧은 기간이라 범위가 넓어요. 광고 전후 비교로는 효과를 말하지 않고, 같은 기간에 동시에 돌린 A/B 비교로만 말해요.</p>
+    </div>
   );
 }
 
 const paren = (s: string) => (s.includes(" ") ? `${s.replace(" ", "(")})` : s);   // 'B 수동' → 'B(수동)'
 
 /** 방문 1명당 비용 (핵심 카드): 방문 1명당 비용 · 같은 돈으로 온 방문자 수 · B가 나을 확률. */
-function CostPerCustomer({ r }: { r: Result }) {
+export function CostPerCustomer({ r }: { r: Result }) {
   const v = r.verdict!;
   const arms = r.summary.arms.slice(0, 2);
   const same = sameMoney(r);
@@ -74,7 +53,7 @@ function CostPerCustomer({ r }: { r: Result }) {
 }
 
 /** 광고비 범위 (CPM 95%): 기본 화면에 두되 문구는 사장님 말로. 겹치지 않으면 '확실해요'. */
-function AdCost({ r }: { r: Result }) {
+export function AdCost({ r }: { r: Result }) {
   const m = r.verdict!.metrics.find((x) => x.key === "cpm");
   if (!m) return null;
   const arms = r.summary.arms.slice(0, 2);
@@ -107,7 +86,7 @@ function AdCost({ r }: { r: Result }) {
 }
 
 /** 날짜별 누적 확률: 결과가 굳어지는 중인지 오락가락하는지. 근거 없는 예측('하루 더 돌리면 90%')은 쓰지 않는다. */
-function Days({ r }: { r: Result }) {
+export function Days({ r }: { r: Result }) {
   const days = r.replay;
   if (!days.length) return null;
   const last = days[days.length - 1]!;
@@ -136,17 +115,17 @@ function Days({ r }: { r: Result }) {
   );
 }
 
-function PlacesLead({ r }: { r: Result }) {
+export function PlacesLead({ r }: { r: Result }) {
   const top = r.placements[0];
   if (!top) return <Lead>노출 위치별 자료가 없어요</Lead>;
   return <Lead>누르는 정도는 보정해서 보면 자리마다 비슷하고, 돈은 {short(top.label)}에 {Math.floor(top.share * 10) * 10}% 넘게 몰렸어요</Lead>;
 }
 
-const short = (label: string) => label.replace("인스타그램", "인스타").replace("페이스북", "페북");
+export const short = (label: string) => label.replace("인스타그램", "인스타").replace("페이스북", "페북");
 
 /** 노출 위치별 탭: 세트 × 노출 위치. 기본 열 = 보정한 값(1,000명 중 ○명), 실제 그대로는 옆에 작게.
  *  노출 100 미만 칸은 파랑 ● 참고만 배지 + 숫자 연하게 (ALT-22). 표 아래 고정 안내(알림 아님): 평균만 보고 끄지 말기. */
-function Places({ r }: { r: Result }) {
+export function Places({ r }: { r: Result }) {
   const rows: Placement[] = r.placements_by_set?.length ? r.placements_by_set : r.placements;
   const arms = r.summary.arms;
   const setName = (n?: string) => { const i = arms.findIndex((a) => a.name === n); return i >= 0 ? armName(n!, i) : "전체"; };

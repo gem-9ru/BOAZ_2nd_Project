@@ -25,7 +25,7 @@ export interface MatrixRow { row: string; stage: string; signal: string; status:
 export type Kind = "테스트" | "다시 보기" | "그대로";
 export interface SettingRow { field_id: string; path: string; value: string; kind: Kind; note: string }
 export interface Matrix { settings?: SettingRow[]; rows: MatrixRow[]; change: Change | null; keep: { field_id: string; path: string; value: string; reason: string; arm?: string; title?: string }[];
-  watch: { field_id: string; path: string; text: string; title?: string; need_per_set?: number | null }[]; dont: string[]; tested_field: string | null;
+  watch: { field_id: string; path: string; text: string; title?: string; short?: string; need_per_set?: number | null }[]; dont: string[]; tested_field: string | null;
   /** 메타 광고 관련성 진단 (품질·참여율·전환율 순위) 중 '평균 이하'인 것: 퍼널 진단의 보조 신호. rankings = 파일에 순위 열이 있었는지 */
   meta_signals?: { row: string; key: string; text: string }[]; rankings?: boolean }
 export interface Placement { placement: string; label: string; spend: number; share: number; impressions: number; link_clicks: number; ctr: number | null; ctr_adjusted: number; reference_only: boolean; adset?: string }
@@ -52,7 +52,7 @@ export interface Result {
 export interface Band { median: number; lo: number; hi: number }
 export interface Simulation { budget: number; runs: number; arm: string; impressions: Band; link_clicks: Band; visits: Band; histogram: { lo: number; hi: number; count: number }[]; limits: string;
   tried?: boolean; days?: number | null; daily?: number | null; daily_max?: number | null; daily_tried?: boolean;
-  daily_min?: number | null; below_daily_min?: boolean; next_test?: { total: number; per_set_lo: number; per_set_hi: number; share_lo: number; share_hi: number; source: string } }
+  daily_min?: number | null; below_daily_min?: boolean; /** 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩) */ judge?: number; next_test?: { total: number; per_set_lo: number; per_set_hi: number; share_lo: number; share_hi: number; source: string } }
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   let r: Response;

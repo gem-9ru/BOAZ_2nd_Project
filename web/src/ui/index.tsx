@@ -1,5 +1,5 @@
 // 공통 부품. 색은 토큰 이름(bg-surface, text-soft …)으로만 쓴다. 이름은 UX_설계원칙.md의 부품 이름을 따른다.
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 
 /** 카드: 블록 하나 = 메시지 하나 (v4.2). 제목 바로 아래 한 줄 요약(summary) → 그 아래 차트·표.
  *  번호는 화면 순서(0~7)라 실제 순서가 있는 곳에만 붙인다. */
@@ -8,7 +8,7 @@ export function Card({ id, step, title, summary, badge, children }: {
 }) {
   return (
     <section id={id} aria-labelledby={id ? `${id}-title` : undefined}
-      className="bg-card border border-card-border rounded-card p-card flex flex-col gap-stack min-w-0 scroll-mt-4">
+      className="bg-card border border-card-border rounded-card shadow-card p-card flex flex-col gap-stack min-w-0 scroll-mt-4">
       <div className="flex flex-col gap-1">
         <h2 id={id ? `${id}-title` : undefined} className="text-title font-bold flex flex-wrap items-baseline gap-2">
           {step !== undefined && <span className="text-caption font-semibold text-soft tabular-nums">{step}</span>}
@@ -26,11 +26,11 @@ export function Button({ children, onClick, kind = "primary", busy, disabled, ty
   children: ReactNode; onClick?: () => void; kind?: "primary" | "secondary"; busy?: boolean; disabled?: boolean; type?: "button" | "submit"; title?: string;
 }) {
   const look = kind === "primary"
-    ? "bg-button text-button-fg hover:bg-button-hover"
-    : "border border-ink text-ink hover:bg-sunk";
+    ? "bg-button text-button-fg shadow-press hover:bg-button-hover active:translate-y-0.5 active:shadow-none"
+    : "border-2 border-accent bg-surface text-accent-ink hover:bg-accent-soft";
   return (
     <button type={type} onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined} title={title}
-      className={`h-button px-5 rounded-button text-body font-semibold disabled:opacity-(--state-disabled-opacity) ${look}`}>
+      className={`h-button px-6 rounded-button text-body font-bold disabled:opacity-(--state-disabled-opacity) disabled:shadow-none ${look}`}>
       {busy ? "계산하는 중…" : children}
     </button>
   );
@@ -70,9 +70,9 @@ export function wordOf(probB: number): Word {
   return p >= 0.9 ? "확실해요" : p >= 0.7 ? `${better} 쪽이에요` : "아직 몰라요";
 }
 
-/** 테스트 제안 태그: 돌려 본 적 없는 선택지 (판정 배지 대신, v4.2 AN-01). 점선 테두리라 실선 판정 배지와 구분돼요. */
+/** 테스트 제안 태그: 돌려 본 적 없는 선택지 (판정 배지 대신). 뭉치 배 색이라 보라 판정 배지와 구분돼요 (꾸미기안_뭉치). */
 export function TestTag({ text = "테스트 제안" }: { text?: string }) {
-  return <span className="inline-flex items-center rounded-badge border border-dashed border-accent bg-surface px-2.5 py-0.5 text-caption font-bold text-accent-ink whitespace-nowrap">{text}</span>;
+  return <span className="inline-flex items-center rounded-badge bg-belly px-2.5 py-0.5 text-caption font-bold text-belly-ink whitespace-nowrap">{text}</span>;
 }
 
 /** ● 참고만 배지 (ALT-22): 노출이 적은 칸. 파랑 바탕 + 흰 글자, 그 칸 숫자는 연하게(text-soft). 회색은 '아직 몰라요'에만. */
@@ -180,4 +180,50 @@ export function md(d: string | undefined): string {
 }
 export function pct(x: number | null | undefined, digits = 0): string {
   return x == null ? "–" : `${(x * 100).toFixed(digits)}%`;
+}
+
+/** 접기 줄 (축소안 v5): '▸ 이름 ······ 핵심 한 줄'. 닫힌 줄에도 핵심 숫자를 미리 보여서 안 열어도 감이 오게.
+ *  내용은 열었을 때만 그린다 (예상 방문자 수처럼 서버에 묻는 내용이 미리 돌지 않게). */
+export function Fold({ label, preview, children, open: start = false }: { label: ReactNode; preview?: ReactNode; children: ReactNode; open?: boolean }) {
+  const [open, setOpen] = useState(start);
+  return (
+    <details open={open} className="group border-t border-line first:border-t-0">
+      <summary onClick={(e) => { e.preventDefault(); setOpen((x) => !x); }} className={`flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-5 py-3 text-label [&::-webkit-details-marker]:hidden ${open ? "font-bold" : ""}`}>
+        <span><span aria-hidden="true" className="inline-block w-4 text-soft">{open ? "▾" : "▸"}</span>{label}</span>
+        {preview && <span className="text-caption font-normal text-soft">{preview}</span>}
+      </summary>
+      {open && <div className="mx-3 mb-3 flex flex-col gap-stack rounded-button bg-accent-faint px-4 py-3 text-body">{children}</div>}
+    </details>
+  );
+}
+
+/** 접기 줄 묶음 상자. title: 맨 위 '궁금하면 열어 보세요' 같은 머리줄. */
+export function Folds({ title, children, label }: { title?: string; children: ReactNode; label?: string }) {
+  return (
+    <section aria-label={label ?? title ?? "더 보기"} className="overflow-hidden rounded-card border border-line bg-surface shadow-card">
+      {title && <p className="px-5 pt-3 pb-1 text-caption font-bold text-soft">{title}</p>}
+      {children}
+    </section>
+  );
+}
+
+/** 보조 버튼 (테두리만, 축소안 v5 ghost): 화면에 진한 버튼은 하나뿐이라 나머지는 이것. */
+export function Ghost({ children, onClick, disabled }: { children: ReactNode; onClick?: () => void; disabled?: boolean }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      className="inline-flex min-h-11 items-center gap-2 rounded-button border-2 border-accent bg-surface px-5 text-label font-bold text-accent-ink hover:bg-accent-soft disabled:opacity-(--state-disabled-opacity)">{children}</button>
+  );
+}
+
+/** 큰 주 버튼 (꾸미기안_뭉치 .big): 화면마다 하나. 아래 진한 보라 그림자로 눌리는 느낌. */
+export function BigButton({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
+  return (
+    <button type="button" onClick={onClick}
+      className="inline-flex h-13 items-center gap-2 rounded-button bg-button px-6 text-lead font-bold text-button-fg shadow-press hover:bg-button-hover active:translate-y-0.5 active:shadow-none">{children}</button>
+  );
+}
+
+/** 제목: 강조할 말에 배 색 밑줄 (꾸미기안_뭉치 .h1 em). parts = [앞, 강조, 뒤] */
+export function Title({ parts }: { parts: readonly [string, string, string] }) {
+  return <>{parts[0]}<em className="mark-belly">{parts[1]}</em>{parts[2]}</>;
 }

@@ -103,15 +103,17 @@ def _checklist(alerts: List[Dict], label: str, days: int = 4) -> List[str]:
     cfg = _loop()
     words = cfg.get("checklist", {})
     out: List[str] = []
+    last: List[str] = []   # 축소안 v5 ③ 순서: 준비 → 같은 날 → 칸 1개 → 'N일 뒤 갈림길'은 맨 끝
     for a in alerts:
         t = words.get(a["kind"]) if a["level"] == "warn" else None
         if t:
             t = t.format(min_clicks=cfg["alerts"]["min_clicks"], label=label, days=days)
-            if t not in out:
-                out.append(t)
+            into = last if a["kind"] == "small_sample" else out
+            if t not in into:
+                into.append(t)
+    out.append(words.get("same_day", "두 세트를 같은 날 같이 시작"))
     out.append(words.get("one_field", "바꾸는 칸은 {label} 1개만").format(label=label))
-    out.append(words.get("same_day", "두 세트는 같은 날 같이 시작"))
-    return out
+    return out + last
 
 
 def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict], settings: Optional[Dict] = None) -> Dict:
@@ -136,8 +138,8 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
                           "reason": "광고가 충분히 나가지 않아서 다른 숫자를 판단할 수 없어요.", "level": "유력", "grade": "A"}
     elif no_delivery:
         rows.append(_row("0", "게재", f"광고가 안 나간 날 {len(no_delivery)}일", "watch", "meta.adset.end_date"))
-        watch.append({"field_id": "meta.adset.end_date", "path": PATH["meta.adset.end_date"], "title": "시작 시간",
-                      "text": "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게"})
+        watch.append({"field_id": "meta.adset.end_date", "path": PATH["meta.adset.end_date"], "title": "시작 날짜",
+                      "text": "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게", "short": "첫날 안 보여졌어요"})
     else:
         rows.append(_row("0", "게재", "매일 광고가 나갔어요", "ok"))
 
@@ -273,7 +275,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
                   # 설계서 AN-06 '(Test & Roll 권장 범위 안)': AN-05 전체 예산 칸 기본값(10만 원) 기준
                   "test_roll": _tr["per_set_lo"] <= per_set <= _tr["per_set_hi"],
                   "test": f"지금 세트와 {won(per_set)}씩 같이 돌려서 직접 비교해요.",
-                  "unknown": f"{josa(what)} 방문자를 더 데려올지는 아직 몰라요. 돌려 봐야 알 수 있어요.",
+                  "unknown": f"{josa(what)} 방문자를 더 데려올지는 아직 몰라요 → 이번 테스트로 확인해요.",   # 축소안 v5 ①
                   "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
                   # 근거 탭·개발 문서용: 진단 규칙 자체의 신뢰도 (확실/유력/보류 그대로)
                   "rule": {"row": pick, "level": p["level"], "why": "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")},
@@ -283,11 +285,12 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
         mb = (verdict.get("min_budget") or {}).get("per_group")
         ss = next((a for a in alerts if a["kind"] == "small_sample"), None)
         # 문구는 화면설계서 v4.2 AN-01 '알림 신청이 1건뿐이라 아직 몰라요' 그대로
-        why = (f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요" if ss and ss.get("actions") is not None
-               else f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요" if ss
-               else f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요")
-        watch.insert(0, {"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"], "title": "기간 · 예산",
-                         "text": why, "need_per_set": mb})
+        why, short = ((f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요", f"{act_label} {int(ss['actions'])}건뿐") if ss and ss.get("actions") is not None
+                      else (f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요", f"클릭 {_loop()['alerts']['min_clicks']}번 안 됨") if ss
+                      else (f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요", "더 모아야 확실해요"))
+        # short: 분석 페이지 ① '다시 보기' 요약 한 줄 (축소안 v5)
+        watch.insert(0, {"field_id": "meta.adset.daily_budget", "path": PATH["meta.adset.daily_budget"], "title": "예산",
+                         "text": why, "short": short, "need_per_set": mb})
 
     dont = ["여러 칸 한 번에 변경 — 무엇 덕분인지 모르게 돼요.",
             "평균만 보고 노출 위치·연령 끄기 — 메타는 '다음 1건에 드는 돈'을 보고 돈을 나눠요. 끄고 싶으면 다음 5,000원 테스트로 확인해요."]

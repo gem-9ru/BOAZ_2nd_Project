@@ -29,3 +29,12 @@ def test_period_changes_daily_amount_and_hypothesis_not_the_range():
     assert seven["below_daily_min"] and not sim.tried(arm, 6000, 4)["below_daily_min"]
     assert not sim.tried(arm, 5000, 1)["daily_tried"]          # 하루에 5,000원은 써 본 적 없음 → 가설
     assert sim.tried(arm, 5000)["tried"] and sim.tried(arm, 5000)["daily"] is None
+
+
+def test_judge_chance_matches_v5_wire():
+    """축소안 v5 ③: 오븐로그 B 실측으로 5,000원 약 70% · 6,000원 약 90% · 10,000원 거의 확실."""
+    import json, pathlib
+    oven = json.loads((pathlib.Path(__file__).parents[2] / "web/tests/fixtures/oven.json").read_text())
+    b = next(a for a in oven["summary"]["arms"] if a["name"].startswith("B"))
+    got = [simulate.judge_chance(b, x, runs=50000) for x in (5000, 6000, 10000)]
+    assert 0.64 < got[0] < 0.74 and 0.85 < got[1] < 0.93 and got[2] > 0.99

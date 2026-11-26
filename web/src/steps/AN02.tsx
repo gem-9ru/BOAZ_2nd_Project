@@ -3,15 +3,14 @@ import type { Result } from "../api";
 import { Funnel } from "../blocks/Funnel";
 import { KeyNumbers } from "../blocks/KeyNumbers";
 import { Card, HowCalculated, people, VerdictBadge, won } from "../ui";
-import { armName, Lead, Signal, type SignalKind } from "./shared";
+import { armName, Signal, type SignalKind } from "./shared";
 
 const paren = (s: string) => (s.includes(" ") ? `${s.replace(" ", "(")})` : s);   // 'B 수동' → 'B(수동)'
 
 type Line = { n: string; stage: string; meaning: ReactNode; suspect: string; kind: SignalKind };
 
-/** AN-02 어디서 막혔나 (v4.2): 퍼널 신호등 4단계. 숫자 칸 대신 사람 수로 푼 '뜻' 한 칸,
- *  A/B 판정은 3단어 배지. CPM·CTR 원래 숫자는 🔎 안에만. 위에서부터 처음 막힌 곳이 고칠 곳. */
-export function AN02({ r }: { r: Result }) {
+/** 단계별 신호 4줄 (기존 AN-02 퍼널 신호등): ② 왜 그런지의 접기 '어디서 막혔나'와 그 줄 미리보기가 같이 쓴다. */
+export function funnelLines(r: Result): Line[] {
   const arms = r.summary.arms.slice(0, 2);
   const row = (id: string) => r.matrix.rows.find((x) => x.row === id);
   const cpm = r.verdict?.metrics.find((m) => m.key === "cpm");
@@ -42,14 +41,23 @@ export function AN02({ r }: { r: Result }) {
       meaning: row("4")?.status === "ok" ? (row("4")?.signal ?? "")
         : <>{(row("4")?.signal ?? "행동 숫자가 파일에 없어요").replace(/ → 아직 몰라요$/, "")} → <VerdictBadge word="아직 몰라요" small /></> },
   ];
-  const blocked = lines.find((l) => l.kind === "low");
-  const lead = blocked ? `'${blocked.stage}'에서 처음 막혔어요`
-    : first.kind === "worse" ? `광고가 보이는 단계에서만 ${cpm?.better === "B" ? "A" : "B"}가 비쌌고, 그 아래는 괜찮아요`   // 설계서 AN-02 그대로
-    : "크게 막힌 곳은 없어요";
+  return lines;
+}
 
+/** 접기 줄 미리보기: '보이는 값 ↓ · 누르는 정도 ✓ · 도착 ✓ · 행동 –' */
+const SHORT = ["보이는 값", "누르는 정도", "도착", "행동"];
+const MARK = { ok: "✓", worse: "↓", low: "↓", unknown: "–" } as const;
+export const funnelPreview = (r: Result) => funnelLines(r).map((l, i) => `${SHORT[i]} ${MARK[l.kind]}`).join(" · ");
+
+/** 어디서 막혔나 (기존 AN-02): 숫자 칸 대신 사람 수로 푼 '뜻' 한 칸, A/B 판정은 3단어 배지. CPM·CTR 원래 숫자는 🔎 안에만. */
+export function FunnelDetail({ r }: { r: Result }) {
+  const arms = r.summary.arms.slice(0, 2);
+  const cpm = r.verdict?.metrics.find((m) => m.key === "cpm");
+  const two = arms.length === 2;
+  const both = (f: (a: (typeof arms)[number]) => string) => arms.map((a, i) => `${"AB"[i]} ${f(a)}`).join(" · ");
+  const lines = funnelLines(r);
   return (
     <>
-      <Lead sub="위에서부터 처음 막힌 곳이 고칠 곳이에요 · 광고가 보이고 → 눌리고 → 페이지에 오고 → 행동하기까지">{lead}</Lead>
       <Card title="단계별 신호" summary="광고가 보이고 → 눌리고 → 페이지에 오고 → 행동하기까지, 사람 수로 풀어 봤어요">
         <div className="overflow-x-auto">
           <table className="w-full text-body max-sm:block">
@@ -68,7 +76,7 @@ export function AN02({ r }: { r: Result }) {
             </tbody>
           </table>
         </div>
-        <p className="text-caption text-soft">✓ 괜찮음 · ↓ 비교 대상보다 나쁨 · ▲ 기준 미달 · – 아직 몰라요</p>
+        <p className="text-caption text-soft">✓ 괜찮음 · ↓ 비교 대상이나 기준보다 낮음 · – 아직 몰라요</p>
         {(r.matrix.meta_signals?.length ?? 0) > 0 && (
           <section aria-label="메타 진단" className="flex flex-col gap-1 border-t border-line pt-3 text-body">
             <p className="text-caption font-semibold text-soft">메타 관련성 진단도 같이 봤어요 (참고)</p>
@@ -91,7 +99,7 @@ export function AN02({ r }: { r: Result }) {
           <p>광고 1,000번 보여주는 데 드는 돈 (CPM): {both((a) => won(a.cpm))} (적게~많게 A {won(cpm.a_interval[0])}~{won(cpm.a_interval[1])} · B {won(cpm.b_interval[0])}~{won(cpm.b_interval[1])}, 95% 범위)</p>
         )}
         <p>본 사람 중 누른 비율 (CTR): {both((a) => `${((a.ctr ?? 0) * 100).toFixed(2)}%`)}</p>
-        <p>신호 기준값: 누르는 정도 1,000번 보여질 때 10번(1%) 미만 · 페이지 도착 누른 100명 중 60명 미만이면 ▲</p>
+        <p>신호 기준값: 누르는 정도 1,000번 보여질 때 10번(1%) 미만 · 페이지 도착 누른 100명 중 60명 미만이면 ↓</p>
         <p>메타 관련성 진단(품질·참여율·전환율 순위): {r.matrix.rankings
           ? "파일에 있어서 '평균 이하'인 것만 참고로 보여 드려요. 신호등과 결론은 우리 숫자로만 정해요."
           : "파일에 없거나 노출이 적어 비어 있어서 건너뛰었어요. 광고 관리자 열에 '품질 순위·참여율 순위·전환율 순위'를 넣어 내보내면 같이 봐요."}</p>

@@ -1,3 +1,4 @@
+// 분석 페이지 축소안 v5 (2026-11-26, 광고어시스턴트_분석페이지_축소안_v5.pdf): 업로드 → ① 결론 → ② 왜 그런지 → ③ 준비하기
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "../src/App";
@@ -9,629 +10,310 @@ const ok = (body: unknown) => Promise.resolve(new Response(JSON.stringify(body),
 const sim = { budget: 30000, runs: 200000, arm: "B", impressions: { median: 5000, lo: 4500, hi: 5600 },
   link_clicks: { median: 100, lo: 73, hi: 133 }, visits: { median: 78, lo: 55, hi: 108 },
   histogram: [{ lo: 60, hi: 80, count: 100000 }, { lo: 80, hi: 140, count: 100000 }], limits: "한계" };
+const JUDGE: Record<number, number> = { 5000: 0.69, 6000: 0.89, 10000: 0.9995 };   // 서버 judge_chance 오븐로그 값
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState(null, "", "/"); });
 
-function showExample() {
+function show(result: unknown = oven) {
   const f = vi.fn((url: string, init?: RequestInit) => {
-    const u = String(url);
-    if (u.includes("/simulate")) {
+    if (String(url).includes("/simulate")) {
       const b = JSON.parse(init!.body as string);
       const daily = b.days ? b.budget / b.days : null;
-      return ok({ ...sim, tried: b.budget <= 5308 && (daily == null || daily <= 2643), days: b.days, daily, daily_max: 2643, daily_tried: daily == null || daily <= 2643,
-        daily_min: 1336, below_daily_min: daily != null && daily < 1336, next_test: { total: 20000, per_set_lo: 1000, per_set_hi: 2000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
+      return ok({ ...sim, budget: b.budget, judge: JUDGE[b.budget] ?? 0.5, tried: b.budget <= 5308, days: b.days, daily, daily_max: 2643,
+        daily_tried: daily == null || daily <= 2643, daily_min: 1336, below_daily_min: daily != null && daily < 1336,
+        next_test: { total: 100000, per_set_lo: 4000, per_set_hi: 10000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
     }
-    if (u.includes("/assistant")) {
-      const b = JSON.parse(init!.body as string);
-      return ok(b.question ? { message: `답: ${b.question}`, source: "llm" }
-        : { message: `${b.step} 첫 말`, suggestions: ["질문 하나", "질문 둘"], alerts: b.step === "AN-01" ? [oven.alerts[0]] : [] });
-    }
-    return ok(oven);
+    return ok(result);
   });
   vi.stubGlobal("fetch", f);
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
   return f;
 }
+const click = async (name: RegExp | string) => fireEvent.click(await screen.findByRole("button", { name }));
+const open = (label: RegExp | string) => fireEvent.click(screen.getByText(label, { selector: "summary span" }));
+const h1 = (name: string) => screen.findByRole("heading", { level: 1, name });
+const upload = () => fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
 
-describe("AN-00 예시 2건", () => {
-  it("[희수 실험 예시로 보기] asks the server for the heesu example and shows its file name", async () => {
-    const f = vi.fn((url: string) => ok(String(url).includes("/assistant") ? { message: "m", suggestions: [] } : oven));
-    vi.stubGlobal("fetch", f);
+describe("⓪ 업로드", () => {
+  it("has one job (the file), a settings status line, two examples and four folded help rows", () => {
     render(<App />);
-    expect(screen.getByRole("button", { name: "오븐로그 예시로 보기" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: "희수 실험 예시로 보기" }));
-    await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
-    expect(f.mock.calls.some(([u]) => String(u) === "/analysis/example?name=heesu")).toBe(true);
-    expect(screen.getByText(/희수_메타AB_20261117-20261120\.csv/)).toBeTruthy();
-  });
-});
-
-describe("AN-02 메타 관련성 진단 (보조 신호)", () => {
-  it("shows the below-average rankings as a reference list under the funnel table", async () => {
-    const text = "메타 품질 순위: A(자동) 평균 이하 — 같은 사람을 두고 경쟁하는 광고보다 소재 품질이 낮게 보여요 → 소재 · 형식";
-    const withRank = { ...oven, matrix: { ...oven.matrix, rankings: true, meta_signals: [{ row: "1", key: "quality", text }] } };
-    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/assistant") ? { message: "m", suggestions: [] } : withRank)));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-    await next("왜 그런지 보기 ▶");
-    const box = await screen.findByRole("region", { name: "메타 진단" });
-    expect(within(box).getByText(`① ${text}`)).toBeTruthy();
-    expect(screen.getByText(/신호등과 결론은 우리 숫자로만 정해요/)).toBeTruthy();
-  });
-});
-
-describe("화면 0 시작", () => {
-  it("offers upload, example and test-prep with one promise line", () => {
-    render(<App />);
-    // 점검 G: 계산 횟수 대신 하는 일 (화면설계서 v4.2 AN-00 '결과 파일과 광고 설정을 올리면 분석이 시작돼요')
-    expect(screen.getByText("결과 파일과 광고 설정을 올리면 다음에 바꿔 볼 칸 1개와 예상 방문자 수를 알려 드려요.")).toBeTruthy();
-    expect(document.body.textContent).not.toMatch(/20만 번/);
-    expect(screen.getByLabelText("광고 결과 파일 (CSV)")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "오븐로그 예시로 보기" })).toBeTruthy();
-    expect(document.body.textContent).not.toContain("₩");
-    expect(screen.getByRole("button", { name: "아직 안 돌려 봤어요" })).toBeTruthy();
-  });
-
-  it("upload area accepts a dropped file and speaks Korean", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ error: "x 다시 내보내 주세요" }), { status: 400 }))));
-    render(<App />);
-    expect(screen.getByText("파일 고르기")).toBeTruthy();
-    const zone = screen.getByText(/끌어다 놓거나/).closest("label")!;
-    fireEvent.drop(zone, { dataTransfer: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    await waitFor(() => expect(screen.getByRole("alert")).toBeTruthy());
-  });
-
-  it("names the columns it needs and warns about '조회'", () => {
-    render(<App />);
-    expect(screen.getByText(/랜딩 페이지 조회/, { selector: "li" })).toBeTruthy();
-    expect(screen.getByText(/'조회'는 랜딩 페이지 조회가 아니에요/)).toBeTruthy();
-  });
-
-  it("test-prep is a checklist with what is left", () => {
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "아직 안 돌려 봤어요" }));
-    const boxes = screen.getAllByRole("checkbox");
-    expect(boxes.length).toBe(4);
-    expect(screen.getByText("0/4")).toBeTruthy();
-    fireEvent.click(boxes[0]!);
-    expect(screen.getByText("1/4")).toBeTruthy();
-  });
-
-  it("a bad file shows how to fix it right under the upload box", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ error: "링크 클릭 열이 없어요. 다시 내보내 주세요." }), { status: 400 }))));
-    render(<App />);
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("다시 내보내"));
-  });
-});
-
-async function next(name: RegExp | string) {
-  fireEvent.click(await screen.findByRole("button", { name }));
-}
-
-const OWNER_BAD = ["₩", "유력", "보류", "채택", "코치"];
-/** v4.2 AN-TXT: 사장님 화면(🔎 접기 밖)에 '₩'·개발 판정어·'코치'·지표 숫자가 없는지. */
-function ownerTextOk() {
-  const main = document.querySelector("main")!.cloneNode(true) as HTMLElement;
-  main.querySelectorAll("details").forEach((d) => d.remove());
-  for (const w of OWNER_BAD) expect(main.textContent, w).not.toContain(w);
-  expect(main.textContent).not.toMatch(/CPM \d|CTR \d|CPC \d/);
-}
-
-describe("7단계 결과 (v4.2)", () => {
-  it("AN-01 shows the one field as a 테스트 제안 (no verdict badge), and keep/watch/dont with customers first", async () => {
-    showExample();
-    expect(await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" })).toBeTruthy();
-    expect(screen.getByText("나머지 칸은 그대로 둬야 무엇 덕분인지 알 수 있어요")).toBeTruthy();
-    const card = screen.getByRole("region", { name: "테스트할 칸" });
-    expect(within(card).getByText("광고 › 형식·미디어")).toBeTruthy();
-    expect(within(card).getByText(/세로\(9:16\) 소재를 넣은 세트를 하나 더 만들어 보세요/)).toBeTruthy();
-    expect(within(card).getByText("테스트 제안")).toBeTruthy();
-    expect(within(card).getByText(/6,000원씩 같이 돌려서 직접 비교해요/)).toBeTruthy();
-    expect(within(card).queryByText(/쪽이에요|확실해요/)).toBeNull();
-    for (const h of ["유지", "지켜보기", "하지 말기"]) expect(screen.getByText(h)).toBeTruthy();
-    expect(screen.getByText(/노출 위치 = 직접 고르기\(수동\)/)).toBeTruthy();
-    expect(screen.getByText(/같은 돈으로 방문자 A 10명 · B 14명/)).toBeTruthy();
-    expect(screen.getByText("B 쪽이에요")).toBeTruthy();
-    expect(screen.getByText(/광고비 10,616원 · 보여진 횟수 1,822번 · 클릭 30번/)).toBeTruthy();
-    expect(screen.getByText("알림 신청이 1건뿐이라 아직 몰라요")).toBeTruthy();   // 지켜보기 이유 (화면설계서 v4.2 AN-01 그대로)
-    expect(screen.getByText(/분석 · 오븐로그_메타AB_20261117-20261120\.csv/)).toBeTruthy();   // 머리에 파일 이름
-    ownerTextOk();
-    // 작은 카드를 누르면 AN-03 내 세팅 카드의 그 행으로
-    fireEvent.click(screen.getByRole("button", { name: /지켜보기/ }));
-    expect(screen.getByRole("heading", { level: 1, name: "내 다른 설정은 괜찮나요?" })).toBeTruthy();
-    expect(screen.getByText(/선택한 칸: 예산/)).toBeTruthy();
-  });
-
-  it("alert bar puts this step's warning first, counts by name, and opens all", async () => {
-    showExample();
-    const bar = await screen.findByRole("region", { name: "알림" });
-    expect(within(bar).getByText(/11\/17 두 세트 모두 하루 종일 안 보여졌어요/)).toBeTruthy();
-    expect(within(bar).getByText("주의 2 · 참고 1")).toBeTruthy();
-    fireEvent.click(within(bar).getByRole("button", { name: "모두 보기" }));
-    expect(within(bar).getByText(/메타는 '노출 위치 자동'을 권하지만/)).toBeTruthy();
-    expect(within(bar).queryByText(/써 본 적 없는|가설/)).toBeNull();   // AN-05 알림은 그 단계부터
-  });
-
-  it("[다음] walks the steps; AN-02 is a people-count table, AN-03 uses 테스트/다시 보기/그대로", async () => {
-    showExample();
-    await next("왜 그런지 보기 ▶");
-    expect(await screen.findByRole("heading", { level: 1, name: "어디서 막혔나요?" })).toBeTruthy();
-        expect(screen.getByText(/B\(수동\)가 15% 싸요/)).toBeTruthy();
-    expect(screen.getByText(/1,000번 보이면 A 약 16번 · B 약 17번 눌려요 → 괜찮아요/)).toBeTruthy();   // 노출은 횟수 (점검 A)
-    expect(screen.getByText("광고가 보이는 단계에서만 A가 비쌌고, 그 아래는 괜찮아요")).toBeTruthy();   // 화면설계서 v4.2 AN-02 그대로 (점검 O)
-    expect(screen.getByText(/누른 100명 중 A 77명 · B 82명 → 괜찮아요/)).toBeTruthy();
-    expect(within(screen.getByRole("region", { name: "알림" })).getByText(/알림 신청이 1건뿐이라 ④단계는 아직 몰라요/)).toBeTruthy();
-    expect(screen.getByText(/알림 신청 A 0건 · B 1건/)).toBeTruthy();
-    expect(screen.queryByRole("region", { name: "메타 진단" })).toBeNull();   // 오븐로그 파일엔 관련성 진단 열이 없음 → 건너뜀
-    expect(screen.getByText(/파일에 없거나 노출이 적어 비어 있어서 건너뛰었어요/)).toBeTruthy();
-    ownerTextOk();
-    await next("내 세팅 보기 ▶");
-    expect(screen.getByRole("heading", { level: 1, name: "내 다른 설정은 괜찮나요?" })).toBeTruthy();
-    expect(screen.getByText(/테스트할 칸 1개, 다시 볼 칸 2개/)).toBeTruthy();
-    for (const t of ["전체", "테스트", "다시 보기", "그대로"]) expect(screen.getByRole("tab", { name: new RegExp(`^${t} \\d`) })).toBeTruthy();
-    expect(screen.getAllByText(/광고비 15% 싸요/).length).toBeGreaterThan(0);
-    expect(screen.getByRole("table").textContent).not.toMatch(/↓/);   // ↓는 퍼널 '비교보다 나쁨' 전용 (점검 N)
-    ownerTextOk();
-    await next("값 비교 보기 ▶");
-    expect(screen.getByRole("heading", { level: 1, name: "어떤 값이 더 나았나요?" })).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /① 확인·결론/ }));
-    expect(screen.getByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" })).toBeTruthy();
-  });
-
-  it("future steps are locked except ⑥, and [이 테스트 바로 준비 →] jumps to ⑥", async () => {
-    showExample();
-    await screen.findByText("광고 › 형식·미디어");
-    expect((screen.getByRole("button", { name: /③ 세팅 카드/ }) as HTMLButtonElement).disabled).toBe(true);
-    expect((screen.getByRole("button", { name: /⑥ 보내기/ }) as HTMLButtonElement).disabled).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "이 테스트 바로 준비 →" }));
-    expect(screen.getByRole("heading", { level: 1, name: "이 테스트를 광고 관리자에 준비해요" })).toBeTruthy();
-  });
-
-  it("AN-04 ★ leads with cost per customer; CPM range in owner words; CPC·CTR only inside 🔎; placements get a blue ● 참고만", async () => {
-    showExample();
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶"]) await next(n);
-    expect(screen.getByText("B(수동)가 같은 돈으로 방문자를 더 데려왔어요")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "방문 1명당 비용" })).toBeTruthy();
-    expect(screen.getByText("531원")).toBeTruthy();
-    expect(screen.getByText("379원")).toBeTruthy();
-    expect(screen.getByText(/같은 돈\(5,308원\)으로 온 방문자/)).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /광고비는 확실히 B가 쌌어요/ })).toBeTruthy();
-    expect(screen.getByText(/보통 6,342원 \(적게 5,92\d원 ~ 많이 6,78\d원\)/)).toBeTruthy();
-    expect(screen.getByText(/B 쪽으로 굳어지고 있어요/)).toBeTruthy();
-    const fold = screen.getByText("이 숫자는 어떻게 나왔나요?").closest("details")!;
-    expect(within(fold).getByText("클릭 1번에 드는 돈 (CPC)")).toBeTruthy();
-    ownerTextOk();
-    fireEvent.click(screen.getByRole("tab", { name: "날짜별" }));
-    expect(screen.getByText("79%")).toBeTruthy();
-    const days = screen.getByText("26%").closest("ol")!;   // 설계서: 11/18 26% 아직 몰라요 → 11/19 65% 아직 몰라요 → 11/20 79% B 쪽이에요
-    expect([...days.querySelectorAll("li")].map((li) => li.textContent!.replace(/^→/, "").replace(/[○◐●]/, ""))).toEqual(["11/1826%아직 몰라요", "11/1965%아직 몰라요", "11/2079%B 쪽이에요"]);
-    fireEvent.click(screen.getByRole("tab", { name: "노출 위치별" }));
-    expect(screen.getAllByText("참고만").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("참고만")[0]!.closest("span")!.className).toContain("bg-reference");
-    expect(screen.getByText(/평균이 나쁜 자리를 바로 끄지 마세요/)).toBeTruthy();
-    expect(screen.getByText(/A는 100원 중 73원, B는 100원 중 70원/)).toBeTruthy();
-  });
-
-  it("AN-05 shows ranges as '보통 ○명 (적게 ~ 많이)', marks untried budgets as 가설, shows Test & Roll and the check", async () => {
-    const f = showExample();
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "예산별 예상 보기 ▶"]) await next(n);
-    await waitFor(() => expect(screen.getAllByText(/보통 78명 \(적게 55명 ~ 많이 108명\)/).length).toBeGreaterThan(0));
-    expect(screen.getByText("10번 중 8번은 이 안에 들어요")).toBeTruthy();
-    const slider = screen.getByLabelText("예산") as HTMLInputElement;
-    expect(slider.step).toBe("5000");
-    fireEvent.change(slider, { target: { value: "20000" } });
-    await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).includes("/simulate") && JSON.parse((o as RequestInit).body as string).budget === 80000)).toBe(true));
-    expect(screen.getAllByText("가설").length).toBeGreaterThan(0);
-    expect(screen.getByRole("heading", { name: "다음 테스트에 쓸 돈 (Test & Roll)" })).toBeTruthy();
-    expect(screen.getByText("예측이 맞았나? (검증)")).toBeTruthy();
-    expect(within(screen.getByRole("region", { name: "알림" })).getByText("주의 2 · 참고 2")).toBeTruthy();
-    ownerTextOk();
-  });
-
-  it("AN-05 period toggle 4일/7일 changes the daily amount and warns under Meta's daily minimum (오븐로그 11/17과 같은 경우)", async () => {
-    const f = showExample();
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "예산별 예상 보기 ▶"]) await next(n);
-    expect((screen.getByRole("radio", { name: "4일" }) as HTMLInputElement).checked).toBe(true);
-    // 권하는 금액(6,000원 · 4일)은 하루 최소를 넘는다 → 결론·보내기와 같은 금액, 경고 없음
-    expect(screen.getByText("하루 약 1,500원")).toBeTruthy();
-    await waitFor(() => expect(screen.getByText(/세트당 총 6,000원을 4일 동안 쓰면/)).toBeTruthy());
-    expect(screen.queryByText(/메타 하루 최소/)).toBeNull();
-    fireEvent.change(screen.getByLabelText("예산"), { target: { value: "5000" } });
-    expect(screen.getByText("하루 약 1,250원")).toBeTruthy();
-    await waitFor(() => expect(screen.getByText(/메타 하루 최소\(약 1,336원\)보다 적어요 → 광고가 안 나갈 수 있어요/)).toBeTruthy());
-    fireEvent.change(screen.getByLabelText("예산"), { target: { value: "10000" } });
-    fireEvent.click(screen.getByRole("radio", { name: "7일" }));
-    expect(screen.getByText("하루 약 1,430원")).toBeTruthy();
-    await waitFor(() => expect(screen.getByText(/세트당 총 1만 원을 7일 동안 쓰면/)).toBeTruthy());
-    await waitFor(() => expect(screen.queryByText(/메타 하루 최소/)).toBeNull());
-    expect(f.mock.calls.some(([u, o]) => String(u).includes("/simulate") && JSON.parse((o as RequestInit).body as string).days === 7)).toBe(true);
-  });
-
-  it("AN-06 prepares the test: 지금 세트/새 세트, 4-item checklist without ALT numbers, send with a toast", async () => {
-    showExample();
-    const writeText = vi.fn(() => Promise.resolve());
-    Object.assign(navigator, { clipboard: { writeText } });
-    fireEvent.click(await screen.findByRole("button", { name: "이 테스트 바로 준비 →" }));
-    expect(screen.getByText(oven.code)).toBeTruthy();
-    expect(screen.getByText(/새 세트: \+ 세로\(9:16\) 1개/)).toBeTruthy();
-    expect(screen.getByText("세로 소재를 넣은 세트 하나만 더 만들면 돼요")).toBeTruthy();   // 설계서 AN-06 한 줄 요약
-    expect(screen.getByText(/세트당 총 6,000원, 4일 \(Test & Roll 권장 범위 안\)/)).toBeTruthy();   // ①·⑤와 같은 금액, 설계서 AN-06 (점검 S)
-    expect(screen.getAllByRole("checkbox").length).toBe(4);
-    expect(screen.getByText("두 세트는 같은 날 같이 시작")).toBeTruthy();
-    expect(document.body.textContent).not.toMatch(/ALT-\d/);
-    expect(within(screen.getByRole("region", { name: "알림" })).getByText(/주의 2건은 다음 테스트 체크리스트에 넣었어요/)).toBeTruthy();
-    const print = vi.fn(); vi.stubGlobal("print", print);
-    fireEvent.click(screen.getByRole("button", { name: "결과 PDF" }));
-    expect(print).toHaveBeenCalled();   // 브라우저 인쇄 → 'PDF로 저장'
-    fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기" }));
-    await waitFor(() => expect(screen.getByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy());
-    expect(writeText).toHaveBeenCalledWith(oven.code);
-    expect(new URLSearchParams(window.location.hash.slice(1)).get("send")).toBeTruthy();   // 옆 패널이 이걸 보고 테스트안을 받음
-    // 보내기만으로는 광고 관리자에서 짚지 않는다 → 패널의 [다음 테스트 세팅]을 누르라고 말한다
-    expect(document.body.textContent).not.toMatch(/광고 관리자에서 이 칸만 짚어 드려요/);
-    expect(document.body.textContent).toMatch(/패널의 \[다음 테스트 세팅\]/);
-  });
-
-  it("AN-06 근거 탭 '가상 케이스' shows the 6-case table and says it is not used for the verdict", async () => {
-    showExample();
-    fireEvent.click(await screen.findByRole("button", { name: "이 테스트 바로 준비 →" }));
-    fireEvent.click(screen.getByRole("tab", { name: "가상 케이스" }));
-    const table = screen.getByRole("table", { name: "가상 케이스 6개 결과" });
-    expect(within(table).getAllByRole("row")).toHaveLength(7);   // 머리 1 + 케이스 6
-    const v5 = within(table).getByRole("row", { name: /V5 B 웹사이트 주소 잘못/ });
-    expect(within(v5).getByText("광고 › 웹사이트 URL: 주소·속도 점검")).toBeTruthy();
-    expect(within(v5).getByText("페이지 도착 적음")).toBeTruthy();
-    expect(within(table).getByRole("row", { name: /V6 좁은 지역/ }).textContent).toContain("반복 노출");
-    expect(table.textContent).not.toMatch(/네이버/);   // 네이버 광고는 돌리지 않음 → 메타 설정 케이스만
-    expect(screen.queryByText(/같은 설정 두 세트\(V2\)를 40번/)).toBeNull();
-    expect(screen.getByText(/판정에는 쓰지 않아요/)).toBeTruthy();
-  });
-});
-
-describe("광고 어시스턴트 = 크롬 확장 프로그램 사이드 패널 (v4.2 AN-COM ④)", () => {
-  afterEach(() => { window.history.replaceState(null, "", "/"); });
-
-  it("the page has no built-in assistant; it writes code and step after # for the side panel", async () => {
-    showExample();
-    await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
-    expect(screen.queryByRole("complementary", { name: "광고 어시스턴트" })).toBeNull();
-    expect(screen.getByText(/크롬 오른쪽 광고 어시스턴트\(확장 프로그램 패널\)에 물어보세요/)).toBeTruthy();
-    expect(new URLSearchParams(window.location.hash.slice(1)).get("code")).toBe(oven.code);
-    expect(new URLSearchParams(window.location.hash.slice(1)).get("step")).toBe("AN-01");
-    await next("왜 그런지 보기 ▶");
-    await waitFor(() => expect(new URLSearchParams(window.location.hash.slice(1)).get("step")).toBe("AN-02"));
-  });
-
-  it("keeps the settings key from the extension in the hash", async () => {
-    window.history.replaceState(null, "", "/#s=K3yK3yK3yK3yK3y");
-    showExample();
-    await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
-    const q = new URLSearchParams(window.location.hash.slice(1));
-    expect(q.get("s")).toBe("K3yK3yK3yK3yK3y");
-    expect(q.get("code")).toBe(oven.code);
-  });
-});
-
-describe("접근성", () => {
-  it("moves focus to the step title and announces the result", async () => {
-    showExample();
-    const title = await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" });
-    await waitFor(() => expect(document.activeElement).toBe(title));
-    expect(screen.getByText("결과를 다 계산했어요")).toBeTruthy();
-  });
-
-  it("links the upload error to the file input", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ error: "다시 내보내 주세요" }), { status: 400 }))));
-    render(<App />);
-    const input = screen.getByLabelText("광고 결과 파일 (CSV)");
-    fireEvent.change(input, { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    const alert = await screen.findByRole("alert");
-    expect(alert.id).toBeTruthy();
-    expect(input.getAttribute("aria-describedby")!.split(" ")).toContain(alert.id);
-  });
-});
-
-describe("세팅값 받기 (v4 8장 입력 ②)", () => {
-  afterEach(() => { window.location.hash = ""; });
-
-  it("from the extension: reads the session key from #s=, shows how many, and uploads with the key", async () => {
-    window.location.hash = "#s=K3yK3yK3yK3yK3y";
-    const f = vi.fn((url: string, init?: RequestInit) => {
-      if (String(url).includes("/settings/")) return ok({ count: 13, settings: {} });
-      if (init?.method === "POST" && String(url).endsWith("/analysis")) return ok(oven);
-      return ok({ message: "m", suggestions: [] });
-    });
-    vi.stubGlobal("fetch", f);
-    render(<App />);
-    expect(await screen.findByText(/자동으로 받음 \(13칸\)/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "5개만 직접 입력" })).toBeNull();
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).endsWith("/analysis") && (o?.body as FormData).get("settings_key") === "K3yK3yK3yK3yK3y")).toBe(true));
-  });
-
-  it("without the extension: 5 questions (목표·예산·연령·노출 위치·소재 형식) go with the upload", async () => {
-    window.history.replaceState(null, "", "/");   // 앞 테스트의 늦게 끝난 화면이 남긴 # 지우기
-    const f = vi.fn((_url: string, _init?: RequestInit) => ok(oven));
-    vi.stubGlobal("fetch", f);
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "5개만 직접 입력" }));
-    for (const g of ["캠페인 목표", "세트당 하루 예산", "연령", "노출 위치", "소재 형식"]) expect(screen.getByRole("group", { name: g })).toBeTruthy();
-    fireEvent.click(screen.getByRole("radio", { name: "수동" }));
-    fireEvent.change(screen.getByLabelText("세트당 하루 예산 (원)"), { target: { value: "1350" } });
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    await waitFor(() => expect(f).toHaveBeenCalled());
-    const body = f.mock.calls[0]![1]!.body as FormData;
-    expect(JSON.parse(body.get("settings") as string)).toMatchObject({ "meta.adset.placements": "수동", "meta.adset.daily_budget": "1350" });
-  });
-
-  it("AN-03 shows every received setting in Ads Manager order with 테스트·다시 보기·그대로", async () => {
-    const withSettings = { ...oven, matrix: { ...oven.matrix, settings: [
-      { field_id: "meta.campaign.objective", path: "캠페인 › 캠페인 목표", value: "트래픽", kind: "그대로", note: "—" },
-      { field_id: "meta.adset.placements", path: "광고 세트 › 노출 위치", value: "수동", kind: "그대로", note: "↓ 광고비 15% 싸요 · 확실해요" },
-      { field_id: "meta.ad.media", path: "광고 › 형식·미디어", value: "정사각 이미지", kind: "테스트", note: "릴스에 세로 소재가 없어요" },
-    ] } };
-    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/assistant") ? { message: "m", suggestions: [] } : withSettings)));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-    await next("왜 그런지 보기 ▶");
-    await next("내 세팅 보기 ▶");
-    expect(screen.getByText("캠페인 목표")).toBeTruthy();
-    expect(screen.getByText("트래픽")).toBeTruthy();
-    expect(screen.getByRole("tab", { name: "그대로 2" })).toBeTruthy();
-    expect(screen.getByText("정사각 이미지").closest("tr")!.className).toContain("border-l-accent");
-    expect(screen.queryByText(/결과 파일로 알 수 있는 칸만/)).toBeNull();
-  });
-});
-
-describe("예외 파일 (행동 열 없음 · A가 이김 / 세트 1개)", () => {
-  function show(result: unknown) {
-    vi.stubGlobal("fetch", vi.fn((url: string, init?: RequestInit) => {
-      if (String(url).includes("/simulate")) return ok({ ...sim, tried: true, next_test: { total: 100000, per_set_lo: 4000, per_set_hi: 10000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } });
-      void init;
-      return ok(result);
-    }));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-  }
-
-  it("when A wins, numbers are told from A's side (A가 나을 확률 95%), and ④ says the action column is missing", async () => {
-    show(twoSets);
-    expect(await screen.findByText("기본 문구를 바꾼 세트를 하나 더 만들어 보세요")).toBeTruthy();
-    expect(screen.getByText(/노출 위치 = 자동 \(Advantage\+\)/)).toBeTruthy();
-    await next("왜 그런지 보기 ▶");
-    expect(screen.getByText(/행동 숫자가 파일에 없어요/)).toBeTruthy();
-    await next("내 세팅 보기 ▶");
-    expect(screen.queryByText(/다시 볼 칸 0개/)).toBeNull();
-    await next("값 비교 보기 ▶");
-    expect(screen.getByText("A(자동)가 같은 돈으로 방문자를 더 데려왔어요")).toBeTruthy();
-    const main = screen.getByRole("heading", { name: "방문 1명당 비용" }).closest("section")!;
-    expect(within(main).getByText(/^A가 나을 확률/)).toBeTruthy();
-    expect(within(main).getByText("95%")).toBeTruthy();
-    expect(within(main).queryByText(/B가 나을 확률/)).toBeNull();
-    expect(screen.getByText("하루씩 쌓일수록 A 쪽으로 굳어지고 있어요")).toBeTruthy();
-  });
-
-  it("a single ad set: no A/B wording, ① is '–', AN-04 still has a one-line summary", async () => {
-    show(oneSet);
-    expect(await screen.findByText(/페이지 속도·주소 점검/)).toBeTruthy();
-    await next("왜 그런지 보기 ▶");
-    const row1 = screen.getByText(/비교할 세트가 하나라 광고비 비교는 없어요/).closest("tr")!;
-    expect(row1.querySelector('[aria-label="아직 몰라요"]')).toBeTruthy();
-    await next("내 세팅 보기 ▶");
-    await next("값 비교 보기 ▶");
-    expect(screen.getByText("비교할 세트가 하나라 값 비교는 없어요")).toBeTruthy();
-  });
-});
-
-describe("점검 2026-11-26", () => {
-  function showResult(result: unknown) {
-    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/simulate") ? { ...sim, tried: true } : result)));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-  }
-
-  it("a blocked file shows no conclusion and cannot jump to ⑥", async () => {
-    const block = { level: "block", mark: "■", kind: "not_same_days", text: "두 세트를 같은 날 같이 돌리지 않아서 비교할 수 없어요.", todo: "같은 날 같이 시작한 기간만 골라 다시 내보내 주세요.", screen: "AN-00" };
-    showResult({ ...oven, blocked: true, alerts: [block, ...oven.alerts] });
-    expect(await screen.findByRole("heading", { level: 1, name: "이 파일로는 아직 결론을 낼 수 없어요" })).toBeTruthy();
-    expect(screen.getByText(/같은 날 같이 시작한 기간만 골라 다시 내보내 주세요/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "이 테스트 바로 준비 →" })).toBeNull();
-    expect(screen.queryByRole("region", { name: "테스트할 칸" })).toBeNull();
-    expect((screen.getByRole("button", { name: /⑥ 보내기/ }) as HTMLButtonElement).disabled).toBe(true);
-  });
-
-  it("AN-04 card does not say B brought more customers when the verdict is 아직 몰라요", async () => {
-    const v = oven.verdict!;
-    const keep = [{ ...oven.matrix.keep[0]!, title: "B(수동) 세트 그대로 (노출 위치 · 연령·성별 함께)" }];
-    showResult({ ...oven, matrix: { ...oven.matrix, keep }, replay: oven.replay.map((d) => ({ ...d, word: "아직 몰라요" })),
-      verdict: { ...v, badge: { ...v.badge, word: "아직 몰라요", level: "보류", capped: ["한쪽에 돈이 몰려서 한 단계 낮췄어요"] } } });
-    expect(await screen.findByText("B(수동) 세트 그대로 (노출 위치 · 연령·성별 함께)")).toBeTruthy();   // 여러 칸이 함께 다르면 한 칸 이름을 붙이지 않음
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶"]) await next(n);
-    expect(screen.getByText("어느 쪽이 방문자를 더 데려왔는지는 아직 몰라요")).toBeTruthy();
-    expect(screen.queryByText("B가 같은 돈으로 방문자를 더 데려왔어요")).toBeNull();
-    expect(screen.getByText("B가 조금 더 데려왔지만 아직 우연일 수 있어요")).toBeTruthy();
-    expect(screen.getByText("하루씩 쌓일수록 B 쪽으로 기울지만 아직 몰라요")).toBeTruthy();
-  });
-
-  it("evidence grade is not shown as a letter that looks like set A", async () => {
-    render(<App />);
-    expect(screen.getByText("근거: 실측")).toBeTruthy();
-    expect(document.body.textContent).not.toMatch(/근거 A/);
-  });
-});
-
-describe("UI/UX 점검 2026-11-26", () => {
-  it("AN-05: when the server lost the result, the lead says so and offers one way out", async () => {
-    vi.stubGlobal("fetch", vi.fn((url: string) => String(url).includes("/simulate")
-      ? Promise.resolve(new Response(JSON.stringify({ error: "분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요." }), { status: 404 }))
-      : ok(oven)));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "예산별 예상 보기 ▶"]) await next(n);
-    await waitFor(() => expect(screen.getByRole("heading", { level: 2, name: /분석 결과나 광고 세트를 찾지 못했어요/ })).toBeTruthy());
-    expect(screen.queryByText("계산하는 중…")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "파일 다시 올리기" }));
     expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();
+    expect(screen.getByText("파일 하나만 올리면, 다음에 바꿔 볼 칸 1개를 뭉치가 찾아 드려요")).toBeTruthy();
+    expect(screen.getByText("광고 결과 파일(CSV)을 여기로 끌어다 놓기")).toBeTruthy();
+    expect(screen.getByText("파일을 올리면 눌러져요")).toBeTruthy();
+    expect(screen.getByText("새 분석")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "내 광고 설정 5개만 직접 입력하기 ▸" })).toBeTruthy();
+    for (const n of ["오븐로그 예시로 보기", "희수 실험 예시로 보기"]) expect(screen.getByRole("button", { name: n })).toBeTruthy();
+    for (const t of ["결과 파일은 어떻게 받아요?", "꼭 있어야 하는 열", "내 광고 설정이 없어요", "아직 광고를 안 돌려 봤어요"]) expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByText("지출 금액 · 노출 · 링크 클릭 · 랜딩 페이지 조회")).toBeTruthy();   // 닫힌 줄에도 핵심 한 줄
+    expect((screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(document.body.textContent).not.toMatch(/20만 번|₩/);
   });
 
-  it("AN-01 has one main button; [왜 그런지 보기] is a secondary button", async () => {
-    showExample();
-    await screen.findByRole("button", { name: "이 테스트 바로 준비 →" });
-    expect(screen.getByRole("button", { name: "왜 그런지 보기 ▶" }).className).not.toMatch(/bg-button/);
-    await next("왜 그런지 보기 ▶");
-    expect(screen.getByRole("button", { name: "내 세팅 보기 ▶" }).className).toMatch(/bg-button/);   // 다른 단계는 [다음]이 주 버튼
-  });
-
-  it("[다른 파일 올리기] asks first, because the result would be lost", async () => {
-    showExample();
-    await screen.findByRole("button", { name: "이 테스트 바로 준비 →" });
-    const confirm = vi.fn(() => false); vi.stubGlobal("confirm", confirm);
-    fireEvent.click(screen.getByRole("button", { name: "다른 파일 올리기" }));
-    expect(confirm).toHaveBeenCalled();
-    expect(screen.getByRole("button", { name: "이 테스트 바로 준비 →" })).toBeTruthy();
-    confirm.mockReturnValue(true);
-    fireEvent.click(screen.getByRole("button", { name: "다른 파일 올리기" }));
-    expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();
-  });
-});
-
-describe("점검 A·C·E·H", () => {
-  it("AN-04: thresholds name the real side and the bars carry their own labels", async () => {
-    showExample();
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶"]) await next(n);
-    expect(document.body.textContent).not.toMatch(/○ 쪽이에요/);
-    expect(screen.getByText(/70% 넘으면 'B 쪽이에요'/)).toBeTruthy();
-    const card = screen.getByRole("heading", { name: "방문 1명당 비용" }).closest("section")!;
-    expect(within(card).getByText("70%")).toBeTruthy();
-    expect(within(card).getByText("90%")).toBeTruthy();
-    const cost = screen.getByRole("heading", { name: /광고비는 확실히 B가 쌌어요/ }).closest("section")!;
-    expect(within(cost).getByText(/^4,\d{3}원$/)).toBeTruthy();   // 범위 그림 왼쪽 끝 금액
-    expect(within(cost).getByText(/^6,\d{3}원$/)).toBeTruthy();   // 오른쪽 끝 금액
-  });
-
-  it("AN-03 without settings explains the empty value instead of a bare dash", async () => {
-    showExample();
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶"]) await next(n);
-    const table = screen.getByRole("table");
-    expect(within(table).getAllByText("확장에서 넘기면 보여요").length).toBe(3);
-  });
-});
-
-describe("점검 B", () => {
-  it("AN-05 next-test money follows the spec wording and says why the classic amount is bigger", async () => {
-    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/simulate")
-      ? { ...sim, tried: true, next_test: { total: 100000, per_set_lo: 4000, per_set_hi: 10000, share_lo: 0.076, share_hi: 0.2, source: "Feit" } } : oven)));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "예산별 예상 보기 ▶"]) await next(n);
-    // 화면설계서 v4.2 AN-05 ④: '세트당 5,000원이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요'
-    expect(await screen.findByText("세트당 총 6,000원이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요")).toBeTruthy();
-    expect(screen.getByText(/작게 시험할 때는 '확실해요'까지 가지 않아도 돼요/)).toBeTruthy();
-  });
-});
-
-describe("점검 K", () => {
-  it("step ⑤ is named like the spec (예산별 예상)", async () => {
-    showExample();
-    expect(await screen.findByRole("button", { name: "⑤ 예산별 예상" })).toBeTruthy();
-  });
-});
-
-describe("점검 M", () => {
-  it("no screen says 손님 (spec AN-TXT: 방문자)", async () => {
-    showExample();
-    await screen.findByRole("button", { name: "이 테스트 바로 준비 →" });
-    expect(document.body.textContent).not.toMatch(/손님/);
-    for (const n of ["왜 그런지 보기 ▶", "내 세팅 보기 ▶", "값 비교 보기 ▶", "예산별 예상 보기 ▶", "보내기 ▶"]) {
-      await next(n);
-      document.querySelectorAll("details").forEach((d) => { d.open = true; });
-      expect(document.body.textContent).not.toMatch(/손님/);
-    }
-    expect(screen.getByRole("heading", { level: 1, name: "이 테스트를 광고 관리자에 준비해요" })).toBeTruthy();
-  });
-});
-
-function answerFive() {
-  fireEvent.click(screen.getByRole("button", { name: "5개만 직접 입력" }));
-  for (const name of ["트래픽", "20대", "수동", "이미지 1장"]) fireEvent.click(screen.getByRole("radio", { name }));
-  fireEvent.change(screen.getByLabelText("세트당 하루 예산 (원)"), { target: { value: "1350" } });
-}
-
-describe("점검 Q·R (화면설계서 v4.2 AN-00 · AN-COM)", () => {
-  const csv = () => new File(["a"], "내파일.csv", { type: "text/csv" });
-
-  it("Q: a good file is checked in place (✓ name · rows) and waits for [분석 시작 ▶]", async () => {
+  it("the settings link opens the 5 questions in place; answers go with the upload", async () => {
     const f = vi.fn((_u: string, _i?: RequestInit) => ok(oven));
     vi.stubGlobal("fetch", f);
     render(<App />);
-    answerFive();
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [csv()] } });
-    expect(await screen.findByText(`✓ 내파일.csv · ${oven.check.read.placement_rows}줄 확인`)).toBeTruthy();
-    expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();   // 아직 결과로 안 넘어감
-    fireEvent.click(screen.getByRole("button", { name: "분석 시작 ▶" }));
-    expect(await screen.findByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" })).toBeTruthy();
-    expect(f.mock.calls.filter(([u]) => String(u).endsWith("/analysis")).length).toBe(1);   // 세팅이 그대로면 다시 계산 안 함
+    fireEvent.click(screen.getByRole("button", { name: "내 광고 설정 5개만 직접 입력하기 ▸" }));
+    for (const g of ["캠페인 목표", "세트당 하루 예산", "연령", "노출 위치", "소재 형식"]) expect(screen.getByRole("group", { name: g })).toBeTruthy();
+    fireEvent.click(screen.getByLabelText("트래픽"));
+    upload();
+    await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).endsWith("/analysis") && JSON.parse(String((o?.body as FormData).get("settings"))).hasOwnProperty("meta.campaign.objective"))).toBe(true));
   });
 
-  it("Q: a blocked file shows the fix right under the upload box and keeps [분석 시작] off", async () => {
-    const block = { level: "block", mark: "■", kind: "not_same_days", text: "두 세트를 같은 날 같이 돌리지 않아서 비교할 수 없어요.", todo: "같은 날 같이 시작한 기간만 골라 다시 내보내 주세요.", screen: "AN-00" };
+  it("from the extension: shows the received count instead of the link, and uploads with the key", async () => {
+    window.history.replaceState(null, "", "/#s=K3yK3yK3yK3yK3y");
+    const f = vi.fn((url: string, init?: RequestInit) => ok(String(url).includes("/settings/") ? { count: 14, settings: {} } : init?.method === "POST" ? oven : {}));
+    vi.stubGlobal("fetch", f);
+    render(<App />);
+    expect(await screen.findByText(/확장 프로그램에서 자동으로 받았어요 \(14칸\)/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /5개만 직접 입력하기/ })).toBeNull();
+    upload();
+    await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).endsWith("/analysis") && (o?.body as FormData).get("settings_key") === "K3yK3yK3yK3yK3y")).toBe(true));
+  });
+
+  it("a good file is checked in place and [분석 시작] turns on without settings", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok(oven)));
+    render(<App />);
+    upload();
+    expect(await screen.findByText(/✓ x\.csv · \d+줄 확인/)).toBeTruthy();
+    const start = screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement;
+    expect(start.disabled).toBe(false);
+    fireEvent.click(start);
+    expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
+  });
+
+  it("a blocked file shows the fix right under the file box and keeps [분석 시작] off", async () => {
+    const block = { level: "block", mark: "■", kind: "missing_column", text: "'랜딩 페이지 조회' 열이 없어요", todo: "내보내기에서 이 열을 추가해 다시 받아 주세요.", screen: "AN-00" };
     vi.stubGlobal("fetch", vi.fn(() => ok({ ...oven, blocked: true, alerts: [block] })));
     render(<App />);
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [csv()] } });
-    const card = (await screen.findByText(/같은 날 같이 시작한 기간만 골라/)).closest("section")!;
-    expect(within(card).getByText("광고 결과 파일 (CSV)")).toBeTruthy();   // 업로드 카드 안
+    upload();
+    expect((await screen.findByRole("alert")).textContent).toContain("다시 받아 주세요");
     expect((screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
-  it("Q: the file picker also takes Excel (.xlsx)", () => {
+  it("a server error is linked to the file input", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ error: "다시 내보내 주세요" }), { status: 400 }))));
     render(<App />);
-    expect(screen.getByLabelText("광고 결과 파일 (CSV)").getAttribute("accept")).toContain(".xlsx");
+    upload();
+    const alert = await screen.findByRole("alert");
+    expect(screen.getByLabelText("광고 결과 파일 (CSV)").getAttribute("aria-describedby")).toBe(alert.id);
   });
 
-  it("R: the stepper starts with 업로드, and ① has [◀ 업로드] that asks first", async () => {
-    showExample();
-    await screen.findByRole("button", { name: "이 테스트 바로 준비 →" });
-    expect(screen.getByRole("button", { name: "업로드" })).toBeTruthy();
-    vi.stubGlobal("confirm", vi.fn(() => true));
-    fireEvent.click(screen.getByRole("button", { name: "◀ 업로드" }));
-    expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();
+  it("the not-yet checklist counts what is left", () => {
+    render(<App />);
+    open("아직 광고를 안 돌려 봤어요");
+    const boxes = screen.getAllByRole("checkbox");
+    expect(boxes.length).toBe(4);
+    fireEvent.click(boxes[0]!);
+    expect(screen.getByText("1/4")).toBeTruthy();
   });
 });
 
-describe("점검: [분석 시작]은 내 광고 설정이 있어야 (설계서 AN-00 ⑤) · 차단이면 [다음]에 이유 (AN-COM ⑤)", () => {
-  it("a good file without settings keeps [분석 시작] off and says what is left", async () => {
-    vi.stubGlobal("fetch", vi.fn(() => ok(oven)));
-    render(<App />);
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    await screen.findByText(/x\.csv · \d+줄 확인/);
-    const start = screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement;
-    expect(start.disabled).toBe(true);
-    expect(screen.getByText("내 광고 설정 5개를 넣으면 시작할 수 있어요 (남은 5개)")).toBeTruthy();
-    answerFive();
-    expect(start.disabled).toBe(false);
-    expect(document.body.textContent).not.toMatch(/몰라도 분석은 돼요/);
+describe("① 결론", () => {
+  it("one conclusion card with a 테스트 제안 tag, one main button, two summaries and two folds", async () => {
+    show();
+    expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
+    expect(screen.getByText("세로 소재를 넣은 세트를 하나 더 만들어, 지금 세트와 같이 돌려 보면 돼요")).toBeTruthy();
+    const card = screen.getByRole("region", { name: "테스트할 칸" });
+    expect(within(card).getByText("광고 › 형식·미디어")).toBeTruthy();
+    expect(within(card).getByText(/세로\(9:16\) 소재 세트 하나 더/)).toBeTruthy();
+    expect(within(card).getByText("테스트 제안")).toBeTruthy();
+    expect(card.textContent).toContain("돈의 72%가 인스타 릴스");
+    expect(within(card).getByText("세로 소재가 방문자를 더 데려올지는 아직 몰라요 → 이번 테스트로 확인해요.")).toBeTruthy();
+    const rest = screen.getByRole("list", { name: "나머지 칸" });
+    expect(within(rest).getByText("노출 위치 = 직접 고르기")).toBeTruthy();
+    expect(within(rest).getByText("확실해요")).toBeTruthy();
+    expect(within(rest).getByText("시작 날짜 · 예산")).toBeTruthy();
+    expect(within(rest).getByText("첫날 안 보여졌어요 · 알림 신청 1건뿐")).toBeTruthy();
+    expect(screen.getByText("11/17~20 · 광고비 10,616원 · 클릭 30번")).toBeTruthy();
+    expect(within(rest).getByText("광고비가 15% 쌌어요")).toBeTruthy();
+    expect(screen.getByText("여기서 바로 준비해도 돼요")).toBeTruthy();
+    expect(screen.queryByText(/하지 말기/)).toBeNull();   // ③ 체크리스트로 옮김
+    expect(document.querySelector("main")!.textContent).not.toMatch(/손님|₩|유력|보류|채택/);
   });
 
-  it("settings from the extension are enough", async () => {
-    window.history.replaceState(null, "", "/#s=K3yK3yK3yK3yK3y");
-    vi.stubGlobal("fetch", vi.fn((url: string) => ok(String(url).includes("/settings/") ? { count: 13 } : oven)));
-    render(<App />);
-    await screen.findByText(/자동으로 받음 \(13칸\)/);
-    fireEvent.change(screen.getByLabelText("광고 결과 파일 (CSV)"), { target: { files: [new File(["a"], "x.csv", { type: "text/csv" })] } });
-    await screen.findByText(/x\.csv · \d+줄 확인/);
-    expect((screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement).disabled).toBe(false);
-    window.history.replaceState(null, "", "/");
+  it("[이 테스트 준비하기 →] goes straight to ③; [왜 그런지 보기 ▶] is a secondary button to ②", async () => {
+    show();
+    await click("이 테스트 준비하기 →");
+    expect(await h1("이 테스트를 준비해요")).toBeTruthy();
+    await click(/① 결론/);
+    await click("왜 그런지 보기 ▶");
+    expect(await h1("왜 이 칸이에요?")).toBeTruthy();
   });
 
-  it("a blocked result's [다음] tells why on the button itself too", async () => {
-    const block = { level: "block", mark: "■", kind: "sum_mismatch", text: "기간이 겹치거나 빠진 날이 있어요.", todo: "다시 내보내 주세요.", screen: "AN-00" };
-    vi.stubGlobal("fetch", vi.fn(() => ok({ ...oven, blocked: true, alerts: [block] })));
-    render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "오븐로그 예시로 보기" }));
-    const nextBtn = await screen.findByRole("button", { name: "왜 그런지 보기 ▶" });
-    expect((nextBtn as HTMLButtonElement).disabled).toBe(true);
-    expect(nextBtn.getAttribute("title")).toBe("차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요");
+  it("alert bar: the most serious one in short words, counts, and [모두 보기 ▾]", async () => {
+    show();
+    const bar = await screen.findByRole("region", { name: "알림" });
+    expect(within(bar).getByText(/11\/17은 두 세트 모두 하루 종일 안 보여졌어요 → 이 날은 비교에서 뺐어요/)).toBeTruthy();
+    expect(within(bar).getByText("주의 2 · 참고 1")).toBeTruthy();
+    fireEvent.click(within(bar).getByRole("button", { name: "모두 보기 ▾" }));
+    expect(within(bar).getAllByRole("listitem").length).toBe(3);
+  });
+
+  it("stepper: three steps; ③ can be reached directly, ② only after ①; the hash tells the side panel the step", async () => {
+    show();
+    await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요");
+    expect((screen.getByRole("button", { name: /② 왜 그런지/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /③ 준비하기/ }) as HTMLButtonElement).disabled).toBe(false);
+    const q = () => new URLSearchParams(window.location.hash.slice(1));
+    expect(q().get("code")).toBe(oven.code);
+    expect(q().get("step")).toBe("AN-01");
+    await click("왜 그런지 보기 ▶");
+    await waitFor(() => expect(q().get("step")).toBe("AN-02"));
+    await click("준비하기 ▶");
+    await waitFor(() => expect(q().get("step")).toBe("AN-06"));
+  });
+
+  it("a blocked result shows no conclusion and cannot jump ahead", async () => {
+    const block = { level: "block", mark: "■", kind: "not_same_days", text: "두 세트를 같은 날 같이 돌리지 않아서 비교할 수 없어요.", todo: "같은 날 같이 시작한 기간만 골라 다시 내보내 주세요.", screen: "AN-00" };
+    show({ ...oven, blocked: true, alerts: [block, ...oven.alerts] });
+    expect(await h1("이 파일로는 아직 결론을 낼 수 없어요")).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "테스트할 칸" })).toBeNull();
+    expect((screen.getByRole("button", { name: /③ 준비하기/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "왜 그런지 보기 ▶" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("[다른 파일 올리기] asks first, because the result would be lost", async () => {
+    show();
+    await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요");
+    const confirm = vi.fn(() => false);
+    vi.stubGlobal("confirm", confirm);
+    fireEvent.click(screen.getByRole("button", { name: "다른 파일 올리기" }));
+    expect(confirm).toHaveBeenCalled();
+    expect(screen.getByRole("heading", { level: 1, name: "다음엔 이 칸 1개만 바꿔서 테스트해 보세요" })).toBeTruthy();
+  });
+});
+
+describe("② 왜 그런지", () => {
+  async function why(result: unknown = oven) {
+    show(result);
+    await click("왜 그런지 보기 ▶");
+    await h1("왜 이 칸이에요?");
+  }
+
+  it("three reasons that end in a badge, then six folds with a preview on each", async () => {
+    await why();
+    expect(screen.getByText(/돈은 릴스로 몰렸고, 나머지 설정은 괜찮았어요/)).toBeTruthy();
+    expect(screen.getByText("돈의 72%가 인스타 릴스(세로 화면)에서 나갔어요")).toBeTruthy();
+    expect(screen.getByText("노출 위치는 직접 고르기(수동)가 광고비 15% 쌌어요")).toBeTruthy();
+    expect(screen.getByText(/메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요/)).toBeTruthy();
+    expect(screen.getByText(/같은 돈\(5,308원\)으로 방문자 A \d+명 · B \d+명/)).toBeTruthy();
+    expect(screen.getByText(/방문 1명당 A [\d,]+원 · B [\d,]+원 · B가 나을 확률 \d+%/)).toBeTruthy();
+    expect(screen.getByText("들어온 뒤 행동(알림 신청 1건)은 아직 몰라요")).toBeTruthy();
+    expect(screen.getByText("보이는 값 ↓ · 누르는 정도 ✓ · 도착 ✓ · 행동 –")).toBeTruthy();
+    expect(screen.getByText(/^A [\d,]+원~[\d,]+원 · B [\d,]+원~[\d,]+원$/)).toBeTruthy();
+    expect(screen.getByText(/^테스트 1 · 다시 보기 \d · 그대로 1$/)).toBeTruthy();
+    expect(screen.getByText("베이지안 · 논문 · 한계")).toBeTruthy();
+    expect(screen.queryByText(/▲ 기준 미달/)).toBeNull();
+  });
+
+  it("with settings that lack a vertical creative, it names what the creative was", async () => {
+    const c = { ...oven.matrix.change, now: "정사각 1장 + AI 이미지 2장", reason: "돈의 72%가 인스타 릴스(세로 화면)에서 나갔는데, 세로 소재가 없었어요." };
+    await why({ ...oven, matrix: { ...oven.matrix, change: c } });
+    expect(screen.getByText("돈은 릴스로 갔는데 세로 소재가 없었고, 나머지 설정은 괜찮았어요")).toBeTruthy();
+    expect(screen.getByText("돈의 72%가 인스타 릴스(세로 화면)에서 나갔어요")).toBeTruthy();
+    expect(screen.getByText("그런데 소재는 정사각 1장 + AI 이미지 2장이었어요 → 이번에 테스트할 칸")).toBeTruthy();
+  });
+
+  it("folds keep the old screens: funnel table (with Meta rankings), dates, placements, settings", async () => {
+    const text = "메타 품질 순위: A(자동) 평균 이하 — 소재 품질이 낮게 보여요 → 소재 · 형식";
+    await why({ ...oven, matrix: { ...oven.matrix, rankings: true, meta_signals: [{ row: "1", key: "quality", text }] } });
+    open("어디서 막혔나 · 단계별 신호");
+    expect(within(screen.getByRole("region", { name: "메타 진단" })).getByText(`① ${text}`)).toBeTruthy();
+    expect(screen.getByText(/1,000번 보이면 A 약 \d+번 · B 약 \d+번 눌려요/)).toBeTruthy();
+    open("날짜별로 확률이 어떻게 굳어졌나");
+    expect(screen.getAllByText("B 쪽이에요").length).toBeGreaterThan(0);
+    open("노출 위치별 클릭");
+    expect(screen.getAllByText("참고만").length).toBeGreaterThan(0);
+    open("내 세팅 칸별 상태");
+    expect(screen.getByRole("tablist", { name: "상태로 거르기" })).toBeTruthy();
+    open("계산 방법 · 근거");
+    expect(screen.getByRole("heading", { name: "방문 1명당 비용" })).toBeTruthy();
+  });
+
+  it("when A wins, the numbers are told from A's side", async () => {
+    await why(twoSets);
+    expect(screen.getByText(/A가 나을 확률 95%/)).toBeTruthy();
+    expect(screen.queryByText(/B가 나을 확률/)).toBeNull();
+  });
+
+  it("a single ad set: no A/B reason, the funnel row 1 is '–'", async () => {
+    await why(oneSet);
+    expect(screen.queryByText(/같은 돈\(/)).toBeNull();
+    open("어디서 막혔나 · 단계별 신호");
+    const row1 = screen.getByText(/비교할 세트가 하나라 광고비 비교는 없어요/).closest("tr")!;
+    expect(row1.querySelector('[aria-label="아직 몰라요"]')).toBeTruthy();
+  });
+});
+
+describe("③ 준비하기", () => {
+  async function prep(result: unknown = oven) {
+    const f = show(result);
+    await click("이 테스트 준비하기 →");
+    await h1("이 테스트를 준비해요");
+    return f;
+  }
+
+  it("now vs new set, then budget as a decision question with chips", async () => {
+    await prep();
+    expect(screen.getByText("지금 세트는 그대로 두고, 세로 소재를 넣은 세트 하나만 더 만들면 돼요")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "지금 세트" })).getByText("노출 위치 직접 고르기 · 나머지 그대로")).toBeTruthy();
+    const n = screen.getByRole("region", { name: "새 세트" });
+    expect(within(n).getByText("+ 세로(9:16) 1개")).toBeTruthy();
+    expect(within(n).getByText("테스트 제안")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "예산 · 세트당 총액 (4일)" })).toBeTruthy();
+    expect((screen.getByRole("radio", { name: "6,000원" }) as HTMLInputElement).checked).toBe(true);
+    const answer = () => screen.getByText(/결과를 판단할 수 있을 가능성/).textContent;
+    await waitFor(() => expect(answer()).toContain("약 90%"));
+    expect(screen.getByText("5,000원 약 70% · 10,000원 거의 확실")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "5,000원" }));
+    expect(answer()).toContain("약 70%");
+    expect(screen.getByText(/성공 확률 아님/)).toBeTruthy();
+    expect(screen.getByText(/금액을/).textContent).toContain("결제·게시를 하지 않아요");
+  });
+
+  it("budget folds keep the visitor range (가설, daily minimum), Test & Roll and the backtest", async () => {
+    await prep();
+    open("예상 방문자 수 보기");
+    expect((await screen.findAllByText(/보통 78명 \(적게 55명 ~ 많이 108명\)/, {}, { timeout: 2000 })).length).toBeGreaterThan(0);
+    expect(screen.getAllByText("가설").length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("radio", { name: "7일" }));
+    fireEvent.change(screen.getByRole("slider", { name: "예산" }), { target: { value: "5000" } });
+    expect(await screen.findByText(/메타 하루 최소/, {}, { timeout: 2000 })).toBeTruthy();
+    open("전체 예산으로 정하기");
+    expect(await screen.findByRole("heading", { name: "다음 테스트에 쓸 돈 (Test & Roll)" }, { timeout: 2000 })).toBeTruthy();
+    open("예측이 맞았나?");
+    expect(screen.getByText(/예측이 맞았나\? \(검증\)/)).toBeTruthy();
+  });
+
+  it("the 4-item checklist (no ALT numbers) and send with a toast; the alert bar says warnings moved here", async () => {
+    await prep();
+    expect(screen.getByRole("heading", { name: "체크리스트 4개" })).toBeTruthy();
+    for (const t of ["시작은 하루 여유 있게", "두 세트를 같은 날 같이 시작", "바꾸는 칸은 형식·미디어 1개만 (여러 칸 한 번에 바꾸지 않기)"]) expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByText(/딱 하루만 연장/)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/ALT-/);
+    expect(within(screen.getByRole("region", { name: "알림" })).getByText(/주의 2건은 아래 체크리스트에 넣었어요/)).toBeTruthy();
+    vi.stubGlobal("navigator", { clipboard: { writeText: () => Promise.resolve() } });
+    fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기 →" }));
+    expect(await screen.findByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy();
+    expect(new URLSearchParams(window.location.hash.slice(1)).get("send")).toBeTruthy();
+  });
+
+  it("evidence is one fold with the 5 tabs, including 6 virtual cases not used for the verdict", async () => {
+    await prep();
+    open(/^근거 · 메타 공식 신호/);
+    fireEvent.click(screen.getByRole("tab", { name: "가상 케이스" }));
+    expect(screen.getByText(/판정에는 쓰지 않아요/)).toBeTruthy();
+    expect(screen.getAllByRole("row").length).toBe(7);
+    fireEvent.click(screen.getByRole("tab", { name: "한계" }));
+    expect(screen.getByText(/겹쳐 보일 수 있어요/)).toBeTruthy();
+  });
+
+  it("navigation: [◀ 왜 그런지] and [처음으로]", async () => {
+    await prep();
+    await click("처음으로");
+    expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
   });
 });

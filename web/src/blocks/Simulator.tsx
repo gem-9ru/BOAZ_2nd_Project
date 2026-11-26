@@ -7,7 +7,7 @@ import { AlertMark, band, Button, Card, HowCalculated, won } from "../ui";
  *  방문자 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
  *  메타 하루 최소보다 적으면 ▲ (광고가 안 나갈 수 있어요).
  *  10번 중 8번은 이 안에 들어요(10~90%). 써 본 적 없는 금액은 점선 + '가설'. 보통 값은 진한 보라 점(주황은 주의 색). */
-export function Simulator({ r, onReload }: { r: Result; onReload?: () => void }) {
+export function Simulator({ r, onReload, part = "all" }: { r: Result; onReload?: () => void; part?: "all" | "visits" | "roll" }) {
   const arms = r.summary.arms;
   const bi = r.verdict?.badge.better === "A" || arms.length < 2 ? 0 : 1;
   const arm = arms[bi];
@@ -43,6 +43,18 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
   const max = Math.max(...sims.map((s) => s.visits.hi), 1);
   const nt = first?.next_test;
   const who = armName(arm.name, bi);
+  const roll = nt && (
+        <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
+          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `세트당 총 ${won(start)}이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요`
+            : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
+          <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
+            <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
+              className="w-32 rounded-button border border-field-line bg-surface px-2 py-1 tabular-nums" />원
+          </label>
+          <p className="text-body">전체 예산의 약 {Math.round(nt.share_lo * 100)}~{Math.round(nt.share_hi * 100)}% · {won(nt.total)}이면 세트당 {won(nt.per_set_lo)}~{won(nt.per_set_hi)}. 나머지는 이긴 쪽에 써요.</p>
+        </Card>
+  );
+  if (part === "roll") return roll || <p className="text-body text-soft">계산하는 중…</p>;
   return (
     <>
       <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.what ? ` · ${c.what} 효과는 아직 재 본 적 없어요` : ""}`}>
@@ -102,17 +114,7 @@ export function Simulator({ r, onReload }: { r: Result; onReload?: () => void })
         <p className="text-caption text-soft">방문자 수 범위는 세트당 총액으로 계산해요. 기간을 바꾸면 하루 금액과 '가설' 여부가 바뀌어요.</p>
         {error && <p role="alert" className="text-body text-warn">{error}</p>}
       </Card>
-      {nt && (
-        <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
-          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `세트당 총 ${won(start)}이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요`
-            : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
-          <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
-            <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
-              className="w-32 rounded-button border border-field-line bg-surface px-2 py-1 tabular-nums" />원
-          </label>
-          <p className="text-body">전체 예산의 약 {Math.round(nt.share_lo * 100)}~{Math.round(nt.share_hi * 100)}% · {won(nt.total)}이면 세트당 {won(nt.per_set_lo)}~{won(nt.per_set_hi)}. 나머지는 이긴 쪽에 써요.</p>
-        </Card>
-      )}
+      {part !== "visits" && roll}
       <HowCalculated easy="실측으로 맞춘 범위에서 광고비·누르는 정도·페이지 도착을 무작위로 뽑아 수만 번 가상으로 돌려 보고, 가운데 80%를 보여 드려요.">
         <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 방문자. 골라 뽑지 않고 전체 분포를 써요.</p>
         <p>한계: {first?.limits ?? "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>

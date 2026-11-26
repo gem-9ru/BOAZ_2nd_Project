@@ -13,6 +13,11 @@
   --color-accent: var(--tone-accent);
   --color-accent-ink: var(--tone-accent-ink);
   --color-accent-soft: var(--tone-accent-soft);
+  --color-accent-line: var(--tone-accent-line);
+  --color-accent-faint: var(--tone-accent-faint);
+  --color-belly: var(--tone-belly);
+  --color-belly-strong: var(--tone-belly-strong);
+  --color-belly-ink: var(--tone-belly-ink);
   --color-action: var(--tone-action);
   --color-action-hover: var(--tone-action-hover);
   --color-on-action: var(--tone-on-action);
@@ -71,9 +76,18 @@
   --container-measure: var(--layout-measure);
   --shadow-raised: var(--elevation-raised);
   --shadow-float: var(--elevation-float);
+  --shadow-card: var(--elevation-card);
+  --shadow-press: var(--elevation-press);
+  --shadow-hero: var(--elevation-hero);
 }
 
 /* 한국어는 단어 중간에서 끊지 않는다 (휴대폰에서 '돌/려'처럼 끊기던 문제) */
-body { background: var(--tone-bg); color: var(--tone-ink); font-family: var(--primitive-font-family-sans); word-break: keep-all; overflow-wrap: anywhere; }
+/* 꾸미기안_뭉치: 크림 바탕 + 옅은 보라·배 색 둥근 빛 두 개 (장식) */
+body { background: radial-gradient(circle at 100% 18%, var(--tone-accent-soft), transparent 32rem), radial-gradient(circle at 0% 100%, var(--tone-belly), transparent 28rem), var(--tone-bg); background-attachment: fixed; letter-spacing: -0.01em; color: var(--tone-ink); font-family: var(--primitive-font-family-sans); word-break: keep-all; overflow-wrap: anywhere; }
 :focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* 제목 강조: 보라 글자 + 아래쪽 배 색 밑줄 (꾸미기안_뭉치 .h1 em) */
+.mark-belly { font-style: normal; color: var(--tone-accent); background: linear-gradient(transparent 64%, var(--tone-belly) 64%); }
+/* 뭉치 그림 아래 그림자 (메인 진하게를 투명하게) */
+.mungchi-shadow { filter: drop-shadow(0 8px 8px color-mix(in srgb, var(--tone-accent-ink) 20%, transparent)); }
