@@ -1,3 +1,7 @@
+/** 메타 권장 길이: 제목 27자, 기본 문구 50~150자 — 메타 광고 가이드 '이미지 · 페이스북 피드 · 트래픽' 텍스트 권장 사항 (2026-11-26 확인). 권장일 뿐, 넘는다고 잘린다는 말은 문서에 없음 */
+export const HEAD_REC = 27;
+export const TEXT_REC_MIN = 50;
+
 export type PreviewKind = "ig" | "fb" | "story";
 export const PREVIEW_LABEL: Record<PreviewKind, string> = { ig: "인스타 피드", fb: "페이스북 피드", story: "스토리" };
 

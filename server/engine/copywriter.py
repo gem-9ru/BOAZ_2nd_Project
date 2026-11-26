@@ -17,7 +17,7 @@ MAX_TOKENS = 16000   # 생각(thinking)이 먼저 토큰을 쓰므로 넉넉히:
 KEY_NAME = "ANTHROPIC_API_KEY"
 
 META_HEADLINE_MAX = 40
-META_TEXT_MIN, META_TEXT_MAX = 10, 125
+META_TEXT_MIN, META_TEXT_MAX = 10, 150   # 메타 권장 기본 문구 50~150자 (광고 가이드 '이미지·페이스북 피드·트래픽', 2026-11-26 확인)
 
 # 근거를 댈 수 없는 최상급·보장 표현 (광고 심의·신뢰 문제)
 BANNED = ["최저가", "최저", "1위", "1등", "최고", "최상", "최초", "국내 유일", "세계 유일", "유일", "넘버원",
@@ -184,7 +184,7 @@ def reply_text(resp) -> str:
 
 
 def _system_prompt(n: int) -> str:
-    spec = (f"제목(headline)은 {META_HEADLINE_MAX}자 이하, 본문(text)은 60~{META_TEXT_MAX}자. "
+    spec = (f"제목(headline)은 {META_HEADLINE_MAX}자 이하, 본문(text)은 50~{META_TEXT_MAX}자. "
             "인스타그램·페이스북 피드에서 스크롤하다 멈추게 하는 광고다. 본문은 "
             "① 손님이 공감할 상황이나 질문 한 문장 → ② 이 상품의 장점을 구체적으로 → ③ 부담 없는 행동 권유(예: 프로필 링크에서 보기) 순서로 쓴다. "
             "제목은 본문을 반복하지 말고 장점 하나를 짧고 또렷하게.")

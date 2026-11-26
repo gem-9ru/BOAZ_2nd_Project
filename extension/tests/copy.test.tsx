@@ -1,10 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import CopyStep, { forgetCopyWork } from "../entrypoints/sidepanel/steps/CopyStep";
 import { initialState } from "../lib/flow";
 
 afterEach(() => vi.unstubAllGlobals());
-beforeEach(() => forgetCopyWork());   // 문구 화면 기억은 테스트마다 비운다
+beforeEach(() => { forgetCopyWork(); try { localStorage.clear(); } catch { /* */ } });   // 문구 화면 기억·지난번 문구는 테스트마다 비운다
 
 const three = [1, 2, 3].map((i) => ({ primary_text: `본문 ${i}`, headline: `제목 ${i}` }));
 
@@ -371,11 +371,6 @@ describe("② 문구 복사 · 되돌리기 · 바로 보이는 부분 · 요약
     expect((screen.getByLabelText("제목 (고쳐도 돼요)") as HTMLInputElement).value).toBe("제목 1");
   });
 
-  it("marks what the feed shows before '더 보기'", async () => {
-    await pickFirst();
-    expect(screen.getByText("가".repeat(30) + "나".repeat(10))).toBeTruthy();   // 앞 40자
-    expect(screen.getByText(/… 더 보기/)).toBeTruthy();
-  });
 
   it("sums up the chosen words and tone above the write button", () => {
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "쿠키" }} dispatch={() => {}} />);
@@ -424,5 +419,48 @@ describe("② 문구 누르는 크기·도움말", () => {
     fireEvent.change(screen.getByLabelText("직접 적기"), { target: { value: "당일 구움" } });
     fireEvent.keyDown(screen.getByLabelText("직접 적기"), { key: "Enter" });
     expect(screen.getByRole("button", { name: "당일 구움 빼기" }).className).toContain("size-11");
+  });
+});
+
+describe("② 문구 제목 잘림 · 상품 이름 · 지난번 문구", () => {
+  const three = [1, 2, 3].map((i) => ({ primary_text: `수제 쿠키 본문 ${i}`, headline: `제목 ${i}` }));
+  const pick = async (product = "수제 쿠키") => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    const dispatch = vi.fn();
+    render(<CopyStep state={{ ...initialState(), step: "copy", product }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => screen.getByRole("radio", { name: "1안: 제목 1" }));
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    return dispatch;
+  };
+
+  it("says Meta's recommended lengths without claiming the text gets cut", async () => {
+    await pick();
+    fireEvent.change(screen.getByLabelText("제목 (고쳐도 돼요)"), { target: { value: "가".repeat(30) } });
+    expect(screen.getByText(/메타 권장 제목 길이는 27자예요 \(지금 30자\)/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "페이스북 피드" }));
+    expect(screen.getByText("가".repeat(30))).toBeTruthy();   // 미리 보기에서 자르지 않음
+    expect(screen.getByText(/메타 권장 본문 길이는 50~150자예요/)).toBeTruthy();   // 본문 '수제 쿠키 본문 1'은 50자 미만
+    expect(screen.queryByText(/피드에서 바로 보이는 부분/)).toBeNull();
+  });
+
+  it("warns (without blocking) when the product name is missing", async () => {
+    await pick();
+    expect(screen.queryByText(/상품 이름\('수제 쿠키'\)이 없어요/)).toBeNull();   // 본문에 '수제 쿠키'가 있음
+    fireEvent.change(screen.getByLabelText("본문 (고쳐도 돼요)"), { target: { value: "오늘 구운 간식이에요." } });
+    expect(screen.getByText(/상품 이름\('수제 쿠키'\)이 없어요/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "이 문구로 할게요" }).hasAttribute("disabled")).toBe(false);
+  });
+
+  it("remembers the chosen copy and offers it next time", async () => {
+    const dispatch = await pick();
+    fireEvent.click(screen.getByRole("button", { name: "이 문구로 할게요" }));
+    expect(dispatch).toHaveBeenCalled();
+    cleanup();
+    forgetCopyWork();
+    render(<CopyStep state={{ ...initialState(), step: "copy", product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/지난번 고른 문구/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "이 문구로 다시 쓰기" }));
+    expect((screen.getByLabelText("제목 (고쳐도 돼요)") as HTMLInputElement).value).toBe("제목 1");
   });
 });

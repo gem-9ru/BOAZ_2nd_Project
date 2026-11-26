@@ -4,7 +4,7 @@ import { copies as fetchCopies, type Copy } from "../../../lib/api";
 import { compact } from "../../../lib/format";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
-import FeedPreview, { PREVIEW_LABEL, type PreviewKind } from "./copy/FeedPreview";
+import FeedPreview, { HEAD_REC, PREVIEW_LABEL, TEXT_REC_MIN, type PreviewKind } from "./copy/FeedPreview";
 import { targetLine } from "./find/TargetPick";
 
 const TONES = ["친근하게", "깔끔하게", "감성적으로"] as const;
@@ -18,7 +18,7 @@ interface Props {
 const OTHER = "그 밖";   // 맨 끝. 묶음 이름은 서버가 상품에 맞게(재질·기능…) 붙이고 브랜드·가게 이름은 거른다
 /** 메타 글자 수 기준 (server/engine/copywriter.py와 같게) */
 export const HEADLINE_MAX = 40;
-export const TEXT_MAX = 125;
+export const TEXT_MAX = 150;   // 메타 권장 기본 문구 50~150자 (copy/FeedPreview.tsx 출처 참고)
 type Choice = number | "own" | null;
 
 /** 문구 화면에서 한 일을 상품·손님 무리별로 기억 (① 찾기에 갔다 와도 그대로). 패널이 열려 있는 동안만. 사진은 기억하지 않음. */
@@ -49,6 +49,11 @@ export default function CopyStep({ state, dispatch }: Props) {
   useEffect(() => {
     MEMO.set(memoKey, { strengths, added, tone, picked, rounds, sources, choice, draft, view });
   }, [memoKey, strengths, added, tone, picked, rounds, sources, choice, draft, view]);
+  const lastKey = `ad-coach.last-copy.${state.product ?? ""}`;   // 지난번 고른 문구 (이 브라우저에만, 다음 달에 다시 쓰기용)
+  const [last] = useState<{ headline: string; primary_text: string; day: string } | null>(() => {
+    try { const v = JSON.parse(localStorage.getItem(lastKey) ?? "null"); return v && typeof v.headline === "string" ? v : null; }
+    catch { return null; }
+  });
   const [photo, setPhoto] = useState<string | null>(null);   // 미리 보기에만 쓰는 내 사진 (패널 안에서만, 올리지 않음)
   useEffect(() => () => { if (photo) URL.revokeObjectURL(photo); }, [photo]);
   const shop = (state.answers?.["meta.pre.ig_account"] ?? "").replace(/^@/, "").trim() || "내 가게";
@@ -65,6 +70,10 @@ export default function CopyStep({ state, dispatch }: Props) {
     const from = typeof choice === "number" ? list?.[choice] : undefined;
     const same = !!from && from.headline === draft.headline && from.primary_text === draft.text;
     const copy = same ? from! : { headline: draft.headline.trim(), primary_text: draft.text.trim() };   // 고쳤으면 근거 줄은 뺀다
+    try {
+      const d = new Date();
+      localStorage.setItem(lastKey, JSON.stringify({ headline: copy.headline, primary_text: copy.primary_text, day: `${d.getMonth() + 1}/${d.getDate()}` }));
+    } catch { /* 저장이 막혀도 그대로 진행 */ }
     dispatch({ type: "pickCopy", copy, ...(all.length ? { strengths: all } : {}) });   // 칩이 없어도 직접 적은 좋은 점은 넘긴다
   }
 
@@ -134,7 +143,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           ? <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           : <p className="line-clamp-2 text-caption text-soft">{c.primary_text}</p>}
         {c.basis && c.basis.length > 0 && <p className="text-caption text-soft">이 문구에 쓴 말: {c.basis.join(" · ")}</p>}
-        {on && <Editor draft={draft} setDraft={setDraft} banned={banned} original={{ headline: c.headline, text: c.primary_text }} />}
+        {on && <Editor draft={draft} setDraft={setDraft} banned={banned} product={state.product ?? ""} original={{ headline: c.headline, text: c.primary_text }} />}
       </div>
     );
   }
@@ -200,6 +209,17 @@ export default function CopyStep({ state, dispatch }: Props) {
         )}
         {error && !list && <ErrorLine message={error} onRetry={write} />}
       </div>
+      {!list && choice === null && last && (
+        <div className="flex flex-col gap-2 rounded-card border border-dashed border-line px-4 py-3">
+          <span className="text-caption font-semibold text-soft">지난번 고른 문구 ({last.day})</span>
+          <strong className="text-body">{last.headline}</strong>
+          <p className="line-clamp-2 text-caption text-soft">{last.primary_text}</p>
+          <button type="button" onClick={() => { setChoice("own"); setDraft({ headline: last.headline, text: last.primary_text }); }}
+            className="min-h-11 self-start rounded-button border border-accent bg-paper px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            이 문구로 다시 쓰기
+          </button>
+        </div>
+      )}
       {!list && choice !== "own" && (
         <div className="flex flex-col gap-2">
           {!toneOpen ? (
@@ -281,7 +301,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             {choice === "own" && (
               <>
                 <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
-                <Editor draft={draft} setDraft={setDraft} banned={banned} />
+                <Editor draft={draft} setDraft={setDraft} banned={banned} product={state.product ?? ""} />
               </>
             )}
           </div>
@@ -291,7 +311,7 @@ export default function CopyStep({ state, dispatch }: Props) {
         <div className="flex flex-col gap-2 rounded-card border border-accent bg-accent-soft p-3">
           <strong className="text-body">직접 쓰기</strong>
           <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
-          <Editor draft={draft} setDraft={setDraft} banned={banned} />
+          <Editor draft={draft} setDraft={setDraft} banned={banned} product={state.product ?? ""} />
           <button type="button" onClick={() => setChoice(null)} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">← 문구를 써 달라고 할게요</button>
         </div>
       )}
@@ -322,16 +342,18 @@ function euro(word: string): string {
   return jong === 0 || jong === 8 ? "로" : "으로";
 }
 
-/** 인스타 피드에서 '더 보기' 전에 바로 보이는 본문 길이 (두 줄쯤) */
-const FOLD = 40;
-
-function Editor({ draft, setDraft, banned, original }: {
+function Editor({ draft, setDraft, banned, original, product }: {
   draft: { headline: string; text: string }; setDraft: (d: { headline: string; text: string }) => void; banned: string[];
+  product: string;
   /** 받은 문구 그대로 (직접 쓰기엔 없음): 고쳤으면 [원래 문구로] */
   original?: { headline: string; text: string };
 }) {
   const [copied, setCopied] = useState<"" | "ok" | "fail">("");
   const edited = !!original && (original.headline !== draft.headline || original.text !== draft.text);
+  // 상품 이름(또는 그 끝 낱말, 2글자 이상)이 제목·본문 어디에도 없으면 알려 준다 (막지는 않음)
+  const flat = `${draft.headline}${draft.text}`.replace(/\s/g, "");
+  const names = [product.replace(/\s/g, ""), ...product.split(/\s+/).filter((w) => w.length >= 2)].filter(Boolean);
+  const noName = !!product && flat.length > 0 && !names.some((n) => flat.includes(n));
   async function copy() {
     try {
       await navigator.clipboard.writeText(`${draft.headline}\n${draft.text}`);
@@ -360,12 +382,13 @@ function Editor({ draft, setDraft, banned, original }: {
       <textarea id="copy-text" rows={4} value={draft.text} onChange={(e) => setDraft({ ...draft, text: e.target.value })}
         aria-invalid={draft.text.length > TEXT_MAX || undefined}
         className="rounded-button border border-field-line bg-paper px-3 py-2 text-body" />
-      {draft.text.trim() && (
-        <p className="text-caption text-soft">
-          피드에서 바로 보이는 부분 (약 {FOLD}자): <span className="font-semibold text-ink">{draft.text.slice(0, FOLD)}</span>
-          {draft.text.length > FOLD && <span> … 더 보기</span>}
-        </p>
+      {draft.headline.length > HEAD_REC && draft.headline.length <= HEADLINE_MAX && (
+        <p className="text-caption text-soft">메타 권장 제목 길이는 {HEAD_REC}자예요 (지금 {draft.headline.length}자). 줄여도 되면 중요한 말을 앞에 두세요.</p>
       )}
+      {draft.text.trim() && draft.text.length < TEXT_REC_MIN && (
+        <p className="text-caption text-soft">메타 권장 본문 길이는 {TEXT_REC_MIN}~{TEXT_MAX}자예요 (지금 {draft.text.length}자).</p>
+      )}
+      {noName && <p className="text-caption text-warn">▲ 문구에 상품 이름('{product}')이 없어요. 무엇을 파는지 알 수 있게 넣어 주세요.</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void copy()} disabled={!draft.headline.trim() && !draft.text.trim()}
           className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
