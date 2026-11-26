@@ -6,7 +6,7 @@ export type PreviewKind = "ig" | "fb" | "story";
 export const PREVIEW_LABEL: Record<PreviewKind, string> = { ig: "인스타 피드", fb: "페이스북 피드", story: "스토리" };
 
 /** 광고가 뜨는 자리마다 문구가 보이는 모양을 작게 미리 보기 (사진은 내 사진 또는 자리만).
- *  - 인스타 피드: 사진 → [더 알아보기] 막대 → '가게 이름 본문' 두 줄 (메타 가이드 권장: 제목 40자·본문 125자, 제목이 어디 보이는지는 확인 못 함)
+ *  - 인스타 피드: 사진 → [더 알아보기] 막대 → '가게 이름 본문' 두 줄. 제목은 [더 알아보기] 막대에 함께 그림 — 메타 가이드 권장은 제목 40자·본문 125자, 제목 자리는 문서에 없어 짐작 (사장님 선택, 2026-11-26)
  *  - 페이스북 피드: 본문 → 사진 → 제목 + [더 알아보기]
  *  - 스토리: 세로 화면 가득 사진, 아래에 본문과 [더 알아보기] (메타 가이드: 9:16, 위 14%·아래 35% 비우기 — 도움말 2405736176188602는 아래 약 20%. 본문 줄 수는 기기마다 달라서, 메타 도움말 예시대로 2줄까지) */
 export default function FeedPreview({ name, headline, text, photo, kind = "fb" }: {
@@ -44,7 +44,10 @@ export default function FeedPreview({ name, headline, text, photo, kind = "fb" }
         {head}
         {picture("aspect-square")}
         <div className="flex items-center justify-between gap-2 border-b border-line px-3 py-2">
-          <span className="text-caption font-semibold text-ink">더 알아보기</span>
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate text-caption font-semibold text-ink">{headline || "제목"}</span>
+            <span className="text-small text-soft">더 알아보기</span>
+          </span>
           <span className="text-caption text-soft">›</span>
         </div>
         <p className="line-clamp-2 px-3 py-2 text-caption text-ink">
