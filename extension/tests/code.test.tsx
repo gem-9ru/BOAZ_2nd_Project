@@ -98,3 +98,27 @@ describe("③ 결과 화면: 체크리스트 · 하지 말 것", () => {
     expect(screen.getByText(/첫날 안 보여졌어요/)).toBeTruthy();
   });
 });
+
+describe("③ 코드 넣기: 받은 단계 ✓ (EX-02 ③)", () => {
+  const ended = [{ fieldId: "meta.adset.end_date", label: "종료", value: "2026-11-20" }];
+  it("[짚어 주기] only notes the start; the ✓ comes when the owner returns from the export guide", () => {
+    const dispatch = vi.fn();
+    const { unmount } = render(<CodeStep state={{ ...initialState(), step: "upload", settings: ended }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "내보내기 버튼 짚어 주기" }));
+    expect(dispatch).toHaveBeenCalledWith({ type: "toggleCheck", key: "upload:2026-11-20", index: 9 });
+    expect(dispatch).not.toHaveBeenCalledWith({ type: "toggleCheck", key: "upload:2026-11-20", index: 0 });
+    expect(dispatch).toHaveBeenCalledWith({ type: "startExport" });
+    unmount();
+    // 안내를 닫고 이 화면이 다시 그려짐 → 1번 ✓
+    const back = vi.fn();
+    render(<CodeStep state={{ ...initialState(), step: "upload", settings: ended, checks: { "upload:2026-11-20": [9] } }} dispatch={back} />);
+    expect(back).toHaveBeenCalledWith({ type: "toggleCheck", key: "upload:2026-11-20", index: 0 });
+  });
+
+  it("shows ✓ for done steps and the number for the rest", () => {
+    render(<CodeStep state={{ ...initialState(), step: "upload", settings: ended, checks: { "upload:2026-11-20": [0, 9] } }} dispatch={() => {}} />);
+    const items = screen.getAllByRole("listitem");
+    expect(items[0]!.textContent).toMatch(/^✓ 했어요/);
+    expect(items[1]!.textContent).toMatch(/^2/);
+  });
+});

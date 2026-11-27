@@ -40,6 +40,15 @@ describe("2. 기다리기: 돈이 얼마까지만 나가는지", () => {
   });
 });
 
+describe("2-1. 광고가 끝난 뒤 기다리기 화면은 할 일 하나", () => {
+  it("hides the 'will spend / will stop' box and the export link once the ad has ended", () => {
+    render(<WaitStep state={{ ...initialState(), step: "wait", endDate: "2020-01-01", settings: budget }} dispatch={() => {}} />);
+    expect(screen.queryByText(/까지만 나가요/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "결과 내보내는 법 보기" })).toBeNull();
+    expect(screen.getByRole("button", { name: "결과 분석하기" })).toBeTruthy();
+  });
+});
+
 describe("3. 결과 화면: 체크리스트를 보고 주 버튼 (설계서 EX-03 ④ → ⑤)", () => {
   it("[다음 테스트 세팅] comes after the money box and the checklist, before the chatbot", () => {
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);

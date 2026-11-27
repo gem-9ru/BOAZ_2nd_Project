@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { analysisPageUrl, plan as fetchPlan } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
@@ -7,6 +7,9 @@ import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 export function tidyCode(raw: string): string {
   return raw.replace(/\s+/g, "").toUpperCase();
 }
+
+/** CodeStep 체크 칸 번호: 0 파일 받기 ✓ · 1 분석 페이지 열기 ✓ · 9 내보내기 안내를 시작함(화면에 안 보임) */
+const EXPORTING = 9;
 
 /** ③ 분석: 결과 파일은 분석 페이지에서 올리고, 거기서 받은 코드 4자리를 여기에 넣는다. */
 export default function CodeStep({ state, dispatch }: { state: FlowState; dispatch: (ev: FlowEvent) => void }) {
@@ -48,6 +51,9 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   const doneKey = `upload:${endIso ?? ""}`;
   const done = state.checks?.[doneKey] ?? [];
   const mark = (i: number) => { if (!done.includes(i)) dispatch({ type: "toggleCheck", key: doneKey, index: i }); };
+  // 1번 ✓는 '받았을 때': [짚어 주기]를 누르면 시작만 적어 두고(EXPORTING), 내보내기 안내를 닫고 이 화면으로 돌아오면
+  // ('← 파일을 받았어요 · 돌아가기') ✓. 이 화면은 안내가 떠 있는 동안 안 보이니, 다시 그려질 때가 곧 안내가 닫힌 때다.
+  useEffect(() => { if (done.includes(EXPORTING)) mark(0); }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   const Num = ({ i }: { i: number }) => done.includes(i)
     ? <span className="font-bold text-adopt">✓<span className="sr-only"> 했어요</span></span>
     : <span className="font-bold text-accent-ink">{i + 1}</span>;
@@ -58,7 +64,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
         <li className="flex gap-2"><Num i={0} />
           <span>광고 관리자에서 결과 파일 받기
             <span className="block text-label text-soft">[내보내기]에서 <b>일 · 노출 위치</b>를 꼭 골라요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</span>
-            <button type="button" onClick={() => { mark(0); dispatch({ type: "startExport" }); }} className="flex min-h-11 items-center text-label font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
+            <button type="button" onClick={() => { mark(EXPORTING); dispatch({ type: "startExport" }); }} className="flex min-h-11 items-center text-label font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
           </span></li>
         <li className="flex gap-2"><Num i={1} />
           <span>분석 페이지에 파일 올리기

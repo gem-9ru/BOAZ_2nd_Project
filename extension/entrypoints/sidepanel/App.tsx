@@ -100,7 +100,7 @@ export default function App() {
         </ol>
       </header>
       <div className="flex flex-col gap-6 px-4">
-      {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} handled={state.planSent} plan={state.plan} />}
+      {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} handled={state.planSent} plan={state.plan} flowStep={state.step} />}
       {!analysis && <>
       {state.guide && state.step !== "prep" && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}

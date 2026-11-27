@@ -28,9 +28,12 @@ describe("분석 페이지 주소 읽기", () => {
 describe("분석 페이지 옆 광고 어시스턴트", () => {
   it("before upload (AN-00) it greets and explains the export without calling the server", () => {
     const f = vi.fn(); vi.stubGlobal("fetch", f);
-    render(<AnalysisAssistant tab={{ tabId: 1, code: null, step: null, send: null }} dispatch={() => {}} />);
+    const { rerender } = render(<AnalysisAssistant tab={{ tabId: 1, code: null, step: null, send: null }} dispatch={() => {}} flowStep="wait" />);
     expect(screen.getByText(/왼쪽 분석 페이지에 결과 파일\(CSV\)을 올려 주세요/)).toBeTruthy();   // 할 일 한 줄
     expect(screen.getByRole("button", { name: /광고 관리자에서 내보내기 짚어 주기/ })).toBeTruthy();
+    // 광고를 만들기 전(① 찾기)에는 내보내기 안내를 띄우지 않는다 (찾기 화면과 겹치지 않게)
+    rerender(<AnalysisAssistant tab={{ tabId: 1, code: null, step: null, send: null }} dispatch={() => {}} flowStep="find" />);
+    expect(screen.queryByRole("button", { name: /내보내기 짚어 주기/ })).toBeNull();
     expect(screen.getByText("CSV는 어디서 받아요?")).toBeTruthy();
     expect(f).not.toHaveBeenCalled();
   });
@@ -58,18 +61,26 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
 
   it("AN-06 [확장 프로그램으로 보내기] (send in the address) loads the test plan for EX-03", async () => {
     const plan = { code: "AB12", action: "한 번 더", change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로", note: "n", path: "광고 › 형식·미디어" }, summary: [], badge: null };
-    vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "AN-06 요약", suggestions: [] })));
+    let give!: () => void;
+    const planReady = new Promise<void>((r) => { give = r; });
+    vi.stubGlobal("fetch", vi.fn((u: string) => String(u).includes("/plan/") ? planReady.then(() => ok(plan)) : ok({ message: "AN-06 요약", suggestions: [] })));
     const dispatch = vi.fn();
     const tab = { tabId: 1, code: "AB12", step: "AN-06", send: "123" };
     const { rerender } = render(<AnalysisAssistant tab={tab} dispatch={dispatch} />);
-    expect(screen.getByText(/\[확장 프로그램으로 보내기 →\]를 눌러요/)).toBeTruthy();
+    // 받는 동안: 방금 누른 [보내기]를 또 누르라고 하지 않는다
+    expect(screen.getByText(/받는 중이에요/)).toBeTruthy();
+    expect(screen.queryByText(/\[확장 프로그램으로 보내기 →\]를 눌러요/)).toBeNull();
+    give();
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan, sent: "123" }));
     // 받은 뒤(App이 planSent·plan을 넘김): '받았어요' 카드 + 광고 관리자로 가는 버튼 하나
     const update = vi.spyOn(fakeBrowser.tabs, "update").mockResolvedValue({} as never);
     vi.spyOn(fakeBrowser.windows, "update").mockResolvedValue({} as never);
-    vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, windowId: 1, url: "https://adsmanager.facebook.com/adsmanager/manage/campaigns" }] as never);
+    // 지금 창의 광고 관리자 탭(7)을 다른 창의 탭(8)보다 먼저 (사이드 패널은 창마다 따로)
+    const ads = "https://adsmanager.facebook.com/adsmanager/manage/campaigns";
+    vi.spyOn(fakeBrowser.tabs, "query").mockImplementation((async (q: { currentWindow?: boolean }) =>
+      q.currentWindow ? [{ id: 7, windowId: 1, url: ads }] : [{ id: 8, windowId: 2, url: ads }, { id: 7, windowId: 1, url: ads }]) as never);
     rerender(<AnalysisAssistant tab={tab} dispatch={dispatch} handled="123" plan={plan as never} />);
-    const card = screen.getByRole("region", { name: "받은 테스트안" });
+    const card = screen.getByRole("region", { name: "받은 바꿀 칸" });
     expect(card.textContent).toContain("광고 › 형식·미디어");
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자에서 다음 테스트 준비 ▶" }));
     await waitFor(() => expect(update).toHaveBeenCalledWith(7, { active: true }));
