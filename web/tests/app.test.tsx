@@ -125,7 +125,8 @@ describe("① 결론", () => {
     const rest = screen.getByRole("list", { name: "나머지 칸" });
     expect(within(rest).getByText("노출 위치 = 직접 고르기")).toBeTruthy();
     expect(within(rest).getByText("확실해요")).toBeTruthy();
-    expect(within(rest).getByText("시작 날짜 · 예산")).toBeTruthy();
+    expect(within(rest).getByText("→ 다음엔 이렇게")).toBeTruthy();
+    expect(within(rest).getByText("시작은 하루 여유 있게")).toBeTruthy();
     expect(within(rest).getByText("첫날 안 보여졌어요 · 알림 신청 1건뿐")).toBeTruthy();
     expect(screen.getByText("11/17~20 · 광고비 10,616원 · 클릭 30번")).toBeTruthy();
     expect(within(rest).getByText("광고비가 15% 쌌어요")).toBeTruthy();
@@ -184,9 +185,9 @@ describe("① 결론", () => {
     expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
   });
 
-  it("the 다시 보기 card says where the to-do went", async () => {
+  it("the 다음엔 이렇게 card leads with the to-do and says where the rest went", async () => {
     show();
-    expect(await screen.findByText("→ ③ 준비하기 체크리스트에 넣었어요")).toBeTruthy();
+    expect(await screen.findByText(/→ ③ 준비하기 체크리스트에 4가지로 넣었어요/)).toBeTruthy();
   });
 
   it("[다른 파일 올리기] asks first, because the result would be lost", async () => {
@@ -217,7 +218,9 @@ describe("② 왜 그런지", () => {
     expect(screen.getByText(/방문 1명당 A [\d,]+원 · B [\d,]+원 · B가 나을 확률 \d+%/)).toBeTruthy();
     expect(screen.getByText("들어온 뒤 행동(알림 신청 1건)은 아직 몰라요")).toBeTruthy();
     expect(screen.getByText("보이는 값 ↓ · 누르는 정도 ✓ · 도착 ✓ · 행동 –")).toBeTruthy();
-    expect(screen.getByText(/^A [\d,]+원~[\d,]+원 · B [\d,]+원~[\d,]+원$/)).toBeTruthy();
+    expect(screen.getByRole("figure", { name: /^광고 1,000번 보여주는 데 드는 돈 범위: A\(?/ })).toBeTruthy();   // 광고비 범위는 이유 2 안 그래프로
+    expect(screen.getByRole("figure", { name: /노출 위치별로 나간 돈: 인스타 릴스 72%, 나머지 자리 28%/ })).toBeTruthy();
+    expect(screen.getByText(/날짜가 쌓일수록 26% → 65% → 79%로 B 쪽으로 굳어지는 중/)).toBeTruthy();
     expect(screen.getByText(/^테스트 1 · 다시 보기 \d · 그대로 1$/)).toBeTruthy();
     expect(screen.getByText("베이지안 · 논문 · 한계")).toBeTruthy();
     expect(screen.queryByText(/▲ 기준 미달/)).toBeNull();
@@ -277,11 +280,12 @@ describe("③ 준비하기", () => {
     const n = screen.getByRole("region", { name: "새 세트" });
     expect(within(n).getByText("+ 세로(9:16) 1개")).toBeTruthy();
     expect(within(n).getByText("테스트 제안")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: "예산 · 세트당 총액 (4일)" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /세트당 얼마로 돌릴까요\? · 4일 기준/ })).toBeTruthy();
     expect((screen.getByRole("radio", { name: "6,000원" }) as HTMLInputElement).checked).toBe(true);
     const answer = () => screen.getByText(/결과를 판단할 수 있을 가능성/).textContent;
     await waitFor(() => expect(answer()).toContain("약 90%"));
     expect(screen.getByText("5,000원 약 70% · 10,000원 거의 확실")).toBeTruthy();
+    expect(screen.getByText(/방문자/, { selector: "p" }).textContent).toMatch(/방문자 보통 78명 \(적게 55명 ~ 많이 108명\) · 지금 세팅\(B 수동\) 기준 · 10번 중 8번은 이 범위 안 · 세로 소재 효과는 이 숫자에 없어요/);
     fireEvent.click(screen.getByRole("radio", { name: /5,000원/ }));
     expect(answer()).toContain("약 70%");
     expect(screen.getByText(/성공 확률 아님/)).toBeTruthy();
@@ -304,7 +308,7 @@ describe("③ 준비하기", () => {
 
   it("the 4-item checklist (no ALT numbers) and send with a toast; the alert bar says warnings moved here", async () => {
     await prep();
-    expect(screen.getByRole("heading", { name: "체크리스트 4개" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /돌리기 전에 4가지만/ })).toBeTruthy();
     for (const t of ["시작은 하루 여유 있게", "두 세트를 같은 날 같이 시작", "바꾸는 칸은 형식·미디어 1개만 (여러 칸 한 번에 바꾸지 않기)"]) expect(screen.getByText(t)).toBeTruthy();
     expect(screen.getByText(/딱 하루만 연장/)).toBeTruthy();
     expect(document.body.textContent).not.toMatch(/ALT-/);

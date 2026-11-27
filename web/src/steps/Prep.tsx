@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { simulate, type Result, type Simulation } from "../api";
 import { Simulator } from "../blocks/Simulator";
-import { AlertMark, BigButton, Fold, Folds, Ghost, md, TestTag, won } from "../ui";
+import { AlertMark, band, BigButton, Fold, Folds, Ghost, md, TestTag, won } from "../ui";
+import { armName } from "./shared";
 import { Mungchi } from "../ui/Mungchi";
 import type { Result as R } from "../api";
 import { AN05 } from "./AN05";
@@ -19,6 +20,9 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
   const options = [...new Set([5000, start, 10000])].sort((a, b) => a - b);
   const [budget, setBudget] = useState(start);
   const sims = useSims(r, options, days);
+  const armsAll = r.summary.arms;
+  const bi = r.verdict?.badge.better === "A" || armsAll.length < 2 ? 0 : 1;
+  const who = armsAll[bi] ? armName(armsAll[bi]!.name, bi) : "지금 세트";
   const chance = Object.fromEntries(Object.entries(sims).filter(([, x]) => x.judge != null).map(([b, x]) => [b, x.judge!])) as Record<number, number>;
   const low = sims[budget]?.below_daily_min ? sims[budget] : null;   // 하루 금액이 메타 하루 최소보다 적음 → 광고가 안 나갈 수 있어요
   const floor = sims[start]?.daily_min;
@@ -56,7 +60,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
       </div>
 
       <section aria-labelledby="budget-title" className="flex flex-col gap-2 rounded-card border border-line bg-surface p-card shadow-card">
-        <h2 id="budget-title" className="text-body font-extrabold"><span aria-hidden="true">💰 </span>예산 · 세트당 총액 ({days}일)</h2>
+        <h2 id="budget-title" className="text-body font-extrabold"><span aria-hidden="true">💰 </span>세트당 얼마로 돌릴까요? <span className="font-semibold text-soft">· {days}일 기준</span></h2>
         <div role="radiogroup" aria-label="세트당 총액" className="flex flex-wrap gap-2">
           {options.map((b) => (
             <label key={b} className={`cursor-pointer rounded-badge border-2 px-4.5 py-2 text-label font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${budget === b ? "border-accent bg-accent text-on-accent shadow-press-sm" : "border-line bg-surface text-soft"}`}>
@@ -78,6 +82,11 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         <div aria-hidden="true" className="h-4 overflow-hidden rounded-badge bg-sunk">
           <i className="block h-full rounded-badge bg-linear-90 from-accent-line to-accent transition-[width] duration-(--motion-expand)" style={{ width: `${Math.round((chance[budget] ?? 0) * 100)}%` }} />
         </div>
+        {sims[budget] && (
+          // 고른 금액의 예상 방문자 수 한 줄 (시안 ③): 지금 세팅 실측 기준이라 바꿀 칸의 효과는 들어 있지 않다고 같이 말한다
+          <p className="text-label">방문자 <b>{band(sims[budget]!.visits)}</b>
+            <span className="text-soft"> · 지금 세팅({who}) 기준 · 10번 중 8번은 이 범위 안{c.what ? ` · ${c.what} 효과는 이 숫자에 없어요` : ""}</span></p>
+        )}
         {/* 30번: 서버 rules.yaml min_clicks (클릭이 이보다 적으면 판정 최대 '○ 쪽이에요') — 체크리스트 문구와 같은 기준. 새 세트도 지금 세트처럼 반응한다고 가정 */}
         <p className="flex flex-wrap justify-between gap-x-4 text-caption text-soft">
           <span>{options.filter((b) => b !== budget).map((b) => `${plain(b)} ${chanceText(chance[b])}`).join(" · ")}</span>
@@ -95,7 +104,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
       </section>
 
       <section aria-labelledby="check-title" className="flex flex-col gap-1 rounded-card border border-line bg-surface p-card shadow-card">
-        <h2 id="check-title" className="text-body font-extrabold"><span aria-hidden="true">📝 </span>체크리스트 {checklist.length}개</h2>
+        <h2 id="check-title" className="text-body font-extrabold"><span aria-hidden="true">📝 </span>돌리기 전에 {checklist.length}가지만</h2>
         <ul className="flex flex-col">
           {checklist.map((t) => (
             <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3 text-body"><input type="checkbox" className="size-5 shrink-0 accent-action" />{t}</label></li>

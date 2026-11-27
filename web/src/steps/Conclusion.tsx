@@ -40,11 +40,15 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
           </> : <span className="text-soft">이번 결과로는 없어요</span>}
         </li>
         <li className="flex flex-col items-start gap-1 rounded-card border border-line bg-surface px-5 py-4 text-label shadow-card">
-          <Tag tone="watch">– 다시 보기</Tag>
-          {watch.length ? <>
-            <b className="mt-1.5 text-body">{watch.map((w) => w.title ?? w.path.split(" › ").pop()).join(" · ")}</b>
+          {/* 시안 ①: 문제보다 할 일을 먼저 ('다음엔 이렇게' + 체크리스트 첫 줄), 이유는 그 아래 */}
+          <Tag tone="watch">→ 다음엔 이렇게</Tag>
+          {c.checklist?.length ? <>
+            <b className="mt-1.5 text-body">{c.checklist[0]}</b>
+            {watch.length > 0 && <span>{watch.map((w) => w.short ?? w.text).join(" · ")}</span>}
+            <span className="text-caption text-soft">→ ③ 준비하기 체크리스트에 {c.checklist.length}가지로 넣었어요</span>
+          </> : watch.length ? <>
+            <b className="mt-1.5 text-body">{watch.map((w) => w.title ?? w.path.split(" › ").pop()).join(" · ")} 다시 보기</b>
             <span>{watch.map((w) => w.short ?? w.text).join(" · ")}</span>
-            {(c.checklist?.length ?? 0) > 0 && <span className="text-caption text-soft">→ ③ 준비하기 체크리스트에 넣었어요</span>}
           </> : <span className="text-soft">이번엔 없어요</span>}
         </li>
       </ul>

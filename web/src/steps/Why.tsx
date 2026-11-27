@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import type { Result } from "../api";
+import type { Metric, Result } from "../api";
 import { Fold, Folds, josa, md, pct, people, TestTag, VerdictBadge, won, wordOf } from "../ui";
 import { FunnelDetail, funnelPreview } from "./AN02";
 import { SettingsDetail, settingPreview } from "./AN03";
-import { AdCost, CostPerCustomer, Method, Places, PlacesLead, short } from "./AN04";
+import { CostPerCustomer, Method, Places, PlacesLead, short } from "./AN04";
+import { armName } from "./shared";
 import { sameMoney } from "./shared";
 
 /** ② 왜 그런지 (축소안 v5 · 기존 AN-02 + AN-03 + AN-04 합침): 한 줄 답 → 이유 3줄(판정 배지로 끝나는 문장) → 접기 6줄.
@@ -32,11 +33,16 @@ export function Why({ r }: { r: Result }) {
   return (
     <>
       <div className="flex flex-col gap-3">
-      <Reason n={1} first tag={<TestTag text={c.tag ?? "테스트 제안"} />} sub={c.field_id === "meta.ad.media" && c.now ? `그런데 소재는 ${c.now}${batchim(c.now) ? "이었어요" : "였어요"} → 이번에 테스트할 칸` : "→ 이번에 테스트할 칸"}>
+      <Reason n={1} first graph={top && (c.rule?.row ?? c.row) === "5" && (
+          <Bars label="노출 위치별로 나간 돈" rows={[
+            { name: short(top.label), value: top.share, text: pct(top.share), on: true },
+            { name: "나머지 자리", value: 1 - top.share, text: pct(1 - top.share) },
+          ]} />
+        )} tag={<TestTag text={c.tag ?? "테스트 제안"} />} sub={c.field_id === "meta.ad.media" && c.now ? `그런데 소재는 ${c.now}${batchim(c.now) ? "이었어요" : "였어요"} → 이번에 테스트할 칸` : "→ 이번에 테스트할 칸"}>
         {firstSentence(c.reason ?? c.note)}
       </Reason>
       {keep && keepValue && (
-        <Reason n={2} tag={keepBadge && <VerdictBadge word={keepBadge} small />}
+        <Reason n={2} graph={cpm && <Ranges m={cpm} names={arms.map((a, i) => armName(a.name, i))} />} tag={keepBadge && <VerdictBadge word={keepBadge} small />}
           sub={keep.field_id === "meta.adset.placements" && meta
             ? "메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (희수 실험은 36%)"
             : "지금처럼 그대로 두세요"}>
@@ -44,7 +50,10 @@ export function Why({ r }: { r: Result }) {
         </Reason>
       )}
       {v && same && m && (
-        <Reason n={keep ? 3 : 2} tag={<VerdictBadge word={v.badge.word} small />}
+        <Reason n={keep ? 3 : 2} graph={<>
+            <Bars label="방문 1명당 비용 (짧을수록 좋아요)" rows={arms.map((a, i) => ({ name: `방문 1명당 ${"AB"[i]}`, value: (costs[i] ?? 0) / Math.max(...costs.map((x) => x ?? 0), 1), text: won(costs[i]), on: "AB"[i] === v.badge.better }))} />
+            {days.length > 1 && <p className="mt-1.5 text-caption font-medium text-soft">날짜가 쌓일수록 {days.map((d) => pct(of(d.prob))).join(" → ")}로 {side} 쪽으로 {of(days[days.length - 1]!.prob) >= of(days[0]!.prob) ? "굳어지는 중" : "오락가락하는 중"}</p>}
+          </>} tag={<VerdictBadge word={v.badge.word} small />}
           sub={`방문 1명당 A ${won(costs[0])} · B ${won(costs[1])} · ${v.badge.better}가 나을 확률 ${pct(v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better)}`}>
           같은 돈({won(same.base)})으로 방문자 A {same.counts[0]}명 · B {same.counts[1]}명
         </Reason>
@@ -71,11 +80,6 @@ export function Why({ r }: { r: Result }) {
             </div>
           </Fold>
         )}
-        {cpm && (
-          <Fold label="광고비 범위" preview={`A ${won(cpm.a_interval[0])}~${won(cpm.a_interval[1])} · B ${won(cpm.b_interval[0])}~${won(cpm.b_interval[1])}`}>
-            <AdCost r={r} />
-          </Fold>
-        )}
         {top && (
           <Fold label="노출 위치별 클릭" preview={`${short(top.label)} 1,000번 보이면 ${people(top.ctr_adjusted, 1000, "번")}`}>
             <PlacesLead r={r} /><Places r={r} />
@@ -92,11 +96,15 @@ export function Why({ r }: { r: Result }) {
 }
 
 /** 이유 한 줄: 번호 · 굵은 문장 + 작은 설명 · 끝에 판정 배지(또는 테스트 제안 태그). */
-function Reason({ n, children, sub, tag, first }: { n: number; children: ReactNode; sub: string; tag?: ReactNode; first?: boolean }) {
+/** 문장 → 작은 설명 → 근거 그래프 순서 (시안 '문장 1줄 + 근거 그래프 1개 + 판정 배지') */
+function Reason({ n, children, sub, tag, first, graph }: { n: number; children: ReactNode; sub: string; tag?: ReactNode; first?: boolean; graph?: ReactNode }) {
   return (
-    <section className={`flex items-center gap-4 rounded-card bg-surface px-5 py-4 shadow-card ${first ? "border-2 border-accent" : "border border-line"}`}>
+    <section className={`flex items-start gap-4 rounded-card bg-surface px-5 py-4 shadow-card ${first ? "border-2 border-accent" : "border border-line"}`}>
       <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-button text-lead font-extrabold ${first ? "bg-accent text-on-accent" : "bg-accent-soft text-accent"}`}>{n}</span>
-      <p className="flex-1 text-body font-bold leading-snug">{children}<span className="mt-1 block text-label font-medium text-soft">{sub}</span></p>
+      <div className="min-w-0 flex-1">
+        <p className="text-body font-bold leading-snug">{children}<span className="mt-1 block text-label font-medium text-soft">{sub}</span></p>
+        {graph}
+      </div>
       {tag}
     </section>
   );
@@ -125,4 +133,41 @@ function firstSentence(s: string): string {
 function batchim(w: string): boolean {
   const c = w.trim().slice(-1).charCodeAt(0);
   return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
+}
+
+/** 근거 막대 (가로): 이긴 쪽·주인공은 보라, 나머지는 옅은 회보라. 숫자는 막대 옆 글자로도 (색만으로 말하지 않음). */
+function Bars({ label, rows }: { label: string; rows: { name: string; value: number; text: string; on?: boolean }[] }) {
+  return (
+    <figure className="mt-3 flex flex-col gap-1.5" aria-label={`${label}: ${rows.map((x) => `${x.name} ${x.text}`).join(", ")}`}>
+      {rows.map((x) => (
+        <div key={x.name} aria-hidden="true" className="grid grid-cols-[7rem_1fr_4.5rem] items-center gap-2 text-caption">
+          <span className={x.on ? "font-bold text-ink" : "text-soft"}>{x.name}</span>
+          <span className="h-2.5 rounded-badge bg-sunk"><i className={`block h-full rounded-badge ${x.on ? "bg-accent" : "bg-series-soft"}`} style={{ width: `${Math.max(2, x.value * 100)}%` }} /></span>
+          <b className={`text-right tabular-nums ${x.on ? "text-accent" : "text-soft"}`}>{x.text}</b>
+        </div>
+      ))}
+    </figure>
+  );
+}
+
+/** 광고비 범위 (CPM 95%): 두 세트 범위를 한 눈금 위에. 안 겹치면 '확실해요'. */
+function Ranges({ m, names }: { m: Metric; names: string[] }) {
+  const ivs = [m.a_interval, m.b_interval];
+  const lo = Math.min(...ivs.map((x) => x[0])) * 0.97, hi = Math.max(...ivs.map((x) => x[1])) * 1.03;
+  const at = (x: number) => ((x - lo) / (hi - lo || 1)) * 100;
+  return (
+    <figure className="mt-3 flex flex-col gap-1.5" aria-label={`광고 1,000번 보여주는 데 드는 돈 범위: ${ivs.map((x, i) => `${names[i]} ${won(x[0])}~${won(x[1])}`).join(", ")}`}>
+      <figcaption className="text-caption text-soft">광고 1,000번 보여주는 데 드는 돈 · {m.overlap ? "두 범위가 겹쳐요" : "두 범위가 안 겹쳐요"}</figcaption>
+      {ivs.map((x, i) => {
+        const on = "AB"[i] === m.better;
+        return (
+          <div key={i} aria-hidden="true" className="grid grid-cols-[7rem_1fr_8.5rem] items-center gap-2 text-caption">
+            <span className={on ? "font-bold text-ink" : "text-soft"}>{names[i]}</span>
+            <span className="relative h-2.5 rounded-badge bg-sunk"><i className={`absolute inset-y-0 block rounded-badge ${on ? "bg-accent" : "bg-series-soft"}`} style={{ left: `${at(x[0])}%`, width: `${at(x[1]) - at(x[0])}%` }} /></span>
+            <b className={`text-right tabular-nums ${on ? "text-accent" : "text-soft"}`}>{won(x[0])}~{won(x[1])}</b>
+          </div>
+        );
+      })}
+    </figure>
+  );
 }
