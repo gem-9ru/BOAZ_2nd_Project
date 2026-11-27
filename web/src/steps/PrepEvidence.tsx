@@ -1,8 +1,11 @@
 import { useState } from "react";
 import type { Result } from "../api";
 import { Tabs } from "../ui";
-import { DEV_LABEL } from "./Certainty";
+import type { Level } from "../api";
 import { VIRTUAL_CASES } from "./cases";
+
+/** 근거 탭용 이름 (확실 / 유력 / 보류 그대로). */
+export const DEV_LABEL: Record<Level, string> = { 채택: "확실", 유력: "유력", 보류: "보류" };
 
 const EVIDENCE = ["메타 공식 신호", "우리 실측 2건", "논문", "가상 케이스", "한계"] as const;
 /** 근거 탭은 개발 표기 (v4.2: 확실 / 유력 / 보류) */

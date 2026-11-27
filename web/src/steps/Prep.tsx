@@ -5,8 +5,8 @@ import { AlertMark, band, BigButton, Fold, Folds, Ghost, md, TestTag, won } from
 import { armName } from "./shared";
 import { Mungchi } from "../ui/Mungchi";
 import type { Result as R } from "../api";
-import { AN05 } from "./AN05";
-import { Evidence } from "./AN06";
+import { Backtest } from "./PrepBacktest";
+import { Evidence } from "./PrepEvidence";
 import { oneLine } from "./Conclusion";
 
 /** ③ 준비하기 (축소안 v5 · 기존 AN-05 + AN-06 합침): 지금 세트 vs 새 세트 → 예산(결정용 질문) → 체크리스트 → 보내기.
@@ -95,7 +95,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         <Folds label="예산 더 보기">
           <Fold label="예상 방문자 수 보기"><Simulator r={r} onReload={onReload} part="visits" /></Fold>
           <Fold label="전체 예산으로 정하기" preview="Test & Roll: 전체의 약 8~20%"><Simulator r={r} onReload={onReload} part="roll" /></Fold>
-          {btLine && <Fold label="예측이 맞았나?" preview={btLine}><AN05 r={r} /></Fold>}
+          {btLine && <Fold label="예측이 맞았나?" preview={btLine}><Backtest r={r} /></Fold>}
         </Folds>
         <p className="mt-2 flex items-start gap-2 rounded-soft border-[1.5px] border-info-line bg-info-bg px-4 py-2.5 text-label text-info-ink">
           <span aria-hidden="true" className="font-bold text-info">i</span>

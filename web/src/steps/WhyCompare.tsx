@@ -1,8 +1,7 @@
-import { useState } from "react";
 import type { Placement, Result } from "../api";
 import { sentence } from "../blocks/sentence";
 import { MetricRow, ProbBar } from "../blocks/Trust";
-import { band, Card, HowCalculated, md, pct, people, betterProb, probText, ReferenceBadge, Tabs, VerdictBadge, won, wordOf } from "../ui";
+import { Card, HowCalculated, people, betterProb, probText, ReferenceBadge, VerdictBadge, won } from "../ui";
 import { armName, Lead, sameMoney } from "./shared";
 
 /** 계산 방법 · 근거 (기존 AN-04 🔎): 판정 기준과 계산 방법. ② 접기 '계산 방법 · 근거' 안에 들어간다. */
@@ -19,7 +18,6 @@ export function Method({ r }: { r: Result }) {
   );
 }
 
-const paren = (s: string) => (s.includes(" ") ? `${s.replace(" ", "(")})` : s);   // 'B 수동' → 'B(수동)'
 
 /** 방문 1명당 비용 (핵심 카드): 방문 1명당 비용 · 같은 돈으로 온 방문자 수 · B가 나을 확률. */
 export function CostPerCustomer({ r }: { r: Result }) {
@@ -52,68 +50,7 @@ export function CostPerCustomer({ r }: { r: Result }) {
   );
 }
 
-/** 광고비 범위 (CPM 95%): 기본 화면에 두되 문구는 사장님 말로. 겹치지 않으면 '확실해요'. */
-export function AdCost({ r }: { r: Result }) {
-  const m = r.verdict!.metrics.find((x) => x.key === "cpm");
-  if (!m) return null;
-  const arms = r.summary.arms.slice(0, 2);
-  const lo = Math.min(m.a_interval[0], m.b_interval[0]) * 0.97, hi = Math.max(m.a_interval[1], m.b_interval[1]) * 1.03;
-  const at = (x: number) => `${((x - lo) / (hi - lo || 1)) * 100}%`;
-  const sure = m.word === "확실해요";
-  return (
-    <Card title={sure ? `광고비는 확실히 ${m.better}가 쌌어요` : "광고비 차이는 아직 몰라요"} badge={<VerdictBadge word={m.word} small />}
-      summary="광고 1,000번 보여주는 데 드는 돈 (CPM) · 가능한 범위">
-      <ul className="flex flex-col gap-3">
-        {arms.map((a, i) => {
-          const iv = i === 0 ? m.a_interval : m.b_interval;
-          const mid = a.cpm ?? (iv[0] + iv[1]) / 2;
-          const rec = "AB"[i] === m.better;
-          return (
-            <li key={a.name} className="flex flex-col gap-1">
-              <p className="text-body"><b>{armName(a.name, i)}</b> <span className="text-soft">{band({ median: mid, lo: iv[0], hi: iv[1] }, "", won)}</span></p>
-              <div className="relative h-4" aria-hidden="true">
-                <div className={`absolute top-1/2 h-1.5 -translate-y-1/2 rounded-badge ${rec ? "bg-series-b" : "bg-series-a"}`} style={{ left: at(iv[0]), width: `calc(${at(iv[1])} - ${at(iv[0])})` }} />
-                <span className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-badge bg-accent-ink" style={{ left: at(mid) }} />
-              </div>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="flex justify-between text-caption text-soft tabular-nums" aria-hidden="true"><span>{won(Math.round(lo / 10) * 10)}</span><span>{won(Math.round(hi / 10) * 10)}</span></p>
-      <p className="flex justify-between text-caption text-soft"><span>{m.overlap ? "두 범위가 겹쳐요 → 아직 몰라요" : "두 범위가 안 겹쳐요 → 확실해요"}</span><span>← 쌈 · 비쌈 →</span></p>
-    </Card>
-  );
-}
 
-/** 날짜별 누적 확률: 결과가 굳어지는 중인지 오락가락하는지. 근거 없는 예측('하루 더 돌리면 90%')은 쓰지 않는다. */
-export function Days({ r }: { r: Result }) {
-  const days = r.replay;
-  if (!days.length) return null;
-  const last = days[days.length - 1]!;
-  const lastWord = last.word ?? wordOf(last.prob);
-  // 마지막 날 이긴 쪽 기준 확률로 보여 준다 (B가 이기면 B가 나을 확률, A가 이기면 A가 나을 확률)
-  const side = last.prob >= 0.5 ? "B" : "A";
-  const of = (p: number) => (side === "B" ? p : 1 - p);
-  const steady = days.length >= 2 && days.every((d, i) => i === 0 || of(d.prob) >= of(days[i - 1]!.prob) - 0.03);
-  return (
-    <Card title={!steady ? "하루씩 더해 보면 아직 오락가락해요" : lastWord === "아직 몰라요" ? `하루씩 쌓일수록 ${side} 쪽으로 기울지만 아직 몰라요` : `하루씩 쌓일수록 ${side} 쪽으로 굳어지고 있어요`}
-      summary={`방문 1명당 비용 기준 · ${side}가 나을 확률${lastWord === "확실해요" ? "" : " · 더 돌리면 '확실해요'까지 갈 수도 있지만 아직 장담은 못 해요"}`}>
-      <ol className="flex flex-wrap items-center gap-2">
-        {days.map((d, i) => (
-          <li key={d.date} className="flex items-center gap-2">
-            {i > 0 && <span aria-hidden="true" className="text-soft">→</span>}
-            <span className="flex flex-col items-center gap-1 rounded-button bg-bg px-3 py-2">
-              <span className="text-caption text-soft">{md(d.date)}</span>
-              <b className="text-lead tabular-nums">{pct(of(d.prob))}</b>
-              <VerdictBadge word={d.word ?? wordOf(d.prob)} small />
-            </span>
-          </li>
-        ))}
-      </ol>
-      {lastWord !== "확실해요" && <p className="text-caption text-soft">날짜가 쌓일수록 한쪽으로 모이면 우연이 아닐 가능성이 커요 (Scott 2010).</p>}
-    </Card>
-  );
-}
 
 export function PlacesLead({ r }: { r: Result }) {
   const top = r.placements[0];

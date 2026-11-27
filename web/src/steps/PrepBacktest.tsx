@@ -2,7 +2,7 @@ import type { Result } from "../api";
 import { Card, md } from "../ui";
 
 /** 예측이 맞았나? (기존 AN-05 검증 카드): 앞 날짜로 마지막 날을 예측해 실제와 비교. ③ 준비하기 접기 안에 들어간다. */
-export function AN05({ r }: { r: Result }) {
+export function Backtest({ r }: { r: Result }) {
   const bt = r.backtest;
   const allIn = bt.arms?.every((a) => a.visits.inside && a.link_clicks.inside);
   return (

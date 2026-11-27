@@ -267,7 +267,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             const start = rounds.slice(0, ri).reduce((n, r) => n + r.length, 0);
             const cards = rounds[ri]!.map((c, k) => card(c, start + k));
             const fallback = sources[ri] === "template" && ri === rounds.length - 1 && (
-              <p role="status" className="rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">
+              <p role="status" className="rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-3 py-2 text-caption text-warn">
                 ▲ 이번엔 Claude가 문구를 쓰지 못해 기본 문장 틀로 썼어요. [다른 문구로 다시 써 주세요]를 누르면 나아질 수 있어요.
               </p>
             );
@@ -391,7 +391,7 @@ function Editor({ draft, setDraft, banned, original, product }: {
       {noName && <p className="text-caption text-warn">▲ 문구에 상품 이름('{product}')이 없어요. 무엇을 파는지 알 수 있게 넣어 주세요.</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void copy()} disabled={!draft.headline.trim() && !draft.text.trim()}
-          className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           복사
         </button>
         {edited && (

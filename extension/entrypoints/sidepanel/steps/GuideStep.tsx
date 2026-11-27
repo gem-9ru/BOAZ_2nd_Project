@@ -193,14 +193,14 @@ export default function GuideStep({ state, dispatch }: Props) {
         })}
       </ol>
       {login && (
-        <p role="status" className="rounded-button bg-info-bg px-3 py-2 text-caption text-ink">
+        <p role="status" className="rounded-soft border-[1.5px] border-info-line bg-info-bg px-3 py-2 text-caption text-info-ink">
           <span aria-hidden="true" className="font-bold text-info">● </span><span className="sr-only">참고 </span>
           광고 관리자 대신 페이스북 로그인 화면이 열렸어요. 그 탭에서 페이스북에 로그인해 주세요 (비밀번호는 사장님이 직접 넣어요). 로그인이 끝나 광고 관리자가 뜨면 뭉치가 이어서 시작해요.
         </p>
       )}
       {error && <WarnLine message={error} onRetry={open} />}
       {mode === "create" && (state.prepMissing?.length ?? 0) > 0 && (
-        <div role="status" className="flex flex-col gap-2 rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">
+        <div role="status" className="flex flex-col gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-3 py-2 text-caption text-warn">
           <span><span aria-hidden="true" className="font-bold">▲ </span><span className="sr-only">주의 </span>
             {state.prepMissing!.join(" · ")}이(가) 아직 없어요 → 없으면 광고를 낼 수 없어요. 준비한 뒤 광고 관리자를 열어 주세요.</span>
           <button type="button" onClick={() => dispatch({ type: "openPrep" })} className="self-start font-semibold underline">준비물 다시 보기</button>
@@ -220,9 +220,9 @@ export default function GuideStep({ state, dispatch }: Props) {
       )}
       <div className="flex gap-2">
         <button type="button" onClick={() => void move(-1)} disabled={index === 0}
-          className="flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:opacity-(--state-disabled-opacity)">이전 칸</button>
+          className="flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">이전 칸</button>
         <button type="button" onClick={() => void move(1)} disabled={index >= total}
-          className="flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:opacity-(--state-disabled-opacity)">다음 칸</button>
+          className="flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">다음 칸</button>
       </div>
       {index > 0 && (
         // 초안을 지웠거나 다시 만들 때: 1번 칸으로 (뭉치는 [광고 관리자 열기]로 다시 부른다)
@@ -254,7 +254,7 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     if (budget !== null) {
       if (budget >= least) return null;
       return (
-        <span role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-warn">
+        <span role="status" className="flex gap-1.5 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-2 py-1 text-warn">
           <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
           <span>총예산 {won(budget)}이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적어요 → 광고가 안 나갈 수 있어요. {each}{won(least)} 이상으로 넣거나 기간을 줄여 주세요.</span>
         </span>
@@ -262,7 +262,7 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     }
     if (id === BUDGET) return null;
     return (
-      <span className="flex gap-1.5 rounded-button bg-info-bg px-2 py-1 text-ink">
+      <span className="flex gap-1.5 rounded-soft border-[1.5px] border-info-line bg-info-bg px-2 py-1 text-info-ink">
         <span aria-hidden="true" className="font-bold text-info">●</span><span className="sr-only">참고</span>
         <span>총예산이 '하루 최소 약 {won(META_DAILY_MIN)} × {days}일 = 약 {won(least)}'보다 적으면 광고가 안 나갈 수 있어요 → {each}그 이상으로 넣어 주세요.</span>
       </span>
@@ -272,7 +272,7 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     const empty = REQUIRED.map((f) => state.settings.find((x) => x.fieldId === f)).filter((x) => x && !x.value.trim());
     if (!empty.length) return null;
     return (
-      <span role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-warn">
+      <span role="status" className="flex gap-1.5 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-2 py-1 text-warn">
         <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
         <span>{empty.map((x) => x!.label).join(" · ")} 칸이 비어 있어요 → 채운 뒤 게시해 주세요.</span>
       </span>

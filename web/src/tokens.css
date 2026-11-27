@@ -39,6 +39,7 @@
   --primitive-color-alert-ok-line: #A9D9B5;
   --primitive-color-alert-info-ink: #123B73;
   --primitive-color-alert-info-line: #BCD5FA;
+  --primitive-color-alert-block-line: #F6AEA9;
   --primitive-color-white-0: #FFFFFF;
   --primitive-color-mascot-belly: #F7B77A;
   --primitive-color-mascot-beak: #A8481A;
@@ -153,6 +154,7 @@
   --tone-disabled-bg: #EEECF3;
   --tone-disabled-line: #D6D0E6;
   --tone-disabled-fg: #5E5880;
+  --tone-block-line: #F6AEA9;
   --space-inline: 8px;
   --space-stack: 16px;
   --space-section: 48px;

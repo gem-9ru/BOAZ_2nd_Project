@@ -375,7 +375,7 @@ function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void
       {n !== null && <p className="text-caption text-ink">{n.toLocaleString()}원</p>}
       {unread && <p id="budget-unread" role="alert" className="text-caption text-block-ink">숫자로 넣어 주세요 (예: 30000 또는 3만)</p>}
       {short && (
-        <p id="budget-short" role="status" className="flex gap-1.5 rounded-button bg-warn-bg px-2 py-1 text-caption text-warn">
+        <p id="budget-short" role="status" className="flex gap-1.5 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-2 py-1 text-caption text-warn">
           <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
           <span>약 {least.toLocaleString()}원보다 적어서 광고가 안 나갈 수 있어요 → 금액을 늘리거나 기간을 줄여 주세요.</span>
         </p>

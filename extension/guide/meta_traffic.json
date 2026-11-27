@@ -239,6 +239,12 @@
   },
   "find": [
    {
+    "labelledBy": "Facebook 페이지"
+   },
+   {
+    "labelText": "Facebook 페이지"
+   },
+   {
     "heading": "대표 계정"
    },
    {
@@ -265,6 +271,9 @@
   "find": [
    {
     "labelledBy": "Instagram 프로필"
+   },
+   {
+    "labelText": "Instagram 프로필"
    },
    {
     "heading": "대표 계정"

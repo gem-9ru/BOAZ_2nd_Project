@@ -7,8 +7,8 @@ import { Coach } from "../ui/Coach";
 
 const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: string }> = {
   block: { mark: "■", name: "차단", box: "bg-block-bg text-block-ink" },
-  warn: { mark: "▲", name: "주의", box: "bg-warn-bg text-warn" },
-  info: { mark: "●", name: "참고", box: "bg-info-bg text-ink" },
+  warn: { mark: "▲", name: "주의", box: "border-[1.5px] border-warn-line bg-warn-bg text-warn" },
+  info: { mark: "●", name: "참고", box: "border-[1.5px] border-info-line bg-info-bg text-info-ink" },
 };
 
 /** 분석 페이지 옆 광고 어시스턴트 (v4.2 AN-COM ④): 분석 페이지를 크롬 탭에 펼쳐 두면, 이 사이드 패널이 그 단계에 맞춰

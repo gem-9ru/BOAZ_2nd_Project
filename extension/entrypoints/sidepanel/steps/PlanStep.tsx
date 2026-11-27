@@ -28,7 +28,7 @@ export function nextMoney(p: Plan, settings: FlowState["settings"], today = new 
 // 판정 배지 토큰 (design-system): 확실해요 adopt · ○ 쪽이에요 likely · 아직 몰라요 hold. 사장님 화면 문구는 3개만 (v4.2)
 const LOOK = {
   확실해요: { mark: "●", cls: "bg-adopt text-on-accent" },
-  쪽이에요: { mark: "◐", cls: "bg-adopt-bg text-adopt ring-1 ring-inset ring-likely" },
+  쪽이에요: { mark: "◐", cls: "bg-likely-bg text-adopt ring-[1.5px] ring-inset ring-likely" },
   "아직 몰라요": { mark: "○", cls: "bg-hold-bg text-hold" },
 } as const;
 

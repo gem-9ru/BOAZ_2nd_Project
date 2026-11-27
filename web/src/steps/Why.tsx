@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
 import type { Metric, Result } from "../api";
 import { Fold, Folds, josa, md, pct, people, TestTag, VerdictBadge, won, wordOf } from "../ui";
-import { FunnelDetail, funnelPreview } from "./AN02";
-import { SettingsDetail, settingPreview } from "./AN03";
-import { CostPerCustomer, Method, Places, PlacesLead, short } from "./AN04";
+import { FunnelDetail, funnelPreview } from "./WhyFunnel";
+import { SettingsDetail, settingPreview } from "./WhySettings";
+import { CostPerCustomer, Method, Places, PlacesLead, short } from "./WhyCompare";
 import { armName } from "./shared";
 import { sameMoney } from "./shared";
 
@@ -99,13 +99,12 @@ export function Why({ r }: { r: Result }) {
 /** 문장 → 작은 설명 → 근거 그래프 순서 (시안 '문장 1줄 + 근거 그래프 1개 + 판정 배지') */
 function Reason({ n, children, sub, tag, first, graph }: { n: number; children: ReactNode; sub: string; tag?: ReactNode; first?: boolean; graph?: ReactNode }) {
   return (
-    <section className={`flex items-start gap-4 rounded-card bg-surface px-5 py-4 shadow-card ${first ? "border-2 border-accent" : "border border-line"}`}>
+    // 휴대폰: 번호 · 문장만 한 줄, 배지는 문장 아래, 그래프는 카드 너비 전체 (좁은 칸에 갇히지 않게)
+    <section className={`grid grid-cols-[auto_1fr] items-start gap-x-4 gap-y-2 rounded-card bg-surface px-5 py-4 shadow-card sm:grid-cols-[auto_1fr_auto] ${first ? "border-2 border-accent" : "border border-line"}`}>
       <span aria-hidden="true" className={`grid size-10 shrink-0 place-items-center rounded-button text-lead font-extrabold ${first ? "bg-accent text-on-accent" : "bg-accent-soft text-accent"}`}>{n}</span>
-      <div className="min-w-0 flex-1">
-        <p className="text-body font-bold leading-snug">{children}<span className="mt-1 block text-label font-medium text-soft">{sub}</span></p>
-        {graph}
-      </div>
-      {tag}
+      <p className="min-w-0 text-body font-bold leading-snug">{children}<span className="mt-1 block text-label font-medium text-soft">{sub}</span></p>
+      {tag && <span className="col-start-2 justify-self-start sm:col-start-3 sm:row-start-1">{tag}</span>}
+      {graph && <div className="col-span-2 min-w-0 sm:col-span-1 sm:col-start-2">{graph}</div>}
     </section>
   );
 }
@@ -140,7 +139,7 @@ function Bars({ label, rows }: { label: string; rows: { name: string; value: num
   return (
     <figure className="mt-3 flex flex-col gap-1.5" aria-label={`${label}: ${rows.map((x) => `${x.name} ${x.text}`).join(", ")}`}>
       {rows.map((x) => (
-        <div key={x.name} aria-hidden="true" className="grid grid-cols-[7rem_1fr_4.5rem] items-center gap-2 text-caption">
+        <div key={x.name} aria-hidden="true" className="grid grid-cols-[minmax(0,7rem)_minmax(3rem,1fr)_auto] items-center gap-2 text-caption">
           <span className={x.on ? "font-bold text-ink" : "text-soft"}>{x.name}</span>
           <span className="h-2.5 rounded-badge bg-sunk"><i className={`block h-full rounded-badge ${x.on ? "bg-accent" : "bg-series-soft"}`} style={{ width: `${Math.max(2, x.value * 100)}%` }} /></span>
           <b className={`text-right tabular-nums ${x.on ? "text-accent" : "text-soft"}`}>{x.text}</b>
@@ -157,14 +156,14 @@ function Ranges({ m, names }: { m: Metric; names: string[] }) {
   const at = (x: number) => ((x - lo) / (hi - lo || 1)) * 100;
   return (
     <figure className="mt-3 flex flex-col gap-1.5" aria-label={`광고 1,000번 보여주는 데 드는 돈 범위: ${ivs.map((x, i) => `${names[i]} ${won(x[0])}~${won(x[1])}`).join(", ")}`}>
-      <figcaption className="text-caption text-soft">광고 1,000번 보여주는 데 드는 돈 · {m.overlap ? "두 범위가 겹쳐요" : "두 범위가 안 겹쳐요"}</figcaption>
+      <figcaption className="mt-1 text-caption text-soft">광고 1,000번 보여주는 데 드는 돈 · {m.overlap ? "두 범위가 겹쳐요" : "두 범위가 안 겹쳐요"}</figcaption>
       {ivs.map((x, i) => {
         const on = "AB"[i] === m.better;
         return (
-          <div key={i} aria-hidden="true" className="grid grid-cols-[7rem_1fr_8.5rem] items-center gap-2 text-caption">
+          <div key={i} aria-hidden="true" className="grid grid-cols-[minmax(0,7rem)_minmax(3rem,1fr)_auto] items-center gap-2 text-caption">
             <span className={on ? "font-bold text-ink" : "text-soft"}>{names[i]}</span>
             <span className="relative h-2.5 rounded-badge bg-sunk"><i className={`absolute inset-y-0 block rounded-badge ${on ? "bg-accent" : "bg-series-soft"}`} style={{ left: `${at(x[0])}%`, width: `${at(x[1]) - at(x[0])}%` }} /></span>
-            <b className={`text-right tabular-nums ${on ? "text-accent" : "text-soft"}`}>{won(x[0])}~{won(x[1])}</b>
+            <b className={`whitespace-nowrap text-right tabular-nums ${on ? "text-accent" : "text-soft"}`}>{won(x[0])}~{won(x[1])}</b>
           </div>
         );
       })}

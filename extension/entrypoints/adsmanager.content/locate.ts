@@ -2,6 +2,7 @@
 import type { FindStrategy, Level } from "../../lib/guide";
 
 const MAX_CLIMB = 4;   // 라벨에서 위로 몇 단계까지만 입력칸을 찾는다 (멀리 있는 검색칸을 잡지 않게)
+const FAR_CLIMB = 8;   // 그보다 멀면 입력칸이 하나뿐인 구역일 때만
 const FIELD = "input, select, textarea, [role=combobox], [role=textbox], [contenteditable=true]";
 
 const RADIO_FIELD = `${FIELD}, [role=radio], [role=checkbox], [role=switch]`;
@@ -22,16 +23,21 @@ export function textOf(e: Element | null): string {
 }
 
 /** 글자가 정확히 같은 가장 작은 요소를 찾고, 그 근처(같은 부모 → 위로 MAX_CLIMB 단계)의 첫 입력칸을 고른다. */
+/** 꼭 채울 칸 표시 '*'는 이름에서 뺀다 ('* Facebook 페이지' = 'Facebook 페이지') */
+const noStar = (t: string) => t.replace(/^\*\s*/, "");
+
 function byLabel(doc: Root, label: string): HTMLElement | null {
   const top = doc instanceof Document ? doc.body : doc;
   const labels = Array.from(top.querySelectorAll<HTMLElement>("*")).filter(
-    (e) => textOf(e) === label && !Array.from(e.children).some((c) => textOf(c) === label),
+    (e) => noStar(textOf(e)) === label && !Array.from(e.children).some((c) => noStar(textOf(c)) === label),
   );
   for (const l of labels) {
     let box: HTMLElement | null = l.parentElement;
-    for (let up = 0; box && box !== top && up < MAX_CLIMB; up += 1, box = box.parentElement) {
-      const field = box.querySelector<HTMLElement>(FIELD);
-      if (field) return field;
+    for (let up = 0; box && box !== top && up < FAR_CLIMB; up += 1, box = box.parentElement) {
+      const fields = box.querySelectorAll<HTMLElement>(FIELD);
+      // 가까우면 첫 입력칸. 더 멀면 그 구역에 입력칸이 하나뿐일 때만 (실제 화면 2026-11-27: '* Facebook 페이지' 이름표에서
+      // 7단계 위에야 '페이지 선택' 목록이 있고, 목록은 이름표가 아니라 고른 값으로만 이름이 붙어 있다)
+      if (fields.length && (up < MAX_CLIMB || fields.length === 1)) return fields[0]!;
     }
   }
   return null;
@@ -50,7 +56,7 @@ function byLabelledBy(doc: Root, name: string): HTMLElement | null {
   return firstShown(Array.from(doc.querySelectorAll<HTMLElement>("[aria-labelledby]")).filter((e) => {
     if (!e.matches(RADIO_FIELD)) return false;
     const ids = (e.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean);
-    return ids.some((id) => textOf(owner.getElementById(id) ?? owner.createElement("i")) === name);
+    return ids.some((id) => noStar(textOf(owner.getElementById(id) ?? owner.createElement("i"))) === name);
   }));
 }
 

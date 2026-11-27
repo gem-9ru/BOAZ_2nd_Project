@@ -661,3 +661,34 @@ describe("뭉치가 도착한 뒤에 누르고 넣기", () => {
     expect((document.getElementById("head") as HTMLInputElement).value).toBe("쿠키");
   });
 });
+
+describe("대표 계정: 제목이 아니라 그 아래 드롭박스를 짚는다 (2026-11-27 사용자)", () => {
+  const steps = () => import("../lib/guideList").then(({ GUIDE }) => GUIDE.filter((e) => e.mode === "create"));
+  // 2026-11-27 실제 광고 편집 화면 구조: 'Facebook 페이지' 목록은 7단계 위 구역에 있고 고른 값으로만 이름이 붙음,
+  // 'Instagram 프로필' 목록은 이름표와 aria-labelledby로 이어짐
+  const page = `<h2>대표 계정</h2>
+    <div><div><div><div><div><div><div><span><span>*</span> Facebook 페이지</span></div></div></div></div></div>
+      <div><span>페이지 선택</span><span id="v1">가게 페이지</span><div role="combobox" aria-haspopup="listbox" aria-labelledby="v1" id="fb"></div></div></div></div>
+    <div><label id="igl"><span>Instagram 프로필</span></label><div role="combobox" aria-haspopup="listbox" aria-labelledby="igl v2" id="ig"><span id="v2">gem</span></div></div>`;
+
+  it("10번 Facebook 페이지 → 페이지 드롭박스, 11번 Instagram 프로필 → 프로필 드롭박스", async () => {
+    document.body.innerHTML = page;
+    const all = await steps();
+    const fb = all.find((e) => e.id === "meta.pre.fb_page")!;
+    const ig = all.find((e) => e.id === "meta.pre.ig_account")!;
+    expect(locate(document, fb.find)?.id).toBe("fb");
+    expect(locate(document, ig.find)?.id).toBe("ig");
+  });
+
+  it("'*'가 이름과 한 글자로 붙어 있어도 같은 칸, aria-labelledby로 이어진 목록도 찾는다", async () => {
+    document.body.innerHTML = `<h2>대표 계정</h2><span id="l">* Facebook 페이지</span><div role="combobox" aria-labelledby="l" id="fb"></div>`;
+    const fb = (await steps()).find((e) => e.id === "meta.pre.fb_page")!;
+    expect(locate(document, fb.find)?.id).toBe("fb");
+  });
+
+  it("드롭박스가 없으면(아직 안 그려짐) 예전처럼 '대표 계정' 구역", async () => {
+    document.body.innerHTML = `<h2 id="h">대표 계정</h2>`;
+    const fb = (await steps()).find((e) => e.id === "meta.pre.fb_page")!;
+    expect(locate(document, fb.find)?.id).toBe("h");
+  });
+});

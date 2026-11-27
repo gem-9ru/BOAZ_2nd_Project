@@ -111,7 +111,7 @@ export default function FindStep({ state, dispatch }: Props) {
           <button
             type="submit"
             disabled={!product.trim() || busy}
-            className="shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {busy ? "찾는 중…" : "찾아보기"}
           </button>

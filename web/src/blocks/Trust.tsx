@@ -1,5 +1,5 @@
 import type { Metric } from "../api";
-import { betterProb, pct, probText, seriesBg, VerdictBadge, won } from "../ui";
+import { betterProb, probText, seriesBg, VerdictBadge, won } from "../ui";
 
 /** 지표 하나의 'B가 나을 확률' 막대 (70·90% 점선) + 두 세트 범위. AN-04의 🔎 안에서 CPC·CTR에 쓴다 (v4.2). */
 export function MetricRow({ m }: { m: Metric }) {

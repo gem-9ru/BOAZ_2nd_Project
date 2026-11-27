@@ -18,7 +18,7 @@ export function PrimaryButton(props: { children: ReactNode; onClick?: () => void
       type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled || props.busy}
-      className="w-full min-h-12 rounded-button bg-accent text-on-accent py-3 text-body font-bold shadow-press transition-colors hover:bg-accent-ink active:translate-y-0.5 active:shadow-none disabled:opacity-(--state-disabled-opacity) disabled:shadow-none disabled:hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="w-full min-h-12 rounded-button bg-accent text-on-accent py-3 text-body font-bold shadow-press transition-colors hover:bg-accent-ink active:translate-y-0.5 active:shadow-none disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none disabled:shadow-none disabled:hover:bg-disabled-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {props.busy ? "잠시만요…" : props.children}
     </button>
@@ -44,7 +44,7 @@ export function ErrorLine({ message, onRetry }: { message: string; onRetry?: () 
  *  v4.2: 이유 → 할 일 → [다시 시도] 순서. */
 export function WarnLine({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="status" className="flex flex-wrap items-center gap-2 rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">
+    <div role="status" className="flex flex-wrap items-center gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-3 py-2 text-caption text-warn">
       <span aria-hidden="true" className="font-bold">▲</span>
       <span className="sr-only">주의</span>
       <span>{message}</span>
