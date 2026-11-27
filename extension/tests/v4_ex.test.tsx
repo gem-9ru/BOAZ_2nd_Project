@@ -228,7 +228,7 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(nextMoney(p7, last, new Date(2026, 10, 26))).toMatchObject({ startDate: "2026-11-27", endDate: "2026-12-03", days: 7 });
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     render(<PlanStep state={{ ...initialState(), step: "plan", plan: p7, settings: last }} dispatch={() => {}} />);
-    expect(screen.getByRole("region", { name: "다음 테스트 돈·기간" }).textContent).toContain("(7일) · 내일 시작, 분석 페이지에서 고른 기간");
+    expect(screen.getByRole("region", { name: "다음 테스트 돈·기간" }).textContent).toContain("(7일) · 내일 시작, 분석 페이지와 같은 기간");
   });
 
   it("the button sends the owner back to ② 세팅 with the changed field + new dates and amount, the rest as last time", () => {

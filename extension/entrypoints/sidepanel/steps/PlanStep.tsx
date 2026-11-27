@@ -74,9 +74,9 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
           {m.amount ? `두 세트 × 세트당 ${won(m.amount)} = 합계 ${won(m.amount * 2)}` : m.budget ? `두 세트 × 세트당 ${m.budget}` : "세트당 금액은 ② 세팅에서 정해요"}
         </p>
         {m.want && m.amount! > m.want && (
-          <p className="text-soft">분석 페이지 권장은 세트당 {won(m.want)}인데, {m.days}일이면 메타 최소(하루 약 {won(META_DAILY_MIN)} × {m.days}일)보다 적어서 올렸어요.</p>
+          <p className="text-soft">분석 페이지에서 정한 금액은 세트당 {won(m.want)}인데, {m.days}일이면 메타 최소(하루 약 {won(META_DAILY_MIN)} × {m.days}일)보다 적어서 올렸어요.</p>
         )}
-        <p>{day(m.startDate)} ~ {day(m.endDate)} ({m.days}일) · 내일 시작, {c.days ? "분석 페이지에서 고른 기간" : "지난번과 같은 길이"}</p>
+        <p>{day(m.startDate)} ~ {day(m.endDate)} ({m.days}일) · 내일 시작, {c.days ? "분석 페이지와 같은 기간" : "지난번과 같은 길이"}</p>
         <p>두 세트(지난번 그대로 · 이 칸만 바꾼 것) 모두 이 금액·날짜로 맞춰야 정한 돈만 나가요.</p>
       </section>
       {(c.checklist?.length ?? 0) > 0 && (

@@ -118,6 +118,30 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     rerender(<AnalysisAssistant tab={tab} dispatch={dispatch} handled="125" plan={got as never} />);
     expect(screen.getByRole("region", { name: "받은 바꿀 칸" }).textContent).toContain("세트당 10,000원 · 7일");
   });
+
+  it("the card shows the same amount as the next screen: raised to Meta's daily minimum × days", async () => {
+    const plan = { code: "AB12", action: "한 번 더", change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로", note: "n", per_set: 3000, days: 7 }, summary: [], badge: null };
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "1" }} dispatch={() => {}} handled="1" plan={plan as never} />);
+    // 3,000원 · 7일은 하루 최소(1,336원 × 7일 = 9,400원)보다 적다 → 다음 화면처럼 9,400원
+    expect(screen.getByRole("region", { name: "받은 바꿀 칸" }).textContent).toContain("세트당 9,400원 · 7일");
+  });
+
+  it("sending twice quickly: a late answer for the first send does not overwrite the second", async () => {
+    const plan = (per_set: number) => ({ code: "AB12", action: "a", change: { field_id: "meta.ad.media", label: "l", new: "n", note: "n", per_set }, summary: [], badge: null });
+    const waits: ((r: Response) => void)[] = [];
+    vi.stubGlobal("fetch", vi.fn((u: string) => String(u).includes("/plan/") ? new Promise<Response>((r) => waits.push(r)) : ok({ message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    const { rerender } = render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "1", budget: 6000 }} dispatch={dispatch} />);
+    rerender(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "2", budget: 10000 }} dispatch={dispatch} />);
+    await waitFor(() => expect(waits).toHaveLength(2));
+    waits[1]!(new Response(JSON.stringify(plan(6000)), { status: 200 }));   // 두 번째 답 먼저
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith(expect.objectContaining({ type: "planLoaded", sent: "2" })));
+    waits[0]!(new Response(JSON.stringify(plan(6000)), { status: 200 }));   // 첫 번째 답이 늦게 옴 → 버린다
+    await new Promise((r) => setTimeout(r, 20));
+    expect(dispatch).toHaveBeenCalledTimes(1);
+    expect(dispatch.mock.calls[0]![0].plan.change.per_set).toBe(10000);
+  });
 });
 
 describe("사이드 패널이 지금 탭을 따라간다", () => {

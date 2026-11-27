@@ -5,6 +5,7 @@ import type { FlowEvent, Plan, Step } from "../../../lib/flow";
 import { ADS_MANAGER_URL } from "../../../lib/guideList";
 import { AskForm, bubbleClass, useAsk, type Bubble } from "../ui/Chat";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
+import { nextMoney } from "./PlanStep";
 
 const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: string }> = {
   block: { mark: "■", name: "차단", box: "border-[1.5px] border-block-line bg-block-bg text-block-ink" },
@@ -70,14 +71,17 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
   // AN-06 [확장 프로그램으로 보내기] → 테스트안을 받아 둔다. 받으면 아래 '받았어요' 카드의 버튼 하나로 광고 관리자(EX-03 결과 화면)에 간다
   useEffect(() => {
     if (!code || !tab.send || sent.current === tab.send || handled === tab.send) return;
-    sent.current = tab.send;
+    const mine = tab.send;
+    sent.current = mine;
     setSendError(null);
     setReceiving(true);
-    fetchPlan(code).finally(() => setReceiving(false)).then((got) => {
+    // 답이 오면 '지금 기다리는 보내기'인지 본다: 빨리 두 번 보내면 늦게 온 옛 답(옛 금액)이 새 답을 덮지 않게
+    fetchPlan(code).finally(() => { if (sent.current === mine) setReceiving(false); }).then((got) => {
+      if (sent.current !== mine) return;
       // 사장님이 ③에서 고른 예산·기간이 있으면 그 값으로 (서버 계획은 기본값 per_set·days)
       const p = { ...got, change: { ...got.change, ...(tab.budget ? { per_set: tab.budget } : {}), ...(tab.days ? { days: tab.days } : {}) } };
-      dispatch({ type: "planLoaded", plan: p, sent: tab.send! });
-    }, (e: Error) => { sent.current = null; setSendError(e.message); });
+      dispatch({ type: "planLoaded", plan: p, sent: mine });
+    }, (e: Error) => { if (sent.current !== mine) return; sent.current = null; setSendError(e.message); });
   }, [code, tab.send, tab.budget, tab.days, dispatch, handled, retry]);
 
   useEffect(() => { end.current?.scrollIntoView?.({ block: "end" }); }, [bubbles]);
@@ -143,10 +147,11 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
   );
 }
 
-/** 받은 금액·기간 한 줄: 분석 페이지 '보냈어요 · 세트당 ○원'과 같은지 맞춰 보게 */
+/** 받은 금액·기간 한 줄: 다음 테스트 화면(PlanStep)과 같은 계산 (메타 하루 최소보다 적으면 올린 금액) */
 function money(p: Plan): string {
-  const { per_set, days } = p.change as { per_set?: number; days?: number };
-  return [per_set ? `세트당 ${per_set.toLocaleString()}원` : "", days ? `${days}일` : ""].filter(Boolean).join(" · ");
+  const days = (p.change as { days?: number }).days;
+  const m = nextMoney(p, []);
+  return [m.amount ? `세트당 ${m.amount.toLocaleString()}원` : "", days ? `${days}일` : ""].filter(Boolean).join(" · ");
 }
 
 /** 지금 할 일 한 줄 (패널 맨 위 고정) */
