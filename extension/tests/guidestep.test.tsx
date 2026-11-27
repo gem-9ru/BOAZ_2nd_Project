@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import GuideStep from "../entrypoints/sidepanel/steps/GuideStep";
 import WaitStep from "../entrypoints/sidepanel/steps/WaitStep";
@@ -11,7 +11,7 @@ describe("GuideStep", () => {
   it("lists every step with the current one marked", () => {
     const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 2 } };
     render(<GuideStep state={state} dispatch={() => {}} />);
-    const items = screen.getAllByRole("listitem");
+    const items = within(screen.getAllByRole("list")[0]!).getAllByRole("listitem");   // 칸 목록만 (아래 '다른 할 일' 카드 빼고)
     expect(items).toHaveLength(18);
     expect(items[2]!.getAttribute("aria-current")).toBe("step");
     expect(screen.getByRole("button", { name: "광고 관리자 열기" })).toBeTruthy();

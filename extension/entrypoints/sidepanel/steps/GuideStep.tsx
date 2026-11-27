@@ -234,20 +234,45 @@ export default function GuideStep({ state, dispatch }: Props) {
         // 다음 테스트를 누른 뒤 마음이 바뀌면: 지난 세팅·날짜·금액으로 되돌리고 결과 화면으로
         <button type="button" onClick={() => dispatch({ type: "backToPlan" })} className="min-h-11 self-start text-label text-accent-ink underline">← 결과 화면으로 돌아가기</button>
       )}
-      {away && (
-        // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
-        <button type="button" onClick={open} disabled={busy || login} className="min-h-11 self-start text-label text-accent-ink underline disabled:text-disabled-fg disabled:no-underline">{login ? "로그인을 기다리는 중…" : "뭉치 다시 부르기"}</button>
-      )}
-      {index > 0 && (
-        // 초안을 지웠거나 다시 만들 때: 1번 칸으로 (뭉치는 [광고 관리자 열기]로 다시 부른다)
-        // 뭉치가 나가 있으면 뭉치에게도 1번 칸으로 가라고 알린다 (패널 번호만 바꾸면 다음 움직임에 되돌아감, 재검토 A7)
-        <button type="button" onClick={() => { dispatch({ type: "guideProgress", index: 0 }); if (away) void goTo(0); }} className="min-h-11 self-start text-label text-accent-ink underline">뭉치 안내만 1번 칸부터 (답은 그대로)</button>
-      )}
-      {mode === "create" && !next && (
-        // 기간·금액·지역·클릭 주소를 바꾸려면 ② 질문으로 (① 찾기·문구·준비물 답은 그대로, 날짜는 오늘 기준으로 다시, 화면 검토 9)
-        <button type="button" onClick={() => dispatch({ type: "editAnswers" })} className="min-h-11 self-start text-label text-accent-ink underline">← ② 답 바꾸기 (기간·금액·지역·클릭 주소)</button>
+      {/* 다른 할 일: 밑줄 링크 3개를 한 묶음 목록 카드로 (줄마다 아이콘·이름·짧은 설명, 44px) */}
+      {(away || index > 0 || (mode === "create" && !next)) && (
+        <ul aria-label="다른 할 일" className="flex flex-col divide-y divide-line rounded-card border border-line bg-paper">
+          {away && (
+            // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
+            <MoreRow id="more-call" icon="↻" title={login ? "로그인을 기다리는 중…" : "뭉치 다시 부르기"} desc="뭉치가 안 보이면 눌러요"
+              onClick={open} disabled={busy || login} />
+          )}
+          {index > 0 && (
+            // 초안을 지웠거나 다시 만들 때: 1번 칸으로 (뭉치는 [광고 관리자 열기]로 다시 부른다)
+            // 뭉치가 나가 있으면 뭉치에게도 1번 칸으로 가라고 알린다 (패널 번호만 바꾸면 다음 움직임에 되돌아감, 재검토 A7)
+            <MoreRow id="more-restart" icon="⟲" title="1번 칸부터 다시 안내" desc="넣은 답은 그대로예요"
+              onClick={() => { dispatch({ type: "guideProgress", index: 0 }); if (away) void goTo(0); }} />
+          )}
+          {mode === "create" && !next && (
+            // 기간·금액·지역·클릭 주소를 바꾸려면 ② 질문으로 (① 찾기·문구·준비물 답은 그대로, 날짜는 오늘 기준으로 다시, 화면 검토 9)
+            <MoreRow id="more-edit" icon="✎" title="② 답 바꾸기" desc="기간·금액·지역·클릭 주소 (뭉치는 1번 칸부터)"
+              onClick={() => dispatch({ type: "editAnswers" })} />
+          )}
+        </ul>
       )}
     </section>
+  );
+}
+
+/** '다른 할 일' 카드의 한 줄: 이름이 버튼 이름, 설명은 덧붙임 (aria-describedby) */
+function MoreRow({ id, icon, title, desc, onClick, disabled }: { id: string; icon: string; title: string; desc: string; onClick: () => void; disabled?: boolean }) {
+  return (
+    <li>
+      <button type="button" onClick={onClick} disabled={disabled} aria-labelledby={`${id}-t`} aria-describedby={`${id}-d`}
+        className="flex min-h-11 w-full items-center gap-3 px-3 py-2.5 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:text-disabled-fg">
+        <span aria-hidden="true" className="w-5 shrink-0 text-center text-body text-accent-ink">{icon}</span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span id={`${id}-t`} className="text-label font-semibold">{title}</span>
+          <span id={`${id}-d`} className="text-small text-soft">{desc}</span>
+        </span>
+        <span aria-hidden="true" className="text-body text-soft">›</span>
+      </button>
+    </li>
   );
 }
 

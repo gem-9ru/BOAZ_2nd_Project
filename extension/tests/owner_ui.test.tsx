@@ -85,13 +85,13 @@ describe("패널 안내 목록", () => {
   it("[뭉치 안내만 1번 칸부터]는 1번 칸으로 되돌린다 (첫 칸이면 없음)", () => {
     const dispatch = vi.fn();
     const { unmount } = render(<GuideStep state={state(9)} dispatch={dispatch} />);
-    const b = screen.getByRole("button", { name: "뭉치 안내만 1번 칸부터 (답은 그대로)" });
+    const b = screen.getByRole("button", { name: "1번 칸부터 다시 안내" });
     expect(b.className).toContain("min-h-11");
     fireEvent.click(b);
     expect(dispatch).toHaveBeenCalledWith({ type: "guideProgress", index: 0 });
     unmount();
     render(<GuideStep state={state(0)} dispatch={noop} />);
-    expect(screen.queryByRole("button", { name: "뭉치 안내만 1번 칸부터 (답은 그대로)" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "1번 칸부터 다시 안내" })).toBeNull();
   });
 });
 
