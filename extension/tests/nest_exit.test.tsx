@@ -48,7 +48,7 @@ describe("패널 → 광고 관리자: fromNest", () => {
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);
     const state = { ...base, guide: { ...base.guide!, away } };
     render(<GuideStep state={state} dispatch={() => {}} />);
-    screen.getByRole("button", { name: away ? "뭉치 다시 부르기" : "광고 관리자 열기" }).click();
+    screen.getByRole("button", { name: away ? "어시스턴트 다시 부르기" : "광고 관리자 열기" }).click();
     await waitFor(() => expect(send).toHaveBeenCalled());
     return (send.mock.calls[0]![1] as { fromNest?: boolean }).fromNest;
   }

@@ -89,7 +89,7 @@ export default function GuideStep({ state, dispatch }: Props) {
       setLogin(false);
       setBusy(false);
       dispatch({ type: "guideClosed" });   // 뭉치가 못 나갔다 → 집으로 (화면 검토 10)
-      setError(`광고 관리자 화면이 뜨지 않았어요 → 로그인한 뒤 '${away ? "뭉치 다시 부르기" : "광고 관리자 열기"}'를 다시 눌러 주세요.`);
+      setError(`광고 관리자 화면이 뜨지 않았어요 → 로그인한 뒤 '${away ? "어시스턴트 다시 부르기" : "광고 관리자 열기"}'를 다시 눌러 주세요.`);
       return;
     }
     setLogin(false);
@@ -116,7 +116,7 @@ export default function GuideStep({ state, dispatch }: Props) {
   // 목록에서 지난 칸을 누르면 뭉치를 그 칸으로 (설계서 EX-01 ②)
   async function goTo(i: number) {
     const tab = await findAdsTab();
-    if (!tab?.id) { setError("광고 관리자 탭이 닫혔어요 → '뭉치 다시 부르기'를 눌러 주세요."); return; }
+    if (!tab?.id) { setError("광고 관리자 탭이 닫혔어요 → '어시스턴트 다시 부르기'를 눌러 주세요."); return; }
     await browser.tabs.sendMessage(tab.id, { type: "guide:goto", index: i } satisfies GuideMsg).catch(() => setError("뭉치를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
@@ -128,7 +128,7 @@ export default function GuideStep({ state, dispatch }: Props) {
       return;
     }
     const tab = await findAdsTab();
-    if (!tab?.id) { setError("광고 관리자 탭이 닫혔어요 → '뭉치 다시 부르기'를 눌러 주세요."); return; }
+    if (!tab?.id) { setError("광고 관리자 탭이 닫혔어요 → '어시스턴트 다시 부르기'를 눌러 주세요."); return; }
     await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("뭉치를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
@@ -239,7 +239,7 @@ export default function GuideStep({ state, dispatch }: Props) {
         <ul aria-label="다른 할 일" className="flex flex-col divide-y divide-line rounded-card border border-line bg-paper">
           {away && (
             // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
-            <MoreRow id="more-call" icon="↻" title={login ? "로그인을 기다리는 중…" : "뭉치 다시 부르기"} desc="뭉치가 안 보이면 눌러요"
+            <MoreRow id="more-call" icon="↻" title={login ? "로그인을 기다리는 중…" : "어시스턴트 다시 부르기"} desc="뭉치가 안 보이면 눌러요"
               onClick={open} disabled={busy || login} />
           )}
           {index > 0 && (

@@ -1,4 +1,4 @@
-// 감사 6·7·8·12·13·14·18 (2026-11-26): 뭉치 다시 부르기, 진행 덮어쓰기, 종료 날짜, 게시 막기, 금액 읽기
+// 감사 6·7·8·12·13·14·18 (2026-11-26): 어시스턴트 다시 부르기, 진행 덮어쓰기, 종료 날짜, 게시 막기, 금액 읽기
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 import { beforeEach, describe, expect, it, vi } from "vitest";
