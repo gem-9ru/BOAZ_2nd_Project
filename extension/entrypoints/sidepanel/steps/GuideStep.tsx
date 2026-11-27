@@ -180,7 +180,7 @@ export default function GuideStep({ state, dispatch }: Props) {
                   <span className="flex items-center gap-1.5">
                     {away && i >= 0 && i < index
                       ? <button type="button" onClick={() => void goTo(i)} className="min-h-11 text-left text-soft underline decoration-dotted" aria-label={`${label}: 뭉치를 이 칸으로 보내기`}>{label}<span className="sr-only"> (끝남)</span></button>
-                      : <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : done ? "text-soft line-through" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>}
+                      : <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : done && i >= 0 ? "text-soft line-through" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>}
                     {now && !publish && <span className="rounded-badge bg-accent px-1.5 text-small font-bold text-on-accent">지금</span>}
                     {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
                     {s.value && <span className={`ml-auto max-w-48 truncate text-right font-semibold ${now ? "text-accent" : "text-ink"}`}>{shownDates(s.value)}</span>}

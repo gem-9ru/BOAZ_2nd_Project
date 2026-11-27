@@ -99,6 +99,12 @@ function fill(template: string | string[] | undefined, answers: Record<string, s
   return empty ? "" : out;
 }
 
+/** 지난번 답 한 줄: 날짜 답('2026-12-01~2026-12-14')은 '12월 1일 ~ 12월 14일'로 */
+function shownBefore(v: string): string {
+  const m = /^(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?~(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?$/.exec(v);
+  return m ? `${monthDay(m[1]!, m[2])} ~ ${monthDay(m[3]!, m[4])}` : v;
+}
+
 /** 앞 답에 따라 정해지는 값 (default_if·note_if): 맞는 게 없으면 undefined */
 function byEarlier(map: Record<string, Record<string, string>> | null | undefined, answers: Record<string, string>): string | undefined {
   for (const [id, byAnswer] of Object.entries(map ?? {})) {
@@ -219,6 +225,10 @@ export function Question({ field, answers, prev = {}, keywords, checked, onCheck
         </div>
       ) : field.options ? (
         <div className="flex flex-col gap-2">
+          {/* 지난번에 보기 밖의 값을 넣었으면 (가게 주변 주소·직접 넣은 금액·날짜) 그 값을 한 줄로 */}
+          {was !== undefined && !field.options.some((o) => was === o || field.answer_as?.[o] === was) && (
+            <p className="text-caption text-ink">✓ 지난번 답: {shownBefore(was)}</p>
+          )}
           {field.options.map((o) => {
             const short = least > 0 && (parseWon(o) ?? Infinity) < least;   // 이 기간엔 광고가 안 나갈 수 있는 금액
             const before = was !== undefined && (was === o || field.answer_as?.[o] === was);   // [② 답 바꾸기]로 돌아왔을 때 지난번 답

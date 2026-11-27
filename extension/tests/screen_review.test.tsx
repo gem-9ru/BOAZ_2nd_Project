@@ -168,6 +168,18 @@ describe("A. 답을 다시 정하는 길", () => {
     expect(screen.getByRole("button", { name: /14일/ }).textContent).not.toContain("지난번 답");
   });
 
+  it("[② 답 바꾸기]: 가게 주변처럼 보기 밖의 답은 한 줄로 보여 준다", () => {
+    const s = reduce({ ...initialState(), answers: { "meta.adset.location": "가게 주변 5km · 서울 마포구 망원동" } }, { type: "unanswer", id: "meta.adset.location" });
+    const field = (fieldsJson as never as { id: string }[]).find((f) => f.id === "meta.adset.location") as never;
+    render(<Question field={field} answers={s.answers} prev={s.prevAnswers} keywords={[]} checked={[]} onCheck={() => {}} onAnswer={() => {}} />);
+    expect(screen.getByText("✓ 지난번 답: 가게 주변 5km · 서울 마포구 망원동")).toBeTruthy();
+  });
+
+  it("다음 테스트 목록: 지난번 값 그대로인 칸에는 취소선을 긋지 않는다 (EX-03 '유지')", () => {
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0, next: "meta.ad.media" } }} dispatch={vi.fn()} />);
+    expect(document.querySelector(".line-through")).toBeNull();
+  });
+
   it("18. 다음 테스트가 '일일 예산'을 바꾸라 해도 총예산 칸을 새 금액으로", () => {
     const base = { ...initialState(), settings: [...settings, { fieldId: "meta.adset.lifetime_budget", label: "총예산", value: "3만 원" }] };
     const s = reduce(base, { type: "startNextTest", fieldId: "meta.adset.daily_budget", label: "예산", value: "총예산을 넉넉하게", budget: "5만 원" });
