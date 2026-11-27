@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { analysisPageUrl, plan as fetchPlan } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
+import { Coach, ErrorLine, PrimaryButton, QUIET_BUTTON, SECONDARY_BUTTON } from "../ui/Coach";
 
-/** 4자리로 맞춘다: 공백을 빼고 대문자로 (분석 페이지는 헷갈리는 O·0·I·1을 쓰지 않는다). */
+/** 6자리로 맞춘다: 공백을 빼고 대문자로 (분석 페이지는 헷갈리는 O·0·I·1을 쓰지 않는다). */
 export function tidyCode(raw: string): string {
   return raw.replace(/\s+/g, "").toUpperCase();
 }
@@ -11,7 +11,7 @@ export function tidyCode(raw: string): string {
 /** CodeStep 체크 칸 번호: 0 파일 받기 ✓ · 1 분석 페이지 열기 ✓ · 9 내보내기 안내를 시작함(화면에 안 보임) */
 const EXPORTING = 9;
 
-/** ③ 분석: 결과 파일은 분석 페이지에서 올리고, 거기서 받은 코드 4자리를 여기에 넣는다. */
+/** ③ 분석: 결과 파일은 분석 페이지에서 올리고, 거기서 받은 코드 6자리를 여기에 넣는다. */
 export default function CodeStep({ state, dispatch }: { state: FlowState; dispatch: (ev: FlowEvent) => void }) {
   // 이번 광고의 세팅값 (비어 있는 칸은 빼고) → 분석 페이지 '내 세팅 카드'
   const settings = Object.fromEntries(state.settings.filter((x) => x.value).map((x) => [x.fieldId, x.value]));
@@ -22,8 +22,8 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
 
   async function load() {
     const c = tidyCode(code);
-    if (c.length !== 4) {
-      setError("코드는 4자리예요. 분석 페이지 ③ 준비하기에서 [확장 프로그램으로 보내기]를 누르면 나오는 글자 4개예요.");
+    if (c.length !== 6) {
+      setError("코드는 6자리예요. 분석 페이지 ③ 준비하기에서 [확장 프로그램으로 보내기]를 누르면 나오는 글자 6개예요.");
       return;
     }
     setBusy(true);
@@ -63,13 +63,13 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
       <Coach>{ended ? `광고가 끝났어요${period}. ` : ""}결과 파일을 받아서 다음에 바꿀 칸 1개를 찾아볼까요?</Coach>
       {!ended && state.endDate && (
         // 광고가 아직 안 끝났으면 기다리기로 돌아갈 길 (QA 목록 밖)
-        <button type="button" onClick={() => dispatch({ type: "backToWait" })} className="inline-flex min-h-11 items-center self-start text-label text-accent-ink underline">← 기다리기 화면으로</button>
+        <button type="button" onClick={() => dispatch({ type: "backToWait" })} className={QUIET_BUTTON}>← 기다리기 화면으로</button>
       )}
       <ol className="flex flex-col gap-3 text-body">
         <li className="flex gap-2"><Num i={0} />
           <span>광고 관리자에서 결과 파일 받기
-            <span className="block text-label text-soft">[내보내기]에서 <b>일 · 노출 위치</b>를 꼭 골라요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</span>
-            <button type="button" onClick={() => { mark(EXPORTING); dispatch({ type: "startExport" }); }} className="flex min-h-11 items-center text-label font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
+            <span className="block text-label text-soft">내보내기 전에 표 위 [분석 데이터]에서 <b>일 · 노출 위치</b>에 꼭 체크해요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</span>
+            <button type="button" onClick={() => { mark(EXPORTING); dispatch({ type: "startExport" }); }} className={`mt-2 ${SECONDARY_BUTTON}`}>내보내기 버튼 짚어 주기</button>
           </span></li>
         <li className="flex gap-2"><Num i={1} />
           <span>분석 페이지에 파일 올리기
@@ -92,11 +92,11 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
       }}>분석 페이지 열기 (새 창)</PrimaryButton>
       {lost && <ErrorLine message="이번 세팅값을 넘기지 못했어요. 분석 페이지에서 '내 광고 설정 5개만 직접 입력하기'로 넣어 주세요." />}
       <details className="rounded-button bg-paper px-3 py-2">
-        <summary className="flex min-h-11 cursor-pointer items-center text-label font-semibold text-accent-ink">보내기가 안 되면: 코드 4자리로 넣기</summary>
+        <summary className="flex min-h-11 cursor-pointer items-center text-label font-semibold text-accent-ink">보내기가 안 되면: 코드 6자리로 넣기</summary>
       <form className="mt-2 flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void load(); }}>
-        <label htmlFor="plan-code" className="text-caption text-soft">분석 페이지의 코드 4자리</label>
+        <label htmlFor="plan-code" className="text-caption text-soft">분석 페이지의 코드 6자리</label>
         <input id="plan-code" value={code} onChange={(e) => setCode(e.target.value)} maxLength={8}
-          autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="예: 75R7"
+          autoComplete="off" autoCapitalize="characters" spellCheck={false} placeholder="예: 75R7KD"
           aria-invalid={error ? true : undefined} aria-describedby={error ? "plan-code-error" : undefined}
           className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-title font-bold tracking-[0.3em] uppercase" />
         {error && <div id="plan-code-error"><ErrorLine message={error} /></div>}

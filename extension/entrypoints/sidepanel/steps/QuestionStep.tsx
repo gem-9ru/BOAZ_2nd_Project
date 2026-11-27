@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Field, OptionHelp, PresetField } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { SETTING_ORDER, askedFields, buildSettings, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
+import { SETTING_ORDER, askedFields, buildSettings, routeFromPrep, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 const PREP = "사전 점검";   // 준비물 화면에서 묻는 칸 (settings.ts PREP_STAGE)
@@ -26,7 +26,10 @@ interface Props {
 
 /** ② 질문: 한 번에 하나씩. 다 답하면 광고 관리자에 넣을 세팅값 목록을 만든다. */
 export default function QuestionStep({ state, dispatch, fields, defaults: all }: Props) {
-  const asked = askedFields(fields);
+  // 처음 세팅할 때 준비물에서 받은 주소로 갈 곳이 정해졌으면 '어디로 보낼까요'를 다시 묻지 않는다 (세팅 목록·[② 답 바꾸기]에서 보이고 바꿀 수 있음).
+  // 세팅 뒤 준비물을 다시 답한 경우(세팅 목록이 있음)에는 새 주소를 확인하게 그대로 묻는다
+  const fromPrep = state.settings.length ? {} : routeFromPrep(state.answers);
+  const asked = askedFields(fields).filter((f) => !(f.id in fromPrep));
   const defaults = all.filter((d) => !SETTING_ORDER.includes(d.id));   // 뭉치가 안내하는 칸은 '묻지 않고 둔 칸'이 아님
   const next = asked.find((f) => !(f.id in state.answers));
   const index = next ? asked.indexOf(next) : asked.length;
@@ -35,7 +38,7 @@ export default function QuestionStep({ state, dispatch, fields, defaults: all }:
   function answer(id: string, value: string, extra: Record<string, string> = {}) {
     dispatch({ type: "answer", id, value });
     for (const [k, v] of Object.entries(extra)) dispatch({ type: "answer", id: k, value: v });
-    const answers = { ...state.answers, [id]: value, ...extra };
+    const answers = { ...fromPrep, ...state.answers, [id]: value, ...extra };
     if (asked.every((f) => f.id in answers) && state.target && state.copy) {
       const when = scheduleFrom(answers["meta.adset.end_date"] ?? "14일");
       dispatch({ type: "questionsDone", settings: buildSettings(fields, answers, state.target, state.copy, when),
@@ -335,12 +338,12 @@ function monthDay(iso: string, time = ""): string {
   return `${m}월 ${d}일 ${half} ${h12}시${min ? ` ${min}분` : ""}`;
 }
 
-/** 시작일·종료일 고르기 (시각은 선택). 시작일은 오늘부터, 종료일은 시작일 다음 날부터. 기간은 시작일·종료일을 모두 셈 */
+/** 시작일·종료일 고르기 (시각은 선택). 시작일은 내일이 기본(오늘도 고를 수 있음), 종료일은 시작일 다음 날부터. 기간은 시작일·종료일을 모두 셈 */
 function DateRange({ initial, onBack, onDone }: { initial?: string; onBack: () => void; onDone: (value: string) => void }) {
   const now = new Date();
   const today = isoDate(now);
   const got = initial ? scheduleFrom(initial) : undefined;   // 지난번에 고른 날짜·시각
-  const [start, setStart] = useState(got?.start ?? today);
+  const [start, setStart] = useState(got?.start ?? scheduleFrom("1일", now).start);   // 기본은 칩과 같이 내일 시작
   const [end, setEnd] = useState(got?.end ?? "");
   const [startTime, setStartTime] = useState(got?.startTime ?? "");
   const [endTime, setEndTime] = useState(got?.endTime ?? "");

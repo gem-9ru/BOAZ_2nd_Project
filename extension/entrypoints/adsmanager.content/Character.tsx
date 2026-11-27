@@ -43,6 +43,18 @@ function num(el: Element | null, name: string, fallback: number): number {
   return Number.isFinite(v) ? v : fallback;
 }
 
+/** 가리킨 칸 + 지금 펼쳐진 메타 목록(role=menu·listbox, 예: '분석 데이터'의 '일'·'노출 위치' 체크 목록)을 합친 상자.
+ *  말풍선이 펼쳐진 목록을 덮어 누를 곳을 가리지 않게 (2026-11-27 사용자, 실제 화면: 목록은 단추 바로 아래로 펼쳐짐) */
+export function avoidBox(r: { left: number; top: number; right: number; bottom: number }, doc: Document = document) {
+  let box = { left: r.left, top: r.top, right: r.right, bottom: r.bottom };
+  for (const el of Array.from(doc.querySelectorAll<HTMLElement>("[role=menu], [role=listbox]"))) {
+    const p = el.getBoundingClientRect();
+    if (p.width <= 0 || p.height <= 0) continue;
+    box = { left: Math.min(box.left, p.left), top: Math.min(box.top, p.top), right: Math.max(box.right, p.right), bottom: Math.max(box.bottom, p.bottom) };
+  }
+  return { ...box, width: box.right - box.left, height: box.bottom - box.top };
+}
+
 /** 광고 관리자 위의 뭉치(3D) + 말풍선.
  *  집(화면 오른쪽 위, 사이드 패널 쪽)에서 걸어 나와 칸 옆까지 걷거나(가까우면) 뛰어가서(멀면) 팔로 가리킨다.
  *  닫으면 집으로 돌아간 뒤 사라진다. 크기·속도·색은 design-system 토큰(--character-*). */
@@ -150,9 +162,21 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
   // 말풍선: 가리키는 칸을 덮지 않는 자리 (오른쪽 → 왼쪽 → 아래 → 위)
   const bubbleEl = useRef<HTMLDivElement>(null);
   const bubble = { width: num(host.current, "--coach-width", 340), height: bubbleEl.current?.offsetHeight || 170 };
-  const b = bubbleSpot(pos, size, bubble, vp(), rect, BUBBLE_GAP);
-  const bubbleLeft = b.x, bubbleTop = b.y;
   const moving = mode === "walk" || mode === "run";
+  // 걷는 동안: 출발할 때 뭉치와의 거리를 그대로 두고 같이 간다 (매 걸음 자리를 다시 고르면 좌우로 튀고, 늦게 따라와 쫓아다니는 것처럼 보였음, 2026-11-27 사용자).
+  // 도착하면 가리킨 칸을 덮지 않는 자리를 다시 골라 짧게 미끄러져 들어간다
+  const lastSpot = useRef<Point | null>(null);
+  const carry = useRef<Point | null>(null);
+  let b = bubbleSpot(pos, size, bubble, vp(), rect ? avoidBox(rect) : null, BUBBLE_GAP);
+  if (moving) {
+    carry.current ??= lastSpot.current ? { x: lastSpot.current.x - pos.x, y: lastSpot.current.y - pos.y } : { x: b.x - pos.x, y: b.y - pos.y };
+    const v = vp();
+    b = { x: Math.min(Math.max(8, pos.x + carry.current.x), v.width - bubble.width - 8), y: Math.min(Math.max(8, pos.y + carry.current.y), v.height - bubble.height - 8) };
+  } else {
+    carry.current = null;
+    lastSpot.current = b;
+  }
+  const bubbleLeft = b.x, bubbleTop = b.y;
   // 첫 칸에서 아직 자동 진행을 안 켰으면: [자동 진행] 안내 한 줄 + 단추 강조 (2026-11-26 사용자: 처음엔 멈춘 채 시작)
   // 사장님이 직접 할 차례 (사장님 칸·뭉치가 못 해서 기다림·게시): 꼬리표·테두리·주 버튼을 크게 (2026-11-26 사용자)
   const publishTurn = view.waiting === "publish" || Boolean(view.publish);
@@ -177,7 +201,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
         <Character3D mode={mode} size={size} move={move} point={point} label="광고 어시스턴트 뭉치" />
       </div>
       {!leaving && (
-        <div ref={bubbleEl} className="coach-bubble-wrap" style={{ left: bubbleLeft, top: bubbleTop, opacity: moving ? "var(--coach-moving-opacity)" : 1 }}>
+        <div ref={bubbleEl} className={moving ? "coach-bubble-wrap coach-bubble-carried" : "coach-bubble-wrap"} style={{ left: bubbleLeft, top: bubbleTop, opacity: moving ? "var(--coach-moving-opacity)" : 1 }}>
           <div className={ownerTurn ? "coach-bubble coach-bubble-owner" : "coach-bubble"}>
             {/* 화면 읽기: 바뀌는 안내만 알림 영역 (단추까지 넣으면 0.5초마다 다시 읽힐 수 있다) */}
             {/* 꾸미기안_뭉치: 맨 위 칩('1 / 14 · 캠페인') + ✕ 닫기 */}

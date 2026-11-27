@@ -4,7 +4,7 @@ import { ANALYSIS_STEPS, type AnalysisTab } from "../../../lib/analysisTab";
 import type { FlowEvent, Plan, Step } from "../../../lib/flow";
 import { ADS_MANAGER_URL } from "../../../lib/guideList";
 import { AskForm, bubbleClass, useAsk, type Bubble } from "../ui/Chat";
-import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
+import { Coach, ErrorLine, PrimaryButton, SECONDARY_BUTTON } from "../ui/Coach";
 import { isLoginPage } from "./GuideStep";
 import { nextMoney } from "./PlanStep";
 
@@ -98,14 +98,14 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
       <section aria-label="분석 페이지 어시스턴트" className="flex flex-col gap-3">
         <p className="text-caption font-semibold text-accent-ink">분석 페이지 · 업로드</p>
         <Todo>왼쪽 분석 페이지에 결과 파일(CSV)을 올리고 [분석 시작 ▶]을 눌러요.</Todo>
-        <Coach>올려 주시면 다음에 바꿔 볼 칸 1개를 같이 찾아볼게요. 내보내기 할 때 분석 기준에서 <b>일</b>과 <b>노출 위치</b>를 꼭 골라 주세요.</Coach>
+        <Coach>올려 주시면 다음에 바꿔 볼 칸 1개를 같이 찾아볼게요. 내보내기 전에 표 위 '분석 데이터'에서 <b>일</b>과 <b>노출 위치</b>를 꼭 골라 주세요.</Coach>
         {(flowStep === "wait" || flowStep === "upload") && (   // 결과 화면(plan)에서는 안 띄움: 내보내기 안내와 PlanStep이 겹친다 (새 결과는 [다른 코드 넣기]로)
           <button type="button" onClick={() => { dispatch({ type: "startExport" }); void goAds(); }}
-            className="flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline">파일이 아직 없으면: 광고 관리자에서 내보내기 짚어 주기</button>
+            className={SECONDARY_BUTTON}>파일이 아직 없으면: 광고 관리자에서 내보내기 짚어 주기</button>
         )}
         <details className="rounded-button bg-paper px-3 py-2 text-label">
           <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent-ink">CSV는 어디서 받아요?</summary>
-          <p className="mt-1">광고 관리자 › 보고서 › 내보내기에서 분석 기준을 '일 · 노출 위치'로 고른 뒤 CSV로 받아요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</p>
+          <p className="mt-1">광고 관리자 › 광고 세트 탭 › 표 위 '분석 데이터'에서 '일 · 노출 위치'에 체크한 뒤 내보내기로 CSV를 받아요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</p>
         </details>
         <details className="rounded-button bg-paper px-3 py-2 text-label">
           <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent-ink">광고 설정은 왜 필요해요?</summary>
@@ -136,7 +136,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
       ) : sendError ? (
         <div className="flex flex-col gap-1 rounded-button bg-paper px-3 py-2">
           <ErrorLine message={`바꿀 칸을 받지 못했어요. ${sendError}`} onRetry={() => setRetry((n) => n + 1)} />
-          <p className="text-label">그래도 안 되면 광고 관리자 패널의 '보내기가 안 되면: 코드 4자리로 넣기'에 <b className="tracking-widest">{code}</b>를 넣어 주세요.</p>
+          <p className="text-label">그래도 안 되면 광고 관리자 패널의 '보내기가 안 되면: 코드 6자리로 넣기'에 <b className="tracking-widest">{code}</b>를 넣어 주세요.</p>
         </div>
       ) : <Todo>{receiving ? "보낸 바꿀 칸을 받는 중이에요…" : todoFor(step, blocked, offline)}</Todo>}
       <div className="flex flex-col gap-2" aria-live="polite">

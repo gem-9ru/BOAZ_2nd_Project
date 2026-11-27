@@ -8,7 +8,7 @@ import { stepsFor } from "../lib/guide";
 import { GUIDE } from "../lib/guideList";
 
 const plan: Plan = {
-  code: "75R7", action: "한 번 더",
+  code: "75R7KD", action: "한 번 더",
   change: { field_id: "meta.adset.end_date", label: "종료 날짜", new: "세트당 총 151,000원이 쓰일 때까지 더 돌리기", note: "확실히 고르려면 이만큼 더 필요해요" },
   summary: ["이번에 알게 된 것: B가 나을 확률 79% (B 쪽이에요)", "아직 모르는 것: 도착 수가 적어요", "다음에 바꿀 것: 세트당 총 151,000원까지 더 돌리기"],
   badge: { word: "B 쪽이에요", prob: 0.79 },
@@ -41,22 +41,22 @@ describe("③ 코드 넣기", () => {
     vi.stubGlobal("fetch", f);
     const dispatch = vi.fn();
     render(<CodeStep state={{ ...initialState(), step: "upload" }} dispatch={dispatch} />);
-    fireEvent.change(screen.getByLabelText("분석 페이지의 코드 4자리"), { target: { value: " 75r7 " } });
+    fireEvent.change(screen.getByLabelText("분석 페이지의 코드 6자리"), { target: { value: " 75r7kd " } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan }));
-    expect(String(f.mock.calls[0]![0])).toBe("http://localhost:8000/plan/75R7");
+    expect(String(f.mock.calls[0]![0])).toBe("http://localhost:8000/plan/75R7KD");
   });
 
   it("explains how to fix a short or unknown code, right under the box", async () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ detail: "코드를 찾지 못했어요. 분석 페이지의 코드를 다시 확인해 주세요." }, 404)));
     render(<CodeStep state={{ ...initialState(), step: "upload" }} dispatch={() => {}} />);
-    const box = screen.getByLabelText("분석 페이지의 코드 4자리");
+    const box = screen.getByLabelText("분석 페이지의 코드 6자리");
     fireEvent.change(box, { target: { value: "75" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
-    expect(screen.getByRole("alert").textContent).toContain("4자리");
+    expect(screen.getByRole("alert").textContent).toContain("6자리");
     expect(screen.getByRole("alert").textContent).toContain("③ 준비하기");   // 분석 페이지에 실제로 코드가 있는 곳 (축소안 v5: 3단계)
     expect(screen.getByRole("alert").textContent).not.toContain("다음에 할 일");
-    fireEvent.change(box, { target: { value: "ZZZZ" } });
+    fireEvent.change(box, { target: { value: "ZZZZZZ" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
     await waitFor(() => expect(screen.getByRole("alert").textContent).toContain("다시 확인해 주세요"));
   });
@@ -94,11 +94,11 @@ describe("③ 결과 화면: 체크리스트 · 하지 말 것", () => {
   it("a ticked checklist line is saved (stays after the panel is closed and opened again)", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
-    render(<PlanStep state={{ ...initialState(), step: "plan", plan: p, checks: { "plan:75R7": [1] } }} dispatch={dispatch} />);
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: p, checks: { "plan:75R7KD": [1] } }} dispatch={dispatch} />);
     const boxes = screen.getAllByRole("checkbox") as HTMLInputElement[];
     expect(boxes.map((b) => b.checked)).toEqual([false, true]);
     fireEvent.click(boxes[0]!);
-    expect(dispatch).toHaveBeenCalledWith({ type: "toggleCheck", key: "plan:75R7", index: 0 });
+    expect(dispatch).toHaveBeenCalledWith({ type: "toggleCheck", key: "plan:75R7KD", index: 0 });
   });
 
   it("shows what not to do and what to watch from the analysis", () => {

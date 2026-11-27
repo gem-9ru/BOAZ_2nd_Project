@@ -90,7 +90,7 @@ describe("5. 광고가 끝나기 전에는 [결과 분석하기]를 작게", () 
 describe("6. 코드 칸은 '보내기가 안 되면'으로 접어 둔다", () => {
   it("the code box sits inside a closed disclosure; opening the analysis page is the main way", () => {
     render(<CodeStep state={{ ...initialState(), step: "upload" }} dispatch={() => {}} />);
-    const box = screen.getByLabelText("분석 페이지의 코드 4자리");
+    const box = screen.getByLabelText("분석 페이지의 코드 6자리");
     const fold = box.closest("details")!;
     expect(fold).toBeTruthy();
     expect(fold.open).toBe(false);

@@ -15,6 +15,13 @@ export function Coach({ children, avatar = true }: { children: ReactNode; avatar
   );
 }
 
+/** 글자만 있던 보조 단추를 단추 모양으로 (2026-11-27 사용자: ③ 분석의 밑줄 글자도 단추로). [이전 칸]·[다음 칸]과 같은 테두리 단추 */
+const BUTTON_BASE = "inline-flex min-h-11 items-center justify-center self-start rounded-button border bg-paper px-4 py-2 text-label text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+/** 할 일 단추 (보라 테두리) */
+export const SECONDARY_BUTTON = `${BUTTON_BASE} border-accent font-semibold text-accent-ink`;
+/** 돌아가기·일찍 누르지 않을 단추 (회색 테두리) */
+export const QUIET_BUTTON = `${BUTTON_BASE} border-line text-soft`;
+
 /** 화면 맨 아래 큰 버튼 하나. */
 export function PrimaryButton(props: { children: ReactNode; onClick?: () => void; disabled?: boolean; busy?: boolean; type?: "button" | "submit" }) {
   return (

@@ -32,6 +32,14 @@ def test_sends_only_words_and_parses_the_answer(monkeypatch):
     assert seen["output_config"]["format"]["type"] == "json_schema"
 
 
+def test_memory_is_capped(monkeypatch):
+    monkeypatch.setattr(brands, "MAX_KNOWN", 3)
+    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: (set(), {w: "기능" for w in ws}))
+    brands.classify("텀블러", ["보온", "유리"], client=object())
+    brands.classify("쿠키", ["버터", "초코"], client=object())
+    assert len(brands._known) == 2   # 넘치면 비우고 새로 물은 2개만 남김
+
+
 def test_remembers_words_and_asks_only_new_ones(monkeypatch):
     asked = []
     monkeypatch.setattr(brands, "_ask", lambda c, p, ws: (asked.append(list(ws)) or {"투썸"} & set(ws), {w: "기능" for w in ws if w != "투썸"}))
@@ -64,3 +72,18 @@ def test_offline_research_never_asks_claude(monkeypatch):
     monkeypatch.setattr(brands, "_ask", lambda *a: (_ for _ in ()).throw(AssertionError("오프라인에서 묻지 않는다")))
     b = TestClient(app).post("/research", json={"product": "수제 쿠키"}).json()
     assert len(b["modifiers"]) <= 15
+
+
+def test_other_product_words_are_dropped_per_product(monkeypatch):
+    """처음 쓰는 사람 따라가기 7: 수제 쿠키의 '커터'(쿠키 틀)는 다른 상품이라 칩에서 뺀다. 상품마다 따로 판단한다."""
+    class Msgs:
+        def create(self, **kw):
+            body = {"brands": [], "others": ["커터"], "groups": [{"name": "맛", "words": ["초코칩"]}]}
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text=json.dumps(body, ensure_ascii=False))])
+
+    monkeypatch.undo()
+    monkeypatch.setattr(brands, "_known", {})
+    monkeypatch.setattr(brands, "_groups", {})
+    got, groups = brands.classify("수제 쿠키", ["커터", "초코칩"], client=SimpleNamespace(messages=Msgs()))
+    assert got == {"커터"} and groups == {"초코칩": "맛"}
+    assert brands.classify("쿠키 틀", ["커터"], client=False)[0] == set()   # 다른 상품에는 기억을 쓰지 않는다

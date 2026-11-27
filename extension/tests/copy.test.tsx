@@ -123,7 +123,7 @@ describe("CopyStep", () => {
     expect(screen.getByRole("button", { name: /경량/ })).toBeTruthy();
     const groupLabels = screen.getAllByText(/^(포장|맛·재료|그 밖)$/).map((e) => e.textContent);
     expect(groupLabels[groupLabels.length - 1]).toBe("그 밖");
-    expect(screen.getByText("다른 가게·브랜드 이름이 보이면 고르지 마세요. 문구에 그대로 들어가요.")).toBeTruthy();
+    expect(screen.getByText("다른 가게·브랜드 이름이나 다른 상품(틀·재료 등)이 보이면 고르지 마세요. 문구에 그대로 들어가요.")).toBeTruthy();
   });
 
   it("old state without modifiers still lets owner type", () => {

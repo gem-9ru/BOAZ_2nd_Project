@@ -7,7 +7,9 @@
 /* 뭉치(3D)는 rAF로 걷고 뛰므로 위치 transition 없음. 클릭은 말풍선만 받는다 */
 .coach-mungchi { position: fixed; z-index: 2147483647; pointer-events: none; }
 .coach-bubble-wrap { position: fixed; z-index: 2147483647; width: var(--coach-width); font-family: var(--coach-font-family);
-  transition: left var(--coach-walk-duration) var(--coach-easing), top var(--coach-walk-duration) var(--coach-easing), opacity var(--coach-move-duration) var(--coach-easing); }
+  transition: left var(--coach-move-duration) var(--coach-easing), top var(--coach-move-duration) var(--coach-easing), opacity var(--coach-move-duration) var(--coach-easing); }
+/* 걷는 동안은 뭉치와 같은 걸음으로 (위치 전환을 끄지 않으면 매 걸음 늦게 따라와 쫓아다니는 것처럼 보임) */
+.coach-bubble-carried { transition: opacity var(--coach-move-duration) var(--coach-easing); }
 .coach-bubble { background: var(--coach-bubble-bg); color: var(--coach-bubble-fg); border: 1.5px solid var(--coach-bubble-border); box-shadow: var(--coach-shadow); border-radius: var(--coach-radius); padding: var(--coach-padding-y) var(--coach-padding-x); font-size: var(--coach-font-size); line-height: var(--coach-line-height); flex: 1; }
 .coach-count { margin: 0 0 4px; font-size: var(--coach-small-font-size); color: var(--coach-count-fg); font-weight: 700; }
 .coach-text { margin: 0 0 var(--coach-gap); }

@@ -217,7 +217,7 @@ export function fields(): Promise<{ fields: Field[]; defaults: PresetField[] }> 
 
 export const ANALYSIS_PAGE = `${BASE}/analysis`;
 
-/** 분석 페이지의 4자리 코드 → 다음에 할 일. */
+/** 분석 페이지의 6자리 코드 → 다음에 할 일. */
 export function plan(code: string): Promise<import("./flow").Plan> {
   return call(`/plan/${encodeURIComponent(code)}`);
 }

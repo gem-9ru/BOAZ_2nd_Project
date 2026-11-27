@@ -42,9 +42,9 @@ describe("questions", () => {
     expect(scheduleDays(scheduleFrom("7일", new Date("2026-11-29T10:00:00")))).toBe(7);
   });
 
-  it("scheduleFrom: chips start today; a picked range is used as is", () => {
+  it("scheduleFrom: chips start tomorrow (메타 심사로 첫날이 비지 않게); a picked range is used as is", () => {
     const today = new Date("2026-11-29T10:00:00");
-    expect(scheduleFrom("14일", today)).toEqual({ start: "2026-11-29", end: "2026-12-12" });
+    expect(scheduleFrom("14일", today)).toEqual({ start: "2026-11-30", end: "2026-12-13" });
     expect(scheduleFrom("2026-12-01~2026-12-14", today)).toEqual({ start: "2026-12-01", end: "2026-12-14" });
     expect(scheduleFrom("2026-12-01 09:00~2026-12-14 21:30", today))
       .toEqual({ start: "2026-12-01", end: "2026-12-14", startTime: "09:00", endTime: "21:30" });
@@ -318,7 +318,7 @@ describe("광고 기간: 날짜 직접 정하기", () => {
     return dispatch;
   }
 
-  it("shows start and end date boxes; start is today by default", () => {
+  it("shows start and end date boxes; start is tomorrow by default", () => {
     open();
     const start = screen.getByLabelText("시작일") as HTMLInputElement;
     expect(start.type).toBe("date");
@@ -425,5 +425,16 @@ describe("unanswer", () => {
     const { reduce } = await import("../lib/flow");
     const s = reduce({ ...initialState(), answers: { a: "1", b: "2" } }, { type: "unanswer", id: "b" });
     expect(s.answers).toEqual({ a: "1" });
+  });
+});
+
+describe("처음 쓰는 사람 따라가기 3: 준비물에서 받은 주소는 ② 질문에서 다시 묻지 않는다", () => {
+  it("처음 세팅이면 '어디로 보낼까요'를 건너뛴다", () => {
+    const answers = { "meta.pre.store_product": "올렸어요", "meta.pre.store_url": "https://smartstore.naver.com/a/products/1" };
+    const state = { ...initialState(), step: "questions" as const, answers };
+    render(<QuestionStep state={state} dispatch={() => {}} fields={FIELDS as never} defaults={[]} />);
+    expect(screen.queryByText(/어디로 가면 좋겠어요/)).toBeNull();
+    const n = askedFields(FIELDS as never).length;
+    expect(screen.getByText(`질문 1 / ${n - 1}`)).toBeTruthy();
   });
 });

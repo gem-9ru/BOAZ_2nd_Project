@@ -52,7 +52,7 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
   function send() {
     onSend?.(budget, days);
     navigator.clipboard.writeText(r.code).then(() => setSent({ budget, copied: true }), () => setSent({ budget, copied: false }));
-    onCopied("오른쪽 광고 어시스턴트로 보냈어요");
+    onCopied("오른쪽 광고 어시스턴트 패널로 보냈어요 (패널이 열려 있을 때 받아요)");
   }
   function download() {
     const blob = new Blob([JSON.stringify({ code: r.code, change: c, budget_per_set: budget, keep: r.matrix.keep, dont: r.matrix.dont, checklist }, null, 2)], { type: "application/json" });
@@ -189,8 +189,8 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
       {sent && (
         <p role="status" className="-mt-2 flex flex-wrap items-center gap-2 rounded-soft border-[1.5px] border-ok-line bg-ok-bg px-4 py-2.5 text-label text-ok-ink">
           <AlertMark level="ok" />
-          <span>보냈어요 · 세트당 {plain(sent.budget)} · 코드 <b className="tracking-widest tabular-nums">{r.code}</b>{sent.copied ? " (복사됨)" : ""}</span>
-          <span className="text-soft">패널이 안 열려 있으면 확장 프로그램 ③ 분석에 이 코드를 넣어 주세요</span>
+          <span>패널로 보냈어요 · 세트당 {plain(sent.budget)} · 코드 <b className="tracking-widest tabular-nums">{r.code}</b>{sent.copied ? " (복사됨)" : ""}</span>
+          <span className="text-soft">패널이 닫혀 있었다면 받지 못했어요 → 확장 프로그램 아이콘을 눌러 패널을 열고, ③ 분석 › [코드 6자리로 넣기]에 이 코드를 넣어 주세요</span>
         </p>
       )}
     </>
