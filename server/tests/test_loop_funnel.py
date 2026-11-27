@@ -11,7 +11,7 @@ def test_stages_rates_and_ranges_per_arm():
     assert [s["key"] for s in a["stages"]] == ["impressions", "link_clicks", "landing_page_views"]
     click, visit = a["stages"][1], a["stages"][2]
     assert click["count"] == 13 and abs(click["rate"] - 13 / 837) < 1e-9
-    assert click["per100"] == "1,000명이 보면 약 16명이 눌렀어요"   # v4.2: 100명 기준으로 차이가 안 보이면 1,000명
+    assert click["per100"] == "1,000번 보이면 약 16번 눌려요"   # 노출은 사람 수가 아니라 횟수 (점검 A) · 1,000 기준
     assert visit["range"][0] < visit["rate"] < visit["range"][1]
     assert 0.45 < visit["range"][0] < 0.55 and visit["range"][1] > 0.9      # 팀 계산 A 74%(49~92%)
 

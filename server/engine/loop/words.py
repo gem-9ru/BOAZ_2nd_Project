@@ -12,7 +12,7 @@ def won(x: Optional[float]) -> str:
     """6,342원 · 10만 원 ('₩' 대신 '원'). 만 원 단위로 딱 떨어지면 '10만 원'."""
     if x is None:
         return "?"
-    n = int(round(x))
+    n = int(x + 0.5)   # 0.5는 올림 (분석 페이지 화면의 Math.round와 같게, 감사 19)
     if n >= 10_000 and n % 10_000 == 0:
         return f"{n // 10_000:,}만 원"
     return f"{n:,}원"
@@ -28,12 +28,13 @@ def word_of(p: float, better: str = "B") -> str:
     return "확실해요" if p >= ADOPT else f"{better} 쪽이에요" if p >= LIKELY else "아직 몰라요"
 
 
-def per_people(rate: Optional[float], base: int = 1000) -> str:
-    """1.73% → '약 17명' (base명 중). 100명 기준으로 차이가 안 보이면 1,000명 기준을 쓴다."""
+def per_people(rate: Optional[float], base: int = 1000, unit: str = "명") -> str:
+    """1.73% → '약 17명' (base명 중). 100명 기준으로 차이가 안 보이면 1,000명 기준을 쓴다.
+    노출 대비 클릭처럼 사람 수가 아닌 비율은 unit='번'."""
     if rate is None:
         return "?"
     n = rate * base
-    return f"약 {n:.0f}명" if n >= 1 else f"약 {n:.1f}명"
+    return f"약 {int(n + 0.5)}{unit}" if n >= 1 else f"약 {n:.1f}{unit}"
 
 
 def josa(word: str, pair: str = "이가") -> str:

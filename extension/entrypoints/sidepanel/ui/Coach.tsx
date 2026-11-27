@@ -1,16 +1,16 @@
 import type { ReactNode } from "react";
+import wave from "../../../assets/mungchi/wave.png";
 
-/** 광고 어시스턴트가 하는 말 한 덩어리: 작은 캐릭터 + 글. 말풍선 상자 없이 글만 둔다. */
-export function Coach({ children }: { children: ReactNode }) {
+/** 광고 어시스턴트가 하는 말 한 덩어리: 손 흔드는 뭉치 + 흰 말풍선 (꾸미기안_뭉치 .say · .bub: 왼쪽 아래만 각진 16px, 굵은 말은 보라).
+ *  그림은 장식이라 읽지 않는다. 글자는 꾸미기안 13.5px 대신 본문 토큰(가독성). */
+/** avatar={false}: 바로 아래에 뭉치 말풍선이 또 이어질 때. 그림 자리만 비워 줄을 맞춘다 (같은 화면에 뭉치는 한 번만, 2026-11-27 사용자) */
+export function Coach({ children, avatar = true }: { children: ReactNode; avatar?: boolean }) {
   return (
-    <div className="flex gap-3 items-start">
-      <span aria-hidden className="mt-0.5 size-7 shrink-0 rounded-badge bg-accent grid place-items-center">
-        <span className="flex gap-1">
-          <i className="block size-1.5 rounded-badge bg-on-accent" />
-          <i className="block size-1.5 rounded-badge bg-on-accent" />
-        </span>
-      </span>
-      <div className="text-body leading-relaxed">{children}</div>
+    <div className="flex items-end gap-2.5">
+      {avatar
+        ? <img src={wave} alt="" aria-hidden="true" draggable={false} className="w-14 shrink-0 select-none" />
+        : <span aria-hidden="true" className="w-14 shrink-0" />}
+      <div className="rounded-button rounded-bl-mark border-[1.5px] border-line bg-paper px-3.5 py-3 text-body leading-relaxed [&_b]:text-accent">{children}</div>
     </div>
   );
 }
@@ -22,7 +22,7 @@ export function PrimaryButton(props: { children: ReactNode; onClick?: () => void
       type={props.type ?? "button"}
       onClick={props.onClick}
       disabled={props.disabled || props.busy}
-      className="w-full rounded-button bg-accent text-on-accent py-3 text-body font-semibold transition-colors hover:bg-accent-ink active:bg-accent-ink disabled:opacity-(--state-disabled-opacity) disabled:hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+      className="w-full min-h-12 rounded-button bg-accent text-on-accent py-3 text-body font-bold shadow-press transition-colors hover:bg-accent-ink active:translate-y-0.5 active:shadow-none disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none disabled:shadow-none disabled:hover:bg-disabled-bg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
     >
       {props.busy ? "잠시만요…" : props.children}
     </button>
@@ -48,7 +48,7 @@ export function ErrorLine({ message, onRetry }: { message: string; onRetry?: () 
  *  v4.2: 이유 → 할 일 → [다시 시도] 순서. */
 export function WarnLine({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div role="status" className="flex flex-wrap items-center gap-2 rounded-button bg-warn-bg px-3 py-2 text-caption text-warn">
+    <div role="status" className="flex flex-wrap items-center gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-3 py-2 text-caption text-warn">
       <span aria-hidden="true" className="font-bold">▲</span>
       <span className="sr-only">주의</span>
       <span>{message}</span>

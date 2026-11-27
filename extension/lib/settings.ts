@@ -5,7 +5,7 @@ import type { Setting, Target } from "./flow";
 const META_MIN_AGE = 18;
 const META_MAX_AGE = 65;
 
-/** 네이버 연령대("30") → 메타 연령 범위 (메타는 18~65세). */
+/** 네이버 연령대("30") → 메타 연령 범위. 18세부터는 이 도구 선택 (메타는 한국에서 만 14세부터 광고 가능, 18세 미만은 상세 타게팅 불가 — 메타 도움말 229435355723442, 2026-11-26 확인). 65는 메타의 '65세 이상'. */
 export function ageGroupToRange(group: string): { ageMin: number; ageMax: number } {
   const start = Number(group);
   return { ageMin: Math.max(start, META_MIN_AGE), ageMax: Math.min(start + 9, META_MAX_AGE) };
@@ -61,9 +61,9 @@ export const SETTING_ORDER = [
   "meta.pre.ig_account",
   "meta.ad.format",
   "meta.ad.media",
+  "meta.ad.website_url",   // 광고 만들기 창 '크리에이티브 설정' 단계의 '소스 URL' (문구보다 앞, 2026-11-26 실제 화면)
   "meta.creative.copy.text",
   "meta.creative.copy.headline",
-  "meta.ad.website_url",
   "meta.money_check",   // 게시 앞 돈 확인 (총예산 종류·금액·종료 날짜를 화면에서 다시 읽음)
 ];
 
@@ -71,12 +71,36 @@ export const SETTING_ORDER = [
 const PREFILLED = new Set(["meta.campaign.objective", "meta.adset.age_gender"]);
 const OBJECTIVE = "트래픽";
 
+/** 시작 전 준비물 화면에서 묻는 칸 (meta_fields.yaml stage '사전 점검'). ② 세팅에서는 다시 묻지 않는다 */
+export const PREP_STAGE = "사전 점검";
+
+export function prepFields(fields: Field[]): Field[] {
+  return fields.filter((f) => f.stage === PREP_STAGE);
+}
+
+/** 꼭 있어야 하는 준비물 중 아직 안 된 것의 이름 (답이 없거나 첫 답 '있어요' 등이 아님) */
+export function prepMissing(fields: Field[], answers: Record<string, string>): string[] {
+  return prepFields(fields).filter((f) => f.required && answers[f.id] !== f.options?.[0]).map((f) => f.label);
+}
+
+/** 준비물에서 사진을 확인했으니 ② 세팅에서 다시 묻지 않는 칸 (값은 기본값, 사진은 사장님이 올림) */
+const NOT_ASKED = new Set(["meta.ad.media"]);
+
+/** 준비물에서 받은 상품·인스타 주소 → 광고를 누르면 갈 곳과 그 주소 (② 세팅에서 다시 묻지 않게) */
+export function routeFromPrep(answers: Record<string, string>): Record<string, string> {
+  const store = answers["meta.pre.store_url"], insta = answers["meta.pre.insta_url"], pick = answers["meta.pre.store_product"];
+  if (pick === "올렸어요" && store) return { "meta.adset.conversion_location": "스토어 상품 페이지", "meta.ad.website_url": store };
+  if (pick && pick !== "올렸어요" && insta) return { "meta.adset.conversion_location": "인스타그램 프로필", "meta.ad.website_url": insta };
+  return {};
+}
+
 export function askedFields(fields: Field[]): Field[] {
   const follow = new Set(fields.flatMap((f) => {                                   // 다른 질문에서 이어 받는 칸
     const to = f.then_ask?.field;
     return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
   }));
-  return fields.filter((f) => !PREFILLED.has(f.id) && !follow.has(f.id));
+  // 준비물에서 받은 주소로 갈 곳이 정해져도 '클릭 주소' 질문은 미리 채운 채 다시 보여 준다 (확인만 하고 [다음], 체크리스트 설계서 47행, 화면 검토 1)
+  return fields.filter((f) => !PREFILLED.has(f.id) && !NOT_ASKED.has(f.id) && !follow.has(f.id) && f.stage !== PREP_STAGE);
 }
 
 /** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */
@@ -85,8 +109,9 @@ export const META_DAILY_MIN = 1336;
 /** '3만 원' · '25,000원' · '10000' → 원. 못 읽으면 null. */
 export function parseWon(text: string | undefined): number | null {
   const t = (text ?? "").replace(/[,\s원]/g, "");
+  if (!/^\d+(\.\d+)?만?$/.test(t)) return null;   // 숫자·쉼표·'만'·'원' 모양만 ('1e3'·'0x10' 같은 건 받지 않음, 감사 18)
   const n = t.endsWith("만") ? Number(t.slice(0, -1)) * 10000 : Number(t);
-  return t && Number.isFinite(n) && n > 0 ? n : null;
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : null;
 }
 
 /** 광고 기간 일수 (시작일·종료일 모두 셈). */
@@ -105,10 +130,10 @@ export function isoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
-/** "7일" → 오늘부터 7일 뒤 날짜 (YYYY-MM-DD). */
+/** "7일" → 오늘 포함 7일째 날짜 (YYYY-MM-DD). 날짜 직접 정하기·scheduleDays처럼 시작일·종료일을 모두 센다. */
 export function endDateFrom(choice: string, today: Date = new Date()): string {
   const days = parseInt(choice, 10) || 14;
-  return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days));
+  return isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + days - 1));
 }
 
 /** 시작일·종료일 (YYYY-MM-DD). 시각(HH:MM)은 사장님이 정했을 때만 — 없으면 광고 관리자 기본 시각 그대로 */
@@ -124,6 +149,8 @@ export function scheduleFrom(choice: string, today: Date = new Date()): Schedule
 export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, schedule: Schedule): Setting[] {
   const label = (id: string) => fields.find((f) => f.id === id)?.label ?? id;
   const value: Record<string, string> = {
+    "meta.ad.media": fields.find((f) => f.id === "meta.ad.media")?.default ?? "",
+    ...routeFromPrep(answers),
     ...answers,
     "meta.campaign.objective": OBJECTIVE,
     "meta.adset.age_gender": `${target.ageMin}–${target.ageMax}세 · ${GENDER_LABEL[target.gender]}`,

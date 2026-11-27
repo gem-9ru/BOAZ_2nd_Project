@@ -2,7 +2,8 @@
 
 export interface Research {
   headline: string;
-  keywords: { keyword: string; total_qc: number }[];
+  /** under: 네이버가 "< 10"으로 준 칸 수 (있을 때만) */
+  keywords: { keyword: string; total_qc: number; under?: number }[];
   audience: { keyword: string; female: number; ages: Record<string, number>; top_age: string } | null;
   fetched: string;
   source: "live" | "cache";
@@ -20,16 +21,22 @@ export interface Research {
   modifiers?: Modifier[];
   /** 상품 이름 그대로의 월 검색 수·찾는 사람 (분야를 모르면 audience 없음) */
   product_stats?: ProductStats | null;
+  /** 자료가 없을 때 대신 찾아볼 말 (연관 검색어 많은 순 또는 더 짧은 이름) */
+  suggestions?: string[];
 }
 
 export interface ProductStats {
   keyword: string;
   total_qc: number;
+  under?: number;
   /** 모바일 비중 0~1 */
   mobile: number | null;
-  audience: { female: number; ages: Record<string, number>; top_age: string } | null;
+  /** index: 같은 분야 평균 대비 배수 (female·male·나이대) */
+  audience: { female: number; ages: Record<string, number>; top_age: string; index?: Record<string, number> } | null;
   /** 몇 월에 많이 찾나 (쇼핑인사이트 클릭, 가장 많은 달 = 100) */
   trend?: { monthly: Record<string, number>; peak_month: number | null; seasonal: boolean } | null;
+  /** 달별 자료 기준: search = 검색어 트렌드(손님 무리 카드와 같음), shopping = 쇼핑 클릭 */
+  trend_source?: "search" | "shopping" | null;
 }
 
 export interface Category { code: string; name: string }
@@ -84,6 +91,10 @@ export interface Field {
   custom_for?: string[] | null;
   /** 고른 답 대신 세팅에 넣을 값 (예: 택배로 보내요 → 전국 (택배)) */
   answer_as?: Record<string, string> | null;
+  /** '사전 점검'이면 ① 찾기 앞 '시작 전 준비물' 화면에서 묻는다 */
+  stage?: string;
+  /** 꼭 있어야 하는 준비물 (첫 답이 아니면 광고 관리자 열기를 막음) */
+  required?: boolean;
 }
 
 /** 할 일 체크리스트 한 줄. hint: keywords → ① 찾기에서 고른 검색어 한 줄 */
@@ -137,7 +148,7 @@ export const BASE = apiBase(import.meta.env.WXT_API_BASE as string | undefined);
 /** 서버가 꺼져 있거나 닿지 않음. */
 export class ServerDown extends Error {
   constructor() {
-    super("도우미 서버에 연결할 수 없어요. 서버를 켠 뒤 다시 시도해 주세요.");
+    super("도우미 서버에 연결할 수 없어요. 인터넷 연결을 확인하고 잠시 뒤 다시 시도해 주세요.");   // 사장님은 서버를 켤 수 없다 (QA F-02)
   }
 }
 
@@ -159,7 +170,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ServerDown();
   }
   const body = await res.json().catch(() => ({}));
-  if (res.status === 400 || res.status === 404) throw new BadInput(body.error ?? body.detail ?? "입력을 확인해 주세요.");
+  // 4xx와 503(잠시 뒤에)은 서버가 사장님께 보여 줄 문장을 보낸다 (분석 페이지 web/src/api.ts와 같은 규칙)
+  const said = body.error ?? body.detail;
+  if ((res.status >= 400 && res.status < 500) || (res.status === 503 && said)) throw new BadInput(said ?? "입력을 확인해 주세요.");
   if (!res.ok) throw new ServerError();
   return body as T;
 }
@@ -179,7 +192,7 @@ export function research(product: string, opts: { seeds?: string[]; category?: s
 }
 
 export function copies(body: { product: string; strengths: string[]; keywords: string[]; avoid: string[];
-  segment?: { intent: string; label: string; peak_month?: number | null } }): Promise<{ copies: Copy[]; source: string }> {
+  segment?: { intent: string; label: string; peak_month?: number | null }; tone?: string }): Promise<{ copies: Copy[]; source: string }> {
   return call("/copies", json(body));
 }
 

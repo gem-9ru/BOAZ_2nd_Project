@@ -1,5 +1,3 @@
-import { useState } from "react";
-import { Card } from "../ui";
 
 export type Settings = Record<string, string>;
 
@@ -11,9 +9,9 @@ const QUESTIONS: { id: string; label: string; options?: string[]; number?: true 
   { id: "meta.ad.format", label: "소재 형식", options: ["이미지 1장", "동영상", "여러 장 (슬라이드)"] },
 ];
 
+
 /** 입력 ② 내 광고 설정 (세팅값) (v4 8장, v4.2 이름): 확장 프로그램에서 오면 받은 칸 수만, 아니면 5문항(선택). */
 export function MySettings({ received, value, onChange }: { received: number | null; value: Settings; onChange: (s: Settings) => void }) {
-  const [open, setOpen] = useState(false);
   if (received !== null) {
     return (
       <p role="status" className="rounded-button bg-ok-bg px-4 py-3 text-body">
@@ -22,12 +20,10 @@ export function MySettings({ received, value, onChange }: { received: number | n
     );
   }
   const set = (id: string, v: string) => onChange({ ...value, [id]: v });
+  // 업로드 화면 접기 '내 광고 설정이 없어요' 안에 바로 펼친다 (축소안 v5: 따로 카드·버튼 없이)
   return (
-    <Card title="내 광고 설정 (세팅값)" summary="파일이 없으면 5개만 입력해 주세요. '내 세팅 카드'에서 칸마다 바꿀지·둘지를 알려 드려요 (몰라도 분석은 돼요)">
-      {!open ? (
-        <div><button type="button" onClick={() => setOpen(true)} className="rounded-button border border-accent px-4 py-2 text-body font-semibold text-accent-ink">5개만 직접 입력</button></div>
-      ) : (
         <div className="flex flex-col gap-stack">
+          <p className="text-soft">확장 프로그램을 연결하지 않았다면 5개만 넣어 주세요. 넣지 않아도 분석은 돼요. 넣으면 칸마다 바꿀지·둘지를 더 정확히 알려 드려요.</p>
           {QUESTIONS.map((q) => (
             <fieldset key={q.id} className="flex flex-col gap-2">
               <legend className="mb-1 text-body font-semibold">{q.label}</legend>
@@ -49,7 +45,5 @@ export function MySettings({ received, value, onChange }: { received: number | n
             </fieldset>
           ))}
         </div>
-      )}
-    </Card>
   );
 }

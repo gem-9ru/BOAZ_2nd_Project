@@ -59,18 +59,22 @@ def test_copies_without_strengths_still_three(monkeypatch):
 def test_fields_are_the_eleven_questions():
     fields = TestClient(app).get("/fields").json()["fields"]
     assert [f["id"] for f in fields] == [
-        "meta.pre.fb_page", "meta.pre.ig_account", "meta.pre.store_product", "meta.campaign.objective", "meta.campaign.special_category",
+        "meta.pre.fb_login", "meta.pre.fb_page", "meta.pre.payment", "meta.pre.media", "meta.pre.ig_account", "meta.pre.store_product",
+        "meta.pre.language", "meta.campaign.objective", "meta.campaign.special_category",
         "meta.adset.conversion_location", "meta.adset.end_date", "meta.adset.lifetime_budget", "meta.adset.location", "meta.adset.age_gender",
         "meta.ad.format", "meta.ad.website_url", "meta.ad.media"]
     end = next(f for f in fields if f["id"] == "meta.adset.end_date")
     assert end["kind"] == "question" and end["options"] == ["7일", "14일", "30일"] and end["ask"]
     assert set(end) == {"id", "kind", "label", "ask", "options", "default", "why", "help", "then_ask", "default_if", "note_if", "custom",
-                         "custom_for", "answer_as"}
+                         "custom_for", "answer_as", "stage", "required"}
     assert end["custom"] == "dates" and end["ask"] == "광고를 언제부터 언제까지 할까요?"
     loc = next(f for f in fields if f["id"] == "meta.adset.location")
     assert loc["ask"] == "손님이 상품을 어떻게 받나요?" and loc["options"] == ["택배로 보내요", "가게에 와서 사요", "배달해요"]
     assert loc["default"] is None and loc["custom"] == "area" and loc["custom_for"] == ["가게에 와서 사요", "배달해요"]
     assert loc["answer_as"] == {"택배로 보내요": "전국 (택배)"}
+    # 시작 전 준비물: 꼭 있어야 하는 2개 (결제 카드는 게시할 때만 필요해서 초안 만들기는 막지 않음, 화면 검토 3)
+    assert [f["id"] for f in fields if f["required"]] == ["meta.pre.fb_login", "meta.pre.fb_page"]
+    assert all(f["stage"] == "사전 점검" for f in fields if f["id"].startswith("meta.pre."))
 
 
 def test_store_product_question():
@@ -104,30 +108,6 @@ def test_research_failure_explains_naver_error(monkeypatch):
     monkeypatch.setattr(naver_api, "last_error", lambda: "네이버 키가 없어요.")
     body = TestClient(app).post("/research", json={"product": "아무거나"}).json()
     assert body["notice"].startswith("네이버 키가 없어요.")
-
-
-def test_research_calls_do_not_overlap(monkeypatch):
-    """네이버 조회일·오류는 모듈 전역이라, 동시에 온 요청이 섞이지 않게 한 번에 하나씩."""
-    import threading
-    import time
-
-    from server.engine import market
-    active, overlaps = [0], [0]
-
-    def slow_build(seeds, online=True, **kw):
-        active[0] += 1
-        overlaps[0] = max(overlaps[0], active[0])
-        time.sleep(0.05)
-        active[0] -= 1
-        return None
-
-    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, []))   # 네트워크 금지
-    monkeypatch.setattr(market, "build", slow_build)
-    client = TestClient(app)
-    threads = [threading.Thread(target=lambda: client.post("/research", json={"product": "x"})) for _ in range(4)]
-    [t.start() for t in threads]
-    [t.join() for t in threads]
-    assert overlaps[0] == 1
 
 
 def test_copies_source_is_template_when_claude_gives_nothing(monkeypatch):
@@ -254,6 +234,9 @@ def test_research_returns_category_candidates_when_unknown(monkeypatch):
     assert [c["code"] for c in b["category_candidates"]] == ["50000006", "50000008"] and all(c["name"] for c in b["category_candidates"])
     monkeypatch.setattr(market, "category_guess", lambda product, online=True: ("50000006", ["50000006"]))
     assert TestClient(app).post("/research", json={"product": "캠핑의자"}).json()["category_candidates"] == []
+    # 추정한 분야가 있어도 남은 가까운 후보는 준다 ([바꾸기]에서 먼저 보여 줌)
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: ("50000008", ["50000008", "50005542"]))
+    assert [c["code"] for c in TestClient(app).post("/research", json={"product": "텀블러"}).json()["category_candidates"]] == ["50005542"]
 
 
 def test_research_counts_category_points_calls_once_even_when_all_fail(monkeypatch):
@@ -286,3 +269,57 @@ def test_copies_rejects_peak_month_out_of_range(monkeypatch):
     assert r.status_code == 422
     assert TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 0}}).status_code == 422
     assert TestClient(app).post("/copies", json={"product": "쿠키", "segment": {**seg, "peak_month": 12}}).status_code == 200
+
+
+def test_no_data_suggests_other_words(monkeypatch):
+    """자료가 없으면 막다른 길 대신 찾아볼 말: 연관 검색어(많은 순) 또는 더 짧은 이름."""
+    import pandas as pd
+    from server.engine import market, naver_api
+    from server.app import _shorter_names
+    assert _shorter_names("수제 버터 쿠키") == ["버터 쿠키", "쿠키"]
+    kw = pd.DataFrame([{"keyword": "수제버터쿠키", "total_qc": 50, "intent": "관련 낮음"},
+                       {"keyword": "버터쿠키", "total_qc": 900, "intent": "관련 낮음"},
+                       {"keyword": "쿠키만들기", "total_qc": 5000, "intent": "제외: 만들기"}])
+    rep = market.MarketReport(seeds=["x"], groups=pd.DataFrame(), keywords=kw, recommended=[], headline="", fetched="2026-11-26")
+    monkeypatch.setattr(market, "category_guess", lambda product, online=True: (None, []))
+    monkeypatch.setattr(market, "build", lambda *a, **k: rep)
+    b = TestClient(app).post("/research", json={"product": "수제 버터 쿠키"}).json()
+    assert b["notice"] and b["suggestions"] == ["버터쿠키"]
+    monkeypatch.setattr(market, "build", lambda *a, **k: None)
+    monkeypatch.setattr(naver_api, "last_error", lambda: None)
+    assert TestClient(app).post("/research", json={"product": "수제 버터 쿠키"}).json()["suggestions"] == ["버터 쿠키", "쿠키"]
+
+
+def test_picked_word_is_not_avoided_and_source_counts_what_is_left(monkeypatch):
+    """향초: '캔들'이 뺄 말에도 있고 좋은 점 칩에도 있다. 고르면 빼지 않는다. 다 버려지면 source는 template."""
+    from server.engine import copywriter
+    claude = [{"headline": "은은한 캔들", "text": "은은하게 퍼지는 캔들 향을 집에서 즐겨 보세요. 프로필 링크에서 만나 보세요."}]
+    monkeypatch.setattr(copywriter, "_ask_claude", lambda *a, **k: claude)
+    monkeypatch.setattr(copywriter, "make_client", lambda: object())
+    c = TestClient(app)
+    b = c.post("/copies", json={"product": "향초", "strengths": ["캔들"], "avoid": ["캔들", "캔들만들기"]}).json()
+    assert b["source"] == "claude" and b["copies"][0]["headline"] == "은은한 캔들"
+    b = c.post("/copies", json={"product": "향초", "strengths": ["아로마"], "avoid": ["캔들"]}).json()
+    assert b["source"] == "template" and all("캔들" not in x["headline"] + x["primary_text"] for x in b["copies"])
+
+
+def test_a_good_point_chip_is_not_also_listed_as_a_word_to_leave_out(monkeypatch):
+    from server import app as app_mod
+    monkeypatch.setenv("COACH_OFFLINE", "1")
+    monkeypatch.setattr(app_mod, "_good_points", lambda product, mods: [{"word": "르뱅", "group": "맛", "total_qc": 1, "examples": []}])
+    real = app_mod.market.build
+
+    def build(*a, **k):
+        r = real(*a, **k)
+        r.negatives = ["르뱅", "쿠키만들기"]
+        return r
+    monkeypatch.setattr(app_mod.market, "build", build)
+    b = TestClient(app).post("/research", json={"product": "수제 쿠키"}).json()
+    assert b["negatives"] == ["쿠키만들기"]
+
+
+def test_privacy_policy_page_for_the_web_store():
+    """크롬 웹 스토어 등록에 쓰는 개인정보 처리방침 (공개 주소/privacy). 비밀번호·결제 정보는 받지 않는다고 적혀 있어야 한다."""
+    r = TestClient(app).get("/privacy")
+    assert r.status_code == 200 and "text/html" in r.headers["content-type"]
+    assert "개인정보 처리방침" in r.text and "비밀번호" in r.text and "Anthropic" in r.text

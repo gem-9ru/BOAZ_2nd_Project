@@ -10,19 +10,36 @@
     "labelledBy": "트래픽"
    },
    {
+    "labelText": "수동 트래픽 캠페인",
+    "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
+    "inDialog": true
+   },
+   {
+    "role": "button",
+    "text": "계속",
+    "say": "'계속'을 누르세요",
+    "inDialog": true
+   },
+   {
     "role": "button",
     "text": "만들기",
-    "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요"
+    "say": "먼저 왼쪽 위 '+ 만들기'를 누르세요",
+    "pageOnly": true
    }
   ],
   "say": "'{value}'을(를) 고르고 '계속'을 누르세요",
-  "done": "value",
+  "done": "manual",
   "fallback": {
    "image": "guide/meta.campaign.objective.png",
    "text": "화면에서 '캠페인 목표' 칸을 찾아 주세요"
   },
   "auto": "click",
-  "level": "list"
+  "level": "list",
+  "doneWhen": [
+   {
+    "labelledBy": "카테고리"
+   }
+  ]
  },
  {
   "id": "meta.campaign.special_category",
@@ -33,25 +50,28 @@
   "find": [
    {
     "labelledBy": "카테고리"
-   },
-   {
-    "say": "'수동 트래픽 캠페인'을 고르고 '계속'을 누르세요",
-    "labelText": "수동 트래픽 캠페인"
-   },
-   {
-    "role": "button",
-    "text": "계속",
-    "say": "'계속'을 누르세요"
    }
   ],
-  "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 '다음 칸'을 누르세요 ({value})",
+  "say": "특별 광고 카테고리예요. ② 세팅에서 '{value}'라고 하셨어요 → 비워 두고 넘어가요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.campaign.special_category.png",
    "text": "화면에서 '특별 광고 카테고리' 칸을 찾아 주세요"
   },
   "auto": "skip",
-  "level": "campaign"
+  "level": "campaign",
+  "variants": [
+   {
+    "when": {
+     "field": "meta.campaign.special_category",
+     "match": "^네"
+    },
+    "set": {
+     "auto": "owner",
+     "say": "특별 광고 카테고리예요. ② 세팅에서 '네'라고 하셨어요 → 여기서 해당 카테고리(금융·고용·주택·사회문제·선거·정치)를 직접 골라 주세요. 사회문제·선거·정치는 광고주 인증도 필요해요."
+    }
+   }
+  ]
  },
  {
   "id": "meta.campaign.budget_strategy",
@@ -89,7 +109,7 @@
     "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
    }
   ],
-  "say": "전환 위치는 '웹사이트'를 고르세요 ({value})",
+  "say": "전환 위치는 메타 화면의 '웹사이트'를 골라요. 손님은 {value} 주소로 가요 (주소는 광고 화면에서 넣어요)",
   "done": "value",
   "fallback": {
    "image": "guide/meta.adset.conversion_location.png",
@@ -152,7 +172,7 @@
     "heading": "예산 및 일정"
    }
   ],
-  "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '다음 칸'을 누르세요. 시각이 있으면 시간·분 칸에 직접 입력해 주세요",
+  "say": "종료 날짜를 {value}(으)로 넣어요. 총예산이면 '종료 날짜 기간' 아래 날짜 칸에, 일일 예산이면 '종료 날짜 설정'을 켠 뒤 날짜 칸에 넣어요. 시각이 있으면 시간·분 칸에 직접 입력해 주세요",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.end_date.png",
@@ -176,7 +196,7 @@
     "heading": "타겟"
    }
   ],
-  "say": "위치를 {value}(으)로 맞춰 주세요. 전국이면 '대한민국' 그대로, 가게 주변이면 지도에서 주소를 찾아 반경을 정한 뒤 '다음 칸'",
+  "say": "위치를 {value}(으)로 맞출게요. 전국이면 '대한민국' 그대로 둬요. 가게 주변이면 여기는 사장님이 직접 지도에서 주소를 찾아 반경을 정해 주세요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.location.png",
@@ -202,7 +222,7 @@
     "say": "'타겟 추천' 아래 '설정 표시'를 눌러 연령·성별 칸을 여세요"
    }
   ],
-  "say": "연령과 바로 아래 성별을 {value}(으)로 맞추고 '다음 칸'을 누르세요",
+  "say": "연령과 바로 아래 성별을 {value}(으)로 맞출게요. 이 나이는 메타가 '추천'으로만 써서 조금 넘을 수 있어요. 그래서 꼭 지키는 '제어 옵션 › 최소 연령'도 맞춰요 (메타는 25세까지만 정할 수 있어요)",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.age_gender.png",
@@ -219,6 +239,12 @@
   },
   "find": [
    {
+    "labelledBy": "Facebook 페이지"
+   },
+   {
+    "labelText": "Facebook 페이지"
+   },
+   {
     "heading": "대표 계정"
    },
    {
@@ -227,7 +253,7 @@
     "say": "아래 '다음'을 눌러 다음 화면으로 가세요"
    }
   ],
-  "say": "가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기') — 고른 뒤 '다음 칸'",
+  "say": "여기는 사장님이 직접 눌러 주세요: 가게 페이스북 페이지를 고르세요 (없으면 '페이지 만들기'). 이미 골라져 있으면 맞는지만 보고 넘어가요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.pre.fb_page.png",
@@ -247,17 +273,31 @@
     "labelledBy": "Instagram 프로필"
    },
    {
+    "labelText": "Instagram 프로필"
+   },
+   {
     "heading": "대표 계정"
    }
   ],
-  "say": "'Instagram 프로필'에서 가게 인스타그램 계정을 고르세요 ({value}). 페이스북 페이지를 먼저 고르면 나와요",
+  "say": "여기는 사장님이 직접 눌러 주세요: 'Instagram 프로필'에서 가게 인스타그램 계정({value})을 고르세요. 페이스북 페이지를 먼저 고르면 나와요. 이미 골라져 있으면 맞는지만 보고 넘어가요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.pre.ig_account.png",
    "text": "'대표 계정' 구역의 'Instagram 프로필'에서 계정을 골라 주세요"
   },
   "auto": "owner",
-  "level": "ad"
+  "level": "ad",
+  "variants": [
+   {
+    "when": {
+     "field": "meta.pre.ig_account",
+     "match": "^\\s*$"
+    },
+    "set": {
+     "say": "여기는 사장님이 직접 눌러 주세요: 인스타그램 계정이 없으면 'Instagram 프로필'은 비워 두세요 (광고는 페이스북 페이지 이름으로 나가요). 계정이 있으면 골라 주세요."
+    }
+   }
+  ]
  },
  {
   "id": "meta.ad.format",
@@ -267,7 +307,12 @@
   },
   "find": [
    {
-    "labelledBy": "단일 이미지 또는 동영상"
+    "labelledBy": "단일 이미지 또는 동영상",
+    "whenValue": "단일"
+   },
+   {
+    "labelledBy": "슬라이드",
+    "whenValue": "슬라이드"
    },
    {
     "heading": "광고 설정"
@@ -294,7 +339,7 @@
     "textStarts": "크리에이티브 설정"
    }
   ],
-  "say": "사진을 고르세요 ({value})",
+  "say": "여기는 사장님이 직접 골라 주세요: 광고에 쓸 사진 ({value})",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.ad.media.png",
@@ -304,7 +349,7 @@
   "level": "ad",
   "stages": [
    {
-    "by": "buddy",
+    "by": "owner",
     "where": "page",
     "find": [
      {
@@ -312,10 +357,10 @@
       "textStarts": "크리에이티브 설정"
      }
     ],
-    "say": "'크리에이티브 설정'을 열게요"
+    "say": "여기는 사장님이 직접 눌러 주세요: '크리에이티브 설정'을 눌러 주세요"
    },
    {
-    "by": "buddy",
+    "by": "owner",
     "where": "page",
     "find": [
      {
@@ -327,7 +372,7 @@
       "textStarts": "이미지 광고"
      }
     ],
-    "say": "'이미지 광고'를 누를게요"
+    "say": "여기는 사장님이 직접 눌러 주세요: '이미지 광고'를 눌러 주세요"
    },
    {
     "by": "owner",
@@ -340,17 +385,66 @@
      {
       "role": "button",
       "text": "다음",
-      "say": "사진을 골랐으면 오른쪽 아래 '다음'을 눌러 '문구'까지 가세요"
+      "say": "사진을 골랐으면(왼쪽 아래 '1개 선택됨') 오른쪽 아래 '다음'을 눌러 주세요. 위쪽 단계 이름은 누르지 마세요"
      }
     ],
-    "say": "사진을 고르거나 '업로드'로 올리세요 ({value})"
+    "say": "여기는 사장님이 직접 골라 주세요: 사진을 누르거나 '업로드'로 올리세요 ({value})"
    }
   ],
   "doneWhen": [
    {
-    "aria": "간단하게 광고를 소개하세요"
+    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요",
+    "inDialog": true
+   },
+   {
+    "aria": "간단하게 광고를 소개하세요",
+    "pageOnly": true
+   }
+  ],
+  "variants": [
+   {
+    "when": {
+     "field": "meta.ad.format",
+     "match": "슬라이드"
+    },
+    "set": {
+     "find": [
+      {
+       "role": "button",
+       "text": "슬라이드 추가"
+      }
+     ],
+     "auto": "owner",
+     "stages": null,
+     "doneWhen": null,
+     "say": "여기는 사장님이 직접 해 주세요: 여러 장(슬라이드)이라 '슬라이드 추가'로 사진을 2장 이상 한 장씩 넣어 주세요 ({value})."
+    }
    }
   ]
+ },
+ {
+  "id": "meta.ad.website_url",
+  "mode": "create",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "labelledBy": "웹사이트 URL"
+   },
+   {
+    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
+   }
+  ],
+  "say": "② 세팅에서 알려 주신 스토어 주소를 넣을게요: {value}",
+  "done": "value",
+  "fallback": {
+   "image": "guide/meta.ad.website_url.png",
+   "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
+  },
+  "auto": "type",
+  "level": "ad",
+  "outsideDialog": true
  },
  {
   "id": "meta.creative.copy.text",
@@ -363,13 +457,19 @@
     "aria": "간단하게 광고를 소개하세요"
    },
    {
+    "labelText": "간단하게 광고를 소개하세요",
+    "pageOnly": true
+   },
+   {
     "role": "button",
-    "text": "문구",
-    "say": "창 위쪽 단계 표시에서 '문구'를 눌러 문구 칸으로 갈게요"
+    "text": "다음",
+    "inDialog": true,
+    "say": "창 오른쪽 아래 '다음'으로 한 단계씩 넘겨 '문구'까지 갈게요 (위쪽 단계 이름은 누르지 않아요)"
    },
    {
     "role": "button",
     "textStarts": "크리에이티브 설정",
+    "pageOnly": true,
     "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
    }
   ],
@@ -397,12 +497,14 @@
    },
    {
     "role": "button",
-    "text": "문구",
-    "say": "창 위쪽 단계 표시에서 '문구'를 눌러 문구 칸으로 갈게요"
+    "text": "다음",
+    "inDialog": true,
+    "say": "창 오른쪽 아래 '다음'으로 한 단계씩 넘겨 '문구'까지 갈게요 (위쪽 단계 이름은 누르지 않아요)"
    },
    {
     "role": "button",
     "textStarts": "크리에이티브 설정",
+    "pageOnly": true,
     "say": "'크리에이티브 설정' › '이미지 광고'를 눌러 사진을 고르세요"
    }
   ],
@@ -413,31 +515,25 @@
    "text": "화면에서 '제목' 칸을 찾아 주세요"
   },
   "auto": "type",
-  "level": "ad"
- },
- {
-  "id": "meta.ad.website_url",
-  "mode": "create",
-  "page": {
-   "urlIncludes": "adsmanager"
-  },
-  "find": [
-   {
-    "labelledBy": "웹사이트 URL"
-   },
-   {
-    "placeholder": "광고 후 사람들이 방문하는 URL을 입력하세요"
-   }
-  ],
-  "say": "② 세팅에서 알려 주신 스토어 주소를 넣을게요: {value}",
-  "done": "value",
-  "fallback": {
-   "image": "guide/meta.ad.website_url.png",
-   "text": "화면에서 '웹사이트 URL' 칸을 찾아 주세요"
-  },
-  "auto": "type",
   "level": "ad",
-  "outsideDialog": true
+  "variants": [
+   {
+    "when": {
+     "field": "meta.ad.format",
+     "match": "슬라이드"
+    },
+    "set": {
+     "find": [
+      {
+       "role": "button",
+       "text": "슬라이드 추가"
+      }
+     ],
+     "auto": "owner",
+     "say": "여기는 사장님이 직접 해 주세요: 여러 장(슬라이드)은 장마다 제목 칸이 따로 있어요. 장마다 제목을 넣어 주세요 ({value})."
+    }
+   }
+  ]
  },
  {
   "id": "meta.money_check",
@@ -457,7 +553,8 @@
    "text": "광고 세트 화면의 '예산 및 일정'을 열어 주세요. 돈 설정을 확인해야 게시로 넘어가요"
   },
   "auto": "moneyCheck",
-  "level": "adset"
+  "level": "adset",
+  "outsideDialog": true
  },
  {
   "id": "meta.publish",
@@ -886,5 +983,51 @@
   },
   "auto": "owner",
   "level": "list"
+ },
+ {
+  "id": "next.duplicate",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "role": "button",
+    "text": "복제"
+   },
+   {
+    "role": "tab",
+    "text": "광고 세트",
+    "say": "'광고 세트' 탭을 누르고 지난 광고 세트 이름 왼쪽 칸에 체크하세요"
+   }
+  ],
+  "say": "여기는 사장님이 직접 해 주세요: 지난 광고 세트에 체크하고 '복제'로 새 세트 2개를 만드세요 (하나는 지난번 그대로, 하나는 바꿀 세트). 지난 광고는 끝났으니 두 세트 모두 새로 돌려요. 바꿀 세트의 수정 화면을 열었으면 '다 했어요'",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/export.open.png",
+   "text": "광고 관리자 목록의 '광고 세트' 탭에서 지난 세트에 체크하고 '복제'를 눌러 주세요"
+  },
+  "auto": "owner",
+  "level": "list"
+ },
+ {
+  "id": "next.keep_set",
+  "mode": "edit",
+  "page": {
+   "urlIncludes": "adsmanager"
+  },
+  "find": [
+   {
+    "heading": "예산 및 일정"
+   }
+  ],
+  "say": "여기는 사장님이 직접 해 주세요: 왼쪽 목록에서 '지난번 그대로' 세트를 열고 총예산·날짜를 바꾼 세트와 똑같이 {value}(으)로 맞추세요. 두 세트가 같은 돈·같은 날이어야 비교가 맞고, 돈도 정한 만큼만 나가요. 맞췄으면 '다 했어요' — 그 세트의 돈 설정도 다시 읽어 확인할게요",
+  "done": "manual",
+  "fallback": {
+   "image": "guide/meta.adset.end_date.png",
+   "text": "왼쪽 목록에서 '그대로' 세트를 열고 '예산 및 일정'을 같은 금액·날짜로 맞춰 주세요"
+  },
+  "auto": "owner",
+  "level": "adset"
  }
 ]

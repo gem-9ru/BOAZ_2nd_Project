@@ -58,3 +58,15 @@ def test_custom_order_modifier_kept_in_delivery_group_but_bare_order_skipped():
     kw = market.classify(_table(["주문제작쿠키", "쿠키주문"], [800, 600]), ["쿠키"])
     out = market.modifiers(kw, ["쿠키"])
     assert [(m["word"], m["group"]) for m in out] == [("주문제작", "배송")]
+
+
+def test_typo_variants_merge_into_the_more_searched_one():
+    kw = pd.DataFrame([
+        {"keyword": "엔드그레인도마", "total_qc": 900, "intent": "상품"},
+        {"keyword": "앤드그레인도마", "total_qc": 100, "intent": "상품"},
+        {"keyword": "미니도마", "total_qc": 300, "intent": "상품"},
+        {"keyword": "미키도마", "total_qc": 50, "intent": "상품"},   # 2글자는 합치지 않음
+    ])
+    out = {m["word"]: m["total_qc"] for m in market.modifiers(kw, ["도마"])}
+    assert out["엔드그레인"] == 1000 and "앤드그레인" not in out
+    assert out["미니"] == 300 and out["미키"] == 50

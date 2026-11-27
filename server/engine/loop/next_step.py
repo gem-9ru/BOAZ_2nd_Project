@@ -33,7 +33,7 @@ def _by_verdict(verdict: Optional[Dict], diag: Dict) -> Dict:
     if badge["level"] == "채택":
         change = rule_change or COPY
         return {"action": "고정하고 새 변수", "change": change, "summary": [
-            f"이번에 알게 된 것: {josa(win)} 같은 돈으로 손님을 더 데려왔어요 (나을 확률 {pct}% · 확실해요)",
+            f"이번에 알게 된 것: {josa(win)} 같은 돈으로 방문자를 더 데려왔어요 (나을 확률 {pct}% · 확실해요)",
             "아직 모르는 것: 다른 칸을 바꾸면 더 나아질지",
             f"다음에 바꿀 것: {win} 세팅은 그대로, {change['label']}만 바꿔 보기"]}
     if badge["level"] == "유력":
@@ -44,7 +44,8 @@ def _by_verdict(verdict: Optional[Dict], diag: Dict) -> Dict:
         return {"action": "한 번 더", "change": change, "summary": [
             f"이번에 알게 된 것: {josa(win)} 나을 확률 {pct}% ({word('유력', badge['better'])})",
             "아직 모르는 것: 확실히 고르기엔 숫자가 아직 적어요",
-            f"다음에 바꿀 것: 같은 세팅으로 세트당 총 {won(per)}까지 더 돌려 확실히 고르기"]}
+            f"다음에 바꿀 것: 같은 세팅으로 세트당 총 {won(per)}까지 더 돌려 확실히 고르기" if per
+            else "다음에 바꿀 것: 같은 세팅으로 기간을 늘려 더 돌려 확실히 고르기"]}
     change = rule_change or COPY
     return {"action": "다른 변수", "change": change, "summary": [
         f"이번에 알게 된 것: 두 세팅의 차이는 아직 몰라요 ({josa(win)} 나을 확률 {pct}%)",

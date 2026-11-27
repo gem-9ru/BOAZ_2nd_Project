@@ -49,7 +49,7 @@ def test_the_analysis_page_is_served_with_its_assets():
         import pytest
         pytest.skip("web/dist가 없음 (cd web && npm run build)")
     page = c.get("/analysis")
-    assert page.status_code == 200 and "Ad assistant" in page.text
+    assert page.status_code == 200 and "Ad Assistant" in page.text
     asset = next(pathlib.Path("web/dist/assets").glob("*.js")).name
     assert c.get(f"/analysis/assets/{asset}").status_code == 200
 
@@ -99,7 +99,7 @@ def test_simulate_marks_untried_budget_as_hypothesis_and_gives_test_and_roll():
     big = c.post("/simulate", json={"code": code, "arm": "A_자동노출위치", "budget": 20000}).json()
     assert small["tried"] is True and big["tried"] is False
     # Test & Roll은 슬라이더(테스트 금액)가 아니라 전체 예산 기준 (기본 ₩100,000 → 세트당 ₩4,000~10,000)
-    assert (small["next_test"]["per_set_lo"], small["next_test"]["per_set_hi"]) == (4000, 10000)
+    assert (small["next_test"]["per_set_lo"], small["next_test"]["per_set_hi"]) == (6000, 10000)   # 하루 최소 × 4일 이상 (감사 9)
     t = c.post("/simulate", json={"code": code, "arm": "A_자동노출위치", "budget": 5000, "total": 300000}).json()
     assert t["next_test"]["total"] == 300000
 
@@ -137,7 +137,7 @@ def test_setting_rows_cover_every_given_field_in_ads_manager_order():
     assert [x["field_id"] for x in rows][:1] == ["meta.campaign.objective"]
     by = {x["field_id"]: x for x in rows}
     assert by["meta.ad.media"]["kind"] == "테스트" and by["meta.ad.media"]["value"] == "정사각 이미지"
-    assert by["meta.adset.placements"]["kind"] == "그대로" and by["meta.adset.placements"]["note"].startswith("↓ 광고비")
+    assert by["meta.adset.placements"]["kind"] == "그대로" and by["meta.adset.placements"]["note"].startswith("광고비")   # ↓는 퍼널 전용 (설계서 AN-03 ③)
     assert by["meta.campaign.objective"]["kind"] == "그대로" and by["meta.campaign.objective"]["path"].startswith("캠페인")
 
 

@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import QuestionStep from "../entrypoints/sidepanel/steps/QuestionStep";
 import { initialState, reduce, type FlowState } from "../lib/flow";
-import { SETTING_ORDER, askedFields, buildSettings, endDateFrom, scheduleFrom } from "../lib/settings";
+import { SETTING_ORDER, askedFields, buildSettings, endDateFrom, scheduleDays, scheduleFrom } from "../lib/settings";
 import { FIELDS } from "./fixtures-fields";
 
 const target = { ageMin: 30, ageMax: 39, gender: "female" as const };
@@ -37,19 +37,33 @@ describe("questions", () => {
     expect(ids.length).toBeLessThanOrEqual(11);
   });
 
-  it("endDateFrom adds the chosen days", () => {
-    expect(endDateFrom("7일", new Date("2026-11-29T10:00:00"))).toBe("2026-12-06");
+  it("endDateFrom: '7일' runs 7 days counting today (not 8)", () => {
+    expect(endDateFrom("7일", new Date("2026-11-29T10:00:00"))).toBe("2026-12-05");
+    expect(scheduleDays(scheduleFrom("7일", new Date("2026-11-29T10:00:00")))).toBe(7);
   });
 
   it("scheduleFrom: chips start today; a picked range is used as is", () => {
     const today = new Date("2026-11-29T10:00:00");
-    expect(scheduleFrom("14일", today)).toEqual({ start: "2026-11-29", end: "2026-12-13" });
+    expect(scheduleFrom("14일", today)).toEqual({ start: "2026-11-29", end: "2026-12-12" });
     expect(scheduleFrom("2026-12-01~2026-12-14", today)).toEqual({ start: "2026-12-01", end: "2026-12-14" });
     expect(scheduleFrom("2026-12-01 09:00~2026-12-14 21:30", today))
       .toEqual({ start: "2026-12-01", end: "2026-12-14", startTime: "09:00", endTime: "21:30" });
     const s = buildSettings(FIELDS, {}, target, copy, scheduleFrom("2026-12-01 09:00~2026-12-14 21:30", today));
     expect(s.find((x) => x.fieldId === "meta.adset.start_date")!.value).toBe("2026-12-01 09:00");
     expect(s.find((x) => x.fieldId === "meta.adset.end_date")!.value).toBe("2026-12-14 21:30");
+  });
+
+  it("the first question starts with how many questions and that no money goes out until 게시", () => {
+    render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy }} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    const n = askedFields(FIELDS).length;
+    expect(screen.getByText(new RegExp(`${n}가지만 물어볼게요`))).toBeTruthy();
+    expect(screen.getByText(/'게시'를 누르기 전에는 돈이 나가지 않아요/)).toBeTruthy();
+  });
+
+  it("the intro is only on the first question", () => {
+    const first = askedFields(FIELDS)[0]!;
+    render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy, answers: { [first.id]: first.default ?? "x" } }} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
+    expect(screen.queryByText(/가지만 물어볼게요/)).toBeNull();
   });
 
   it("QuestionStep shows one question at a time and moves on with the default", () => {
@@ -67,9 +81,24 @@ describe("questions", () => {
     const answers = Object.fromEntries(askedFields(FIELDS).slice(0, -1).map((x) => [x.id, x.default || "x"]));
     const state: FlowState = { ...initialState(), step: "questions", target, copy, answers };
     render(<QuestionStep state={state} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
-    fireEvent.click(screen.getByRole("button", { name: /^정사각형 사진/ }));
-    const done = dispatch.mock.calls.map((c) => c[0]).find((e) => e.type === "questionsDone");
-    expect(done.settings).toHaveLength(17);
+    fireEvent.click(screen.getByRole("button", { name: /^1장/ }));
+    const dones = dispatch.mock.calls.map((c) => c[0]).filter((e) => e.type === "questionsDone");
+    expect(dones).toHaveLength(1);   // 한 번만 넘어간다 (QA Q-08)
+    expect(dones[0].settings).toHaveLength(17);
+  });
+
+  it("photos are not asked again in ② (준비물 already did); the settings keep the media default", () => {
+    expect(askedFields(FIELDS).map((x) => x.id)).not.toContain("meta.ad.media");
+    const s = buildSettings(FIELDS, {}, target, copy, { start: "2026-11-29", end: "2026-12-05" });
+    expect(s.find((x) => x.fieldId === "meta.ad.media")!.value).toBe("정사각형 사진");
+  });
+
+  it("'묻지 않고 이렇게 두었어요' leaves out cells 뭉치 guides (예: 예산 전략)", () => {
+    const defaults = [{ id: "meta.campaign.budget_strategy", label: "예산 전략", default: "광고 세트 예산", why: "w" },
+      { id: "meta.campaign.buying_type", label: "구매 유형", default: "경매", why: "w" }];
+    render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy }} dispatch={() => {}} fields={FIELDS} defaults={defaults} />);
+    expect(screen.getByText(/묻지 않고 이렇게 두었어요 \(1칸\)/)).toBeTruthy();
+    expect(screen.queryByText(/예산 전략:/)).toBeNull();
   });
 
   it("a picked range goes to questionsDone as startDate and endDate", () => {
@@ -77,7 +106,7 @@ describe("questions", () => {
     const answers = { ...Object.fromEntries(askedFields(FIELDS).slice(0, -1).map((x) => [x.id, x.default || "x"])),
       "meta.adset.end_date": "2099-03-01~2099-03-10" };
     render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy, answers }} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
-    fireEvent.click(screen.getByRole("button", { name: /^정사각형 사진/ }));
+    fireEvent.click(screen.getByRole("button", { name: /^1장/ }));
     const done = dispatch.mock.calls.map((c) => c[0]).find((e) => e.type === "questionsDone");
     expect(done).toMatchObject({ startDate: "2099-03-01", endDate: "2099-03-10" });
     expect(done.settings.find((x: { fieldId: string }) => x.fieldId === "meta.adset.start_date").value).toBe("2099-03-01");
@@ -244,16 +273,12 @@ describe("스마트스토어에 아직 안 올렸어요 → 체크리스트와 �
   const atLoc = asked.findIndex((f) => f.id === "meta.adset.conversion_location");
   const upToLoc = Object.fromEntries(asked.slice(0, atLoc).map((f) => [f.id, f.default || "x"]));
 
-  it("not yet on the store → 인스타그램 프로필 is 권장 with a note, and the store address box starts empty", () => {
-    const answers = { ...upToLoc, "meta.pre.store_product": "아직이에요", "meta.pre.insta_url": "https://www.instagram.com/ovenlog",
-      "meta.adset.conversion_location": "인스타그램 프로필", "meta.ad.website_url": "https://www.instagram.com/ovenlog" };
-    delete (answers as Record<string, string>)["meta.adset.conversion_location"];
-    render(<QuestionStep state={{ ...base, answers }} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
-    expect(screen.getByRole("button", { name: /^인스타그램 프로필/ }).textContent).toContain("권장");
-    expect(screen.getByRole("button", { name: /^스토어 상품 페이지/ }).textContent).not.toContain("권장");
-    expect(screen.getByText("스토어가 준비되면 바꿀 수 있어요.")).toBeTruthy();
-    fireEvent.click(screen.getByRole("button", { name: /^스토어 상품 페이지/ }));
-    expect((screen.getByLabelText("상품 페이지 주소") as HTMLInputElement).value).toBe("");
+  it("Instagram address from 준비물 → settings use it (클릭 주소 질문은 미리 채운 채 다시 보여 줌, 화면 검토 1)", () => {
+    const answers = { ...upToLoc, "meta.pre.store_product": "아직이에요", "meta.pre.insta_url": "https://www.instagram.com/ovenlog" };
+    expect(askedFields(FIELDS).map((f) => f.id)).toContain("meta.adset.conversion_location");
+    const s = buildSettings(FIELDS, answers, target, copy, { start: "2026-11-29", end: "2026-12-05" });
+    expect(s.find((x) => x.fieldId === "meta.adset.conversion_location")!.value).toBe("인스타그램 프로필");
+    expect(s.find((x) => x.fieldId === "meta.ad.website_url")!.value).toBe("https://www.instagram.com/ovenlog");
   });
 
   it("on the click question too, no product page → Instagram profile", () => {
@@ -266,12 +291,18 @@ describe("스마트스토어에 아직 안 올렸어요 → 체크리스트와 �
     expect(dispatch).toHaveBeenCalledWith({ type: "answer", id: "meta.adset.conversion_location", value: "인스타그램 프로필" });
   });
 
-  it("the product address given earlier fills the store address box", () => {
+  it("store address from 준비물 → 스토어 상품 페이지 with that address", () => {
     const answers = { ...upToLoc, "meta.pre.store_product": "올렸어요", "meta.pre.store_url": "https://smartstore.naver.com/ovenlog/products/1" };
-    render(<QuestionStep state={{ ...base, answers }} dispatch={() => {}} fields={FIELDS} defaults={[]} />);
-    expect(screen.getByRole("button", { name: /^스토어 상품 페이지/ }).textContent).toContain("권장");
-    fireEvent.click(screen.getByRole("button", { name: /^스토어 상품 페이지/ }));
-    expect((screen.getByLabelText("상품 페이지 주소") as HTMLInputElement).value).toBe("https://smartstore.naver.com/ovenlog/products/1");
+    const s = buildSettings(FIELDS, answers, target, copy, { start: "2026-11-29", end: "2026-12-05" });
+    expect(s.find((x) => x.fieldId === "meta.adset.conversion_location")!.value).toBe("스토어 상품 페이지");
+    expect(s.find((x) => x.fieldId === "meta.ad.website_url")!.value).toBe("https://smartstore.naver.com/ovenlog/products/1");
+  });
+
+  it("a destination answered in ② wins over the 준비물 address", () => {
+    const answers = { "meta.pre.store_product": "올렸어요", "meta.pre.store_url": "https://a.com/1",
+      "meta.adset.conversion_location": "인스타그램 프로필", "meta.ad.website_url": "https://www.instagram.com/x" };
+    const s = buildSettings(FIELDS, answers, target, copy, { start: "2026-11-29", end: "2026-12-05" });
+    expect(s.find((x) => x.fieldId === "meta.ad.website_url")!.value).toBe("https://www.instagram.com/x");
   });
 });
 

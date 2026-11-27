@@ -75,6 +75,30 @@ describe("돈 칸 화면 조작", () => {
     expect(await setLifetimeBudget(document, "3만 원", fast)).toBe(false);
   });
 
+  // 2026-11-26 실제 화면 (초안 120257356971480583): '총 예산'을 고른 뒤 메타가 늦게 바뀌어 첫 확인에서 실패('budget mode did not stick'),
+  // 그사이 금액은 메타 기본값 ₩350,000. 사장님이 [다 했어요]로 다시 하자 맞게 들어갔다 → 조금 더 기다렸다 한 번 더 읽는다
+  it("Meta switches to 총예산 a bit late: waits once more and still fills the amount", async () => {
+    // 선택지를 누르면 글자가 30ms 뒤에야 바뀐다 (기다리는 시간은 40분의 1로 줄여 실제 순서만 본뜸)
+    const slow = { wait: (ms: number) => new Promise<void>((r) => setTimeout(r, ms / 40)) };
+    const orig = document.body.append;
+    document.body.append = function (...nodes: (string | Node)[]) {
+      for (const n of nodes) if (n instanceof HTMLElement && n.getAttribute("role") === "listbox") {
+        n.querySelectorAll<HTMLElement>("[role=option]").forEach((o) => o.addEventListener("click", (e) => {
+          e.stopImmediatePropagation();
+          n.remove();
+          setTimeout(() => { document.getElementById("l3")!.textContent = `${o.textContent}\u200b`; }, 30);
+        }, { capture: true }));
+      }
+      orig.apply(document.body, nodes);
+    };
+    try {
+      expect(await setLifetimeBudget(document, "3만 원", slow)).toBe(true);
+      expect(readBudget(document)).toMatchObject({ mode: "lifetime", amount: 30000 });
+    } finally {
+      document.body.append = orig;
+    }
+  });
+
   it("gives up (owner's turn) when the budget mode is locked on 일일 예산", async () => {
     adset({ locked: true });
     expect(await setLifetimeBudget(document, "3만 원", fast)).toBe(false);
@@ -85,6 +109,19 @@ describe("돈 칸 화면 조작", () => {
     expect(await useAdsetBudget(document, fast)).toBe(true);
     expect(document.querySelectorAll<HTMLInputElement>("input")[1]!.checked).toBe(true);
     expect(document.querySelector<HTMLInputElement>("input[type=checkbox]")!.checked).toBe(false);   // 예산 공유(최대 20%)는 끔
+  });
+
+  it("budget share: Meta asks '예산 공유를 해제하시겠어요?' → presses '예산 공유 해제' (2026-11-26 실제 화면에서 멈춘 곳)", async () => {
+    campaign(true);
+    const box = document.querySelector<HTMLInputElement>("input[type=checkbox]")!;
+    box.addEventListener("click", (e) => {
+      e.preventDefault();   // 메타는 바로 끄지 않고 확인 창을 띄운다
+      document.body.insertAdjacentHTML("beforeend", `<div role="dialog"><div role="button" id="keep">예산 공유 계속 사용</div><div role="button" id="off">예산 공유 해제</div></div>`);
+      document.getElementById("off")!.addEventListener("click", () => { box.checked = false; document.querySelector("[role=dialog]")!.remove(); });
+    });
+    expect(await useAdsetBudget(document, fast)).toBe(true);
+    expect(box.checked).toBe(false);
+    expect(document.querySelector("[role=dialog]")).toBeNull();
   });
 
   it("fails when the budget share box will not turn off", async () => {
@@ -187,5 +224,30 @@ describe("Guide runner: 돈 칸은 맞을 때만 넘어간다", () => {
     await flush();
     expect(g.view().index).toBe(0);
     expect(g.view().text).toContain("끄지 못했어요 → 캠페인 화면 '예산'에서 직접 맞춰 주세요");
+  });
+});
+
+describe("감사 1·2: 예산 공유 칸·두 세트 돈 확인 (2026-11-26)", () => {
+  it("예산 공유 칸을 못 찾으면 '껐다'고 넘어가지 않는다 (메타가 아직 안 그렸을 수 있음)", async () => {
+    campaign(false);
+    document.querySelector("input[type=checkbox]")!.remove();
+    expect(await useAdsetBudget(document, fast)).toBe("unseen");   // '껐다'(true)가 아니라 '못 봄' → 사장님 확인
+  });
+
+  it("두 세트 돈 확인: 두 번째 확인이 첫 번째와 같은 세트(주소의 광고 세트 id)면 통과하지 않는다", async () => {
+    lifetime({ amount: "30,000", end: "2026년 12월 26일" });
+    history.pushState({}, "", "/adsmanager/manage/adsets/edit?selected_adset_ids=111");
+    const money = { entry: { id: "meta.money_check", mode: "create", page: { urlIncludes: "" }, find: [{ heading: "예산 및 일정" }], say: "돈 확인",
+      done: "manual", fallback: { image: "", text: "" }, auto: "moneyCheck", level: "adset" }, value: "3만 원" } as GuideStepItem;
+    const g = new Guide(document, [money, { ...money }, { ...money, entry: { ...money.entry, id: "end", find: [{ aria: "없음" }] } }], 0, () => {}, 0);
+    const settle = () => new Promise((r) => setTimeout(r, 500));   // 돈 확인은 구역을 띄운 뒤 0.8초 기다려 읽는다
+    g.apply(); await settle(); await settle();
+    expect(g.view().index).toBe(1);   // 첫 세트 통과
+    g.apply(); await settle(); await settle();
+    expect(g.view().index).toBe(1);   // 같은 세트를 또 읽음 → 멈춤
+    expect(g.view().text).toMatch(/아까 확인한 세트/);
+    history.pushState({}, "", "/adsmanager/manage/adsets/edit?selected_adset_ids=222");   // '그대로' 세트를 엶
+    g.apply(); await settle(); await settle();
+    expect(g.view().index).toBe(2);
   });
 });

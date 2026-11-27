@@ -1,7 +1,7 @@
 // 안내 진행 (DOM만 다루고 그리기는 Character.tsx). 테스트할 수 있게 화면 그리기와 나눴다.
 import type { GuideStepItem } from "../../lib/guide";
-import { checkLocation, moneyProblems, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace } from "./actions";
-import type { Level, MoneyKind } from "../../lib/guide";
+import { checkLocation, moneyProblems, UNSEEN, setAgeGender, setEndDate, setLifetimeBudget, setStartDate, useAdsetBudget, type Pace, currentAdsetId } from "./actions";
+import { shownDates, type Level, type MoneyKind } from "../../lib/guide";
 import { currentLevel, goToLevel, hasValue, openDialog, isChecked, isChoice, isKorean, isPublishLike, isTextField, locateWith, mainScroller, typeInto } from "./locate";
 
 export const MAX_TRIES = 3;
@@ -12,6 +12,7 @@ const MONEY_FAIL: Record<MoneyKind, string> = {
   lifetimeBudget: "총예산을 넣지 못했어요 → '예산 및 일정'에서 종류를 '총예산'으로 고르고 금액을 직접 넣어 주세요",
   moneyCheck: "돈 설정을 확인하지 못했어요",
 };
+const SHARE_UNSEEN = `'예산 일부를 다른 광고 세트와 공유하기'가 꺼져 있는지 확인해 주세요 (켜져 있으면 한 세트가 정한 돈보다 더 쓸 수 있어요)${UNSEEN}`;
 const LANGUAGE_TEXT = "화면 언어를 한국어로 바꿔 주세요. (메뉴 › 설정 › 언어) 바꾼 뒤 '다음 칸'을 눌러 주세요.";
 
 export interface GuideView {
@@ -29,6 +30,10 @@ export interface GuideView {
   auto?: boolean;
   /** 자동 진행이 멈춰 기다리는 이유: owner = 사장님이 직접 맞출 칸, publish = 게시는 직접 */
   waiting?: "owner" | "publish";
+  /** 사장님 차례 (직접 할 칸·사장님 단계·뭉치가 못 해서 넘긴 칸): 말풍선 맨 위에 '직접 눌러 주세요' */
+  owner?: boolean;
+  /** 지금 칸 id (말풍선 칩의 '캠페인 · 광고 세트 · 광고' 묶음 이름용) */
+  id?: string;
 }
 
 // 사장님이 눈으로 따라올 수 있게 천천히 (2026-11-25 요청): 뭉치가 걸어가 가리키고, 말풍선을 읽을 시간을 둔다
@@ -66,12 +71,21 @@ export class Guide {
   /** 칸 위치 지도: 칸 id → 어느 편집 화면의 어느 높이에 있었는지 (처음 편집 화면에 들어올 때 한 번 훑어 만든다) */
   private map: Record<string, { level: Level; scrollTop: number }> = {};
   private surveyed = false;
+  /** 끝까지 훑어 본 편집 화면. 여기서 못 찾은 칸은 접힌 구역 안에 있다 (예: 연령은 '타겟 추천' › '설정 표시' 안) */
+  private surveyedLevels = new Set<Level>();
   private surveying: string | null = null;
   private jumped = -1;   // 지도로 점프한 단계 (한 단계에 한 번만)
   private shown = -1;   // 이 단계 칸을 이미 가리켜 보여 줬는지
   private hintPresses = 0;   // 이 단계에서 자동으로 누른 준비 버튼 수 (끝없이 누르지 않게)
   /** 찾는 칸이 열린 창 뒤에 가려져 있음 (창을 먼저 마쳐야 함) */
   private behindDialog = false;
+  /** 돈 확인을 통과한 광고 세트 id → 통과한 돈 확인 칸 번호 (다음 테스트의 두 세트가 같은 세트를 두 번 읽지 않게).
+   *  같은 칸으로 [이전 칸] 뒤 돌아와 다시 확인하는 것은 막지 않는다 (화면 검토 14) */
+  private checkedSets = new Map<number, string>();   // 돈 확인 칸 번호 → 그 칸에서 통과한 세트 (재검토 A4: 칸마다 마지막 세트만)
+  /** 이 칸 돈 확인이 '칸을 못 찾음'만으로 멈췄음 → 다음 [다 했어요]는 사장님 확인으로 보고 넘긴다 */
+  private unseenAt = -1;
+  /** kill() 뒤: 어떤 동작도 하지 않는다 */
+  private dead = false;
   private dialogWait = false;   // 칸이 창 뒤라서 기다리는 중 (창이 닫히면 저절로 풀린다)
   /** 창 밖 칸(웹사이트 URL)인데 창이 열려 있음 → 뭉치가 누를 창 마무리 단추('다음'·'완료') */
   private finishBtn: HTMLElement | null = null;
@@ -82,6 +96,10 @@ export class Guide {
   private arrivedTime = 0;
   private waitFor: HTMLElement | null = null;   // 도착을 기다리기 시작한 칸
   private waitSince = 0;
+  /** 뭉치가 넣는 칸인데 준비 버튼을 눌러도 칸이 안 생겨 사장님을 기다리는 중 (진짜 칸이 나타나면 이어서 넣는다) */
+  private hintWait = false;
+  /** 그때 사장님이 [다 했어요]를 누른 횟수 (첫 번째 = 준비를 마침 → 다시 찾기, 두 번째 = 이 칸은 넘어가기) */
+  private hintDone = 0;
   /** 문구를 칸에 넣지 못해 복사해 두고 붙여넣기를 부탁하는 중 */
   private pasteAsk = false;
   /** 돈 칸: 화면에서 다시 읽었더니 다른 것 (있으면 다음 칸으로 가지 않는다) */
@@ -91,6 +109,10 @@ export class Guide {
   private stageMiss = 0;
   private stageShown = -1;
   private stageBack = false;
+  /** 하위 단계 중간에 [다 했어요]를 누름 (화면 검토 15): 한 번은 남은 단계를 알려 주고, 같은 단계에서 또 누르면 넘어간다 */
+  private earlyPress = "";
+  /** [이전 칸]으로 돌아온 칸: 끝 신호(doneWhen)가 이미 보여도 바로 지나가지 않는다 (사진을 바꾸러 돌아옴, 화면 검토 16) */
+  private cameBack = false;
 
   constructor(
     private doc: Document,
@@ -104,18 +126,23 @@ export class Guide {
   }
 
   view(): GuideView {
-    const v = this.baseView();
+    const item = this.steps[this.index];
+    const ownerTurn = Boolean(item && !item.entry.publish && this.languageOk
+      && (item.entry.auto === "owner" || this.waiting === "owner" || (item.entry.stages && item.entry.stages[this.stage]?.by === "owner")));
+    const v = { ...this.baseView(), ...(ownerTurn ? { owner: true } : {}), ...(item ? { id: item.entry.id } : {}) };
     if (this.money && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
       text: `▲ 돈 확인: ${this.money}. 고친 뒤 '다 했어요'를 누르면 다시 확인할게요 (맞을 때만 넘어가요).` };
     if (this.pasteAsk && this.waiting === "owner") return { ...v, auto: this.auto, waiting: this.waiting,
       text: "문구를 칸에 넣지 못했어요. 복사해 두었으니 칸을 누르고 붙여 넣어(⌘V) 주세요. 다 했으면 '다 했어요'." };
     if (this.behindDialog) return { ...v, auto: this.auto, waiting: this.waiting,
       text: this.finishBtn && this.auto && this.waiting !== "owner"
-        ? "창 안 칸은 다 넣었어요. 창 오른쪽 아래 '다음'으로 끝까지 넘기고 '완료'로 창을 닫을게요. 창이 닫히면 웹사이트 칸을 짚을게요."
+        ? "창 안 칸은 다 넣었어요. 창 오른쪽 아래 '다음'으로 끝까지 넘기고 '완료'로 창을 닫을게요. 창이 닫히면 다음 칸을 짚을게요."
         : "열린 창 안의 남은 단계는 그대로 두고 오른쪽 아래 '다음'으로 끝까지 넘긴 뒤 '완료'를 눌러 창을 닫아 주세요. 창이 닫히면 이 칸을 짚을게요." };
     if (this.surveying) return { ...v, found: false, target: undefined, auto: this.auto, text: `화면을 먼저 둘러보고 칸 위치를 적어 둘게요 (${this.surveying})` };
     return { ...v, auto: this.auto, waiting: this.waiting,
-      text: this.waiting === "owner" ? `${v.text} 다 맞췄으면 '다 했어요'를 누르세요.`
+      text: this.earlyPress === `${this.index}:${this.stage}` && item?.entry.stages
+        ? `아직 이 칸의 단계가 남았어요 (${this.stage + 1}/${item.entry.stages.length}). ${v.text} 정말 다 했으면 '다 했어요'를 한 번 더 눌러 주세요.`
+        : this.waiting === "owner" ? `${v.text} 다 맞췄으면 '다 했어요'를 누르세요.`
         : this.waiting === "publish" ? "여기까지 왔어요. 게시는 내용을 확인하고 사장님이 직접 눌러 주세요." : v.text };
   }
 
@@ -146,6 +173,13 @@ export class Guide {
 
   /** 자동 진행 한 걸음 (콘텐츠 스크립트가 tick 뒤에 부른다). now = ms */
   autoStep(now: number): void {
+    if (this.dead) return;
+    // 준비 단계에서 기다리다가 진짜 칸이 나타났다 → 사장님 [다 했어요] 없이 이어서 넣는다
+    if (this.hintWait && this.waiting === "owner" && this.target && !this.steps[this.index]?.entry.find[this.matched]?.say) {
+      this.hintWait = false;
+      this.waiting = undefined;
+      this.shown = -1;
+    }
     if (!this.auto || this.waiting || this.busy || now < this.nextAt || !this.languageOk) return;
     const item = this.steps[this.index];
     if (!item) { this.auto = false; return; }
@@ -180,7 +214,7 @@ export class Guide {
     if (this.target && hint) {
       if (isPublishLike(this.target)) { this.waiting = "publish"; this.auto = false; return; }
       // 사장님이 직접 할 칸(사진 등)은 준비 버튼을 한 번만 열어 주고 기다린다. 어떤 칸이든 3번 눌러도 그대로면 멈춘다.
-      if ((kind === "owner" && this.hintPresses >= 1) || this.hintPresses >= 3) { this.waiting = "owner"; return; }
+      if ((kind === "owner" && this.hintPresses >= 1) || this.hintPresses >= 3) { this.waiting = "owner"; this.hintWait = kind !== "owner"; return; }
       if (!this.atTarget(this.target, now)) { this.nextAt = now + ARRIVE_POLL; return; }   // 뭉치가 도착한 뒤에 누른다
       this.hintPresses += 1;
       this.apply();
@@ -202,8 +236,17 @@ export class Guide {
     }
     if (!dialog && this.ensureLevel()) { this.nextAt = now + HINT_GAP; return true; }
     if (!dialog && this.jumpFromMap()) { this.nextAt = now + SCAN_GAP; return true; }
+    if (!dialog && this.foldedField()) return false;   // 훑어 봐도 없던 칸 + 여는 버튼이 보임 → 또 끝까지 내려 보지 않고 그 버튼부터
     if (!this.scan.done) { this.scanStep(); this.nextAt = now + SCAN_GAP; return true; }
     return false;
+  }
+
+  /** 이 화면을 끝까지 훑었는데도 칸이 지도에 없고, 지금 여는 버튼(힌트)이 보이면 true: 칸이 접힌 구역 안에 있다 */
+  private foldedField(): boolean {
+    const item = this.steps[this.index];
+    const level = item?.entry.level;
+    if (!item || !level || !this.surveyedLevels.has(level) || this.map[item.entry.id] || currentLevel(this.doc) !== level) return false;
+    return Boolean(this.target && item.entry.find[this.matched]?.say);
   }
 
   /** 칸이 다른 편집 화면(캠페인·광고 세트·광고)에 있으면 왼쪽 목록으로 그 화면에 간다. 갔으면 true.
@@ -246,8 +289,10 @@ export class Guide {
     if (start === "list") return this.map;
     const NAMES: Record<string, string> = { campaign: "캠페인", adset: "광고 세트", ad: "광고" };
     for (const level of ["campaign", "adset", "ad"] as const) {
+      if (this.dead) break;
       const items = this.steps.filter((s) => s.entry.level === level && !s.entry.publish);
       if (!items.length || !goToLevel(this.doc, level)) continue;
+      this.surveyedLevels.add(level);
       this.surveying = NAMES[level]!;
       await pace.wait(SURVEY_LEVEL_WAIT);
       const sc = mainScroller(this.doc);
@@ -301,13 +346,13 @@ export class Guide {
     if (stages && this.stage >= 0) {
       const st = stages[this.stage]!;
       const say = (this.target ? st.find[this.matched]?.say : undefined) ?? st.say;
-      const text = `${this.stage + 1}/${stages.length} · ${say.replace("{value}", item.value ?? "").replace(" ()", "")}`;
+      const text = `${this.stage + 1}/${stages.length} · ${say.replace("{value}", shownDates(item.value ?? "")).replace(" ()", "")}`;
       return { index: this.index, total, found: Boolean(this.target), target: this.target ?? undefined, hint: st.by === "buddy", text };
     }
     if (this.target) {
       const hint = item.entry.find[this.matched]?.say;
       return { index: this.index, total, found: true, target: this.target, publish: item.entry.publish, hint: Boolean(hint),
-               text: (hint ?? item.entry.say).replace("{value}", item.value ?? ""), copy: hint ? undefined : item.value };
+               text: (hint ?? item.entry.say).replace("{value}", shownDates(item.value ?? "")), copy: hint ? undefined : item.value };
     }
     if (this.tries >= MAX_TRIES) {
       return { index: this.index, total, found: false, text: item.entry.fallback.text, image: item.entry.fallback.image, copy: item.value };
@@ -332,7 +377,15 @@ export class Guide {
   apply(): void {
     const item = this.steps[this.index];
     const el = this.target;
-    if (this.behindDialog) { this.seek(); return; }   // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않고 창이 닫혔는지만 다시 본다
+    if (this.behindDialog) {
+      // 칸이 아직 창 뒤: [다 했어요]로 건너뛰지 않는다. 사장님이 창 안을 고쳤을 수 있으니 창 마무리([다음]·[완료])를 처음부터 다시 해 본다
+      this.finishPresses = 0;
+      this.dialogWait = false;
+      if (this.waiting === "owner") this.waiting = undefined;
+      this.nextAt = 0;
+      this.seek();
+      return;
+    }
     // 돈 칸: [다 했어요]·[다음 칸]도 화면에서 다시 읽어 맞을 때만 넘어간다 (칸이 다른 편집 화면이면 먼저 그 화면으로)
     if (this.languageOk && item && MONEY.has(item.entry.auto ?? "")) {
       if (!el && this.ensureLevel()) return;
@@ -344,7 +397,17 @@ export class Guide {
     if (this.languageOk && item?.entry.stages) {
       if (!el && this.ensureLevel()) return;
       const st = item.entry.stages[this.stage];
-      if (ownerDone || !el || !st || st.by === "owner") return this.advance();   // 사장님 차례(사진)에서 누르면 = 다 했어요
+      if (ownerDone || !el || !st || st.by === "owner") {   // 사장님 차례(사진)에서 누르면 = 다 했어요
+        const key = `${this.index}:${this.stage}`;
+        // 사진을 바꾸러 돌아왔거나(cameBack) 창이 닫혀 앞 단계로 돌아간(stageBack) 경우는 이미 한 번 마친 칸 → 한 번에 넘긴다 (재검토 A6)
+        if (el && st && this.stage < item.entry.stages.length - 1 && this.earlyPress !== key && !this.cameBack && !this.stageBack) {
+          this.earlyPress = key;   // 마지막 단계 전: 넘기지 않고 남은 단계를 다시 찾는다 (사진을 고르지 않은 채 다음 칸으로 가지 않게)
+          this.recheck();
+          if (this.earlyPress === `${this.index}:${this.stage}`) this.waiting = "owner";   // 그대로면 단추는 [다 했어요] (한 번 더 = 넘김)
+          return;
+        }
+        return this.advance();
+      }
       if (isPublishLike(el)) return;
       this.hintPresses += 1;
       el.click();
@@ -354,12 +417,20 @@ export class Guide {
     if (this.languageOk && item && (!el || item.entry.find[this.matched]?.say) && this.ensureLevel()) return;   // 다른 화면의 칸 → 그 화면으로
     if (!this.languageOk || !item || !el) return this.markDone();
     if (item.entry.publish || isPublishLike(el)) return;   // 게시는 사장님이 직접
-    if (ownerDone) return this.advance();
     const hint = Boolean(item.entry.find[this.matched]?.say);
+    // 뭉치가 넣는 칸의 준비 단계에서 [다 했어요] = 준비를 마쳤다 → 칸을 건너뛰지 않고 다시 찾아 넣는다 (두 번째 누르면 넘어감)
+    if (ownerDone && this.hintWait && this.hintDone < 1) {
+      this.hintDone += 1;
+      this.hintPresses = 0;
+      this.nextAt = 0;
+      this.recheck();
+      return;
+    }
+    if (ownerDone) return this.advance();
     if (hint) {
       // 이미 고른 준비 선택지('수동 트래픽 캠페인' ✓)면 그 뒤의 준비 버튼('계속')을 누른다
       if (isChoice(el) && isChecked(el)) {
-        const later = locateWith(this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
+        const later = locateWith(openDialog(this.doc) ?? this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
         if (later && !isPublishLike(later.el)) later.el.click();
         this.timer = setTimeout(() => this.recheck(), 600);
         return;
@@ -389,6 +460,16 @@ export class Guide {
       return;
     }
     if (isChoice(el)) {
+      if (item.entry.doneWhen) {
+        // 끝 신호가 따로 있는 칸(캠페인 만들기 창): 고른 뒤 넘어가지 않고 창의 다음 준비 버튼('계속')을 누른다 → 끝 신호가 보이면 다음 칸
+        if (!isChecked(el)) el.click();
+        else {
+          const later = locateWith(openDialog(this.doc) ?? this.doc, item.entry.find.slice(this.matched + 1).filter((f) => f.say));
+          if (later && !isPublishLike(later.el)) later.el.click();
+        }
+        this.timer = setTimeout(() => this.recheck(), 600);
+        return;
+      }
       if (!isChecked(el)) el.click();
       return next();
     }
@@ -414,14 +495,23 @@ export class Guide {
   private checkMoney(kind: MoneyKind, value: string): void {
     if (this.busy) return;
     const at = this.index;
+    // 사장님이 멈춘 말풍선을 보고 [다 했어요]를 다시 눌렀을 때만 (자동 진행은 기다리는 동안 부르지 않는다)
+    const pressedAgain = this.unseenAt === at && this.waiting === "owner";
     this.busy = true;
     this.waiting = undefined;
-    const run: Promise<string[]> = kind === "moneyCheck" ? moneyProblems(this.doc, value)
-      : (kind === "campaignBudget" ? useAdsetBudget(this.doc) : setLifetimeBudget(this.doc, value)).then((ok) => (ok ? [] : [MONEY_FAIL[kind]]));
+    const set = kind === "moneyCheck" ? currentAdsetId(this.doc) : null;
+    const other = set !== null && [...this.checkedSets].some(([i, x]) => x === set && i !== at);
+    const run: Promise<string[]> = other
+      ? Promise.resolve(["아까 확인한 세트예요 → 복제한 다른 세트('그대로' 세트)를 열고 '다 했어요'를 눌러 주세요"])
+      : kind === "moneyCheck" ? moneyProblems(this.doc, value)
+      : kind === "campaignBudget" ? useAdsetBudget(this.doc).then((ok) => (ok === true ? [] : ok === "unseen" ? [SHARE_UNSEEN] : [MONEY_FAIL[kind]]))
+      : setLifetimeBudget(this.doc, value).then((ok) => (ok ? [] : [MONEY_FAIL[kind]]));
     void run.then((problems) => {
       this.busy = false;
       if (this.index !== at) return;
-      if (!problems.length) { this.money = null; return this.advance(); }
+      const onlyUnseen = problems.length > 0 && problems.every((p) => p.endsWith(UNSEEN));
+      if (!problems.length || (onlyUnseen && pressedAgain)) { if (set) this.checkedSets.set(at, set); this.money = null; return this.advance(); }
+      this.unseenAt = onlyUnseen ? at : -1;
       this.money = problems.join(" · ");
       this.waiting = "owner";
     }, () => { this.busy = false; if (this.index === at) { this.money = MONEY_FAIL[kind]; this.waiting = "owner"; } });
@@ -459,14 +549,31 @@ export class Guide {
     if (this.timer) clearTimeout(this.timer);
   }
 
+  /** 뭉치를 다시 부를 때 예전 뭉치를 끝낸다: 하던 일(총예산 넣기·둘러보기)이 나중에 끝나도 칸을 넘기거나 진행을 저장하지 않게 (감사 6) */
+  kill(): void {
+    this.dead = true;
+    this.auto = false;
+    this.stop();
+  }
+
+  /** 패널 목록에서 지난 칸을 눌렀을 때 그 칸으로 (설계서 EX-01 ②). 앞 칸으로만: 돈 확인을 건너뛰어 게시 칸에 가지 않게 */
+  goTo(index: number): void {
+    if (this.dead || index < 0 || index >= this.index) return;
+    this.moveTo(index);
+    this.cameBack = Boolean(this.steps[this.index]?.entry.stages);   // 사진처럼 하위 단계가 있는 칸만 (목표 칸 준비 버튼을 다시 누르지 않게, 재검토 A5)
+    if (!this.ensureLevel()) this.seek();
+  }
+
   /** [이전 칸]: 한 칸 뒤로 (첫 칸이면 그대로). */
   back(): void {
     if (this.index === 0) return;
     this.moveTo(this.index - 1);
+    this.cameBack = Boolean(this.steps[this.index]?.entry.stages);   // 사진처럼 하위 단계가 있는 칸만 (목표 칸 준비 버튼을 다시 누르지 않게, 재검토 A5)
     if (!this.ensureLevel()) this.seek();
   }
 
   private advance(): void {
+    if (this.dead) return;
     this.moveTo(this.index + 1);
     this.seek();
   }
@@ -480,7 +587,12 @@ export class Guide {
     this.finishPresses = 0;
     this.dialogWait = false;
     this.pasteAsk = false;
+    this.hintWait = false;
+    this.hintDone = 0;
     this.money = null;
+    this.unseenAt = -1;
+    this.earlyPress = "";
+    this.cameBack = false;
     this.resetStage();
     this.index = index;
     this.tries = 0;
@@ -496,8 +608,11 @@ export class Guide {
       if (!this.target && this.stage < 0 && this.retryMs > 0 && this.tries < MAX_TRIES) this.timer = setTimeout(() => this.retryNow(), this.retryMs);
       return;
     }
+    // 끝 신호(doneWhen)가 보이면 이 칸은 끝 (예: 캠페인 만들기 창을 다 지나 '카테고리' 칸이 뜸)
+    if (item?.entry.doneWhen && !this.cameBack && this.languageOk && locateWith(this.doc, item.entry.doneWhen)) return this.advance();
     const dialog = openDialog(this.doc);
-    const hit = item && this.languageOk ? locateWith(dialog ?? this.doc, item.entry.find) : null;
+    // 창 밖 칸(웹사이트 URL)은 창 안의 같은 칸에 넣지 않는다: 창 안에 넣은 값은 [완료] 뒤 광고 화면 칸에 남지 않았다 (2026-11-26 실제 화면)
+    const hit = item && this.languageOk && !(dialog && item.entry.outsideDialog) ? locateWith(dialog ?? this.doc, item.entry.find) : null;
     // 창 안에 없고 창 밖(가려진 곳)에 진짜 칸이 있으면: 창을 먼저 마쳐야 한다
     // (창 안의 '다음' 같은 준비 버튼이 보여도, 진짜 칸이 창 뒤에 있으면 그 버튼을 누르지 않는다)
     const realInside = Boolean(hit && !item?.entry.find[hit.index]?.say);
@@ -542,7 +657,7 @@ export class Guide {
     this.behindDialog = false;
     const dialog = openDialog(this.doc);
     const root = dialog ?? this.doc;
-    if (item.entry.doneWhen && locateWith(root, item.entry.doneWhen)) return this.advance();
+    if (item.entry.doneWhen && !this.cameBack && locateWith(root, item.entry.doneWhen)) return this.advance();
     let found: { at: number; el: HTMLElement; matched: number } | null = null;
     for (let at = stages.length - 1; at >= 0 && !found; at -= 1) {
       const st = stages[at]!;

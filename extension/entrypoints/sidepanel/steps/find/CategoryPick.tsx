@@ -20,7 +20,7 @@ export function CategoryRadios({ categories, value, onPick }: {
     <div role="radiogroup" aria-label="분야" className="flex flex-wrap gap-2">
       {list.map((c) => (
         <label key={c.code}
-          className={`cursor-pointer rounded-badge border px-3 py-1.5 text-caption has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+          className={`inline-flex min-h-11 items-center cursor-pointer rounded-badge border px-3 py-1.5 text-caption has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
             value === c.code ? "border-accent bg-accent font-semibold text-on-accent" : "border-line bg-paper"}`}>
           <input type="radio" name="category" value={c.code} checked={value === c.code}
             onChange={() => onPick(c.code)} className="sr-only" />
@@ -32,17 +32,17 @@ export function CategoryRadios({ categories, value, onPick }: {
 }
 
 /** 분야를 못 정했을 때: 후보가 있으면 "이 중 어디에 가까워요?"로 먼저 보이고, [다른 분야]로 12개를 펼친다. */
-export function CategoryAsk({ categories, candidates, onPick }: {
-  categories?: Category[]; candidates?: Category[]; onPick: (code: string) => void;
+export function CategoryAsk({ categories, candidates, value, onPick }: {
+  categories?: Category[]; candidates?: Category[]; value?: string; onPick: (code: string) => void;
 }) {
   const [all, setAll] = useState(false);
-  if (!candidates?.length || all) return <CategoryRadios categories={categories} onPick={onPick} />;
+  if (!candidates?.length || all) return <CategoryRadios categories={categories} value={value} onPick={onPick} />;
   return (
     <div className="flex flex-col gap-2.5">
       <p className="text-caption">이 중 어디에 가까워요?</p>
-      <CategoryRadios categories={candidates} onPick={onPick} />
+      <CategoryRadios categories={candidates} value={value} onPick={onPick} />
       <button type="button" onClick={() => setAll(true)}
-        className="self-start rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        className="self-start rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
         다른 분야
       </button>
     </div>
@@ -50,12 +50,15 @@ export function CategoryAsk({ categories, candidates, onPick }: {
 }
 
 /** 1) 분야 줄: "'수제 쿠키'는 '식품'(으)로 볼게요. 맞나요?" + [바꾸기] → 12개 라디오. */
-export default function CategoryPick({ product, category, categories, onPick }: {
+export default function CategoryPick({ product, category, categories, candidates, onPick }: {
   product: string;
   category: Category & { guessed: boolean };
   categories?: Category[];
+  /** 가까운 다른 분야 (서버가 추정할 때 함께 본 것). 있으면 [바꾸기]에서 이것부터, 나머지는 '다른 분야' */
+  candidates?: Category[];
   onPick: (code: string) => void;
 }) {
+  const near = (candidates ?? []).filter((c) => c.code !== category.code);
   const [open, setOpen] = useState(false);
   return (
     <div className="flex flex-col gap-2.5">
@@ -65,11 +68,13 @@ export default function CategoryPick({ product, category, categories, onPick }: 
           '{product}'는 '{category.name}'(으)로 볼게요.{category.guessed ? " 맞나요?" : ""}
         </p>
         <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
-          className="shrink-0 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+          className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
           바꾸기
         </button>
       </div>
-      {open && <CategoryRadios categories={categories} value={category.code} onPick={onPick} />}
+      {open && (near.length
+        ? <CategoryAsk categories={categories} candidates={[{ code: category.code, name: category.name }, ...near]} value={category.code} onPick={onPick} />
+        : <CategoryRadios categories={categories} value={category.code} onPick={onPick} />)}
     </div>
   );
 }

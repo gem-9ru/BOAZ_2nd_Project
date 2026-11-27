@@ -2,6 +2,7 @@
 import type { FindStrategy, Level } from "../../lib/guide";
 
 const MAX_CLIMB = 4;   // 라벨에서 위로 몇 단계까지만 입력칸을 찾는다 (멀리 있는 검색칸을 잡지 않게)
+const FAR_CLIMB = 8;   // 그보다 멀면 입력칸이 하나뿐인 구역일 때만
 const FIELD = "input, select, textarea, [role=combobox], [role=textbox], [contenteditable=true]";
 
 const RADIO_FIELD = `${FIELD}, [role=radio], [role=checkbox], [role=switch]`;
@@ -22,16 +23,22 @@ export function textOf(e: Element | null): string {
 }
 
 /** 글자가 정확히 같은 가장 작은 요소를 찾고, 그 근처(같은 부모 → 위로 MAX_CLIMB 단계)의 첫 입력칸을 고른다. */
+/** 꼭 채울 칸 표시 '*'는 이름에서 뺀다 ('* Facebook 페이지' = 'Facebook 페이지') */
+const noStar = (t: string) => t.replace(/^\*\s*/, "");
+
 function byLabel(doc: Root, label: string): HTMLElement | null {
   const top = doc instanceof Document ? doc.body : doc;
   const labels = Array.from(top.querySelectorAll<HTMLElement>("*")).filter(
-    (e) => textOf(e) === label && !Array.from(e.children).some((c) => textOf(c) === label),
+    (e) => noStar(textOf(e)) === label && !Array.from(e.children).some((c) => noStar(textOf(c)) === label),
   );
   for (const l of labels) {
     let box: HTMLElement | null = l.parentElement;
-    for (let up = 0; box && box !== top && up < MAX_CLIMB; up += 1, box = box.parentElement) {
-      const field = box.querySelector<HTMLElement>(FIELD);
-      if (field) return field;
+    for (let up = 0; box && box !== top && up < FAR_CLIMB; up += 1, box = box.parentElement) {
+      const fields = box.querySelectorAll<HTMLElement>(FIELD);
+      // 가까우면 첫 입력칸. 더 멀면 그 구역에 입력칸이 하나뿐이고 이름표 뒤에 있을 때만 (실제 화면 2026-11-27: '* Facebook 페이지' 이름표에서
+      // 7단계 위에야 '페이지 선택' 목록이 있고, 목록은 이름표가 아니라 고른 값으로만 이름이 붙어 있다)
+      if (fields.length && up < MAX_CLIMB) return fields[0]!;
+      if (fields.length === 1 && l.compareDocumentPosition(fields[0]!) & Node.DOCUMENT_POSITION_FOLLOWING) return fields[0]!;   // 이름표 뒤에 오는 칸만
     }
   }
   return null;
@@ -39,7 +46,9 @@ function byLabel(doc: Root, label: string): HTMLElement | null {
 
 export function byRoleText(doc: Root, role: string, match: (t: string) => boolean): HTMLElement | null {
   const sel = role === "button" ? "[role=button], button, a" : `[role=${role}]`;   // 메타의 "설정 표시" 같은 링크도 버튼처럼 누른다
-  return firstShown(Array.from(doc.querySelectorAll<HTMLElement>(sel)).filter((e) => match(textOf(e))));
+  const hits = Array.from(doc.querySelectorAll<HTMLElement>(sel)).filter((e) => match(textOf(e)));
+  // 열린 창 안에서는 맨 아래(마지막) 단추부터: 창의 '다음'보다 앞에 '사이트 링크' 넘기기 화살표 '다음'이 있다 (2026-11-26 실제 화면)
+  return firstShown(doc.nodeType === 9 ? hits : hits.reverse());
 }
 
 /** 메타는 칸 이름을 aria-labelledby로 잇는다: 연결된 요소 중 하나의 글자가 정확히 같으면 그 칸. */
@@ -48,7 +57,7 @@ function byLabelledBy(doc: Root, name: string): HTMLElement | null {
   return firstShown(Array.from(doc.querySelectorAll<HTMLElement>("[aria-labelledby]")).filter((e) => {
     if (!e.matches(RADIO_FIELD)) return false;
     const ids = (e.getAttribute("aria-labelledby") ?? "").split(/\s+/).filter(Boolean);
-    return ids.some((id) => textOf(owner.getElementById(id) ?? owner.createElement("i")) === name);
+    return ids.some((id) => noStar(textOf(owner.getElementById(id) ?? owner.createElement("i"))) === name);
   }));
 }
 
@@ -70,8 +79,11 @@ function find(doc: Root, s: FindStrategy): HTMLElement | null {
 /** 앞에서부터 처음 찾은 칸과 그 방법의 순서. */
 /** root를 주면 그 안에서만 찾는다 (열린 창 안). */
 export function locateWith(doc: Document | Element, strategies: FindStrategy[]): { el: HTMLElement; index: number } | null {
+  const page = doc.nodeType === 9;   // Document = 창이 없을 때, Element = 열린 창 안
   for (let i = 0; i < strategies.length; i += 1) {
-    const el = find(doc, strategies[i]!);
+    const s = strategies[i]!;
+    if ((s.inDialog && page) || (s.pageOnly && !page)) continue;
+    const el = find(doc, s);
     if (el) return { el, index: i };
   }
   return null;
@@ -120,7 +132,13 @@ export function isTextField(el: HTMLElement): boolean {
 
 /** 게시와 관련된 버튼은 어떤 경우에도 누르지 않는다. */
 export function isPublishLike(el: HTMLElement): boolean {
-  return /게시|publish/i.test(el.textContent ?? "") || /게시|publish/i.test(el.getAttribute("aria-label") ?? "");
+  const re = /게시|publish/i;
+  // 누르면 실제로 눌리는 건 가장 가까운 버튼이다 (게시 버튼 안의 아이콘을 눌러도 게시) → 그 버튼의 글자·이름표·title까지 본다 (감사 13)
+  const btn = (el.closest("button,[role=button],a,input[type=submit]") as HTMLElement | null) ?? el;
+  const doc = el.ownerDocument;
+  const labelled = (btn.getAttribute("aria-labelledby") ?? "").split(/\s+/).map((id) => doc.getElementById(id)?.textContent ?? "").join(" ");
+  return [el.textContent, btn.textContent, btn.getAttribute("aria-label"), el.getAttribute("aria-label"), btn.getAttribute("title"),
+    labelled, (btn as HTMLInputElement).value].some((t) => re.test(t ?? ""));
 }
 
 /** React가 알아채게 값 넣기: 원래 value setter로 넣고 input·change 이벤트.

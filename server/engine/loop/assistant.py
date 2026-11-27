@@ -50,7 +50,7 @@ def context(result: Dict, step: str) -> Dict:
 
 
 def _same_money(result: Dict) -> Optional[Dict]:
-    """같은 돈으로 온 손님 수 (AN-01 유지 카드 · AN-04): 두 세트 중 적게 쓴 돈 기준."""
+    """같은 돈으로 온 방문자 수 (AN-01 유지 카드 · AN-04): 두 세트 중 적게 쓴 돈 기준."""
     arms = (result.get("summary") or {}).get("arms") or []
     if len(arms) < 2:
         return None
@@ -59,7 +59,7 @@ def _same_money(result: Dict) -> Optional[Dict]:
 
 
 def _forecast(result: Dict) -> Optional[Dict]:
-    """AN-05 첫 말: 지금 세팅(나은 쪽)으로 세트당 예산을 쓰면 손님 수 범위 (80%)."""
+    """AN-05 첫 말: 지금 세팅(나은 쪽)으로 세트당 예산을 쓰면 방문자 수 범위 (80%)."""
     from . import simulate
     arms = (result.get("summary") or {}).get("arms") or []
     if not arms:
@@ -106,7 +106,7 @@ def opening(result: Dict, step: str) -> Dict:
         if badge:
             same = _same_money(result)
             who = "B" if badge.get("better") == "B" else "A"
-            msg = (f"같은 돈으로 {who}가 손님을 더 데려왔어요"
+            msg = (f"같은 돈으로 {who}가 방문자를 더 데려왔어요"
                    + (f" (A {same['counts'][0]}명 · B {same['counts'][1]}명)" if same else "")
                    + f". {who}가 나을 확률 {round(badge.get('prob', 0) * 100)}% · '{badge.get('word', '')}'"
                    + (" 단계라 같은 조건으로 한 번 더 돌리면 확실해질 수 있어요." if badge.get("word") != "확실해요" else "예요."))
@@ -119,7 +119,7 @@ def opening(result: Dict, step: str) -> Dict:
     elif step == "AN-05":
         f = _forecast(result)
         msg = (f"지금 세팅({f['arm']})으로 {won(f['budget'])}을 쓰면 보통 {f['median']}명 (적게 {f['lo']}명 ~ 많이 {f['hi']}명) 와요. "
-               if f else "예산을 움직이면 예상 손님 수 범위가 바뀌어요. ")
+               if f else "예산을 움직이면 예상 방문자 수 범위가 바뀌어요. ")
         if c.get("tested") is False:
             msg += f"{what} 효과는 이 숫자에 없어요. {won(c.get('per_set') or 5000)}씩 두 세트로 돌려 직접 비교해 보세요."
         sug = ["왜 범위가 넓어요?", "얼마 더 써야 확실해요?"]
@@ -129,7 +129,7 @@ def opening(result: Dict, step: str) -> Dict:
         sug = ["세로 소재는 어떻게 만들어요?" if "세로" in c.get("new", "") else "이 칸을 왜 바꿔요?", "바꾸고 나서 언제 다시 봐요?"]
     else:
         n = len(c.get("checklist") or [])
-        msg = ("[확장 프로그램으로 보내기]를 누르면 확장 프로그램이 광고 관리자에서 그 칸을 바로 가리켜 드려요. "
+        msg = ("[확장 프로그램으로 보내기]를 누르면 옆 패널이 테스트안을 받아요. 패널의 [다음 테스트 세팅] → [광고 관리자 열기]를 누르면 그 칸을 짚어 드려요. "
                + (f"체크리스트 {n}개만 지키면 다음 결과로 {what} 효과를 잴 수 있어요." if n else ""))
         sug = ["지금 바로 준비해요?", "근거 더 보여줘요"]
     return {"step": step, "message": msg, "suggestions": sug, "alerts": alerts}

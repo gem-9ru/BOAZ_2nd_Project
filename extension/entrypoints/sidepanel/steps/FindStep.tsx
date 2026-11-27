@@ -1,7 +1,8 @@
+import { josa } from "../../../lib/josa";
 import { useEffect, useRef, useState } from "react";
 import { research as fetchResearch, type Research, type Segment } from "../../../lib/api";
-import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { compact } from "../../../lib/format";
+import type { FlowEvent, FlowState, Target } from "../../../lib/flow";
+import { compact, onlyLastWord, times } from "../../../lib/format";
 import { ageGroupToRange, ageSpan, genderFrom } from "../../../lib/settings";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 import AgeFigure from "./find/AgeFigure";
@@ -16,6 +17,17 @@ interface Props {
 }
 
 const EXAMPLE = "수제 쿠키";
+const RECENT_KEY = "ad-coach.recent-products";   // 최근 찾은 상품 (이 브라우저에만, 편의용)
+
+function readRecent(): string[] {
+  try { return JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]").filter((x: unknown) => typeof x === "string").slice(0, 5); }
+  catch { return []; }
+}
+function saveRecent(word: string): string[] {
+  const next = [word, ...readRecent().filter((x) => x !== word)].slice(0, 5);
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)); } catch { /* 저장이 막혀도 화면은 그대로 */ }
+  return next;
+}
 
 /** ① 찾기: 상품 → 네이버로 누가·어떤 말로 찾는지 → 타겟 확인. */
 export default function FindStep({ state, dispatch }: Props) {
@@ -40,13 +52,17 @@ export default function FindStep({ state, dispatch }: Props) {
     }
   }
 
+  const [recent, setRecent] = useState<string[]>(readRecent);
+
   function search(word = product) {
     const q = word.trim();
     if (!q) return;
     void run(async () => {
       dispatch({ type: "researched", research: await fetchResearch(q), product: q });
+      setRecent(saveRecent(q));
     }, () => search(q));
   }
+  const tryWord = (w: string) => { setProduct(w); search(w); };
 
   // 다시 시도는 누른 그때의 상태(사장님이 그 사이 켜고 끈 말)를 읽어야 해서 ref로 둔다.
   const latest = useRef(state);
@@ -75,7 +91,7 @@ export default function FindStep({ state, dispatch }: Props) {
 
   return (
     <section className="flex flex-col gap-5">
-      <Coach>어떤 상품을 파세요? 네이버에서 손님이 어떤 말로, 언제, 누가 찾는지 알아볼게요.</Coach>
+      <Coach>어떤 상품을 파세요? 네이버에서 손님이 어떤 말로, 언제 찾고, 누가 쇼핑에서 클릭하는지 알아볼게요.</Coach>
       <div className="flex flex-col gap-2">
         <label htmlFor="product" className="text-caption font-semibold text-soft">파는 상품</label>
         <form
@@ -96,7 +112,7 @@ export default function FindStep({ state, dispatch }: Props) {
           <button
             type="submit"
             disabled={!product.trim() || busy}
-            className="shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:opacity-(--state-disabled-opacity) focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="min-h-11 shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {busy ? "찾는 중…" : "찾아보기"}
           </button>
@@ -106,10 +122,21 @@ export default function FindStep({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={() => { setProduct(EXAMPLE); search(EXAMPLE); }}
-            className="self-start rounded-badge bg-accent-soft px-3 py-1.5 text-caption font-semibold text-accent-ink hover:ring-1 hover:ring-accent focus-visible:outline-2 focus-visible:outline-accent"
+            className="min-h-11 self-start rounded-badge bg-accent-soft px-3 py-1.5 text-caption font-semibold text-accent-ink hover:ring-1 hover:ring-accent focus-visible:outline-2 focus-visible:outline-accent"
           >
             {EXAMPLE}로 먼저 보기
           </button>
+        )}
+        {!busy && recent.filter((w) => w !== product.trim()).length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-small text-soft">최근에 찾은 상품</span>
+            {recent.filter((w) => w !== product.trim()).slice(0, 3).map((w) => (
+              <button key={w} type="button" onClick={() => tryWord(w)}
+                className="min-h-11 rounded-badge border border-line bg-paper px-3 py-1 text-caption focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                {w}
+              </button>
+            ))}
+          </div>
         )}
       </div>
 
@@ -118,7 +145,7 @@ export default function FindStep({ state, dispatch }: Props) {
           <span className="text-caption font-semibold text-soft">찾아보면 이렇게 알려 드려요</span>
           <ul className="flex flex-col gap-1 text-caption text-soft">
             <li>· 한 달에 몇 번 찾는지</li>
-            <li>· 누가 찾는지 (나이·성별)</li>
+            <li>· 누가 쇼핑에서 클릭하는지 (나이·성별)</li>
             <li>· 언제 많이 찾는지 (달별)</li>
             <li>· 손님이 어떤 말로 찾는지, 어떤 손님 무리가 있는지</li>
           </ul>
@@ -134,10 +161,11 @@ export default function FindStep({ state, dispatch }: Props) {
       {!busy && r && (
         <div className={stale ? "opacity-50 transition-opacity" : "transition-opacity"}>
           {r.notice
-            ? <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch} />
+            ? <NoData notice={r.notice} product={state.product ?? product.trim()} dispatch={dispatch}
+                suggestions={r.suggestions} onTry={tryWord} />
             : Array.isArray(r.segments)
               ? <SegmentResult research={r} segments={r.segments} state={state} dispatch={dispatch}
-                  onPickCategory={pickCategory} onResearch={() => rerun()} />
+                  onPickCategory={pickCategory} onResearch={() => rerun()} onTry={tryWord} />
               : <Result research={r} dropped={state.dropped ?? []} dispatch={dispatch} />}
         </div>
       )}
@@ -146,10 +174,18 @@ export default function FindStep({ state, dispatch }: Props) {
 }
 
 /** 결과 자리 스켈레톤: 결과 카드와 같은 모양. */
+const SEARCH_STEPS = ["네이버에서 검색 수를 보는 중이에요…", "누가 클릭하는지 보는 중이에요…", "손님을 무리로 나누는 중이에요…", "좋은 점 낱말을 고르는 중이에요…"];
+
 function ResultSkeleton() {
+  // 실제 진행을 받지 않으니 시간으로만 넘긴다 (마지막 단계에서 멈춤)
+  const [stepAt, setStepAt] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setStepAt((i) => Math.min(i + 1, SEARCH_STEPS.length - 1)), 1200);
+    return () => clearInterval(t);
+  }, []);
   return (
     <div className="flex flex-col gap-4 rounded-card border border-line bg-paper p-4">
-      <p role="status" className="text-caption text-soft">네이버에서 찾는 중이에요…</p>
+      <p role="status" className="text-caption text-soft">{SEARCH_STEPS[stepAt]}</p>
       <div aria-hidden className="skeleton flex flex-col gap-4">
         <div className="h-7 w-32 rounded-button bg-sunk" />
         <div className="flex h-24 items-end gap-2">
@@ -166,8 +202,8 @@ function ResultSkeleton() {
 }
 
 /** 2) 부르는 말: 켜고 끄는 칩. */
-function KeywordChips({ research: r, dropped, kept, title, hint, dispatch }: {
-  research: Research; dropped: string[]; kept: string[]; title: string; hint: string;
+function KeywordChips({ research: r, dropped, kept, title, hint, dispatch, product = "" }: {
+  research: Research; dropped: string[]; kept: string[]; title: string; hint: string; product?: string;
   dispatch: (ev: FlowEvent) => void;
 }) {
   return (
@@ -186,14 +222,17 @@ function KeywordChips({ research: r, dropped, kept, title, hint, dispatch }: {
               type="button"
               aria-pressed={!off}
               onClick={() => dispatch({ type: "toggleKeyword", keyword: k.keyword })}
-              className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+              className={`min-h-11 inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 off ? "border-dashed border-line text-soft" : "border-accent bg-accent-soft text-ink"}`}
             >
               <span aria-hidden className={`grid size-4 place-items-center rounded-badge text-mark ${off ? "border border-line" : "bg-accent text-on-accent"}`}>
                 {off ? "" : "✓"}
               </span>
               <span className={off ? "line-through" : "font-medium"}>{k.keyword}</span>
-              <span className="text-small text-soft tabular-nums">월 {compact(k.total_qc)}회</span>
+              <span className="text-small text-soft tabular-nums">한 달 {times(k.total_qc, k.under)}</span>
+              {onlyLastWord(product, k.keyword) && (
+                <span className="rounded-badge border border-line bg-paper px-1.5 text-small text-soft">'{onlyLastWord(product, k.keyword)}'만 같아요</span>
+              )}
             </button>
           );
         })}
@@ -210,7 +249,7 @@ function Negatives({ words }: { words?: string[] }) {
         <span>광고에서 뺄 말 {words.length}개 <span className="font-normal">(만들기·매장·관련 낮은 말)</span></span>
         <span aria-hidden className="transition-transform group-open:rotate-180">▾</span>
       </summary>
-      <p className="mt-2">이런 말로 찾는 사람은 사지 않을 가능성이 커서 문구에 넣지 않아요.</p>
+      <p className="mt-2">만들기·매장 찾기처럼 사려는 뜻과 다르거나 상품과 관련이 낮은 말이라, 문구에 넣지 않아요 (이 도구 기준).</p>
       <ul className="mt-2 flex flex-wrap gap-1.5">
         {words.map((w) => <li key={w} className="rounded-badge bg-sunk px-2 py-0.5 line-through decoration-soft">{w}</li>)}
       </ul>
@@ -219,12 +258,17 @@ function Negatives({ words }: { words?: string[] }) {
 }
 
 function SourceLine({ research: r }: { research: Research }) {
+  const day = r.sources?.find((x) => x.part === "product")?.fetched ?? r.fetched;
+  const detail = r.sources?.length
+    ? `네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
+    : `네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`;
   return (
-    <p className="text-small leading-relaxed text-soft">
-      {r.sources?.length
-        ? `출처: 네이버 검색광고·데이터랩 — ${r.sources.map((x) => `${x.label} ${x.today ? "오늘 조회" : `${dayLabel(x.fetched)} 저장본`}`).join(" · ")}`
-        : `출처: 네이버 검색광고 · 데이터랩 · 조회일 ${r.fetched}${r.source === "cache" ? " (저장된 자료)" : ""}`}
-    </p>
+    <details className="text-small leading-relaxed text-soft">
+      <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+        네이버 자료{day ? ` · ${dayLabel(day)} 기준` : ""} <span aria-hidden>🔎</span>
+      </summary>
+      <p className="mt-1">출처: {detail}</p>
+    </details>
   );
 }
 
@@ -251,7 +295,7 @@ function Result({ research: r, dropped, dispatch }: {
         title="이 사람들이 쓰는 말" hint="빼고 싶은 말은 누르세요. 다시 누르면 돌아와요." />
       <Negatives words={r.negatives} />
       <div className="flex flex-col gap-2">
-        {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
+        {kept.length === 0 && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 검색어를 하나 이상 남겨 주세요.</p>}
         <PrimaryButton onClick={confirm} disabled={kept.length === 0}>이 사람들로 할게요</PrimaryButton>
         <SourceLine research={r} />
       </div>
@@ -260,16 +304,18 @@ function Result({ research: r, dropped, dispatch }: {
 }
 
 /** 새 ① 흐름: 1) 분야 → 2) 부르는 말 → 3) 손님 무리 → [이 손님들로 할게요]. */
-function SegmentResult({ research: r, segments, state, dispatch, onPickCategory, onResearch }: {
+function SegmentResult({ research: r, segments, state, dispatch, onPickCategory, onResearch, onTry }: {
   research: Research;
   segments: Segment[];
   state: FlowState;
   dispatch: (ev: FlowEvent) => void;
   onPickCategory: (code: string) => void;
   onResearch: () => void;
+  onTry: (word: string) => void;
 }) {
   const dropped = state.dropped ?? [];
   const kept = r.keywords.map((k) => k.keyword).filter((k) => !dropped.includes(k));
+  const topWord = [...r.keywords].sort((x, y) => y.total_qc - x.total_qc)[0];
   const selected = segments.find((s) => s.intent === state.segment?.intent);
   const [age, setAge] = useState("");
   const [gender, setGender] = useState<"" | "all" | "female" | "male">("");
@@ -278,7 +324,14 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const rec = selected?.audience
     ? (() => { const g = ageSpan(selected.audience.ages).groups; return { from: g[0]!, to: g[g.length - 1]!, gender: genderFrom(selected.audience.female) }; })()
     : null;
-  const [custom, setCustom] = useState<{ intent: string; from: string; to: string; gender: "all" | "female" | "male" } | null>(null);
+  // ②에 갔다 돌아왔을 때: 지난번에 정한 타깃이 추천과 다르면 그 값을 고친 값으로 다시 쓴다
+  const [custom, setCustom] = useState<{ intent: string; from: string; to: string; gender: "all" | "female" | "male" } | null>(() => {
+    const t = state.target;
+    if (!t || !selected || !rec || state.segment?.intent !== selected.intent) return null;
+    const g = (age: number) => String(Math.min(60, Math.max(10, Math.floor(age / 10) * 10)));
+    const back = { from: g(t.ageMin), to: g(t.ageMax), gender: t.gender };
+    return back.from === rec.from && back.to === rec.to && back.gender === rec.gender ? null : { intent: selected.intent, ...back };
+  });
   const pick = rec ? (custom && custom.intent === selected?.intent ? custom : rec) : null;
 
   // 무리가 하나뿐이면 미리 골라 둔다 (이 결과마다 한 번)
@@ -293,14 +346,28 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const manual = !!selected && !selected.audience;
   const manualMissing = manual && (!age || !gender);
   const ready = !!selected && kept.length > 0 && !manualMissing;
+  // 버튼이 꺼진 이유는 지금 할 것 한 줄만 (검색어 → 손님 → 나이·성별 순)
+  const todo = kept.length === 0 ? "검색어를 하나 이상 남겨 주세요."
+    : !selected ? "광고를 보여 줄 손님을 하나 골라 주세요."
+    : manualMissing ? "보여 줄 나이와 성별을 골라 주세요." : null;
 
+  // [뺀 말을 빼고 손님 다시 보기]: 손님 카드 위 + 칩을 끈 자리 바로 아래 (칩은 화면 아래쪽이라 위에만 두면 안 보임, QA F-05)
+  const reSee = dropped.some((k) => !(state.droppedApplied ?? []).includes(k)) && !segments.some((g) => dropped.includes(g.lead)) && (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-button bg-sunk px-3 py-2">
+      <span className="text-caption">검색어 {dropped.length}개를 뺐어요. 남긴 말로 손님을 다시 볼 수 있어요.</span>
+      <button type="button" onClick={onResearch}
+        className="shrink-0 rounded-button border border-accent bg-paper min-h-11 px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        뺀 말을 빼고 손님 다시 보기
+      </button>
+    </div>
+  );
   // 검색어 칩: 손님 무리 아래에 접어 둔다 (무리가 없을 때·뺀 말이 있을 때는 펼침)
   const words = (
     <details open={dropped.length > 0 || !r.category || segments.length === 0}
       className="group flex flex-col gap-3 rounded-card border border-line bg-paper p-4">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
         <span className="flex flex-col gap-0.5">
-          <span className="text-caption font-semibold text-soft">광고에 넣을 검색어</span>
+          <span className="text-caption font-semibold text-soft">문구에 넣을 검색어</span>
           <span className="text-body">검색어 {kept.length}개를 넣어요{dropped.length ? ` (${dropped.length}개 뺌)` : ""}</span>
         </span>
         <span className="shrink-0 text-caption font-semibold text-soft">
@@ -308,8 +375,10 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         </span>
       </summary>
       <div className="mt-3 flex flex-col gap-4">
-        <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch}
+        <p className="text-small text-soft">이 말들은 ② 문구를 쓸 때 넣어요. 메타 광고는 검색어로 손님을 고르지 않아서, 손님은 위에서 고른 나이·성별로 정해요.</p>
+        <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch} product={state.product ?? ""}
           title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
+        {reSee}
         <Negatives words={r.negatives} />
       </div>
     </details>
@@ -326,8 +395,9 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const detail = selected?.audience && pick && rec
     ? (
       <div className="flex flex-col gap-3">
-        <AgeFigure audience={selected.audience} split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
+        <AgeFigure audience={selected.audience} caption="쇼핑에서 많이 클릭한 사람 (추천)" split={r.category ? { keyword: selected.lead, category: r.category.code } : undefined} />
         <TargetPick from={pick.from} to={pick.to} gender={pick.gender} rec={rec} female={selected.audience.female}
+          recShare={(() => { const g = ageSpan(selected.audience.ages).groups; return g.reduce((t, a) => t + (selected.audience!.ages[a] ?? 0), 0); })()}
           onChange={(v) => setCustom({ intent: selected.intent, ...v })} />
       </div>
     )
@@ -343,9 +413,14 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   return (
     <div className="flex flex-col gap-5">
       {r.category && (
-        <CategoryPick product={product} category={r.category} categories={r.categories} onPick={onPickCategory} />
+        <CategoryPick product={product} category={r.category} categories={r.categories} candidates={r.category_candidates} onPick={onPickCategory} />
       )}
       {r.product_stats && <ProductStats stats={r.product_stats} hasCategory={!!r.category} category={r.category?.code} />}
+      {topWord && (!r.product_stats || (r.product_stats.total_qc * 10 < topWord.total_qc && topWord.keyword !== r.product_stats.keyword)) && (
+        <p className="rounded-card border border-line bg-paper px-4 py-3 text-caption">
+          '{product}' 이름 그대로는 {r.product_stats ? ((r.product_stats.under ?? 0) >= 2 ? "한 달 20번도 안 찾아요" : `한 달 ${times(r.product_stats.total_qc, r.product_stats.under)}만 찾아요`) : "찾는 사람이 적어요"}. 손님은 <span className="font-semibold">'{topWord.keyword}'</span>{euro(topWord.keyword)} 가장 많이 찾아요 (한 달 {times(topWord.total_qc, topWord.under)}).
+        </p>
+      )}
       {!r.category ? (
         <div className="flex flex-col gap-2.5">
           <span className="text-caption font-semibold text-soft">손님 무리</span>
@@ -356,27 +431,35 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
       ) : segments.length === 0 ? (
         <>
           {words}
-          <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch} />
+          <NoData notice="이 말로 찾는 손님 자료를 찾지 못했어요." product={product} keywords={kept} dispatch={dispatch}
+            suggestions={kept.filter((k) => k !== product.replace(/\s/g, "")).slice(0, 3)} onTry={onTry} />
         </>
       ) : (
         <>
-          <SegmentCards segments={segments} selected={selected} dropped={dropped}
+          {reSee}
+          <SegmentCards segments={segments} selected={selected} dropped={dropped} product={product}
             onPick={(segment) => dispatch({ type: "pickSegment", segment })} onResearch={onResearch}
             selectedDetail={detail} />
+          {segments.length === 1 && (
+            <p className="-mt-2 text-small text-soft">
+              {segments[0]!.intent === "상품"
+                ? "선물·시즌으로 찾는 말이 적어서, 상품 자체로 찾는 손님 한 무리로 봤어요."
+                : "다른 목적으로 찾는 말이 적어서 이 한 무리로 봤어요."}
+            </p>
+          )}
           {words}
           <div className="flex flex-col gap-2">
-            {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
-            {!selected && <p className="text-caption text-warn">▲ 광고를 보여 줄 손님을 하나 골라 주세요.</p>}
-            {manualMissing && <p className="text-caption text-warn">▲ 보여 줄 나이와 성별을 골라 주세요.</p>}
+            {todo && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {todo}</p>}
             {ready && target && (
               <p className="rounded-button bg-sunk px-3 py-2 text-caption">
-                광고 관리자에 <span className="font-semibold">{targetLine(target)} · 검색어 {kept.length}개</span>로 넣을게요.
+                광고 관리자에는 <span className="font-semibold">{targetLine(target)}</span>{euro(targetLine(target))} 넣고, 검색어 {kept.length}개는 ② 문구에 써요.
               </p>
             )}
             <PrimaryButton onClick={confirm} disabled={!ready}>이 손님들로 할게요</PrimaryButton>
           </div>
         </>
       )}
+      {segments.length > 0 && <CopySummary product={product} research={r} selected={selected} target={target} kept={kept} />}
       <SourceLine research={r} />
     </div>
   );
@@ -388,8 +471,9 @@ const MANUAL_GENDERS: { id: "all" | "female" | "male"; label: string }[] = [
 ];
 
 /** 네이버 자료가 없을 때: 다른 말로 다시 찾거나, 사장님이 직접 정하고 넘어간다 (막다른 길을 만들지 않는다). */
-function NoData({ notice, product, keywords = [], dispatch }: {
+function NoData({ notice, product, keywords = [], dispatch, suggestions = [], onTry }: {
   notice: string; product: string; keywords?: string[]; dispatch: (ev: FlowEvent) => void;
+  suggestions?: string[]; onTry?: (word: string) => void;
 }) {
   const [manual, setManual] = useState(false);
   const [age, setAge] = useState("30");
@@ -397,9 +481,26 @@ function NoData({ notice, product, keywords = [], dispatch }: {
 
   return (
     <div className="flex flex-col gap-4">
-      <Coach>{notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.</Coach>
+      {/* 말풍선(뭉치)은 화면 첫 말에만: 여기는 참고 상자 (꾸미기안 .say 한 번) */}
+      <p role="status" className="rounded-soft border-[1.5px] border-info-line bg-info-bg px-3 py-2 text-caption text-info-ink">
+        <span aria-hidden="true" className="font-bold text-info">● </span><span className="sr-only">참고 </span>
+        {notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.
+      </p>
+      {onTry && suggestions.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <span className="text-caption font-semibold text-soft">이 말로 다시 찾아볼까요?</span>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((w) => (
+              <button key={w} type="button" onClick={() => onTry(w)}
+                className="min-h-11 rounded-badge border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                {w}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
       {!manual ? (
-        <button type="button" onClick={() => setManual(true)} className="self-start rounded-button border border-accent bg-paper text-accent-ink px-4 py-2 text-label font-semibold focus-visible:outline-2 focus-visible:outline-accent">
+        <button type="button" onClick={() => setManual(true)} className="min-h-11 self-start rounded-button border border-accent bg-paper text-accent-ink px-4 py-2 text-label font-semibold focus-visible:outline-2 focus-visible:outline-accent">
           직접 정하고 계속할게요
         </button>
       ) : (
@@ -409,7 +510,7 @@ function NoData({ notice, product, keywords = [], dispatch }: {
           <Choice legend="성별" name="manual-gender"
             options={MANUAL_GENDERS} value={gender} onChange={(v) => setGender(v as typeof gender)} />
           {keywords.length === 0 && (
-            <p className="text-caption text-soft">검색어 자료가 없어서 광고 문구에는 '{product}'를 넣을게요.</p>
+            <p className="text-caption text-soft">검색어 자료가 없어서 광고 문구에는 '{product}'{josa(product, "을", "를")} 넣을게요.</p>
           )}
           <PrimaryButton onClick={() => dispatch({ type: "confirmTarget", target: { ...ageGroupToRange(age), gender },
             keywords: keywords.length ? keywords : [product] })}>
@@ -430,7 +531,7 @@ function Choice({ legend, name, options, value, onChange }: {
       <div className="flex flex-wrap gap-2">
         {options.map((o) => (
           <label key={o.id}
-            className={`rounded-badge border px-3 py-1.5 text-label cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-accent bg-accent text-on-accent font-semibold" : "border-line"}`}>
+            className={`inline-flex min-h-11 items-center rounded-badge border px-3 py-1.5 text-label cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-accent bg-accent text-on-accent font-semibold" : "border-line"}`}>
             <input type="radio" name={name} value={o.id} checked={value === o.id} onChange={() => onChange(o.id)} className="sr-only" />
             {o.label}
           </label>
@@ -444,4 +545,42 @@ function Choice({ legend, name, options, value, onChange }: {
 function dayLabel(iso: string): string {
   const [, m, d] = iso.split("-").map(Number);
   return m && d ? `${m}월 ${d}일` : iso;
+}
+
+/** '로/으로': 받침이 있으면(ㄹ 받침 빼고) '으로' */
+function euro(word: string): string {
+  const c = word.charCodeAt(word.length - 1) - 0xac00;
+  if (c < 0 || c > 11171) return "(으)로";
+  const jong = c % 28;
+  return jong === 0 || jong === 8 ? "로" : "으로";
+}
+
+/** [결과 복사]: 찾은 결과를 짧은 글로 (메모·동료에게 보내기용). */
+function CopySummary({ product, research: r, selected, target, kept }: {
+  product: string; research: Research; selected?: Segment; target: Target | null; kept: string[];
+}) {
+  const [done, setDone] = useState<"" | "ok" | "fail">("");
+  const st = r.product_stats;
+  const lines = [
+    `상품: ${product}${r.category ? ` (${r.category.name})` : ""}`,
+    st ? `한 달에 찾는 횟수: ${st.under ? times(st.total_qc, st.under) : `${st.total_qc.toLocaleString()}번`}` : null,
+    st?.trend?.peak_month ? `가장 많이 찾는 달: ${st.trend.peak_month}월` : null,
+    selected ? `고른 손님: ${selected.label}${selected.line ? ` — ${selected.line}` : ""}` : null,
+    target ? `광고 대상: ${targetLine(target)}` : null,
+    kept.length ? `문구에 넣을 검색어: ${kept.join(", ")}` : null,
+    `자료: 네이버 검색광고·데이터랩 (${r.fetched || "오늘"})`,
+  ].filter(Boolean).join("\n");
+  async function copy() {
+    try { await navigator.clipboard.writeText(lines); setDone("ok"); } catch { setDone("fail"); }
+    setTimeout(() => setDone(""), 2000);
+  }
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <button type="button" onClick={() => void copy()}
+        className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        결과 복사
+      </button>
+      {done && <span role="status" className="text-small text-soft">{done === "ok" ? "찾은 결과를 복사했어요." : "복사하지 못했어요."}</span>}
+    </div>
+  );
 }

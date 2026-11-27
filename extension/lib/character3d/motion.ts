@@ -39,9 +39,10 @@ export function travelMs(distance: number, s: Speeds): number {
   return (distance / speed) * 1000;
 }
 
-/** 집: 광고 관리자 화면의 오른쪽 위 끝 (사이드 패널 제목 왼쪽 집과 맞닿은 쪽). 반쯤 화면 밖에서 걸어 나온다. */
-export function home(vp: Viewport, size: number): Point {
-  return { x: vp.width - size * 0.35, y: 16 };
+/** 집 쪽 출입구: 광고 관리자 화면 오른쪽 위 끝 바로 바깥 (사이드 패널 제목 왼쪽 둥지와 맞닿은 쪽).
+ *  패널 둥지에서 걸어 나온 뭉치가 여기서 화면 안으로 걸어 들어오고, 닫으면 여기로 걸어 나가 패널 둥지로 돌아간다. */
+export function home(vp: Viewport): Point {
+  return { x: vp.width, y: 16 };
 }
 
 /** 칸 옆 서는 자리: 오른쪽에 자리가 있으면 오른쪽(왼쪽을 가리킴), 없으면 왼쪽. 손 높이를 칸 가운데에 맞춘다. */
@@ -107,6 +108,10 @@ export function pose(mode: Mode, t: number, point?: { side: Side; angle: number 
 }
 
 /** 말풍선 자리: 뭉치 오른쪽 → 왼쪽 → 아래 → 위 순서로, 가리키는 칸을 덮지 않고 화면 안에 들어오는 첫 자리. */
+const NEAR_WIDTH = 380;   // 가리킨 곳부터 오른쪽으로 비워 둘 너비 (메타 칸 한 줄)
+const NEAR_BELOW = 70;    // 가리킨 곳 아래로 비워 둘 높이 (제목 아래 칸 하나)
+const NEAR_SMALL = 200;   // 이보다 좁은 것(제목·라디오)을 가리킬 때만 아래·오른쪽을 비워 둔다
+
 export function bubbleSpot(at: Point, size: number, bubble: { width: number; height: number }, vp: Viewport, target: Box | null, gap = 4): Point {
   const clampY = (y: number) => Math.min(Math.max(MARGIN, y), vp.height - bubble.height - MARGIN);
   const clampX = (x: number) => Math.min(Math.max(MARGIN, x), vp.width - bubble.width - MARGIN);
@@ -117,8 +122,17 @@ export function bubbleSpot(at: Point, size: number, bubble: { width: number; hei
     { x: clampX(at.x + size / 2 - bubble.width / 2), y: at.y - bubble.height - gap },
   ];
   const fits = (p: Point) => p.x >= MARGIN && p.x + bubble.width <= vp.width - MARGIN && p.y >= MARGIN && p.y + bubble.height <= vp.height - MARGIN;
-  const clear = (p: Point) => !target || p.x >= target.right || p.x + bubble.width <= target.left || p.y >= target.bottom || p.y + bubble.height <= target.top;
-  return candidates.find((p) => fits(p) && clear(p)) ?? candidates.find(fits) ?? { x: clampX(candidates[0]!.x), y: clampY(at.y) };
+  const clearOf = (t: { left: number; top: number; right: number; bottom: number } | null) => (p: Point) =>
+    !t || p.x >= t.right || p.x + bubble.width <= t.left || p.y >= t.bottom || p.y + bubble.height <= t.top;
+  // 가리킨 곳 바로 아래·오른쪽도 비워 둔다: 메타는 제목·라디오 아래·옆에 실제 칸(금액·설명)을 둔다 (2026-11-26 실제 화면에서 덮었음)
+  const small = target && target.right - target.left < NEAR_SMALL;
+  const near = target && (small ? { left: target.left, top: target.top, right: Math.max(target.right, target.left + NEAR_WIDTH), bottom: target.bottom + NEAR_BELOW } : target);
+  const around = target ? [
+    { x: clampX(target.left), y: near!.bottom + gap },
+    { x: clampX(target.left), y: target.top - bubble.height - gap },
+  ] : [];
+  return [...candidates, ...around].find((p) => fits(p) && clearOf(near)(p))
+    ?? candidates.find((p) => fits(p) && clearOf(target)(p)) ?? candidates.find(fits) ?? { x: clampX(candidates[0]!.x), y: clampY(at.y) };
 }
 
 // ── 상하좌우 이동 ──
@@ -170,4 +184,26 @@ export function blendPose(a: Pose, b: Pose, k: number): Pose {
 export function smooth(k: number): number {
   const x = Math.min(Math.max(k, 0), 1);
   return x * x * (3 - 2 * x);
+}
+
+/** 패널 둥지 ↔ 광고 관리자 길: 둥지 입구에서 폴짝 나와 패널 왼쪽 끝(광고 관리자 쪽)으로 걸어 나가고, 들어올 땐 거꾸로.
+ *  단위는 3D 모델 단위 (뭉치 키 약 3). 광고 관리자 쪽 뭉치는 NEST_EXIT_MS 뒤에 나타난다. */
+export const NEST_TRIP = { inZ: 0.2, outZ: 2.6, peak: 1.1, hopMs: 450, walk: 3.4 } as const;
+export const NEST_EXIT_MS = 1900;
+
+export interface TripAt { x: number; y: number; z: number; heading: number; walking: boolean; done: boolean }
+
+/** elapsed(ms) 시점의 위치. exitX = 패널 왼쪽 끝 너머(음수). leaving = 나가는 중, 아니면 들어오는 중 */
+export function nestTrip(elapsed: number, exitX: number, leaving: boolean): TripAt {
+  const { inZ, outZ, peak, hopMs, walk } = NEST_TRIP;
+  const walkMs = (Math.abs(exitX) / walk) * 1000;
+  const hop = (k: number, from: number, to: number) => ({ z: from + (to - from) * k, y: peak * 4 * k * (1 - k) });
+  if (leaving) {
+    if (elapsed < hopMs) return { x: 0, ...hop(elapsed / hopMs, inZ, outZ), heading: 0, walking: true, done: false };
+    const k = Math.min(1, (elapsed - hopMs) / walkMs);
+    return { x: exitX * k, y: 0, z: outZ, heading: headingYaw(-1, 0), walking: k < 1, done: k >= 1 };
+  }
+  if (elapsed < walkMs) return { x: exitX * (1 - elapsed / walkMs), y: 0, z: outZ, heading: headingYaw(1, 0), walking: true, done: false };
+  const k = Math.min(1, (elapsed - walkMs) / hopMs);
+  return { x: 0, ...hop(k, outZ, inZ), heading: k < 1 ? Math.PI : 0, walking: k < 1, done: k >= 1 };
 }

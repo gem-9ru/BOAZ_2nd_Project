@@ -6,7 +6,7 @@
 """
 import logging
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
@@ -69,6 +69,9 @@ def _frame(data: dict) -> pd.DataFrame:
         "comp": df["compIdx"],
     })
     out["total_qc"] = out["pc_qc"] + out["mobile_qc"]
+    # 네이버는 10 미만을 "< 10" 글자로 준다 (데이터_수집_전처리_가이드.md 응답 필드 표). 그 칸 수 0·1·2 → 화면이 '20번 미만'·'약 N번'으로
+    is_few = lambda v: str(v).strip().startswith("<")   # noqa: E731
+    out["under"] = df["monthlyPcQcCnt"].map(is_few).astype(int) + df["monthlyMobileQcCnt"].map(is_few).astype(int)
     out["tier"] = out["total_qc"].map(tier_of)
     return out
 
@@ -88,7 +91,7 @@ def keyword_table(seeds: List[str], online: bool = True) -> Optional[pd.DataFram
         return None
     df = pd.concat(frames, ignore_index=True).drop_duplicates("keyword")
     df = df.sort_values("total_qc", ascending=False).reset_index(drop=True)
-    return df[["keyword", "total_qc", "mobile_qc", "pc_qc", "mobile_clicks", "mobile_ctr", "comp", "tier"]]
+    return df[["keyword", "total_qc", "mobile_qc", "pc_qc", "mobile_clicks", "mobile_ctr", "comp", "tier", "under"]]
 
 
 def intent_of(keyword: str, seeds: List[str]) -> str:
@@ -243,6 +246,16 @@ def modifiers(kw: pd.DataFrame, seeds: List[str], limit: int = 15, strip: Option
         item["total_qc"] += int(row.total_qc)
         if len(item["examples"]) < 3:
             item["examples"].append(row.keyword)
+    # 오타·다른 표기(앤드그레인 ← 엔드그레인, 소세지 ← 소시지)는 많이 찾는 쪽 하나로 합친다 (3글자 이상만: 짧은 말은 엉뚱하게 붙음)
+    merged: Dict[str, dict] = {}
+    for item in sorted(found.values(), key=lambda m: m["total_qc"], reverse=True):
+        host = next((m for w, m in merged.items() if is_variant(item["word"], [w])), None)
+        if host:
+            host["total_qc"] += item["total_qc"]
+            host["examples"] = (host["examples"] + item["examples"])[:3]
+        else:
+            merged[item["word"]] = item
+    found = merged
     for item in found.values():
         item["group"] = next((g for g, ws in MODIFIER_GROUPS.items() if any(w in item["word"] for w in ws)), "그 밖")
     ranked = sorted(found.values(), key=lambda m: m["total_qc"], reverse=True)[:max(limit, 0)]
@@ -383,7 +396,7 @@ def lead_audience(auds: Dict[str, dict]) -> Optional[str]:
 
 
 def headline(keyword: str, aud: Optional[dict], fallback_qc: Optional[float] = None) -> str:
-    """한 줄 요약. 예: "답례품쿠키를 찾는 사람은 30대 여성이 분야 평균의 2.8배, 11월에 가장 많이 찾아요"."""
+    """한 줄 요약. 예: "답례품쿠키를 찾는 사람은 30대 여성이 가장 많아요. 30대는 … 2.8배예요 (…). 11월에 가장 많이 찾아요."."""
     if not aud:
         if fallback_qc:
             return f"'{keyword}'은(는) 한 달에 약 {int(fallback_qc):,}번 검색돼요"
@@ -397,7 +410,8 @@ def _seasonal(monthly: Dict[str, float]) -> bool:
 
 
 def segment_line(aud: Optional[dict]) -> str:
-    """손님 무리 한 줄. 예: "30대 여성이 분야 평균의 2.8배, 12월에 가장 많이 찾아요"."""
+    """손님 무리 한 줄. 예: "30대 여성이 가장 많아요. 30대는 네이버 쇼핑 클릭이 같은 분야 평균의 2.8배예요 (…). 12월에 가장 많이 찾아요."
+    배수는 나이대 하나의 값이라 성별과 붙여 말하지 않는다."""
     if not aud:
         return "누가 찾는지 자료가 아직 없어요"
     idx = aud.get("index", {})
@@ -409,7 +423,8 @@ def segment_line(aud: Optional[dict]) -> str:
     seasonal = bool(aud.get("peak_month") and _seasonal(aud.get("monthly") or {}))
     when = f", {aud['peak_month']}월에 가장 많이 찾아요" if seasonal else ""
     if strong:
-        return f"{who} 분야 평균의 {mult:g}배" + (when or "예요")
+        line = f"{who} 가장 많아요. {best}대는 네이버 쇼핑 클릭이 같은 분야 평균의 {mult:g}배예요 ({HIGH_INDEX:g}배 이상만 · 이 도구 기준)."
+        return line + (f" {aud['peak_month']}월에 가장 많이 찾아요." if seasonal else "")
     return f"{who} 가장 많고{when}" if seasonal else f"{who} 가장 많아요"
 
 
@@ -436,9 +451,17 @@ def trend_by_group(groups: Dict[str, List[str]], online: bool = True) -> Dict[st
     return out
 
 
+def lead_of(kws: List[str], name: str = "") -> str:
+    """무리의 대표 검색어: 상품 이름 전체(띄어쓰기 없앰)가 든 말 중 검색이 가장 많은 것, 없으면 그냥 가장 많은 것.
+    ('캠핑 의자'에서 '낚시의자'처럼 끝 낱말만 같은 다른 상품이 대표가 되어 손님 나이·성별이 엉뚱해지는 것을 막는다.)
+    kws는 검색이 많은 순."""
+    me = name.replace(" ", "")
+    return next((k for k in kws if me and me in k.replace(" ", "")), kws[0])
+
+
 def segments(kw: pd.DataFrame, rec: List[str], category: Optional[str], online: bool = True,
-             keep: Optional[List[str]] = None) -> List[dict]:
-    """추천 검색어를 뜻(선물·답례/시즌/상품)으로 묶은 손님 무리 최대 3개 (검색수 합이 큰 순)."""
+             keep: Optional[List[str]] = None, name: str = "") -> List[dict]:
+    """추천 검색어를 뜻(선물·답례/시즌/상품)으로 묶은 손님 무리 최대 3개 (검색수 합이 큰 순). 대표 검색어는 lead_of."""
     chosen = [k for k in rec if keep is None or k in keep]
     sub = kw[kw["keyword"].isin(chosen)].sort_values("total_qc", ascending=False)
     groups = []
@@ -450,7 +473,7 @@ def segments(kw: pd.DataFrame, rec: List[str], category: Optional[str], online: 
     trends = trend_by_group({i: kws[:5] for i, kws, _ in groups}, online)
     out = []
     for intent, kws, total in groups:
-        lead = kws[0]
+        lead = lead_of(kws, name)
         aud = audience(lead, category, online) if category else None
         trend, source = trends.get(intent), "search" if intent in trends else None
         if trend is None and aud and aud.get("monthly"):
@@ -474,6 +497,17 @@ def _obj(word: str) -> str:
     return "을(를)"
 
 
+def _product_trend(word: str, aud: Optional[dict], online: bool) -> dict:
+    """몇 월에 많이 찾나: 손님 무리 카드와 같은 기준(검색어 트렌드)을 먼저 쓰고, 못 받으면 쇼핑인사이트 클릭.
+    (같은 화면에서 상품 카드는 1월·무리 카드는 4월처럼 기준이 달라 서로 다른 달이 나오던 문제)"""
+    t = trend_by_group({"상품": [word]}, online).get("상품")
+    if t:
+        return {"trend": t, "trend_source": "search"}
+    if aud and aud.get("monthly"):
+        return {"trend": _trend_of(aud["monthly"]), "trend_source": "shopping"}
+    return {"trend": None, "trend_source": None}
+
+
 def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: bool = True) -> Optional[dict]:
     """상품 이름 그대로(띄어쓰기 없앰)의 월 검색 수와, 분야가 있으면 그 말을 찾는 사람의 성별·연령.
     키워드 표에 그 말이 없으면 None. 연령·성별을 못 받으면 audience만 None."""
@@ -484,10 +518,11 @@ def product_stats(kw: pd.DataFrame, name: str, category: Optional[str], online: 
     r = row.iloc[0]
     total = int(r["total_qc"])
     aud = audience(word, category, online) if category else None
-    out = {"keyword": word, "total_qc": total,
+    under = int(r["under"]) if "under" in row else 0
+    out = {"keyword": word, "total_qc": total, **({"under": under} if under else {}),
            "mobile": round(float(r["mobile_qc"]) / total, 3) if total > 0 and "mobile_qc" in row else None,
            "audience": {k: aud[k] for k in ("female", "ages", "index")} | {"top_age": top_age(aud)} if aud else None,
-           "trend": _trend_of(aud["monthly"]) if aud and aud.get("monthly") else None}   # 몇 월에 많이 찾나 (쇼핑인사이트 클릭)
+           **_product_trend(word, aud, online)}
     log.info("product stats keyword=%s qc=%d audience=%s", word, total, "yes" if aud else "no")
     return out
 
@@ -510,7 +545,8 @@ class MarketReport:
 
 
 def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
-          keep: Optional[List[str]] = None, *, product: Optional[str] = None) -> Optional[MarketReport]:
+          keep: Optional[List[str]] = None, *, product: Optional[str] = None,
+          drop_words: Optional[Callable[[List[str]], Set[str]]] = None) -> Optional[MarketReport]:
     """한 번에: 키워드 표 → 분류 → 추천·제외·꾸밈말 → (분야가 있으면) 손님 무리 → 한 줄 요약. 키워드를 못 받으면 None.
     분야가 없거나 손님 무리가 비면 손님(쇼핑 인사이트) 조회 없이 첫 추천 검색어의 검색수 한 줄.
     product가 있으면 그 이름으로 사장님 낱말을 만들고, 없으면 첫 seed를 상품 이름으로 본다."""
@@ -522,8 +558,12 @@ def build(seeds: List[str], online: bool = True, category: Optional[str] = None,
     words = product_words(name, seeds)
     kw = classify(table, words)
     rec = recommend(kw, seeds=words)
-    segs = segments(kw, rec, category, online, keep) if category else []
     mods = modifiers(kw, words, limit=MODIFIER_POOL, strip=strip_words(name, seeds))   # 넉넉히: 브랜드를 거른 뒤 화면에 15개
+    if drop_words:   # 다른 가게·브랜드 이름이 든 검색어(아트릭스핸드크림·스탠리텀블러)는 추천·손님 무리에서 뺀다
+        bad = drop_words([m["word"] for m in mods])
+        if bad:
+            rec = [k for k in rec if not any(b in k.replace(" ", "") for b in bad)]
+    segs = segments(kw, rec, category, online, keep, name) if category else []
     stats = product_stats(kw, name, category, online)
     common = dict(seeds=list(seeds), groups=group_summary(kw), keywords=kw, recommended=rec,
                   negatives=negative_list(kw), category=category, segments=segs, modifiers=mods, product_stats=stats)

@@ -7,12 +7,12 @@ import datetime
 import json
 import logging
 import os
-import threading
 import time
-from typing import List, Optional
+from typing import Annotated, Dict, List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
@@ -41,9 +41,43 @@ log = logging.getLogger("coach.api")
 
 MAX_KEYWORDS = 10
 MAX_MODIFIERS = 15   # 좋은 점 칩 (브랜드·가게 이름을 거른 뒤)
-_NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
+app = FastAPI(title="광고 코치 v3", docs_url=None, redoc_url=None, openapi_url=None)   # 공개 주소라 경로 지도는 내보내지 않음
 
-app = FastAPI(title="광고 코치 v3")
+# ── 공개 주소 보호 (감사 3·4, 2026-11-26): 터널로 온 요청은 주소마다 분당 횟수 제한, 본문 크기는 누구든 제한 ──
+RATE_PER_MIN = 30          # Claude·네이버를 부르는 경로, 공개 주소 하나당 1분에
+RATE_PATHS = {"/research", "/copies", "/assistant", "/audience/split", "/simulate", "/simulate/grid", "/analysis", "/settings"}
+COUNTED_GETS = ("/plan/", "/analysis/example", "/analysis/result/")   # 코드 맞히기, 세팅값을 넣은 예시(부를 때마다 분석을 새로 함)
+MAX_BODY = 64 * 1024       # 파일 올리기 말고는 작은 JSON뿐
+_HITS: Dict[str, List[float]] = {}   # shortcut: 서버 하나 메모리에만 센다, 서버를 여러 대 띄우면 공유 저장소로
+
+
+@app.middleware("http")
+async def _guard(request, call_next):
+    if request.method == "POST" and "content-length" not in request.headers:   # 길이를 안 밝힌(chunked) 본문은 크기를 못 막는다
+        return JSONResponse(status_code=411, content={"error": "보낸 내용의 길이를 알 수 없어요."})
+    size = int(request.headers.get("content-length") or 0)
+    limit = MAX_UPLOAD_BYTES + 64 * 1024 if request.url.path == "/analysis" else MAX_BODY
+    if request.method == "POST" and size > limit:
+        return JSONResponse(status_code=413, content={"error": "보낸 내용이 너무 커요."})
+    ip = request.headers.get("cf-connecting-ip")   # Cloudflare 터널로 온 요청만 (내 컴퓨터에서 바로 부르면 없음)
+    counted = (request.method == "POST" and request.url.path in RATE_PATHS) or request.url.path.startswith(COUNTED_GETS)
+    if ip and counted:
+        now = time.time()
+        hits = [t for t in _HITS.get(ip, []) if now - t < 60]
+        if len(hits) >= RATE_PER_MIN:
+            return JSONResponse(status_code=429, content={"error": "요청이 너무 많아요. 1분 뒤에 다시 해 주세요."})
+        _HITS[ip] = hits + [now]
+        if len(_HITS) > 10_000:
+            _HITS.clear()   # 주소가 너무 많이 쌓이면 비운다 (메모리 상한)
+    return await call_next(request)
+
+
+@app.exception_handler(RequestValidationError)
+async def _bad_input(request, exc):
+    # 기본 422는 받은 값을 그대로 돌려주다 Infinity·NaN을 JSON으로 못 바꿔 500이 났다 → 받은 값은 돌려주지 않는다
+    return JSONResponse(status_code=422, content={"error": "보낸 값이 올바르지 않아요.", "fields": [".".join(map(str, e["loc"])) for e in exc.errors()]})
+
+
 app.add_middleware(CORSMiddleware, allow_origin_regex=r"chrome-extension://.*",
                    allow_methods=["*"], allow_headers=["*"])
 
@@ -57,11 +91,14 @@ def health() -> dict:
     return {"ok": True}
 
 
+Word = Annotated[str, Field(max_length=40)]   # 낱말 하나 (검색어·좋은 점)
+
+
 class ResearchIn(BaseModel):
-    product: str
-    seeds: Optional[List[str]] = None   # 비우면 상품 이름 하나로 찾음
-    category: Optional[str] = None      # 쇼핑인사이트 분야 code. 비우면 서버가 추정
-    keywords: Optional[List[str]] = None   # 사장님이 고른 검색어 (손님 무리를 이 안에서만 묶음)
+    product: str = Field(max_length=60)
+    seeds: Optional[List[Word]] = Field(None, max_length=10)   # 비우면 상품 이름 하나로 찾음
+    category: Optional[str] = Field(None, max_length=20)      # 쇼핑인사이트 분야 code. 비우면 서버가 추정
+    keywords: Optional[List[Word]] = Field(None, max_length=30)   # 사장님이 고른 검색어 (손님 무리를 이 안에서만 묶음)
 
 
 def _category_out(code: Optional[str], guessed: bool) -> Optional[dict]:
@@ -93,28 +130,51 @@ def _good_points(product: str, mods: List[dict]) -> List[dict]:
     return [{**m, "group": groups.get(m["word"], m["group"])} for m in kept]
 
 
+def _shorter_names(product: str) -> List[str]:
+    """자료가 없을 때 더 짧게 찾아볼 말: 뒤쪽 조각부터 ('수제 버터 쿠키' → '버터 쿠키', '쿠키'). 최대 3개."""
+    pieces = product.split()
+    return [" ".join(pieces[i:]) for i in range(1, len(pieces)) if len(" ".join(pieces[i:])) >= 2][:3]
+
+
+def _similar_words(product: str, kw) -> List[str]:
+    """추천할 말이 없을 때 대신 찾아볼 말: 네이버 연관 검색어 중 검색이 많은 것 3개 (상품 이름 그대로·만들기·매장 말 제외)."""
+    me = product.replace(" ", "")
+    try:
+        rows = kw[~kw["intent"].astype(str).str.startswith("제외")].sort_values("total_qc", ascending=False)
+        words = [k for k in rows["keyword"] if k.replace(" ", "") != me]
+    except (KeyError, AttributeError):
+        words = []
+    return (words or _shorter_names(product))[:3]
+
+
 def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
-    with _NAVER_LOCK:
-        given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
-        code, cands = (given, []) if given else market.category_guess(body.product, _online())
-        if code:
-            cands = []
-        report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product)
-        why = naver_api.last_error()
+    given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
+    code, cands = (given, []) if given else market.category_guess(body.product, _online())
+    if code:   # 정해진 분야는 빼고, 남은 가까운 후보는 [바꾸기]에서 먼저 보여 준다
+        cands = [c for c in cands if c != code]
+    off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
+    brand_check = lambda words: brands.classify(body.product, words, client=False if off else None)[0]   # noqa: E731
+    report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product,
+                          drop_words=brand_check)
+    why = naver_api.last_error()
     mods = _good_points(body.product, report.modifiers if report else [])
     wide = {"category": _category_out(code, not given), "categories": [dict(c) for c in market.CATEGORIES],
             "category_candidates": [{"code": c, "name": _category_out(c, True)["name"]} for c in cands]}
     if report is None:   # 키 없음·429·네트워크 → 그 이유를 그대로 (키 값은 담기지 않음)
         notice = f"{why} 잠시 뒤 다시 시도해 주세요." if why else "네이버에서 이 상품 검색 자료를 찾지 못했어요. 상품을 다른 말로 적어 보세요."
         return {"headline": "", "keywords": [], "audience": None, "fetched": "", "source": "cache", "notice": notice,
-                **wide, "segments": [], "modifiers": [], "product_stats": None}
+                **wide, "segments": [], "modifiers": [], "product_stats": None,
+                "suggestions": [] if why else _shorter_names(body.product)}
     if not report.recommended:
         return {"headline": report.headline, "keywords": [], "audience": None, "fetched": report.fetched,
                 "source": "cache", "notice": "추천할 만한 검색어를 찾지 못했어요. 상품을 더 흔한 말로 적어 보세요.",
-                **wide, "segments": [], "modifiers": mods, "product_stats": report.product_stats}
+                **wide, "segments": [], "modifiers": mods, "product_stats": report.product_stats,
+                "suggestions": _similar_words(body.product, report.keywords)}
     kw = report.keywords.set_index("keyword")["total_qc"]
-    keywords = [{"keyword": k, "total_qc": int(kw[k])} for k in report.recommended[:MAX_KEYWORDS] if k in kw]
+    under = report.keywords.set_index("keyword")["under"] if "under" in report.keywords else None
+    keywords = [{"keyword": k, "total_qc": int(kw[k]), **({"under": int(under[k])} if under is not None and under[k] else {})}
+                for k in report.recommended[:MAX_KEYWORDS] if k in kw]   # under: "< 10"이던 칸 수 (화면이 미만·약으로)
     audience = None
     if report.audiences:
         name, aud = next(iter(report.audiences.items()))
@@ -124,14 +184,14 @@ def _research(body: ResearchIn) -> dict:
                for part, label in (("product", "검색어·연령"), ("baseline", "분야 평균")) if part in report.fetched_parts]
     live = report.fetched_parts.get("product", report.fetched) == today   # 이 상품 자료가 오늘 받은 것이면 실시간
     return {"headline": report.headline, "keywords": keywords, "audience": audience, "fetched": report.fetched,
-            "source": "live" if live else "cache", "sources": sources, "negatives": report.negatives[:20], "notice": None,
+            "source": "live" if live else "cache", "sources": sources, "negatives": [n for n in report.negatives if n not in {m["word"] for m in mods}][:20], "notice": None,
             **wide, "segments": report.segments, "modifiers": mods, "product_stats": report.product_stats}
 
 
 class SplitIn(BaseModel):
-    keyword: str
-    category: str
-    ages: dict = {}   # 나이대 → 비중 (/research가 준 audience.ages). 적게 찾는 나이대는 묻지 않음
+    keyword: str = Field(max_length=40)
+    category: str = Field(max_length=20)
+    ages: Dict[str, float] = Field(default_factory=dict, max_length=6)   # 나이대 → 비중 (/research가 준 audience.ages). 적게 찾는 나이대는 묻지 않음
 
 
 @app.post("/audience/split")
@@ -140,8 +200,7 @@ def audience_split(body: SplitIn) -> dict:
     if body.category not in {c["code"] for c in market.CATEGORIES}:
         return {"female_by_age": {}}
     ages = {str(k): float(v) for k, v in body.ages.items() if str(k) in market.AGE_GROUPS}
-    with _NAVER_LOCK:
-        out = market.female_by_age(body.keyword.replace(" ", ""), body.category, ages, _online())
+    out = market.female_by_age(body.keyword.replace(" ", ""), body.category, ages, _online())
     log.info("audience split keyword=%s ages=%d", body.keyword, len(out))
     return {"female_by_age": out}
 
@@ -151,17 +210,18 @@ SET_KINDS = ("default", "auto", "next_cycle")
 
 
 class SegmentIn(BaseModel):
-    intent: str
-    label: str
+    intent: str = Field(max_length=20)
+    label: str = Field(max_length=40)
     peak_month: Optional[int] = Field(None, ge=1, le=12)   # 시즌일 때만 옴 (1~12월)
 
 
 class CopiesIn(BaseModel):
-    product: str
-    strengths: List[str] = []
-    keywords: List[str] = []
-    avoid: List[str] = []      # ① 찾기의 뺄 말: 문구에 넣지 않는다
+    product: str = Field(max_length=60)
+    strengths: List[Word] = Field(default_factory=list, max_length=10)
+    keywords: List[Word] = Field(default_factory=list, max_length=30)
+    avoid: List[Word] = Field(default_factory=list, max_length=50)      # ① 찾기의 뺄 말: 문구에 넣지 않는다
     segment: Optional[SegmentIn] = None   # ① 찾기에서 고른 손님 무리
+    tone: Optional[str] = Field(None, max_length=20)            # 문구 말투: 친근하게 | 깔끔하게 | 감성적으로 (모르는 값은 무시)
 
 
 @app.post("/copies")
@@ -177,11 +237,14 @@ def _copies(body: CopiesIn) -> dict:
     client = copywriter.make_client()
     # 상품 이름에 들어 있는 말은 빼지 않는다 (예: '쿠키만들기 키트'를 파는데 '쿠키만들기'를 빼면 문구가 남지 않음)
     product = body.product.replace(" ", "")
-    avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product]
+    # 사장님이 고른 좋은 점도 빼지 않는다 (향초의 '캔들'처럼 뺄 말 목록에도 있는 낱말을 고르면 Claude 문구가 다 버려졌음)
+    picked = [s.replace(" ", "") for s in body.strengths if s.strip()]
+    avoid = [w for w in body.avoid if w.strip() and w.replace(" ", "") not in product and w.replace(" ", "") not in picked]
     clean = lambda cs: [c for c in cs if not any(w in c["text"] + c["headline"] for w in avoid)]
     words = list(body.strengths) + list(body.keywords)
     seg = body.segment.model_dump() if body.segment else None
     made, used_claude = copywriter.meta_copies_with_source(body.product, list(body.strengths), n=3, client=client or False,
+                                                           tone=body.tone,
                                                            segment=seg, keywords=list(body.keywords))
     made = clean(made)
     if len(made) < 3:   # 뺄 말이 들어간 문구를 버렸으면 문장 틀로 채운다
@@ -192,7 +255,7 @@ def _copies(body: CopiesIn) -> dict:
                 made.append(c)
     return {"copies": [{"primary_text": c["text"], "headline": c["headline"],
                         "basis": copywriter.basis(c, words, seg)} for c in made],
-            "source": "claude" if used_claude else "template"}
+            "source": "claude" if any(c.get("by") == "claude" for c in made) else "template"}   # 뺄 말로 버린 뒤 남은 것 기준
 
 
 @app.get("/fields")
@@ -202,7 +265,8 @@ def fields() -> dict:
     asked = [{"id": f["id"], "kind": f["kind"], "label": f["label"], "ask": f["ask"],
               "options": f.get("options"), "default": f.get("default"), "why": f.get("why", ""), "help": f.get("help"),
               "then_ask": f.get("then_ask"), "default_if": f.get("default_if"), "note_if": f.get("note_if"),
-              "custom": f.get("custom"), "custom_for": f.get("custom_for"), "answer_as": f.get("answer_as")}
+              "custom": f.get("custom"), "custom_for": f.get("custom_for"), "answer_as": f.get("answer_as"),
+              "stage": f.get("stage", ""), "required": bool(f.get("required"))}
              for f in all_meta if f.get("kind") in ASKED_KINDS]
     preset = [{"id": f["id"], "label": f["label"], "default": str(f["default"]), "why": f["why"]}
               for f in all_meta if f.get("kind") in SET_KINDS and f.get("default") is not None and f.get("why")]
@@ -215,6 +279,9 @@ import secrets  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 
 DEMO_CSV = os.path.join(os.path.dirname(__file__), "data", "demo", "오븐로그_메타AB_20261117-20261120.csv")
+# 예시 2: 카페 모닝빈 (희수 실측, scripts/heesu_example.py 가 정리 엑셀에서 만든 파일 · 타깃과 노출 위치를 함께 바꾼 묶음 비교)
+EXAMPLES = {"ovenlog": DEMO_CSV,
+            "heesu": os.path.join(os.path.dirname(__file__), "data", "demo", "모닝빈_메타AB_20261117-20261120.csv")}
 from collections import OrderedDict  # noqa: E402
 
 MAX_PLANS = 200          # 서버 메모리에 남기는 분석 결과 수 (넘으면 가장 오래된 것부터 지움)
@@ -231,6 +298,15 @@ def _store(result: dict) -> dict:
     while len(_PLANS) > MAX_PLANS:
         _PLANS.popitem(last=False)
     return {**result, "code": code}
+
+
+# 예시의 내 광고 설정: 베이커리 실험 2(오븐로그)는 실제로 정사각 1장 + AI 이미지 2장을 썼다 (최종안(1) 화면이 이 설정을 받은 상태)
+EXAMPLE_SETTINGS: Dict[str, Dict[str, str]] = {"ovenlog": {"meta.ad.media": "정사각 1장 + AI 이미지 2장"}}
+_EXAMPLE_PLANS: Dict[str, dict] = {}   # 예시 결과: 정해진 코드로 따로 둔다 (예시를 여러 번 눌러도 사장님 결과가 밀려 지워지지 않게, 감사 10)
+
+
+def _plan(code: str) -> Optional[dict]:
+    return _PLANS.get(code.upper()) or _EXAMPLE_PLANS.get(code.upper())
 
 
 def _loop(bundle, settings=None):
@@ -252,9 +328,10 @@ def _settings(raw: Optional[str]) -> Optional[dict]:
 
 
 @app.post("/analysis")
-async def analysis_upload(file: UploadFile = File(...), settings: Optional[str] = Form(None),
-                          settings_key: Optional[str] = Form(None)):
-    data = await file.read(MAX_UPLOAD_BYTES + 1)
+def analysis_upload(file: UploadFile = File(...), settings: Optional[str] = Form(None),
+                    settings_key: Optional[str] = Form(None)):
+    # async가 아닌 def: 분석(pandas·20만 번 뽑기)이 도는 동안 다른 요청이 멈추지 않게 FastAPI가 따로 돌린다
+    data = file.file.read(MAX_UPLOAD_BYTES + 1)
     if len(data) > MAX_UPLOAD_BYTES:
         return JSONResponse(status_code=400, content={"error": f"파일이 {MAX_UPLOAD_BYTES // 1024 // 1024}MB보다 커요. 광고 관리자에서 비교할 광고 세트만 골라 다시 내보내 주세요."})
     given = _settings(settings) or _SETTINGS.get(settings_key or "")   # 직접 넣은 5문항이 우선, 없으면 확장이 넘긴 세팅값
@@ -262,8 +339,16 @@ async def analysis_upload(file: UploadFile = File(...), settings: Optional[str] 
 
 
 @app.get("/analysis/example")
-def analysis_example(settings_key: Optional[str] = None):
-    return _loop(read_export(DEMO_CSV), _SETTINGS.get(settings_key or ""))
+def analysis_example(settings_key: Optional[str] = None, name: str = "ovenlog"):
+    if name not in EXAMPLES:
+        return JSONResponse(status_code=404, content={"error": "그런 예시는 없어요."})
+    given = _SETTINGS.get(settings_key or "")
+    if given:   # 사장님 세팅값을 넣은 예시는 결과가 사람마다 달라 따로 보관
+        return _loop(read_export(EXAMPLES[name]), given)
+    code = "EX" + str(sorted(EXAMPLES).index(name) + 1).zfill(2)   # EX01, EX02 (보통 코드에 없는 모양: 숫자 0·1은 안 씀)
+    if code not in _EXAMPLE_PLANS:
+        _EXAMPLE_PLANS[code] = loop_run.run(read_export(EXAMPLES[name]), settings=EXAMPLE_SETTINGS.get(name))
+    return {**_EXAMPLE_PLANS[code], "code": code}
 
 
 # ── 세팅값 넘기기 (v4 8장): 확장 프로그램 → 분석 페이지. 값은 URL에 넣지 않고, 서버가 보관하고 키만 넘긴다 ──
@@ -276,6 +361,8 @@ class SettingsIn(BaseModel):
 
 @app.post("/settings")
 def keep_settings(body: SettingsIn):
+    if len(body.settings) > 60 or any(len(str(k)) > 80 or len(str(v)) > 300 for k, v in body.settings.items()):
+        return JSONResponse(status_code=400, content={"error": "세팅값이 너무 많거나 길어요."})
     key = secrets.token_urlsafe(12)
     _SETTINGS[key] = {str(k): str(v) for k, v in body.settings.items() if v not in (None, "")}
     while len(_SETTINGS) > MAX_PLANS:
@@ -292,16 +379,16 @@ def read_settings(key: str):
 
 
 class SimulateIn(BaseModel):
-    code: str
-    arm: str
-    budget: float
-    total: float = 100_000   # Test & Roll용 전체 광고 예산
-    days: Optional[int] = None   # AN-05 기간 토글 (4일/7일): 하루 금액이 써 본 적 있는지
+    code: str = Field(max_length=8)
+    arm: str = Field(max_length=120)
+    budget: float = Field(ge=0, le=1e9, allow_inf_nan=False)
+    total: float = Field(100_000, ge=0, le=1e10, allow_inf_nan=False)   # Test & Roll용 전체 광고 예산
+    days: Optional[int] = Field(None, ge=1, le=365)   # AN-05 기간 토글 (4일/7일): 하루 금액이 써 본 적 있는지
 
 
 @app.post("/simulate")
 def simulate(body: SimulateIn):
-    plan = _PLANS.get(body.code.upper())
+    plan = _plan(body.code)
     arm = next((a for a in (plan or {}).get("summary", {}).get("arms", []) if a["name"] == body.arm), None)
     if arm is None:
         raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
@@ -309,12 +396,38 @@ def simulate(body: SimulateIn):
     out = loop_simulate.run(arm, budget)
     # 써 본 적 없는 금액은 '가설' (화면에서 점선). Test & Roll은 따로 받은 전체 예산 기준.
     return {**out, **loop_simulate.tried(arm, budget, body.days if body.days and body.days > 0 else None),
-            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0))}
+            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0), body.days or 4),
+            "judge": loop_simulate.judge_chance(arm, budget)}   # 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩)
+
+
+class GridIn(BaseModel):
+    code: str = Field(max_length=8)
+    arm: str = Field(max_length=120)
+    days: int = Field(4, ge=1, le=365)
+
+
+@app.post("/simulate/grid")
+def simulate_grid(body: GridIn):
+    """③ 예산 슬라이더: 1,000원 단위 결과표를 한 번에 (움직일 때마다 서버에 묻지 않게)."""
+    plan = _plan(body.code)
+    arm = next((a for a in (plan or {}).get("summary", {}).get("arms", []) if a["name"] == body.arm), None)
+    if arm is None:
+        raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
+    return loop_simulate.grid(arm, body.days)
+
+
+@app.get("/analysis/result/{code}")
+def analysis_result(code: str):
+    """분석 페이지를 새로고침해도 같은 결과·단계로: 주소 #의 코드로 서버에 남은 결과를 다시 받는다 (QA N-06)."""
+    p = _plan(code)
+    if p is None:
+        raise HTTPException(status_code=404, detail="이 결과는 서버에서 지워졌어요. 파일을 다시 올려 주세요.")
+    return {**p, "code": code.upper()}
 
 
 @app.get("/plan/{code}")
 def plan(code: str):
-    p = _PLANS.get(code.upper())
+    p = _plan(code)
     if p is None:
         raise HTTPException(status_code=404, detail="코드를 찾지 못했어요. 분석 페이지의 코드를 다시 확인해 주세요.")
     m = p.get("matrix") or {}
@@ -323,16 +436,16 @@ def plan(code: str):
 
 
 class AssistantIn(BaseModel):
-    code: str
-    step: str
-    question: Optional[str] = None
+    code: str = Field(max_length=8)
+    step: str = Field(max_length=20)
+    question: Optional[str] = Field(None, max_length=300)
 
 
 @app.post("/assistant")
 def assistant_reply(body: AssistantIn):
     """분석 페이지 오른쪽 어시스턴트: 질문이 없으면 그 단계 첫 말풍선, 있으면 그 단계 결과 JSON으로 설명."""
     from server.engine.loop import assistant
-    p = _PLANS.get(body.code.upper())
+    p = _plan(body.code)
     if p is None:
         raise HTTPException(status_code=404, detail="분석 결과를 찾지 못했어요. 파일을 다시 올려 주세요.")
     if not body.question:
@@ -352,6 +465,12 @@ def root():
     """주소만 열면(ad-assistant.gem-9ru.com) 분석 페이지로."""
     from fastapi.responses import RedirectResponse
     return RedirectResponse("/analysis")
+
+
+@app.get("/privacy", include_in_schema=False)
+def privacy():
+    """크롬 웹 스토어 등록용 개인정보 처리방침 (ad-assistant.gem-9ru.com/privacy)."""
+    return FileResponse(os.path.join(os.path.dirname(os.path.abspath(__file__)), "privacy.html"), media_type="text/html")
 
 
 @app.get("/analysis")

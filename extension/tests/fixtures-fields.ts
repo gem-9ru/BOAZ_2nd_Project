@@ -28,7 +28,7 @@ export const FIELDS: Field[] = [
     default_if: { "meta.pre.store_product": { 아직이에요: "인스타그램 프로필" } },
     note_if: { "meta.pre.store_product": { 아직이에요: "스토어가 준비되면 바꿀 수 있어요." } } },
   { ...f("meta.adset.end_date", "종료 날짜", ["7일", "14일", "30일"], "14일"), custom: "dates" as const },
-  { ...f("meta.adset.lifetime_budget", "총예산 (광고 세트마다)", ["1만 원", "3만 원", "5만 원"], "3만 원"), custom: "won" as const },
+  { ...f("meta.adset.lifetime_budget", "총예산 (기간 전체)", ["1만 원", "3만 원", "5만 원"], "3만 원"), custom: "won" as const },
   { ...f("meta.adset.location", "타겟 – 위치", ["택배로 보내요", "가게에 와서 사요", "배달해요"], null), custom: "area" as const,
     custom_for: ["가게에 와서 사요", "배달해요"], answer_as: { "택배로 보내요": "전국 (택배)" } },
   f("meta.adset.age_gender", "타겟 – 연령·성별", null, "넓게"),

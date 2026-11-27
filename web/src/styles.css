@@ -13,6 +13,21 @@
   --color-accent: var(--tone-accent);
   --color-accent-ink: var(--tone-accent-ink);
   --color-accent-soft: var(--tone-accent-soft);
+  --color-accent-line: var(--tone-accent-line);
+  --color-accent-faint: var(--tone-accent-faint);
+  --color-belly: var(--tone-belly);
+  --color-belly-strong: var(--tone-belly-strong);
+  --color-belly-ink: var(--tone-belly-ink);
+  --color-warn-line: var(--tone-warn-line);
+  --color-block-line: var(--tone-block-line);
+  --color-ok-ink: var(--tone-ok-ink);
+  --color-ok-line: var(--tone-ok-line);
+  --color-info-ink: var(--tone-info-ink);
+  --color-info-line: var(--tone-info-line);
+  --color-disabled-bg: var(--tone-disabled-bg);
+  --color-disabled-fg: var(--tone-disabled-fg);
+  --color-disabled-line: var(--tone-disabled-line);
+  --color-series-soft: var(--tone-series-soft);
   --color-action: var(--tone-action);
   --color-action-hover: var(--tone-action-hover);
   --color-on-action: var(--tone-on-action);
@@ -44,6 +59,7 @@
   --text-body: var(--primitive-font-size-body);
   --text-lead: var(--primitive-font-size-lead);
   --text-title: var(--primitive-font-size-title);
+  --text-headline: var(--primitive-font-size-headline);
   --text-number: var(--primitive-font-size-number);
   --text-hero: var(--primitive-font-size-hero);
   --text-hero-sm: var(--primitive-font-size-hero-sm);
@@ -71,9 +87,36 @@
   --container-measure: var(--layout-measure);
   --shadow-raised: var(--elevation-raised);
   --shadow-float: var(--elevation-float);
+  --shadow-card: var(--elevation-card);
+  --shadow-press: var(--elevation-press);
+  --shadow-hero: var(--elevation-hero);
+  --shadow-selected: var(--elevation-selected);
+  --shadow-press-sm: var(--elevation-press-sm);
+  --shadow-cta: var(--elevation-cta);
+  --radius-soft: var(--primitive-radius-soft);
+  --radius-sheet: var(--drop-radius);
 }
 
 /* 한국어는 단어 중간에서 끊지 않는다 (휴대폰에서 '돌/려'처럼 끊기던 문제) */
-body { background: var(--tone-bg); color: var(--tone-ink); font-family: var(--primitive-font-family-sans); word-break: keep-all; overflow-wrap: anywhere; }
+/* 꾸미기안_뭉치: 크림 바탕 + 옅은 보라·배 색 둥근 빛 두 개 (장식) */
+body { background: radial-gradient(circle at 100% 18%, var(--tone-accent-soft), transparent 32rem), radial-gradient(circle at 0% 100%, var(--tone-belly), transparent 28rem), var(--tone-bg); background-attachment: fixed; letter-spacing: -0.01em; color: var(--tone-ink); font-family: var(--primitive-font-family-sans); word-break: keep-all; overflow-wrap: anywhere; }
 :focus-visible { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+
+/* 제목 강조: 보라 글자 + 아래쪽 배 색 밑줄 (꾸미기안_뭉치 .h1 em) */
+.mark-belly { font-style: normal; color: var(--tone-accent); background: linear-gradient(transparent 64%, var(--tone-belly) 64%); }
+/* 뭉치 그림 아래 그림자 (메인 진하게를 투명하게) */
+.mungchi-shadow { filter: var(--elevation-mascot); }
+
+/* ③ 예산 슬라이더 (최종안 A): 손잡이 = 흰 바탕 + 메인 보라 테두리 + 눌리는 그림자, 길은 화면의 div가 그린다 (판단 어려운 구간 빗금 · 채움 · 추천 눈금) */
+.budget-range { --track: calc(var(--primitive-size-8) + var(--primitive-size-2)); --knob: calc(var(--primitive-size-6) + var(--primitive-size-1)); --ring: calc(var(--primitive-size-1) * 1.5);
+  -webkit-appearance: none; appearance: none; background: transparent; width: 100%; height: var(--track); margin: 0; cursor: pointer; }
+.budget-range::-webkit-slider-runnable-track { background: transparent; height: var(--track); }
+.budget-range::-moz-range-track { background: transparent; }
+.budget-range::-webkit-slider-thumb { -webkit-appearance: none; width: var(--knob); height: var(--knob); margin-top: calc((var(--track) - var(--knob)) / 2); border-radius: var(--primitive-radius-full); background: var(--tone-surface); border: var(--ring) solid var(--tone-accent); box-shadow: var(--elevation-press-sm); }
+.budget-range::-moz-range-thumb { width: calc(var(--knob) - var(--ring) * 2); height: calc(var(--knob) - var(--ring) * 2); border-radius: var(--primitive-radius-full); background: var(--tone-surface); border: var(--ring) solid var(--tone-accent); box-shadow: var(--elevation-press-sm); }
+.budget-range:focus-visible { outline: none; }
+.budget-range:focus-visible::-webkit-slider-thumb { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
+.hatch-warn { background: repeating-linear-gradient(135deg, var(--tone-warn-line) 0 var(--primitive-size-1), var(--tone-warn-bg) var(--primitive-size-1) var(--primitive-size-2)); }
+/* 써 본 적 없는 금액(가설) 구간의 길: 점선 */
+.rail-guess { background: repeating-linear-gradient(90deg, var(--tone-accent-line) 0 var(--primitive-size-2), transparent var(--primitive-size-2) calc(var(--primitive-size-3) + var(--primitive-size-1) / 2)); opacity: 0.6; }

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { BadInput, ServerDown, research } from "../lib/api";
+import { BadInput, ServerDown, ServerError, research } from "../lib/api";
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -13,6 +13,15 @@ describe("api", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ error: "열이 없어요" }), { status: 400 })));
     await expect(research("x")).rejects.toThrow("열이 없어요");
     await expect(research("x")).rejects.toBeInstanceOf(BadInput);
+  });
+
+  it("shows the server's own words when busy (429, 503)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ error: "1분 뒤에 다시 해 주세요." }), { status: 429 })));
+    await expect(research("x")).rejects.toThrow("1분 뒤에");
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response(JSON.stringify({ detail: "잠시 뒤에 다시" }), { status: 503 })));
+    await expect(research("x")).rejects.toThrow("잠시 뒤에");
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(async () => new Response("oops", { status: 500 })));
+    await expect(research("x")).rejects.toBeInstanceOf(ServerError);
   });
 
   it("posts product and seeds to /research", async () => {

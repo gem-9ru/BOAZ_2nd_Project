@@ -9,6 +9,7 @@
 캠페인 목표 열이 없으면 이번 범위(트래픽)로 채운다.
 """
 import io
+import zipfile
 from pathlib import Path
 from typing import Optional, Union
 
@@ -30,6 +31,11 @@ Source = Union[str, Path, io.IOBase, bytes]
 
 def _read_csv(src: Source) -> pd.DataFrame:
     raw = src if isinstance(src, bytes) else (src.read() if hasattr(src, "read") else Path(src).read_bytes())
+    if raw[:2] == b"PK":   # 엑셀(.xlsx)은 zip이라 'PK'로 시작 (화면설계서 v4.2 AN-00: .csv / .xlsx 허용)
+        # 압축은 작아도 풀면 아주 큰 파일(압축 폭탄)로 메모리를 다 쓰지 않게, 풀린 크기를 먼저 본다 (감사 4)
+        if sum(i.file_size for i in zipfile.ZipFile(io.BytesIO(raw)).infolist()) > MAX_XLSX_UNZIPPED:
+            raise TooBig()
+        return pd.read_excel(io.BytesIO(raw))
     for enc in ("utf-8-sig", "cp949"):
         try:
             return pd.read_csv(io.BytesIO(raw), encoding=enc)
@@ -111,7 +117,47 @@ def _from_export(df: pd.DataFrame) -> Bundle:
             daily.df = daily.df[keep].groupby(["date", "adset", "campaign_objective"], as_index=False).sum()
         b.tables["meta_daily"] = daily
         b.budget = _budget(df, daily.df)
+        b.rankings = _rankings(df)
     return b
+
+
+# 메타 광고 관련성 진단 (광고 관리자 열: 품질 순위 · 참여율 순위 · 전환율 순위). 같은 타깃을 두고 경쟁하는 광고 대비 순위.
+# 노출이 적으면 '-'로 비어 있다 → 건너뛴다 (v4 2장: 있으면 퍼널 진단의 보조 신호, 없으면 건너뜀)
+RANKING_COLUMNS = {"quality": ["품질 순위", "Quality ranking"],
+                   "engagement": ["참여율 순위", "Engagement rate ranking"],
+                   "conversion": ["전환율 순위", "Conversion rate ranking"]}
+
+
+def _rank(text) -> Optional[str]:
+    """'평균 이하 - 하위 35%' → below, '평균 이상' → above, '평균' → average. '-'·빈칸·모르는 글자 → None."""
+    t = str(text).strip().lower()
+    if not t or t in ("-", "nan", "none") or "알 수 없" in t or "unknown" in t:
+        return None
+    if "이하" in t or "below" in t:
+        return "below"
+    if "이상" in t or "above" in t:
+        return "above"
+    if "평균" in t or "average" in t:
+        return "average"
+    return None
+
+
+def _rankings(raw: pd.DataFrame) -> dict:
+    """광고 세트마다 순위 3개 (그 세트 줄에서 가장 많이 나온 값). 열이 없거나 다 비었으면 빈 dict."""
+    set_col = next((c for c in ("광고 세트 이름", "광고 세트", "Ad set name") if c in raw.columns), None)
+    if not set_col:
+        return {}
+    out: dict = {}
+    for key, names in RANKING_COLUMNS.items():
+        col = next((c for c in names if c in raw.columns), None)
+        if not col:
+            continue
+        rows = raw[[set_col, col]].dropna(subset=[set_col])
+        for aset, vals in rows.groupby(set_col)[col]:
+            got = [r for r in map(_rank, vals) if r]
+            if got:
+                out.setdefault(_short(aset), {})[key] = max(set(got), key=got.count)
+    return out
 
 
 BUDGET_COLUMNS = [("광고 세트 예산", "광고 세트 예산 유형", "adset"), ("Ad set budget", "Ad set budget type", "adset"),
@@ -156,11 +202,22 @@ def _budget(raw: pd.DataFrame, daily: pd.DataFrame) -> Optional[dict]:
     return None
 
 
+MAX_XLSX_UNZIPPED = 50 * 1024 * 1024
+
+
+class TooBig(Exception):
+    pass
+
+
 def read_export(src: Source) -> Bundle:
     try:
         df = _read_csv(src)
     except (pd.errors.EmptyDataError, pd.errors.ParserError):
         return Bundle(problems=["파일이 비어 있거나 CSV가 아니에요. 광고 관리자에서 CSV로 내보내 주세요."])
+    except TooBig:
+        return Bundle(problems=["엑셀 파일이 너무 커요. 광고 관리자에서 비교할 광고 세트만 골라 CSV로 다시 내보내 주세요."])
+    except Exception:  # noqa: BLE001 (망가진 엑셀·알 수 없는 형식 → 500 대신 안내)
+        return Bundle(problems=["파일을 읽지 못했어요. 광고 관리자에서 CSV로 다시 내보내 주세요."])
     if df.empty or df.iloc[:, 0].astype(str).str.contains("No data available", case=False).all():
         return Bundle(problems=[NO_DATA])
     if LONG_COLUMNS <= set(df.columns):

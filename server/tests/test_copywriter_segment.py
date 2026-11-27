@@ -94,11 +94,45 @@ def test_claude_gets_strengths_and_search_words_apart_with_room_to_answer():
 def test_basis_catches_changed_word_endings_and_claude_paraphrase():
     c = {"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북이라 하나씩 따로 포장해 드려요."}
     assert copywriter.basis(c, ["가벼움", "개별포장", "버터 듬뿍"], None) == ["가벼움"]
-    c2 = {**c, "basis": ["개별포장", "버터 듬뿍"]}   # Claude가 썼다고 한 말: 조각이라도 보이면 믿고, 안 보이면 안 믿음
-    assert copywriter.basis(c2, ["가벼움", "개별포장", "버터 듬뿍"], {"label": "선물로 찾는 손님"}) == ["가벼움", "개별포장", "선물로 찾는 손님"]
+    c2 = {**c, "basis": ["개별포장", "버터 듬뿍"]}   # Claude가 '썼다'고만 하고 문구에 없는 말은 넣지 않는다
+    assert copywriter.basis(c2, ["가벼움", "개별포장", "버터 듬뿍"], {"label": "선물로 찾는 손님"}) == ["가벼움", "선물로 찾는 손님"]
+    c3 = {"headline": "천연 비누", "text": "천연 재료로 만든 수제 비누예요.", "basis": ["천연비누"]}
+    assert copywriter.basis(c3, ["천연비누", "수제비누"], None) == ["천연비누", "수제비누"]   # 띄어쓰기만 다르면 같은 말
 
 
 def test_claude_copies_keep_their_basis_list():
     body = {"copies": [{"headline": "가볍게 들고 다니는 노트북", "text": "가벼운 노트북, 프로필 링크에서 만나 보세요.", "basis": ["가벼움"]}]}
     out = copywriter._parse(json.dumps(body, ensure_ascii=False))
     assert out[0]["basis"] == ["가벼움"]
+
+
+def test_tone_goes_to_claude_only_when_known():
+    seen = []
+
+    class Msgs:
+        def create(self, **kw):
+            seen.append(json.loads(kw["messages"][0]["content"]))
+            return SimpleNamespace(content=[SimpleNamespace(type="text", text='{"copies": []}')], stop_reason="end_turn")
+
+    client = SimpleNamespace(messages=Msgs())
+    copywriter.meta_copies_with_source("쿠키", ["버터"], n=3, client=client, tone="감성적으로")
+    copywriter.meta_copies_with_source("쿠키", ["버터"], n=3, client=client, tone="이상한값")
+    assert seen[0]["말투"].startswith("장면이 떠오르게") and "말투" not in seen[1]
+
+
+def test_prompt_and_templates_do_not_invent_facts_or_post_wording():
+    """광고는 누르면 바로 가는 곳이 있다: '프로필 링크' 말투 대신 버튼 권유. 틀 문장은 없는 후기를 말하지 않는다. 제목 27자 권장(메타)."""
+    p = copywriter._system_prompt(3)
+    assert "프로필 링크에서' 같은 게시물 말투는 쓰지 않는다" in p and "27자 이내 권장" in p
+    cs = copywriter.meta_copies("수제 쿠키", ["버터 듬뿍", "개별포장", "당일 구움"], n=9, client=False)
+    assert cs and not any("후기" in c["text"] for c in cs)
+
+
+
+def test_prompt_asks_for_the_product_name():
+    assert "'상품' 이름은 제목이나 본문에 한 번은 그대로 넣는다" in copywriter._system_prompt(3)
+
+
+def test_basis_does_not_count_a_cut_compound_word():
+    c = {"headline": "아로마 향이 머무는 향초", "text": "은은한 아로마 향을 좋아하시나요? 향초에 불을 붙여 보세요."}
+    assert copywriter.basis(c, ["아로마향초", "아로마", "향초"], None) == ["아로마", "향초"]

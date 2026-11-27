@@ -18,9 +18,9 @@ def test_cap_spend_gap_lowers_one_level():
     assert out["badge"]["level"] == "보류" and out["badge"]["word"] == "아직 몰라요"
 
 
-def test_test_and_roll_100k_is_4k_to_10k_per_set():
+def test_test_and_roll_100k_is_6k_to_10k_per_set():
     t = simulate.next_test_budget(100_000)
-    assert (t["per_set_lo"], t["per_set_hi"]) == (4000, 10000)
+    assert (t["per_set_lo"], t["per_set_hi"]) == (6000, 10000)   # 4,000원은 하루 1,000원으로 메타 하루 최소(1,336원)보다 적어 6,000원으로 올림 (감사 9)
     assert "Feit" in t["source"]
 
 

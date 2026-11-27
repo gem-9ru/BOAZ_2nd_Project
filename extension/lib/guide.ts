@@ -13,7 +13,15 @@ export type FindStrategy = (
   | { role: string; text: string }
   | { role: string; textStarts: string }
   | { role: string; textPattern: string }   // 정규식 (예: "^연령\\d" → '연령18 - 65+'만, 도움말 링크 제외)
-) & { say?: string };
+) & {
+  say?: string;
+  /** 열린 창 안에서만 찾는다 (예: 창의 [다음]. 창이 없으면 편집 화면의 [다음]을 잘못 누르지 않게) */
+  inDialog?: boolean;
+  /** 창이 없을 때만 찾는다 (예: '크리에이티브 설정' 버튼. 창 안 위쪽 단계 이름을 눌러 단계를 건너뛰지 않게) */
+  pageOnly?: boolean;
+  /** 세팅값에 이 글자(정규식)가 있을 때만 쓰는 방법 (예: 형식 '여러 장 (슬라이드)' → '슬라이드' 선택지) */
+  whenValue?: string;
+};
 
 /** 자동 진행에서 이 칸을 어떻게 할지: 고르기·넣기는 대신 하고, 날짜·지역·사진처럼 복잡한 칸은 사장님을 기다리고, 게시 앞에선 멈춘다. */
 /** 돈이 걸린 칸 (2026-11-26 사장님: "돈이 설정한 대로 잘 나가는지, 추가 지출은 없는지가 제일 중요"):
@@ -56,6 +64,8 @@ export interface GuideEntry {
   /** 이 칸은 열린 창 밖(광고 화면)에 있다. 창이 열려 있으면 칸이 아직 안 그려졌어도 창을 마칠 때까지 기다린다
    *  (메타 '크리에이티브 설정' 창 뒤의 '웹사이트 URL': 창이 열린 동안에는 칸이 그려지지 않는다) */
   outsideDialog?: true;
+  /** 다른 칸의 세팅값에 따라 바꿔 쓰는 안내 (예: 형식이 슬라이드면 사진·제목은 사장님이 직접). set의 null은 그 값을 지운다 */
+  variants?: { when: { field: string; match: string }; set: Partial<Record<keyof GuideEntry, unknown>> }[];
 }
 
 export interface GuideStepItem {
@@ -65,9 +75,16 @@ export interface GuideStepItem {
 
 /** 패널 ↔ 광고 관리자(캐릭터) ↔ 배경 스크립트가 주고받는 메시지. 이름을 틀리면 타입 검사에서 걸린다. */
 export type GuideMsg =
-  | { type: "guide:start"; steps: GuideStepItem[]; startIndex: number }   // 패널 → 캐릭터: 안내 시작
+  | { type: "guide:start"; steps: GuideStepItem[]; startIndex: number;   // 패널 → 캐릭터: 안내 시작
+      /** EX-03 다음 테스트: 첫 칸(바꿀 칸 1개)만 밝게, 나머지 화면은 흐리게 + '나머지는 그대로(유지)' */
+      focus?: boolean;
+      /** 이번 안내 표시: 진행 메시지에 그대로 실어 보낸다 (예전 뭉치 진행 거르기) */
+      sig?: string;
+      /** 패널 둥지에서 지금 막 걸어 나왔다: 광고 관리자 뭉치는 그 걸음(NEST_EXIT_MS)만큼 기다렸다가 들어온다 */
+      fromNest?: boolean }
   | { type: "guide:move"; delta: number }                                  // 패널 → 캐릭터: [이전 칸]·[다음 칸]
-  | { type: "guide:progress"; index: number; total: number }               // 캐릭터 → 배경: 몇 번째 칸까지 왔나
+  | { type: "guide:goto"; index: number }                                  // 패널 → 캐릭터: 목록에서 지난 칸을 눌러 그 칸으로 (설계서 EX-01 ②)
+  | { type: "guide:progress"; index: number; total: number; sig?: string } // 캐릭터 → 배경: 몇 번째 칸까지 왔나 (sig = 받은 안내 묶음 표시)
   | { type: "guide:closed" };                                              // 캐릭터 → 배경: 집에 돌아감
 
 export function validateGuide(entries: GuideEntry[], settingIds: string[]): string[] {
@@ -99,7 +116,15 @@ export function stepsFor(mode: GuideEntry["mode"], entries: GuideEntry[], settin
   if (mode === "create") {
     return entries
       .filter((e) => e.mode === "create")
-      .map((entry) => ({ entry, value: settings.find((s) => s.fieldId === entry.id)?.value }));
+      .map((base) => {
+        const value = settings.find((s) => s.fieldId === base.id)?.value;
+        const variant = base.variants?.find((v) => new RegExp(v.when.match).test(settings.find((s) => s.fieldId === v.when.field)?.value ?? ""));
+        const entry = variant
+          ? (Object.fromEntries(Object.entries({ ...base, ...variant.set }).filter(([, x]) => x !== null)) as unknown as GuideEntry)
+          : base;
+        const find = entry.find.filter((f) => !f.whenValue || new RegExp(f.whenValue).test(value ?? ""));
+        return { entry: find.length === entry.find.length ? entry : { ...entry, find }, value };
+      });
   }
   if (mode === "edit") {
     return changes.flatMap((c) => {
@@ -110,11 +135,16 @@ export function stepsFor(mode: GuideEntry["mode"], entries: GuideEntry[], settin
   return entries.filter((e) => e.mode === "export").map((entry) => ({ entry }));
 }
 
-/** EX-03 [다음 테스트 세팅] (v4.2): ② 세팅 목록 전체(all)는 보여 주되, 캐릭터에게는 바꿀 칸 1개 + 게시 직전 확인만(send) 보낸다.
+/** EX-03 [다음 테스트 세팅] (v4.2): ② 세팅 목록 전체(all)는 보여 주되, 캐릭터에게는 바꿀 칸 1개 + 새 금액·날짜 + 게시 직전 확인만(send) 보낸다.
  *  바꿀 칸이 만들기 목록에 없으면(예: 노출 위치) 수정 안내의 같은 칸을 게시 앞에 넣는다. 나머지 칸은 지난번 값으로 끝난 칸. */
 export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldId: string): { all: GuideStepItem[]; send: GuideStepItem[] } {
   const all = stepsFor("create", entries, settings, []);
   let target = all.find((s) => s.entry.id === fieldId);
+  if (target?.entry.doneWhen) {
+    // 복제한 광고엔 다음 칸(문구)이 이미 있어 끝 신호가 바로 보인다 → 바꿀 칸이 사진이면 끝 신호 없이 사장님이 마칠 때까지 (화면 검토 16)
+    const { doneWhen: _skip, ...entry } = target.entry;
+    all[all.indexOf(target)] = target = { ...target, entry };
+  }
   if (!target) {
     const edit = entries.find((e) => e.mode === "edit" && e.id === fieldId);
     if (edit) {
@@ -125,6 +155,39 @@ export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldI
   }
   const publish = all.find((s) => s.entry.publish);
   const money = all.find((s) => s.entry.auto === "moneyCheck");   // 게시 앞 돈 확인은 다음 테스트에도 늘 거친다
-  const send = [target, money, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
+  // 복제한 세트는 지난 금액·지난(이미 끝난) 날짜를 그대로 가져온다 → 새 금액·날짜 칸도 늘 짚는다
+  const fresh = ["meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date"].map((id) => all.find((s) => s.entry.id === id));
+  // 지난 광고는 끝났다 → 지난 세트를 복제해 두 세트로 새로 돌린다. 뭉치는 바꾼 세트를 짚고, '그대로' 세트는 사장님이 같은 금액·날짜로 맞춘 뒤 그 세트도 돈 확인
+  const value = (id: string) => settings.find((s) => s.fieldId === id)?.value ?? "";
+  const extra = (id: string, v?: string) => { const entry = entries.find((e) => e.id === id); return entry ? { entry, value: v } : undefined; };
+  const duplicate = extra("next.duplicate");
+  const keep = extra("next.keep_set", `${value("meta.adset.lifetime_budget")} · ${value("meta.adset.start_date")} ~ ${value("meta.adset.end_date")}`);
+  const keepMoney = money ? { ...money } : undefined;   // 같은 돈 확인을 '그대로' 세트에서 한 번 더 (다른 물건이라 아래 중복 거르기에 안 걸림)
+  if (duplicate) all.unshift(duplicate);
+  const at = all.findIndex((s) => s.entry.publish);
+  all.splice(at < 0 ? all.length : at, 0, ...[keep, keepMoney].filter((x): x is GuideStepItem => Boolean(x)));
+  // 두 세트가 한 캠페인에 있으니 '예산 공유'(한 세트가 다른 세트 예산을 끌어 씀)를 다시 끈다 (감사 1, 2026-11-26)
+  const share = all.find((s) => s.entry.auto === "campaignBudget");
+  const send = [duplicate, share, target, ...fresh, money, keep, keepMoney, publish].filter((x, i, a): x is GuideStepItem => Boolean(x) && a.indexOf(x) === i);
   return { all, send };
 }
+
+/** 사장님께 보이는 글자만 다른 화면처럼 '2026-11-27' → '11월 27일' (뭉치가 칸에 넣는 값은 그대로 yyyy-mm-dd) */
+export function shownDates(text: string): string {
+  return text.replace(/\b\d{4}-(\d{2})-(\d{2})\b/g, (_, m: string, d: string) => `${Number(m)}월 ${Number(d)}일`);
+}
+
+/** 안내 묶음 표시 (칸 id 순서). 같은 안내를 다시 받은 건지(자동 진행 이어 가기) 새 안내인지 가린다 (감사 12) */
+export function guideSignature(steps: { entry: { id: string } }[]): string {
+  return steps.map((s) => s.entry.id).join("|");
+}
+
+/** 안내 목록 묶음 이름: 메타 화면 순서 (캠페인 → 광고 세트 → 광고) 그대로라 '지금 어디쯤'이 보인다 (꾸미기안_뭉치) */
+export function groupOf(id?: string): string | null {
+  if (!id) return null;
+  if (id.startsWith("meta.campaign")) return "캠페인";
+  if (id.startsWith("meta.adset")) return "광고 세트";
+  if (/^meta\.(ad|creative)\./.test(id)) return "광고";
+  return null;
+}
+

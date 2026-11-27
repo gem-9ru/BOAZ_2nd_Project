@@ -15,7 +15,7 @@ export type Level = "채택" | "유력" | "보류";   // 개발·근거 탭 값 
 export interface Change { field_id: string; label: string; new: string; note: string; path?: string; now?: string | null;
   reason?: string; certainty?: { level: Level; label: string; why: string }; grade?: string; meta_says?: string | null; checklist?: string[];
   /** v4.2: 돌려 본 적 없는 선택지 → '테스트 제안' 태그 (판정 배지 없음) */
-  tag?: string; tested?: boolean; what?: string; new_short?: string; test?: string; unknown?: string; per_set?: number; row?: string;
+  tag?: string; tested?: boolean; what?: string; new_short?: string; test?: string; unknown?: string; per_set?: number; days?: number; test_roll?: boolean; row?: string;
   rule?: { row: string; level: Level; why: string } }
 export type AlertLevel = "block" | "warn" | "info";
 export interface Alert { level: AlertLevel; mark: string; kind: string; text: string; todo: string; screen: string; date?: string;
@@ -24,8 +24,10 @@ export interface Alert { level: AlertLevel; mark: string; kind: string; text: st
 export interface MatrixRow { row: string; stage: string; signal: string; status: "ok" | "blocked" | "watch" | "skip" | "found"; field_id: string | null; path: string; detail: string }
 export type Kind = "테스트" | "다시 보기" | "그대로";
 export interface SettingRow { field_id: string; path: string; value: string; kind: Kind; note: string }
-export interface Matrix { settings?: SettingRow[]; rows: MatrixRow[]; change: Change | null; keep: { field_id: string; path: string; value: string; reason: string; arm?: string }[];
-  watch: { field_id: string; path: string; text: string; title?: string; need_per_set?: number | null }[]; dont: string[]; tested_field: string | null }
+export interface Matrix { settings?: SettingRow[]; rows: MatrixRow[]; change: Change | null; keep: { field_id: string; path: string; value: string; reason: string; arm?: string; title?: string }[];
+  watch: { field_id: string; path: string; text: string; title?: string; short?: string; need_per_set?: number | null }[]; dont: string[]; tested_field: string | null;
+  /** 메타 광고 관련성 진단 (품질·참여율·전환율 순위) 중 '평균 이하'인 것: 퍼널 진단의 보조 신호. rankings = 파일에 순위 열이 있었는지 */
+  meta_signals?: { row: string; key: string; text: string }[]; rankings?: boolean }
 export interface Placement { placement: string; label: string; spend: number; share: number; impressions: number; link_clicks: number; ctr: number | null; ctr_adjusted: number; reference_only: boolean; adset?: string }
 export interface BacktestBand { lo: number; hi: number; median: number; actual: number; inside: boolean }
 export interface Backtest { ok: boolean; train_days?: string[]; test_day?: string; arms?: { name: string; budget: number; link_clicks: BacktestBand; visits: BacktestBand }[]; note: string }
@@ -44,13 +46,15 @@ export interface Result {
   summary: { arms: Arm[]; placements: { placement: string; label: string; spend: number; share: number }[] };
   verdict: Verdict | null;
   replay: { date: string; prob: number; min_visits?: number; word?: string }[];
+  /** 세트 1개: 기준값과 비교한 신호 (축소안 v5 ①b). 두 세트 이상이면 빈 목록 */
+  baseline?: BaselineRow[];
   diagnosis: { status: string; finding: { title: string; message: string } };
   next: { action: string; change: Change; summary: string[] };
 }
 export interface Band { median: number; lo: number; hi: number }
 export interface Simulation { budget: number; runs: number; arm: string; impressions: Band; link_clicks: Band; visits: Band; histogram: { lo: number; hi: number; count: number }[]; limits: string;
   tried?: boolean; days?: number | null; daily?: number | null; daily_max?: number | null; daily_tried?: boolean;
-  daily_min?: number | null; below_daily_min?: boolean; next_test?: { total: number; per_set_lo: number; per_set_hi: number; share_lo: number; share_hi: number; source: string } }
+  daily_min?: number | null; below_daily_min?: boolean; /** 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩) */ judge?: number; next_test?: { total: number; per_set_lo: number; per_set_hi: number; share_lo: number; share_hi: number; source: string } }
 
 async function call<T>(url: string, init?: RequestInit): Promise<T> {
   let r: Response;
@@ -72,8 +76,21 @@ export const analyzeFile = (file: File, extra: { settingsKey?: string | null; se
   else if (extra.settingsKey) fd.append("settings_key", extra.settingsKey);
   return call<Result>("/analysis", { method: "POST", body: fd });
 };
-export const example = (settingsKey?: string | null) =>
-  call<Result>(`/analysis/example${settingsKey ? `?settings_key=${encodeURIComponent(settingsKey)}` : ""}`);
+/** 예시: ovenlog = 베이커리 실험 2 (오븐로그 A/B 실측), heesu = 베이커리 실험 1 (희수 실측 · 타깃·노출 위치 묶음 비교). 화면에는 '베이커리 실험 1·2'로만 (최종안(1)) */
+export type ExampleName = "ovenlog" | "heesu";
+export const example = (settingsKey?: string | null, name: ExampleName = "ovenlog") => {
+  const q = new URLSearchParams(settingsKey ? { settings_key: settingsKey } : {});
+  if (name !== "ovenlog") q.set("name", name);
+  return call<Result>(`/analysis/example${q.toString() ? `?${q}` : ""}`);
+};
 export const simulate = (code: string, arm: string, budget: number, total = 100000, days?: number) =>
   call<Simulation>("/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, budget, total, days }) });
+/** 새로고침했을 때: 주소의 코드로 서버에 남은 결과를 다시 받는다 */
+export const resultByCode = (code: string) => call<Result>(`/analysis/result/${encodeURIComponent(code)}`);
 export const receivedSettings = (key: string) => call<{ count: number }>(`/settings/${encodeURIComponent(key)}`);
+export interface BaselineRow { key: string; label: string; value: number; range: [number, number] | null; standard: string;
+  signal: "ok" | "low" | "unknown"; text: string; why: string | null }
+/** ③ 예산 슬라이더 결과표 (서버 /simulate/grid): 3,000~30,000원 1,000원 단위 */
+export interface GridRow { budget: number; visits: Band; judge: number; hard: boolean; tried: boolean; daily_tried: boolean; below_daily_min: boolean; daily_min?: number | null; daily_max?: number | null }
+export const simulateGrid = (code: string, arm: string, days = 4) =>
+  call<{ arm: string; days: number; rows: GridRow[]; mid: number; many_from: number }>("/simulate/grid", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, days }) });

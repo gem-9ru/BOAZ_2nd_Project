@@ -48,6 +48,10 @@ def run(bundle) -> Dict:
             first, last = mine[mine["date"].isin(dates[:half])], mine[mine["date"].isin(dates[-half:])]
             a["ctr_first"] = _div(first["link_clicks"].sum(), first["impressions"].sum())
             a["ctr_last"] = _div(last["link_clicks"].sum(), last["impressions"].sum())
+    # 메타 관련성 진단 (있을 때만): 품질·참여율·전환율 순위
+    ranks = getattr(bundle, "rankings", None) or {}
+    for a in arms:
+        a["rankings"] = ranks.get(a["name"])
     # AN-05 기간 토글: 하루에 가장 많이 써 본 돈 (그보다 많이 하루에 쓰면 '가설')
     if "spend" in daily.columns and "date" in daily.columns:
         per_day = daily.groupby(["adset", "date"])["spend"].sum().groupby(level=0).max()

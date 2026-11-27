@@ -140,3 +140,42 @@ describe("위치", () => {
     expect(checkLocation(document, "가게 반경 3km")).toBe(false);
   });
 });
+
+// 2026-11-26 실제 화면: '제어 옵션'의 '최소 연령' 버튼(18세 · …)을 열면 바로 옆 구역에 같은 이름 '최소 연령' 목록(18~25)이 생긴다.
+// 이 칸만 메타가 꼭 지킨다 ('타겟 추천'의 나이는 추천일 뿐). 위쪽(먼저)에 있어서 추천 칸과 헷갈리면 안 된다.
+describe("연령: 꼭 지키는 '최소 연령' (제어 옵션)", () => {
+  const listOn = (c: HTMLElement, values: string[]) => c.addEventListener("click", () => {
+    document.querySelectorAll("[role=listbox]").forEach((x) => x.remove());
+    document.body.insertAdjacentHTML("beforeend", `<div role="listbox">${values.map((v) => `<div role="option">${v}</div>`).join("")}</div>`);
+    document.querySelectorAll<HTMLElement>("[role=option]").forEach((o) => o.addEventListener("click", () => { c.textContent = o.textContent; document.querySelector("[role=listbox]")?.remove(); }));
+  });
+  const ages = Array.from({ length: 48 }, (_, i) => String(18 + i)).concat("65+");
+  function page(controlOpen: boolean) {
+    document.body.innerHTML = `
+      <div role="button" id="ctl">최소 연령​18세 · WhatsApp에서 알 수 없는 나이: 포함됨</div><div id="ctlarea"></div>
+      <span id="amin">최소 연령</span><div role="combobox" aria-labelledby="amin" data-name="추천 최소">18</div>
+      <span id="amax">최대 연령</span><div role="combobox" aria-labelledby="amax" data-name="추천 최대">65+</div>
+      <span id="g3">여성</span><input type="radio" name="g" id="f" aria-labelledby="g3">`;
+    const open = () => {
+      document.getElementById("ctl")!.textContent = "최소 연령";   // 실제 화면: 펼치면 버튼 글자에서 '18세 · …'가 빠진다
+      document.getElementById("ctlarea")!.innerHTML = `<span id="cmin">최소 연령</span><div role="combobox" aria-labelledby="cmin" data-name="제어 최소">18</div>`;
+      listOn(document.querySelector<HTMLElement>('[data-name="제어 최소"]')!, ["18", "19", "20", "21", "22", "23", "24", "25"]);
+    };
+    if (controlOpen) open(); else document.getElementById("ctl")!.addEventListener("click", open, { once: true });
+    listOn(document.querySelector<HTMLElement>('[data-name="추천 최소"]')!, ages);
+    listOn(document.querySelector<HTMLElement>('[data-name="추천 최대"]')!, ages);
+  }
+  const name = (n: string) => document.querySelector(`[data-name="${n}"]`)!.textContent;
+
+  it("sets the suggestion 30–39 and the hard minimum too (Meta allows only up to 25)", async () => {
+    page(false);
+    expect(await setAgeGender(document, "30–39세 · 여성", fast)).toBe(true);
+    expect([name("추천 최소"), name("추천 최대"), name("제어 최소")]).toEqual(["30", "39", "25"]);
+  });
+
+  it("an already open control box is not mistaken for the suggestion's 최소 연령", async () => {
+    page(true);
+    expect(await setAgeGender(document, "20–29세 · 여성", fast)).toBe(true);
+    expect([name("추천 최소"), name("추천 최대"), name("제어 최소")]).toEqual(["20", "29", "20"]);
+  });
+});

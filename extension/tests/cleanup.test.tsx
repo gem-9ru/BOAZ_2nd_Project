@@ -113,7 +113,7 @@ describe("자동 진행 버튼", () => {
     document.body.innerHTML = "";
     const { getByRole } = render(<Character view={{ ...base, auto: true, waiting: "owner" }} onDone={() => {}} onBack={() => {}} onClose={() => {}} onToggleAuto={() => {}} />);
     expect(getByRole("button", { name: "다 했어요" })).toBeTruthy();
-    expect(getByRole("button", { name: "멈추기" })).toBeTruthy();
+    expect(getByRole("button", { name: "잠깐 멈추기" })).toBeTruthy();
   });
   it("at publish the only way on is [게시했어요] (the owner publishes first)", () => {
     document.body.innerHTML = "";

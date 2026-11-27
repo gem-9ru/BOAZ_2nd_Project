@@ -41,7 +41,7 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
       </figcaption>
       <div className="flex flex-col gap-1.5">
         <div className="flex h-28 items-end gap-2 border-b border-line" role="img"
-          aria-label={`연령대별 검색 비중: ${ages.map((a) => `${a}대 ${Math.round((aud.ages[a] ?? 0) * 100)}%${a in fem ? ` (여성 ${Math.round(fem[a]! * 100)}%)` : ""}`).join(", ")}`}>
+          aria-label={`연령대별 쇼핑 클릭 비중: ${ages.map((a) => `${a}대 ${Math.round((aud.ages[a] ?? 0) * 100)}%${a in fem ? ` (여성 ${Math.round(fem[a]! * 100)}%)` : ""}`).join(", ")}`}>
           {ages.map((a) => {
             const share = aud.ages[a] ?? 0;
             const isTop = inSpan(a);
@@ -52,14 +52,14 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
                 </span>
                 {a in fem ? (
                   // 위 = 남성(연하게), 아래 = 여성(진하게)
-                  <div aria-hidden className="flex w-full max-w-10 flex-col overflow-hidden rounded-t-md"
+                  <div aria-hidden className={`flex w-full max-w-10 flex-col overflow-hidden rounded-t-md border ${isTop ? "border-accent" : "border-soft"}`}
                     style={{ height: `${Math.max(4, Math.round((share / max) * 76))}px` }}>
-                    <div className={isTop ? "bg-accent-soft" : "bg-sunk"} style={{ flexGrow: 1 - fem[a]! }} />
-                    <div className={isTop ? "bg-accent" : "bg-line"} style={{ flexGrow: fem[a]! }} />
+                    <div className={isTop ? "bg-accent-soft" : "bg-paper"} style={{ flexGrow: 1 - fem[a]! }} />
+                    <div className={`border-t ${isTop ? "border-accent bg-accent" : "border-soft bg-line"}`} style={{ flexGrow: fem[a]! }} />
                   </div>
                 ) : (
                   <div aria-hidden
-                    className={`w-full max-w-10 rounded-t-md ${isTop ? "bg-accent" : "bg-line"}`}
+                    className={`w-full max-w-10 rounded-t-md border ${isTop ? "border-accent bg-accent" : "border-soft bg-line"}`}
                     style={{ height: `${Math.max(4, Math.round((share / max) * 76))}px` }} />
                 )}
               </div>
@@ -75,13 +75,13 @@ export default function AgeFigure({ audience: aud, headline, caption = "광고�
       {hasSplit && (
         <p aria-hidden className="flex items-center gap-3 text-small text-soft">
           <span className="inline-flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm bg-accent" />여성</span>
-          <span className="inline-flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm bg-accent-soft" />남성</span>
+          <span className="inline-flex items-center gap-1"><i className="inline-block size-2.5 rounded-sm border border-accent bg-accent-soft" />남성</span>
           <span>막대 안에서 아래가 여성, 위가 남성이에요</span>
         </p>
       )}
       {span.groups.length > 1 && (
         <p className="text-small text-soft">
-          {top}대가 가장 많이 찾고, 옆 나이대도 많이 찾아서 함께 넣었어요 (전체의 {Math.round(span.groups.reduce((t, a) => t + (aud.ages[a] ?? 0), 0) * 100)}%).
+          {top}대가 가장 많이 찾고, 옆 나이대도 많이 찾아서 함께 넣었어요 (전체의 {Math.round(span.groups.reduce((t, a) => t + (aud.ages[a] ?? 0), 0) * 100)}%). 옆 나이대가 15% 이상이고 가장 많은 나이대의 절반 이상일 때 넣어요 (이 도구 기준).
         </p>
       )}
       {headline && (

@@ -28,7 +28,8 @@ class Bundle:
     """한 번에 올린 결과 묶음. tables: 표 이름 → Table, problems: 사장님에게 보여 줄 문제 (고치는 법 포함)."""
     tables: Dict[str, Table] = field(default_factory=dict)
     problems: List[str] = field(default_factory=list)
-    budget: Optional[Dict] = None   # 메타 내보내기의 예산 열에서 읽은 기간 총예산 {"total": 원, "kind": ...} (없으면 None)
+    budget: Optional[Dict] = None
+    rankings: Dict[str, Dict[str, str]] = field(default_factory=dict)   # 광고 세트 → 메타 관련성 진단 {quality·engagement·conversion: above·average·below}   # 메타 내보내기의 예산 열에서 읽은 기간 총예산 {"total": 원, "kind": ...} (없으면 None)
 
     def get(self, name: str) -> Optional[pd.DataFrame]:
         t = self.tables.get(name)
@@ -87,7 +88,8 @@ def clean(df: pd.DataFrame, table: str, label: str = "") -> (Optional[Table], Li
     missing_req = [c for c, s in spec["columns"].items() if s.get("required") and c not in df.columns]
     if missing_req:
         names = ", ".join(f"'{(spec['columns'][c].get('aliases') or [c])[0]}'" for c in missing_req)
-        return None, [f"{label or title}: {names} 열이 없어요. {spec['source']}에서 이 열을 넣어 다시 내보내 주세요."]
+        # 할 일 한 문장 + 어디서 받는지는 괄호로 (source에 안내가 두 개 섞여 있어 한 문장에 넣으면 뜻이 흐려짐, QA N-01)
+        return None, [f"{label or title}: {names} 열이 없어요 → 이 열을 넣어 다시 내보내 주세요. (받는 곳: {spec['source']})"]
     for c in known:
         t = spec["columns"][c]["type"]
         if t == "date":

@@ -4,8 +4,8 @@ import { fakeBrowser } from "wxt/testing/fake-browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import CodeStep from "../entrypoints/sidepanel/steps/CodeStep";
-import GuideStep from "../entrypoints/sidepanel/steps/GuideStep";
-import PlanStep from "../entrypoints/sidepanel/steps/PlanStep";
+import GuideStep, { isLoginPage } from "../entrypoints/sidepanel/steps/GuideStep";
+import PlanStep, { nextMoney } from "../entrypoints/sidepanel/steps/PlanStep";
 import { initialState, reduce, type FlowState, type Plan } from "../lib/flow";
 import { nextTestSteps, type GuideStepItem } from "../lib/guide";
 import { GUIDE } from "../lib/guideList";
@@ -52,8 +52,9 @@ describe("EX-01 ② 세팅", () => {
   it("panel has [이전 칸] [다음 칸] that move the character on the Ads Manager tab", async () => {
     const tab = await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage" });
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
-    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 3 } };
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 3, away: true } };   // 뭉치가 나가 있을 때만 (EX-01 ⑥)
     render(<GuideStep state={state} dispatch={() => {}} />);
+    expect(screen.queryByRole("button", { name: /광고 관리자 열기/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "다음 칸" }));
     await waitFor(() => expect(send).toHaveBeenCalledWith(tab.id, { type: "guide:move", delta: 1 }));
     fireEvent.click(screen.getByRole("button", { name: "이전 칸" }));
@@ -67,7 +68,7 @@ describe("EX-01 ② 세팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     const w = await screen.findByRole("status");
     expect(w.textContent).toContain("▲");
-    expect(w.textContent).toContain("캐릭터를 부르지 못했어요");
+    expect(w.textContent).toContain("뭉치를 부르지 못했어요");
   });
 });
 
@@ -94,7 +95,7 @@ describe("뭉치 부르기: 어느 탭으로, 못 받으면", () => {
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(reload).toHaveBeenCalledWith(tab.id));
     await waitFor(() => expect(send.mock.calls.length).toBeGreaterThan(1));
-    expect(screen.queryByText(/캐릭터를 부르지 못했어요/)).toBeNull();
+    expect(screen.queryByText(/뭉치를 부르지 못했어요/)).toBeNull();
   });
 });
 
@@ -147,7 +148,7 @@ const plan: Plan = {
   change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로(9:16) 소재를 넣은 세트를 하나 더 만들어 보세요", note: "돈의 72%가 릴스에",
     path: "광고 › 형식·미디어", certainty: { level: "보류", label: "아직 몰라요", why: "돌려 본 적 없음" },
     checklist: ["시작 시간을 하루 여유 있게", "클릭이 30번 넘게 모일 때까지 그대로 두기", "바꾸는 칸은 형식·미디어 1개만", "두 세트는 같은 날 같이 시작"],
-    ...{ tag: "테스트 제안", new_short: "+ 세로(9:16) 1개" } },
+    ...{ tag: "테스트 제안", new_short: "+ 세로(9:16) 1개", what: "세로 소재", per_set: 5000 } },
   summary: ["a", "b", "c"], badge: { word: "B 쪽이에요", prob: 0.79 },
   keep: [{ field_id: "meta.adset.placements", path: "광고 세트 › 노출 위치", value: "직접 고르기(수동)", reason: "↓ 광고비 15% 싸요 · 확실해요" }],
   dont: ["여러 칸을 한 번에 바꾸지 않기 — 이유"],
@@ -179,68 +180,142 @@ describe("EX-03 바꿀 칸 받기", () => {
     expect(within(card).queryByText("유력")).toBeNull();
   });
 
-  it("the chatbot greets from the server and answers a suggested question", async () => {
+  it("the chatbot does not repeat the card's explanation, but offers suggested questions and answers them", async () => {
     const f = vi.fn((_u: string, init?: RequestInit) => {
       const b = JSON.parse(init!.body as string);
       return ok(b.question ? { message: `답: ${b.question}` } : { message: "이 칸만 짚어 드릴게요", suggestions: ["왜 이 칸이에요?", "언제 다시 봐요?"] });
     });
     vi.stubGlobal("fetch", f);
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
-    expect(await screen.findByText("이 칸만 짚어 드릴게요")).toBeTruthy();
+    expect(await screen.findByRole("button", { name: "왜 이 칸이에요?" })).toBeTruthy();
+    expect(screen.queryByText("이 칸만 짚어 드릴게요")).toBeNull();
     expect(JSON.parse((f.mock.calls[0]![1] as RequestInit).body as string)).toMatchObject({ code: "AB12", step: "EX-03" });
     fireEvent.click(screen.getByRole("button", { name: "왜 이 칸이에요?" }));
     expect(await screen.findByText("답: 왜 이 칸이에요?")).toBeTruthy();
   });
 
-  it("[다음 테스트 세팅] goes back to EX-01 after fixing", () => {
+  it("the only big button is [다음 테스트 세팅] (no 'edit the old set' button that breaks the comparison)", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
-    const dispatch = vi.fn();
-    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={dispatch} />);
-    fireEvent.click(screen.getByRole("button", { name: "그 칸으로 이동" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "startFix" });
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
+    expect(screen.queryByRole("button", { name: "그 칸으로 이동" })).toBeNull();
+    expect(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }).className).toContain("bg-accent");
   });
 });
 
 describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
   const settings = SETTING_ORDER.map((id) => ({ fieldId: id, label: `칸 ${id}`, value: "지난 값" }));
+  // 지난 광고: 11/17~11/20 (4일), 세트당 총 10,000원
+  const last = settings.map((x) => ({ ...x, value: { "meta.adset.start_date": "2026-11-17 09:00", "meta.adset.end_date": "2026-11-20",
+    "meta.adset.lifetime_budget": "10,000원", "meta.money_check": "10,000원" }[x.fieldId] ?? x.value }));
+  const go = { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "세로 소재",
+    startDate: "2026-11-27", endDate: "2026-11-30", budget: "5,400원" } as const;
+  beforeEach(() => { vi.useFakeTimers({ toFake: ["Date"] }); vi.setSystemTime(new Date(2026, 10, 26, 10)); });
+  afterEach(() => vi.useRealTimers());
 
-  it("the button sends the owner back to ② 세팅 with only the changed field as the new value", () => {
+  it("says up front how much money and which dates the next test uses (two sets, from tomorrow, same length as last time)", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings: last }} dispatch={() => {}} />);
+    const box = screen.getByRole("region", { name: "다음 테스트 돈·기간" });
+    // 서버는 세트당 5,000원을 권하지만 4일이면 메타 최소(1,336원 × 4일 ≈ 5,400원)보다 적어서 올린다
+    expect(box.textContent).toContain("두 세트 × 세트당 5,400원 = 합계 10,800원");
+    expect(box.textContent).toContain("11월 27일 ~ 11월 30일 (4일)");
+    expect(box.textContent).toMatch(/두 세트.*이 금액·날짜로 맞춰야/);
+    expect(box.textContent).toMatch(/메타 최소/);
+  });
+
+  it("uses the period picked on the analysis page (change.days) over last time's length", () => {
+    const p7 = { ...plan, change: { ...plan.change, days: 7 } as Plan["change"] };
+    expect(nextMoney(p7, last, new Date(2026, 10, 26))).toMatchObject({ startDate: "2026-11-27", endDate: "2026-12-03", days: 7 });
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: p7, settings: last }} dispatch={() => {}} />);
+    expect(screen.getByRole("region", { name: "다음 테스트 돈·기간" }).textContent).toContain("(7일) · 내일 시작, 분석 페이지와 같은 기간");
+  });
+
+  it("the button sends the owner back to ② 세팅 with the changed field + new dates and amount, the rest as last time", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
-    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings }} dispatch={dispatch} />);
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan, settings: last }} dispatch={dispatch} />);
     fireEvent.click(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }));
-    expect(dispatch).toHaveBeenCalledWith({ type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
-    const s = reduce({ ...initialState(), step: "plan", plan, settings }, dispatch.mock.calls[0]![0]);
+    expect(dispatch).toHaveBeenCalledWith(go);
+    const s = reduce({ ...initialState(), step: "plan", plan, settings: last, startDate: "2026-11-17", endDate: "2026-11-20" }, go);
     expect(s.step).toBe("guide");
     expect(s.guide).toEqual({ mode: "create", index: 0, next: "meta.ad.media" });
-    expect(s.settings.find((x) => x.fieldId === "meta.ad.media")!.value).toBe("+ 세로(9:16) 1개");
-    expect(s.settings.filter((x) => x.value === "지난 값")).toHaveLength(settings.length - 1);
+    const v = (id: string) => s.settings.find((x) => x.fieldId === id)!.value;
+    expect(v("meta.ad.media")).toBe("세로 소재");   // 제안 문장('+ 세로(9:16) 1개')이 아니라 값
+    expect(v("meta.adset.start_date")).toBe("2026-11-27");
+    expect(v("meta.adset.end_date")).toBe("2026-11-30");
+    expect(v("meta.adset.lifetime_budget")).toBe("5,400원");
+    expect(v("meta.money_check")).toBe("5,400원");
+    expect([s.startDate, s.endDate]).toEqual(["2026-11-27", "2026-11-30"]);   // 기다리기 화면도 새 날짜
+    expect(s.settings.filter((x) => x.value === "지난 값")).toHaveLength(settings.length - 5);
+  });
+
+  it("when the change is the budget itself, the amount is what the analysis says is needed", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    const budgetPlan = { ...plan, change: { ...plan.change, field_id: "meta.adset.daily_budget", label: "예산", per_set: 5000 },
+      watch: [{ field_id: "meta.adset.daily_budget", path: "광고 세트 › 예산", text: "더 모아야", need_per_set: 82000 }] } as Plan;
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: budgetPlan, settings: last }} dispatch={dispatch} />);
+    fireEvent.click(screen.getByRole("button", { name: "다음 테스트 세팅 ▶" }));
+    expect(dispatch.mock.calls[0]![0]).toMatchObject({ budget: "82,000원" });
   });
 
   it("② 세팅 list: only the changed field is '지금', the rest are done with last values; the character gets just that field + publish check", async () => {
-    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings },
-      { type: "startNextTest", fieldId: "meta.ad.media", label: "형식·미디어", value: "+ 세로(9:16) 1개" });
+    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
     render(<GuideStep state={state} dispatch={() => {}} />);
     const items = screen.getAllByRole("listitem");
-    expect(items).toHaveLength(18);
+    expect(items).toHaveLength(21);   // + 복제, '그대로' 세트 맞추기, 그 세트 돈 확인
     const now = items.filter((li) => li.getAttribute("aria-current") === "step");
     expect(now).toHaveLength(1);
-    expect(now[0]!.textContent).toContain("+ 세로(9:16) 1개");
+    expect(now[0]!.textContent).toContain("'복제'");   // 첫 칸은 지난 세트 복제 (사장님이 직접), 그다음 바꿀 칸
     expect(now[0]!.textContent).toContain("지금");
-    expect(items.filter((li) => li.className.includes("line-through"))).toHaveLength(15);   // 나머지 15칸은 끝난 칸, 돈 확인·게시 확인만 남음
-    expect(screen.getByText(/복제한 세트에서 '칸 meta.ad.media' 칸만 바꾸면 돼요/)).toBeTruthy();
+    // 끝난 칸은 흐리게 하지 않고 ✓와 화면 읽기 '(끝남)'으로 (대비 2.25:1 → 재검토 C)
+    expect(items.find((li) => li.textContent!.includes("세로 소재"))!.textContent).not.toContain("(끝남)");
+    expect(items.filter((li) => li.textContent!.includes("(끝남)"))).toHaveLength(11);   // 나머지 11칸은 끝난 칸, 예산 공유 끄기·금액·날짜·돈 확인·게시 확인이 남음
+    const intro = screen.getByText(/다음 테스트 세팅이에요/).textContent!;
+    expect(intro).toMatch(/지난 광고 세트를 복제해 새 세트 2개/);
+    expect(intro).toContain("바꿀 세트에서 '칸 meta.ad.media' 칸만 바꿔요");
+    expect(intro).toContain("두 세트 모두 총예산 5,400원 · 11월 27일 ~ 11월 30일");   // 다른 화면처럼 '11월 27일' (보이는 글자만)
+    expect(items.find((li) => li.textContent!.includes("meta.adset.start_date"))!.textContent).toContain("11월 27일");
+    expect(screen.queryByText(/2026-11-27/)).toBeNull();
+    expect(intro).not.toMatch(/나머지 칸은 지난번 값 그대로예요\. 두 세트/);   // 금액·날짜는 새로 넣는다
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(true as never);
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, active: true, url: "https://adsmanager.facebook.com/x" }] as never);
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(send).toHaveBeenCalled());
     const msg = send.mock.calls[0]![1] as { steps: { entry: { id: string } }[] };
-    expect(msg.steps.map((x) => x.entry.id)).toEqual(["meta.ad.media", "meta.money_check", "meta.publish"]);
+    expect(msg.steps.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.campaign.budget_strategy", "meta.ad.media", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
+  });
+
+  it("the '그대로' set gets the same amount and dates (owner sets it, then the money check reads that set too)", () => {
+    const s = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
+    const { send } = nextTestSteps(GUIDE, s.settings, "meta.ad.media");
+    const keep = send.find((x) => x.entry.id === "next.keep_set")!;
+    expect(keep.entry.auto).toBe("owner");
+    expect(keep.value).toBe("5,400원 · 2026-11-27 ~ 2026-11-30");
+    expect(send[0]!.entry.auto).toBe("owner");   // 복제는 사장님이 직접
+    expect(send.at(-2)!.value).toBe("5,400원");   // 두 번째 돈 확인도 같은 금액
+  });
+
+  it("다음 테스트 세팅 중엔 '← 결과 화면으로 돌아가기'로 지난 세팅·결과 화면으로 돌아갈 수 있다", () => {
+    const state: FlowState = reduce({ ...initialState(), step: "plan", plan, settings: last }, go);
+    const dispatch = vi.fn();
+    render(<GuideStep state={state} dispatch={dispatch} />);
+    const back = screen.getByRole("button", { name: "← 결과 화면으로 돌아가기" });
+    expect(back.className).toContain("min-h-11");
+    fireEvent.click(back);
+    expect(dispatch).toHaveBeenCalledWith({ type: "backToPlan" });
+  });
+
+  it("처음 만들 때(다음 테스트 아님)는 돌아가기 버튼이 없다", () => {
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings: last, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
+    expect(screen.queryByRole("button", { name: "← 결과 화면으로 돌아가기" })).toBeNull();
   });
 
   it("a field only in the edit guide (노출 위치) is put before the publish check", () => {
     const steps = nextTestSteps(GUIDE, settings, "meta.adset.placements");
-    expect(steps.send.map((x) => x.entry.id)).toEqual(["meta.adset.placements", "meta.money_check", "meta.publish"]);
-    expect(steps.all.at(-2)!.entry.id).toBe("meta.adset.placements");
+    expect(steps.send.map((x) => x.entry.id)).toEqual(["next.duplicate", "meta.campaign.budget_strategy", "meta.adset.placements", "meta.adset.lifetime_budget", "meta.adset.start_date", "meta.adset.end_date", "meta.money_check", "next.keep_set", "meta.money_check", "meta.publish"]);
+    expect(steps.all.at(-4)!.entry.id).toBe("meta.adset.placements");
   });
 });
 
@@ -254,7 +329,7 @@ describe("EX-01 ④ 세팅 중 알림 · EX-02 ④ 세팅 요약 (v4.2)", () => 
     const iso = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, "0")}-${String(end.getDate()).padStart(2, "0")}`;
     const settings = base.map((x) => (x.fieldId === "meta.adset.end_date" ? { ...x, value: iso } : x));
     render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
-    expect(screen.getByText(/하루 최소 약 1,336원 × 7일 = 약 9,400원'보다 적으면 광고가 안 나갈 수 있어요 → 세트마다 그 이상으로/)).toBeTruthy();
+    expect(screen.getByText(/하루 최소 약 1,336원 × 7일 = 약 9,400원'보다 적으면 광고가 안 나갈 수 있어요 → 총예산을 그 이상으로/)).toBeTruthy();
   });
 
   it("publish check warns when a required field is empty", () => {
@@ -269,5 +344,31 @@ describe("EX-01 ④ 세팅 중 알림 · EX-02 ④ 세팅 요약 (v4.2)", () => 
     const card = screen.getByRole("region", { name: "이번 광고 세팅" });
     expect(within(card).getByText("트래픽 · 30–39세 · 여성")).toBeTruthy();
     expect(within(card).getByText("소재: 정사각 이미지")).toBeTruthy();
+  });
+});
+
+describe("처음 쓰는 사장님: 로그인 화면", () => {
+  it("광고 관리자 대신 페이스북 로그인 화면이 뜨면 직접 로그인하라고 알리고, 로그인 뒤 광고 관리자가 뜨면 뭉치를 이어서 부른다", async () => {
+    vi.restoreAllMocks();   // 앞 테스트가 바꿔 둔 탭 찾기(query) 흉내를 지운다
+    const tab = await fakeBrowser.tabs.create({ url: "https://www.facebook.com/login.php?next=https%3A%2F%2Fadsmanager.facebook.com%2F", active: true });
+    const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 } };
+    render(<GuideStep state={state} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
+    expect(await screen.findByText(/페이스북에 로그인해 주세요/)).toBeTruthy();
+    expect(send).not.toHaveBeenCalled();
+    // 기다리는 동안은 다시 누르지 못한다 (기다림이 두 번 돌면 뭉치를 두 번 부름, QA G-06)
+    expect((screen.getByRole("button", { name: /로그인을 기다리는 중/ }) as HTMLButtonElement).disabled).toBe(true);
+    await fakeBrowser.tabs.update(tab.id!, { url: "https://adsmanager.facebook.com/adsmanager/manage/campaigns" });
+    await waitFor(() => expect(send).toHaveBeenCalled(), { timeout: 4000 });
+    expect(send.mock.calls[0]![0]).toBe(tab.id);
+    expect(screen.queryByText(/페이스북에 로그인해 주세요/)).toBeNull();
+  });
+
+  it("로그인 화면 주소를 알아본다 (광고 관리자 주소는 아님)", () => {
+    expect(isLoginPage("https://www.facebook.com/login.php?next=x")).toBe(true);
+    expect(isLoginPage("https://business.facebook.com/business/loginpage/?next=x")).toBe(true);
+    expect(isLoginPage("https://www.facebook.com/checkpoint/1501092823525282/")).toBe(true);
+    expect(isLoginPage("https://adsmanager.facebook.com/adsmanager/manage/campaigns?act=1")).toBe(false);
   });
 });

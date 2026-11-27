@@ -11,6 +11,6 @@ export function sentence(m: Metric, r: Result): string {
     case "cpm": return `${m.better}가 광고비가 약 ${pct(ratio(win.cpm, lose.cpm))} 쌌어요`;
     case "cpc": return `${m.better}가 클릭 1번에 약 ${won(Math.abs((lose.cpc ?? 0) - (win.cpc ?? 0)))} 덜 들었어요`;
     case "ctr": return `${m.better} 광고를 본 사람이 약 ${pct(ratio(win.ctr, lose.ctr))} 더 많이 눌렀어요`;
-    default: return `${m.better}가 같은 돈으로 손님을 더 데려왔어요`;
+    default: return r.verdict?.badge.word === "아직 몰라요" ? `${m.better}가 조금 더 데려왔지만 아직 우연일 수 있어요` : `${m.better}가 같은 돈으로 방문자를 더 데려왔어요`;
   }
 }

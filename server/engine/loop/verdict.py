@@ -16,7 +16,7 @@ from ..specs import loop as _loop
 
 BADGE = "visits_per_1000won"
 METRICS = [  # (키, 사장님 말 이름 (약어), 클수록 좋은가)
-    ("visits_per_1000won", "같은 돈으로 온 손님", True),
+    ("visits_per_1000won", "같은 돈으로 온 방문자", True),
     ("cpm", "광고 1,000번 보여주는 데 드는 돈 (CPM)", False),
     ("cpc", "클릭 1번에 드는 돈 (CPC)", False),
     ("ctr", "본 사람 중 누른 비율 (CTR)", True),
@@ -55,7 +55,7 @@ def compare(a: Dict, b: Dict, seed: int = 0) -> Dict:
     m = next(x for x in metrics if x["key"] == BADGE)
     conf = max(m["prob_b_better"], 1 - m["prob_b_better"])
     return {"a": a["name"], "b": b["name"], "metrics": metrics,
-            "badge": {"metric": BADGE, "label": "손님 1명당 비용", "better": m["better"], "prob": conf,
+            "badge": {"metric": BADGE, "label": "방문 1명당 비용", "better": m["better"], "prob": conf,
                       "level": level(conf), "word": m["word"]}}
 
 
@@ -80,7 +80,7 @@ def daily_replay(bundle, a_name: str, b_name: str) -> List[Dict]:
         b = summary.arm(b_name, *(float(s.loc[b_name].get(c, 0.0)) for c in summary.COUNTS))
         p = _prob_visits(a, b)
         few = min(a["landing_page_views"], b["landing_page_views"])
-        # 그날까지 손님이 세트마다 기준보다 적으면 표본 부족 → '아직 몰라요' (ALT-14와 같은 생각, rules.yaml)
+        # 그날까지 방문자가 세트마다 기준보다 적으면 표본 부족 → '아직 몰라요' (ALT-14와 같은 생각, rules.yaml)
         w = "아직 몰라요" if few < _loop()["alerts"].get("replay_min_visits", 5) else words.word_of(max(p, 1 - p), "B" if p >= 0.5 else "A")
         out.append({"date": str(np.datetime_as_string(np.datetime64(date, "D"))), "prob": p, "min_visits": few, "word": w})
     return out
@@ -135,3 +135,21 @@ def apply_caps(v: Dict, small_sample: bool, spend_gap: bool) -> Dict:
     if reasons:
         badge.update(level=_ORDER[i], word=_word_for(_ORDER[i], badge["better"]), capped=reasons)
     return dict(v, badge=badge)
+
+
+def cap_replay(replay: List[Dict], v: Dict) -> List[Dict]:
+    """날짜별 판정도 큰 판정과 같은 이유로 낮춘다 (그래야 마지막 날 = 큰 판정). 낮춘 단계 수만큼 내린다."""
+    capped = v["badge"].get("capped")
+    if not capped:
+        return replay
+    steps = sum("돈이 몰려서" in c for c in capped)
+    small = any("클릭이 적어서" in c for c in capped)
+    out = []
+    for d in replay:
+        better = "B" if d["prob"] >= 0.5 else "A"
+        i = 2 if d["word"] == "확실해요" else 0 if d["word"] == "아직 몰라요" else 1
+        if small:
+            i = min(i, 1)
+        i = max(0, i - steps)
+        out.append(dict(d, word=_word_for(_ORDER[i], better)))
+    return out
