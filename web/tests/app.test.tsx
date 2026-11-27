@@ -17,10 +17,12 @@ afterEach(() => { vi.unstubAllGlobals(); window.history.replaceState(null, "", "
 function show(result: unknown = oven) {
   const f = vi.fn((url: string, init?: RequestInit) => {
     if (String(url).includes("/simulate/grid")) {
-      const rows = Array.from({ length: 28 }, (_, i) => 3000 + i * 1000).map((b) => ({ budget: b,
+      const days = JSON.parse(init!.body as string).days as number;
+      const budgets = [...Array.from({ length: 28 }, (_, i) => 3000 + i * 1000), ...Array.from({ length: 14 }, (_, i) => 35000 + i * 5000)];
+      const rows = budgets.map((b) => ({ budget: b,
         visits: { median: (b * 16) / 6000, lo: (b * 11) / 6000, hi: (b * 22) / 6000 }, judge: b >= 10000 ? 0.999 : b >= 6000 ? 0.89 : 0.69,
-        hard: b < 6000, tried: b <= 5308, below_daily_min: b / 4 < 1336, daily_min: 1336 }));
-      return ok({ arm: "B", days: 4, rows });
+        hard: b < 6000, tried: b <= 5308, daily_tried: b / days <= 2643, below_daily_min: b / days < 1336, daily_min: 1336 }));
+      return ok({ arm: "B", days, rows, mid: 30000, many_from: 50000 });
     }
     if (String(url).includes("/simulate")) {
       const b = JSON.parse(init!.body as string);
@@ -33,7 +35,7 @@ function show(result: unknown = oven) {
   });
   vi.stubGlobal("fetch", f);
   render(<App />);
-  fireEvent.click(screen.getByRole("button", { name: "베이커리 실험 1 예시" }));
+  fireEvent.click(screen.getByRole("button", { name: "베이커리 실험 2 예시" }));   // 오븐로그 = 베이커리 실험 2 (최종안(1))
   return f;
 }
 const click = async (name: RegExp | string) => fireEvent.click(await screen.findByRole("button", { name }));
@@ -115,14 +117,16 @@ describe("⓪ 업로드", () => {
     expect(screen.getByText("1/4")).toBeTruthy();
   });
 
-  it("example 2 asks the server for the second example and names it 베이커리 실험 2", async () => {
+  it("example 1 (first button) is the heesu experiment; the result is named 베이커리 실험 1", async () => {
     const f = vi.fn((_u: string) => ok(oven));
     vi.stubGlobal("fetch", f);
     render(<App />);
-    fireEvent.click(screen.getByRole("button", { name: "베이커리 실험 2 예시" }));
+    const [one, two] = screen.getAllByRole("button", { name: /베이커리 실험 \d 예시/ });
+    expect([one!.textContent, two!.textContent]).toEqual(["🧪베이커리 실험 1 예시", "🍪베이커리 실험 2 예시"]);
+    fireEvent.click(one!);
     await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요");
     expect(f.mock.calls.some(([u]) => String(u) === "/analysis/example?name=heesu")).toBe(true);
-    expect(screen.getByText(/베이커리실험2_메타AB/)).toBeTruthy();
+    expect(screen.getByText(/베이커리실험1_메타AB/)).toBeTruthy();
   });
 });
 
@@ -243,7 +247,7 @@ describe("② 왜 그런지", () => {
     expect(screen.getByText(/B가 나을 확률/).textContent).toMatch(/B가 나을 확률 79% · 날짜가 쌓일수록 26% → 65% → 79%로 B 쪽으로 굳어지는 중/);
     expect(screen.getByText("광고 1,000번 보여 주는 데 드는 돈 · 두 범위가 안 겹쳐요")).toBeTruthy();
     expect(screen.getByText(/^A 적게 [\d,]+원 ~ 많이 [\d,]+원 · B 적게/)).toBeTruthy();
-    expect(screen.getByText(/메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 \(베이커리 실험 2는 36%\) → 노출 위치는 지금처럼 그대로/)).toBeTruthy();
+    expect(screen.getByText(/메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 \(베이커리 실험 1은 36%\) → 노출 위치는 지금처럼 그대로/)).toBeTruthy();
     expect(screen.getByText("확실해요")).toBeTruthy();
     expect(screen.getByText("B 쪽이에요")).toBeTruthy();
     expect(screen.getByText("들어온 뒤 행동(알림 신청 1건)은 아직 몰라요")).toBeTruthy();
@@ -283,40 +287,66 @@ describe("② 왜 그런지", () => {
   });
 });
 
-describe("③ 준비하기 (예산 슬라이더)", () => {
+describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
   async function prep(result: unknown = oven) {
     const f = show(result);
     await click("이 테스트 준비하기 →");
     await h1("이 테스트를 준비해요");
     return f;
   }
+  const slider = async () => (await screen.findByRole("slider", { name: "세트당 총액" })) as HTMLInputElement;
+  const key = (el: HTMLElement, k: string, n = 1) => { for (let i = 0; i < n; i++) fireEvent.keyDown(el, { key: k }); };
 
-  it("now vs new set, then one slider starting at the recommended amount, with the visitor range as the answer", async () => {
+  it("one slider from 3천 to 10만 원 starting at the recommended amount, period chips, and the visitor range as the answer", async () => {
     const f = await prep();
     expect(screen.getByText("지금 세트는 그대로 두고, 세로 소재를 넣은 세트 하나만 더 만들면 돼요")).toBeTruthy();
-    expect(within(screen.getByRole("region", { name: "새 세트" })).getByText("+ 세로(9:16) 1개")).toBeTruthy();
-    expect(screen.getByRole("heading", { name: /세트당 얼마로 돌릴까요\? · 4일 기준/ })).toBeTruthy();
-    const slider = await screen.findByRole("slider", { name: "세트당 총액" }) as HTMLInputElement;
-    expect([slider.min, slider.max, slider.step, slider.value]).toEqual(["3000", "30000", "1000", "6000"]);
-    expect(slider.getAttribute("aria-valuetext")).toBe("6,000원 (추천)");
+    expect(screen.getByRole("heading", { name: /세트당 얼마로 돌릴까요\?/ })).toBeTruthy();
+    const s = await slider();
+    expect(s.getAttribute("aria-valuemin")).toBe("3000");
+    expect(s.getAttribute("aria-valuemax")).toBe("100000");
+    expect(s.getAttribute("aria-valuetext")).toBe("6,000원 (추천)");
     expect(screen.getByText("추천")).toBeTruthy();
+    for (const t of ["3천", "1만", "3만", "5만", "10만 원"]) expect(screen.getByText(t)).toBeTruthy();
+    expect(screen.getByText("3만 원까지는 1,000원씩, 그 위는 5,000원씩 움직여요")).toBeTruthy();
+    expect((screen.getByRole("radio", { name: "4일" }) as HTMLInputElement).checked).toBe(true);
+    expect(screen.getByText("하루 약 1,500원")).toBeTruthy();
     expect(screen.getByText("방문자 보통 16명")).toBeTruthy();
     expect(screen.getByText("(적게 11명 ~ 많이 22명)")).toBeTruthy();
-    expect(screen.getByText("최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요")).toBeTruthy();
-    expect(screen.getByText("지금 세팅(B 수동) 기준 · 10번 중 8번은 이 범위 안 · 세로 소재 효과는 이 숫자에 없어요")).toBeTruthy();
+    expect(screen.getByText("지금 세팅(B 수동)으로 계산 · 10번 중 8번은 이 안에 들어요 · 세로 소재 효과는 아직 재 본 적 없어요")).toBeTruthy();
+    expect(screen.queryByText(/판단하기 어려워요/)).toBeNull();
     expect(screen.getByText(/금액은/).textContent).toContain("결제·게시를 하지 않아요");
-    expect(f.mock.calls.filter(([u]) => String(u).includes("/simulate/grid")).length).toBe(1);   // 결과표는 한 번만
-    fireEvent.change(slider, { target: { value: "12000" } });
+    key(s, "ArrowRight", 6);   // 1,000원씩
+    expect(s.getAttribute("aria-valuetext")).toBe("12,000원");
     expect(screen.getByText("방문자 보통 32명")).toBeTruthy();
-    expect(screen.getByText("넉넉해요 · 결과를 판단하기에 충분할 가능성이 커요")).toBeTruthy();
-    expect(f.mock.calls.filter(([u]) => String(u).includes("/simulate/grid")).length).toBe(1);
+    expect(screen.getAllByText("가설").length).toBeGreaterThan(0);   // 하루 3,000원 > 써 본 최대 2,643원
+    key(s, "End");
+    expect(s.getAttribute("aria-valuetext")).toBe("100,000원");
+    expect(screen.getByText("금액이 커지면 같은 사람에게 여러 번 보여서, 방문자가 금액만큼 늘지 않을 수 있어요")).toBeTruthy();
+    key(s, "ArrowLeft");
+    expect(s.getAttribute("aria-valuetext")).toBe("95,000원");   // 3만 원 위는 5,000원씩
+    expect(f.mock.calls.filter(([u]) => String(u).includes("/simulate/grid")).length).toBe(1);   // 결과표는 기간마다 한 번
+    fireEvent.click(screen.getByRole("radio", { name: "7일" }));
+    await waitFor(() => expect(f.mock.calls.filter(([u]) => String(u).includes("/simulate/grid")).length).toBe(2));
   });
 
-  it("an amount where 30 clicks are hard to get, or under Meta's daily minimum, warns", async () => {
+  it("under Meta's daily minimum warns with what to do; 7 days makes the same amount too small per day", async () => {
     await prep();
-    fireEvent.change(await screen.findByRole("slider", { name: "세트당 총액" }), { target: { value: "5000" } });
-    expect(screen.getByText("이 금액이면 결과를 판단하기 어려워요 · 클릭 30번이 모이기 어려워요")).toBeTruthy();
-    expect(screen.getByText(/하루 1,250원은 메타 하루 최소\(약 1,336원\)보다 적어요 → 광고가 안 나갈 수 있어요\. 6,000원 이상으로 해 주세요/)).toBeTruthy();
+    const s = await slider();
+    key(s, "ArrowLeft");   // 5,000원
+    expect(screen.getByText(/하루 1,250원은 메타 하루 최소\(약 1,336원\)보다 적어요 → 광고가 안 나갈 수 있어요\. 기간을 줄이거나 총예산을 늘려 주세요/)).toBeTruthy();
+    key(s, "ArrowRight");   // 6,000원 → 4일이면 괜찮음
+    expect(screen.queryByText(/하루 최소/)).toBeNull();
+    fireEvent.click(screen.getByRole("radio", { name: "7일" }));
+    expect(await screen.findByText(/하루 860원은 메타 하루 최소/)).toBeTruthy();
+  });
+
+  it("🔎 inside the budget box compares 2x and 4x of the picked amount with solid/dotted lines", async () => {
+    await prep();
+    expect(screen.getByText("금액 2배·4배 비교 · 실선/점선 뜻 · 계산 방법")).toBeTruthy();
+    open("이 숫자는 어떻게 나왔나요?");
+    expect(await screen.findByRole("heading", { name: "금액을 2배·4배로 하면" })).toBeTruthy();
+    expect(await screen.findByText("12,000원")).toBeTruthy();
+    expect(screen.getByText(/실선 = 써 본 금액 · 점선 = 써 본 적 없는 금액/)).toBeTruthy();
   });
 
   it("the 4-item checklist (final wording) and send with the picked budget; the code stays on screen", async () => {
@@ -325,7 +355,7 @@ describe("③ 준비하기 (예산 슬라이더)", () => {
     for (const t of ["두 세트를 같은 날 같이 시작, 시작은 하루 여유 있게", "바꾸는 칸은 형식·미디어 1개만", "4일 동안 그대로 두기"]) expect(screen.getByText(t)).toBeTruthy();
     expect(screen.getByText("딱 하루만").tagName).toBe("B");
     expect(document.body.textContent).not.toMatch(/ALT-/);
-    fireEvent.change(await screen.findByRole("slider", { name: "세트당 총액" }), { target: { value: "10000" } });
+    key(await slider(), "ArrowRight", 4);
     vi.stubGlobal("navigator", { clipboard: { writeText: () => Promise.resolve() } });
     fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기 →" }));
     expect(await screen.findByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy();
@@ -333,16 +363,15 @@ describe("③ 준비하기 (예산 슬라이더)", () => {
     expect((await screen.findByText(/보냈어요 · 세트당 10,000원 · 코드/)).textContent).toContain(oven.code);
   });
 
-  it("one 더 자세히 fold: Test & Roll, backtest, the 30-click rule, and evidence (6 virtual cases not used for the verdict)", async () => {
+  it("one 더 자세히 fold: Test & Roll, backtest and evidence (6 virtual cases not used for the verdict)", async () => {
     await prep();
-    expect(screen.getByText("전체 예산으로 정하기 · 예측이 맞았나 · 클릭 30번 기준 · 근거")).toBeTruthy();
+    expect(screen.getByText("전체 예산으로 정하기 (Test & Roll) · 예측이 맞았나 · 근거")).toBeTruthy();
     open("더 자세히");
     expect(await screen.findByRole("heading", { name: "다음 테스트에 쓸 돈 (Test & Roll)" }, { timeout: 2000 })).toBeTruthy();
     expect(screen.getByText(/예측이 맞았나\? \(검증\)/)).toBeTruthy();
-    expect(screen.getByText(/두 세트 합쳐 링크 클릭이 30번은 모여야/)).toBeTruthy();
     fireEvent.click(screen.getByRole("tab", { name: "가상 케이스" }));
     expect(screen.getByText(/판정에는 쓰지 않아요/)).toBeTruthy();
-    expect(screen.getByText(/베이커리 실험 2 28 : 72/)).toBeTruthy();
+    expect(screen.getByText(/베이커리 실험 1 28 : 72/)).toBeTruthy();
   });
 
   it("send row: [◀ 왜 그런지] · 계획 파일 · PDF 받기 · [보내기]", async () => {

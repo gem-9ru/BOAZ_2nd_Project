@@ -184,7 +184,7 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
   );
 }
 
-const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "베이커리실험1_메타AB_20261117-20261120.csv", heesu: "베이커리실험2_메타AB_20261117-20261120.csv" };   // 화면 이름 (최종안: 오븐로그 → 베이커리 실험 1, 희수 실험 → 베이커리 실험 2)
+const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "베이커리실험2_메타AB_20261117-20261120.csv", heesu: "베이커리실험1_메타AB_20261117-20261120.csv" };   // 화면 이름 (최종안(1): 희수 실험 → 베이커리 실험 1, 오븐로그 → 베이커리 실험 2)
 const ORDER = SCREEN_ORDER;
 // 최종안의 한 줄 답 (①·②는 고정 문장, ③은 바꿀 칸에 따라)
 const LEAD_1 = "나머지 칸은 그대로 둬야 무엇 덕분인지 알 수 있어요";

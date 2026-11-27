@@ -56,8 +56,8 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
 
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-body text-soft">파일이 없나요?</span>
-        <Example icon="🍪" onClick={() => onExample("ovenlog")} disabled={busy}>베이커리 실험 1 예시</Example>
-        <Example icon="🧪" onClick={() => onExample("heesu")} disabled={busy}>베이커리 실험 2 예시</Example>
+        <Example icon="🧪" onClick={() => onExample("heesu")} disabled={busy}>베이커리 실험 1 예시</Example>
+        <Example icon="🍪" onClick={() => onExample("ovenlog")} disabled={busy}>베이커리 실험 2 예시</Example>
       </div>
 
       {/* 최종안: 접기는 '도움말' 1개 (결과 파일 받는 법 · 꼭 있어야 하는 열 · 내 광고 설정 · 광고를 아직 안 돌렸을 때) */}

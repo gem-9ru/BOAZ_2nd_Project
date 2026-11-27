@@ -47,7 +47,9 @@ def test_grid_for_the_budget_slider():
     b = next(a for a in oven["summary"]["arms"] if a["name"].startswith("B"))
     g = simulate.grid(b, days=4, runs=50000)
     rows = {r["budget"]: r for r in g["rows"]}
-    assert min(rows) == 3000 and max(rows) == 30000 and len(rows) == 28
+    assert min(rows) == 3000 and max(rows) == 100000 and len(rows) == 28 + 14   # 3만까지 1,000원 · 그 위 5,000원
+    assert 31000 not in rows and 35000 in rows and g["mid"] == 30000 and g["many_from"] == 50000
+    assert rows[10000]["daily_tried"] and not rows[11000]["daily_tried"]   # 하루 2,643원 × 4일까지 써 본 금액
     assert rows[5000]["hard"] and not rows[6000]["hard"]          # 69% · 89% (기준 80%)
     assert rows[5000]["below_daily_min"] and not rows[6000]["below_daily_min"]
     one = simulate.run(b, 6000, runs=50000)

@@ -118,3 +118,5 @@ body { background: radial-gradient(circle at 100% 18%, var(--tone-accent-soft), 
 .budget-range:focus-visible { outline: none; }
 .budget-range:focus-visible::-webkit-slider-thumb { outline: var(--focus-width) solid var(--focus-ring); outline-offset: var(--focus-offset); }
 .hatch-warn { background: repeating-linear-gradient(135deg, var(--tone-warn-line) 0 var(--primitive-size-1), var(--tone-warn-bg) var(--primitive-size-1) var(--primitive-size-2)); }
+/* 써 본 적 없는 금액(가설) 구간의 길: 점선 */
+.rail-guess { background: repeating-linear-gradient(90deg, var(--tone-accent-line) 0 var(--primitive-size-2), transparent var(--primitive-size-2) calc(var(--primitive-size-3) + var(--primitive-size-1) / 2)); opacity: 0.6; }

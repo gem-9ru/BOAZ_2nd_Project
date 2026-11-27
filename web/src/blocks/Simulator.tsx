@@ -7,14 +7,20 @@ import { AlertMark, band, Button, Card, HowCalculated, won } from "../ui";
  *  방문자 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
  *  메타 하루 최소보다 적으면 ▲ (광고가 안 나갈 수 있어요).
  *  10번 중 8번은 이 안에 들어요(10~90%). 써 본 적 없는 금액은 점선 + '가설'. 보통 값은 진한 보라 점(주황은 주의 색). */
-export function Simulator({ r, onReload, part = "all" }: { r: Result; onReload?: () => void; part?: "all" | "visits" | "roll" }) {
+export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days: fixedDays }: {
+  r: Result; onReload?: () => void; part?: "all" | "visits" | "roll" | "compare";
+  /** part "compare" (③ 슬라이더 아래 '🔎 이 숫자는 어떻게 나왔나요?'): 슬라이더가 고른 금액·기간으로 2배·4배를 비교한다 */
+  budget?: number; days?: number;
+}) {
   const arms = r.summary.arms;
   const bi = r.verdict?.badge.better === "A" || arms.length < 2 ? 0 : 1;
   const arm = arms[bi];
   const start = r.matrix.change?.per_set ?? 5000;
-  const [budget, setBudget] = useState(start);
+  const [budgetState, setBudget] = useState(start);
   const [total, setTotal] = useState(100000);
-  const [days, setDays] = useState(r.matrix.change?.days ?? (r.check.read.days === 7 ? 7 : 4));
+  const [daysState, setDays] = useState(r.matrix.change?.days ?? (r.check.read.days === 7 ? 7 : 4));
+  const budget = fixedBudget ?? budgetState, days = fixedDays ?? daysState;
+  const compare = part === "compare";
   const [sims, setSims] = useState<Simulation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const budgets = [budget, budget * 2, budget * 4];
@@ -57,10 +63,11 @@ export function Simulator({ r, onReload, part = "all" }: { r: Result; onReload?:
   if (part === "roll") return roll || <p className="text-body text-soft">계산하는 중…</p>;
   return (
     <>
-      <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.what ? ` · ${c.what} 효과는 아직 재 본 적 없어요` : ""}`}>
+      {!compare && <Lead sub={`지금 세팅(${who}) 실측으로 계산${c?.tested === false && c.what ? ` · ${c.what} 효과는 아직 재 본 적 없어요` : ""}`}>
         {first ? `지금 세팅으로 세트당 총 ${won(budget)}을 ${days}일 동안 쓰면 ${band(first.visits)} 와요` : "계산하는 중…"}
-      </Lead>
-      <Card title="예상 방문자 수" summary="10번 중 8번은 이 안에 들어요">
+      </Lead>}
+      <Card title={compare ? "금액을 2배·4배로 하면" : "예상 방문자 수"} summary="10번 중 8번은 이 안에 들어요">
+        {!compare && <>
         <label htmlFor="budget" className="flex flex-wrap items-baseline justify-between gap-2 text-body">
           <span>예산 <span className="text-soft">(세트당 총액)</span></span><b className="tabular-nums">{won(budget)}</b>
         </label>
@@ -82,6 +89,7 @@ export function Simulator({ r, onReload, part = "all" }: { r: Result; onReload?:
             <span>하루 {won(Math.round(budget / days / 10) * 10)}은 메타 하루 최소(약 {won(first.daily_min)})보다 적어요 → 광고가 안 나갈 수 있어요. 기간을 줄이거나 총예산을 늘려 주세요.</span>
           </p>
         )}
+        </>}
         <ul className="flex flex-col gap-3" aria-live="polite">
           {budgets.map((b, i) => {
             const s = sims[i];
@@ -114,7 +122,7 @@ export function Simulator({ r, onReload, part = "all" }: { r: Result; onReload?:
         <p className="text-caption text-soft">방문자 수 범위는 세트당 총액으로 계산해요. 기간을 바꾸면 하루 금액과 '가설' 여부가 바뀌어요.</p>
         {error && <p role="alert" className="text-body text-warn">{error}</p>}
       </Card>
-      {part !== "visits" && roll}
+      {part === "all" && roll}
       <HowCalculated easy="실측으로 맞춘 범위에서 광고비·누르는 정도·페이지 도착을 무작위로 뽑아 수만 번 가상으로 돌려 보고, 가운데 80%를 보여 드려요.">
         <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 방문자. 골라 뽑지 않고 전체 분포를 써요.</p>
         <p>한계: {first?.limits ?? "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>

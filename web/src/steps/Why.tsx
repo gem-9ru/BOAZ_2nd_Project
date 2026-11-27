@@ -65,7 +65,7 @@ export function Why({ r }: { r: Result }) {
         <Reason n={3} graph={<>
             <Bars label="광고 1,000번 보여 주는 데 드는 돈 (짧을수록 좋아요)" rows={arms.map((a, i) => ({ name: names[i]!, value: (a.cpm ?? 0) / Math.max(...arms.map((x) => x.cpm ?? 0), 1), text: won(a.cpm), on: "AB"[i] === cpm.better }))} />
             <p className="mt-1.5 text-caption font-medium text-soft">{arms.map((_, i) => { const iv = i ? cpm.b_interval : cpm.a_interval; return `${"AB"[i]} 적게 ${won(iv[0])} ~ 많이 ${won(iv[1])}`; }).join(" · ")}</p>
-            {placementKeep && meta && <p className="mt-2 rounded-button bg-belly px-3 py-2 text-caption text-belly-ink"><span aria-hidden="true">💡 </span>메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (베이커리 실험 2는 36%) → 노출 위치는 지금처럼 그대로</p>}
+            {placementKeep && meta && <p className="mt-2 rounded-button bg-belly px-3 py-2 text-caption text-belly-ink"><span aria-hidden="true">💡 </span>메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (베이커리 실험 1은 36%) → 노출 위치는 지금처럼 그대로</p>}
           </>} tag={<VerdictBadge word={cpm.word} small />}
           sub={`광고 1,000번 보여 주는 데 드는 돈 · ${cpm.overlap ? "두 범위가 겹쳐요" : "두 범위가 안 겹쳐요"}`}>
           {cpm.word === "확실해요" ? `광고비 자체는 확실히 ${cheap.split(" ")[0]}가 쌌어요` : "광고비 차이는 아직 몰라요"}

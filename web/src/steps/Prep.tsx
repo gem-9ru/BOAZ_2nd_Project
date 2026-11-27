@@ -17,18 +17,23 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
   const c = r.matrix.change ?? r.next.change;
   const keep = r.matrix.keep[0];
   const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
-  const days = c.days ?? r.check.read.days;
+  const [days, setDays] = useState(c.days ?? (r.check.read.days === 7 ? 7 : 4));
   const start = c.per_set ?? 6000;
   const [budget, setBudget] = useState(start);
-  const { grid, error } = useGrid(r, days);
+  const { grid, error, mid, manyFrom } = useGrid(r, days);
   const armsAll = r.summary.arms;
   const bi = r.verdict?.badge.better === "A" || armsAll.length < 2 ? 0 : 1;
   const who = armsAll[bi] ? armName(armsAll[bi]!.name, bi) : "지금 세트";
   const rows = grid ?? [];
-  const lo = rows[0]?.budget ?? 3000, hi = rows[rows.length - 1]?.budget ?? 30000;
-  const at = (b: number) => ((b - lo) / (hi - lo || 1)) * 100;
+  const lo = rows[0]?.budget ?? 3000, hi = rows[rows.length - 1]?.budget ?? 100000;
+  // 눈금 자리: 3만 원까지 왼쪽 절반, 그 위 10만 원까지 오른쪽 절반 (최종안(1) — 작은 금액을 자세히)
+  const at = (b: number) => (b <= mid ? ((b - lo) / (mid - lo || 1)) * 50 : 50 + ((b - mid) / (hi - mid || 1)) * 50);
   const row = rows.find((x) => x.budget === budget);
-  const hardEnd = Math.max(lo, ...rows.filter((x) => x.hard || x.below_daily_min).map((x) => x.budget));   // 빗금: 판단하기 어려운 금액까지
+  const idx = Math.max(0, rows.findIndex((x) => x.budget === budget));
+  const lowEnd = Math.max(lo, ...rows.filter((x) => x.below_daily_min).map((x) => x.budget));   // 빗금: 하루 금액이 메타 최소보다 적은 금액까지
+  const tested = Math.max(lo, ...rows.filter((x) => x.daily_tried).map((x) => x.budget));       // 써 본 범위 (하루 최대 × 기간)
+  const pick = (i: number) => { const x = rows[Math.min(rows.length - 1, Math.max(0, i))]; if (x) setBudget(x.budget); };
+  const nearest = (pos: number) => rows.reduce((best, x, i) => (Math.abs(at(x.budget) - pos) < Math.abs(at(rows[best]!.budget) - pos) ? i : best), 0);
   const bt = r.backtest;
 
   // 옆 광고 어시스턴트(확장 프로그램 패널)로 보낸다. 패널이 안 열려 있을 때를 위해 코드도 복사해 둔다.
@@ -63,44 +68,76 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
       </div>
 
       <section aria-labelledby="budget-title" className="flex flex-col gap-2 rounded-card border border-line bg-surface p-card shadow-card">
-        <h2 id="budget-title" className="text-body font-extrabold"><span aria-hidden="true">💰 </span>세트당 얼마로 돌릴까요? <span className="font-semibold text-soft">· {days}일 기준</span></h2>
+        <h2 id="budget-title" className="text-body font-extrabold"><span aria-hidden="true">💰 </span>세트당 얼마로 돌릴까요?</h2>
         {error && !grid && <p role="alert" className="text-body text-block-ink">{error} {onReload && <button type="button" onClick={onReload} className="underline">파일 다시 올리기</button>}</p>}
         {grid && (
-          <div className="relative mt-7 mb-6">
-            {/* 길: 빗금 = 판단하기 어려운 금액 · 보라 = 지금 금액까지 · 추천 눈금 */}
-            <span aria-hidden="true" className="absolute inset-x-0 top-1/2 h-2.5 -translate-y-1/2 rounded-badge bg-sunk" />
-            <span aria-hidden="true" className="absolute top-1/2 left-0 h-2.5 -translate-y-1/2 rounded-badge bg-linear-90 from-accent-line to-accent opacity-90" style={{ width: `${at(budget)}%` }} />
-            <span aria-hidden="true" className="hatch-warn absolute top-1/2 left-0 h-2.5 -translate-y-1/2 rounded-l-badge" style={{ width: `${at(hardEnd)}%` }} />
+          <div className="relative mt-11 mb-6">
+            {/* 길: 써 본 범위(실선) · 그 위는 가설(점선) · 빗금 = 하루 금액이 메타 최소보다 적은 금액 · 보라 = 지금 금액까지 · 추천 눈금 */}
+            <span aria-hidden="true" className="absolute top-1/2 left-0 h-3 -translate-y-1/2 rounded-l-badge bg-line" style={{ width: `${at(tested)}%` }} />
+            <span aria-hidden="true" className="rail-guess absolute top-1/2 right-0 h-3 -translate-y-1/2 rounded-r-badge" style={{ left: `${at(tested)}%` }} />
+            <span aria-hidden="true" className="absolute top-1/2 left-0 h-3 -translate-y-1/2 rounded-badge bg-linear-90 from-accent-line to-accent" style={{ width: `${at(budget)}%` }} />
+            <span aria-hidden="true" className="hatch-warn absolute top-1/2 left-0 h-3 -translate-y-1/2 rounded-l-badge opacity-90" style={{ width: `${at(lowEnd)}%` }} />
+            {tested < hi && <>
+              <span aria-hidden="true" className="absolute top-0 h-full border-l-2 border-belly-strong" style={{ left: `${at(tested)}%` }} />
+              <span aria-hidden="true" className="absolute -top-6 ml-1.5 whitespace-nowrap text-small font-bold text-belly-ink max-sm:hidden" style={{ left: `${at(tested)}%` }}>
+                ← 써 본 범위 · 여기부터 <span className="rounded-badge border-[1.5px] border-dashed border-disabled-line bg-hold-bg px-1.5 text-hold">가설</span> →
+              </span>
+            </>}
             <span aria-hidden="true" className="absolute -bottom-6 -translate-x-1/2 rounded-badge bg-belly px-2 text-small font-bold text-belly-ink" style={{ left: `${at(start)}%` }}>추천</span>
-            <span aria-hidden="true" className="absolute -top-7 -translate-x-1/2 whitespace-nowrap rounded-button bg-accent px-2.5 py-0.5 text-caption font-bold text-on-accent" style={{ left: `${at(budget)}%` }}>{plain(budget)}</span>
-            <input type="range" className="budget-range relative" min={lo} max={hi} step={1000} value={budget} onChange={(e) => setBudget(Number(e.target.value))}
-              aria-label="세트당 총액" aria-valuetext={`${plain(budget)}${budget === start ? " (추천)" : ""}`} />
+            <span aria-hidden="true" className="absolute -top-11 -translate-x-1/2 whitespace-nowrap rounded-button bg-accent px-2.5 py-0.5 text-label font-extrabold text-on-accent" style={{ left: `${at(budget)}%` }}>{plain(budget)}</span>
+            {/* 길이 두 구간이라 위치(0~1000)로 움직이고 가장 가까운 금액에 붙는다. 화살표 키는 한 칸씩 */}
+            <input type="range" className="budget-range relative" min={0} max={1000} step={1} value={Math.round(at(budget) * 10)}
+              onChange={(e) => pick(nearest(Number(e.target.value) / 10))}
+              onKeyDown={(e) => {
+                const move = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[e.key];
+                if (move !== undefined) { e.preventDefault(); pick(idx + move); }
+                else if (e.key === "Home") { e.preventDefault(); pick(0); }
+                else if (e.key === "End") { e.preventDefault(); pick(rows.length - 1); }
+              }}
+              aria-label="세트당 총액" aria-valuemin={lo} aria-valuemax={hi} aria-valuenow={budget} aria-valuetext={`${plain(budget)}${budget === start ? " (추천)" : ""}`} />
           </div>
         )}
-        {/* 눈금 글자는 실제 금액 자리에 (양 끝은 안쪽으로 붙여 잘리지 않게) */}
         {grid && <p aria-hidden="true" className="relative h-5 text-caption text-soft">
-          {[lo, 10000, 20000, hi].map((b, i, all) => (
-            <span key={b} className={`absolute whitespace-nowrap ${i === 0 ? "" : i === all.length - 1 ? "-translate-x-full" : "-translate-x-1/2"}`} style={{ left: `${at(b)}%` }}>{plain(b)}</span>
+          {[[lo, "3천"], [10000, "1만"], [20000, "2만"], [mid, "3만"], [50000, "5만"], [hi, "10만 원"]].map(([b, t], i, all) => (
+            <span key={b} className={`absolute whitespace-nowrap ${i === 0 ? "" : i === all.length - 1 ? "-translate-x-full" : "-translate-x-1/2"}`} style={{ left: `${at(Number(b))}%` }}>{t}</span>
           ))}
         </p>}
+        {grid && <p className="text-caption text-soft">{(mid / 10000).toLocaleString()}만 원까지는 1,000원씩, 그 위는 5,000원씩 움직여요</p>}
+        <div className="flex flex-wrap items-center gap-2 pt-2">
+          <div role="radiogroup" aria-label="기간" className="flex gap-1.5">
+            {[4, 7].map((d) => (
+              <label key={d} className={`cursor-pointer rounded-badge border-2 px-3.5 py-1 text-label font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${days === d ? "border-accent bg-accent text-on-accent shadow-press-sm" : "border-line bg-surface text-soft"}`}>
+                <input type="radio" name="days" className="sr-only" checked={days === d} onChange={() => setDays(d)} />{d}일
+              </label>
+            ))}
+          </div>
+          <span className="text-label text-soft">하루 약 {won(Math.round(budget / days / 10) * 10)}</span>
+        </div>
         {!grid && !error && <p role="status" className="text-body text-soft">계산하는 중…</p>}
         {row && (
           <div aria-live="polite" className="flex flex-col gap-2 pt-1">
-            <p className="text-lead"><b className="text-number font-extrabold text-accent">방문자 보통 {Math.round(row.visits.median)}명</b> <span className="text-soft">(적게 {Math.round(row.visits.lo)}명 ~ 많이 {Math.round(row.visits.hi)}명)</span></p>
-            {row.hard ? (
-              <p role="status" className="flex items-start gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-4 py-2.5 text-label text-warn">
-                <AlertMark level="warn" /><span>이 금액이면 결과를 판단하기 어려워요 · 클릭 30번이 모이기 어려워요</span>
-              </p>
-            ) : <p className="text-label text-soft">{row.judge >= 0.995 ? "넉넉해요 · 결과를 판단하기에 충분할 가능성이 커요" : "최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요"}</p>}
+            <p className="flex flex-wrap items-baseline gap-x-2 text-lead"><b className="text-number font-extrabold text-accent">방문자 보통 {Math.round(row.visits.median)}명</b>
+              <span className="text-soft">(적게 {Math.round(row.visits.lo)}명 ~ 많이 {Math.round(row.visits.hi)}명)</span>
+              {!row.daily_tried && <span className="rounded-badge border-[1.5px] border-dashed border-disabled-line bg-hold-bg px-2 text-caption font-bold text-hold">가설</span>}</p>
+            <p className="text-caption text-soft">지금 세팅({who})으로 계산 · 10번 중 8번은 이 안에 들어요{c.what ? ` · ${c.what} 효과는 아직 재 본 적 없어요` : ""}</p>
             {row.below_daily_min && (
               <p role="status" className="flex items-start gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-4 py-2.5 text-label text-warn">
                 <AlertMark level="warn" />
-                <span>하루 {won(Math.round(budget / days / 10) * 10)}은 메타 하루 최소(약 {won(row.daily_min)})보다 적어요 → 광고가 안 나갈 수 있어요. {plain(start)} 이상으로 해 주세요.</span>
+                <span>하루 {won(Math.round(budget / days / 10) * 10)}은 메타 하루 최소(약 {won(row.daily_min)})보다 적어요 → 광고가 안 나갈 수 있어요. 기간을 줄이거나 총예산을 늘려 주세요.</span>
               </p>
             )}
-            <p className="text-caption text-soft">지금 세팅({who}) 기준 · 10번 중 8번은 이 범위 안{c.what ? ` · ${c.what} 효과는 이 숫자에 없어요` : ""}</p>
+            {budget > manyFrom && (
+              <p className="flex items-start gap-2 text-label font-bold">
+                <AlertMark level="info" /><span>금액이 커지면 같은 사람에게 여러 번 보여서, 방문자가 금액만큼 늘지 않을 수 있어요</span>
+              </p>
+            )}
           </div>
         )}
+        <Folds label="이 숫자는 어떻게 나왔나요?">
+          <Fold label={<><span aria-hidden="true">🔎 </span>이 숫자는 어떻게 나왔나요?</>} preview="금액 2배·4배 비교 · 실선/점선 뜻 · 계산 방법">
+            <Simulator r={r} onReload={onReload} part="compare" budget={budget} days={days} />
+          </Fold>
+        </Folds>
         <p className="mt-2 flex items-start gap-2 rounded-soft border-[1.5px] border-info-line bg-info-bg px-4 py-2.5 text-label text-info-ink">
           <span aria-hidden="true" className="font-bold text-info">i</span>
           <span>금액은 <b>제안만</b> 해요. 예산은 광고 관리자에서 직접 넣고, 이 페이지는 결제·게시를 하지 않아요.</span>
@@ -118,13 +155,9 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
 
       {/* 최종안: 접기는 '더 자세히' 1개 */}
       <Folds label="더 자세히">
-        <Fold label="더 자세히" preview="전체 예산으로 정하기 · 예측이 맞았나 · 클릭 30번 기준 · 근거">
+        <Fold label="더 자세히" preview="전체 예산으로 정하기 (Test & Roll) · 예측이 맞았나 · 근거">
           <Sub title="전체 예산으로 정하기" note="Test & Roll: 전체의 약 8~20%"><Simulator r={r} onReload={onReload} part="roll" /></Sub>
           {btLine && <Sub title="예측이 맞았나?" note={btLine}><Backtest r={r} /></Sub>}
-          <Sub title="클릭 30번 기준" note={row ? `지금 금액이면 약 ${Math.round(row.judge * 100)}%` : ""}>
-            <p className="text-soft">두 세트 합쳐 링크 클릭이 30번은 모여야 어느 쪽이 나은지 말할 수 있어요. 그보다 적으면 결과가 좋아 보여도 '○ 쪽이에요'까지만 말해요.
-              슬라이더는 금액마다 '두 세트 합쳐 클릭 30번이 모일 가능성'을 계산해서, 80%보다 낮으면 빗금으로 표시해요. 테스트가 '성공'할 확률은 아니에요. (새 세트도 지금 세트처럼 반응한다고 가정)</p>
-          </Sub>
           <Sub title="근거" note="메타 공식 신호 · 우리 실측 2건 · 논문 · 가상 케이스 · 한계"><Evidence r={r} /></Sub>
         </Fold>
       </Folds>
@@ -164,17 +197,19 @@ export function prepLine(r: R) {
 /** 금액 글자는 '10,000원' (슬라이더 눈금끼리 같은 모양으로) */
 const plain = (b: number) => `${b.toLocaleString()}원`;
 
-/** 슬라이더 결과표를 한 번 받아 둔다 (움직일 때마다 서버에 묻지 않음). 새 세트도 지금 이긴 세트처럼 반응한다고 가정. */
+/** 슬라이더 결과표를 기간마다 한 번 받아 둔다 (움직일 때마다 서버에 묻지 않음, 4일↔7일은 기억). 새 세트도 지금 이긴 세트처럼 반응한다고 가정. */
 function useGrid(r: Result, days: number) {
-  const [grid, setGrid] = useState<GridRow[] | null>(null);
+  const [got, setGot] = useState<Record<number, { rows: GridRow[]; mid: number; many_from: number }>>({});
   const [error, setError] = useState<string | null>(null);
   const arms = r.summary.arms;
   const arm = arms[r.verdict?.badge.better === "A" || arms.length < 2 ? 0 : 1];
   useEffect(() => {
-    if (!arm) return;
+    if (!arm || got[days]) return;
     let live = true;
-    simulateGrid(r.code, arm.name, days).then((g) => { if (live) setGrid(g.rows); }, (e: Error) => { if (live) setError(e.message); });
+    simulateGrid(r.code, arm.name, days).then((g) => { if (live) setGot((x) => ({ ...x, [days]: g })); }, (e: Error) => { if (live) setError(e.message); });
     return () => { live = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r.code, arm?.name, days]);
-  return { grid, error };
+  const g = got[days];
+  return { grid: g?.rows ?? null, error, mid: g?.mid ?? 30000, manyFrom: g?.many_from ?? 50000 };
 }
