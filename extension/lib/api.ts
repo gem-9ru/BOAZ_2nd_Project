@@ -170,7 +170,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
     throw new ServerDown();
   }
   const body = await res.json().catch(() => ({}));
-  if (res.status === 400 || res.status === 404) throw new BadInput(body.error ?? body.detail ?? "입력을 확인해 주세요.");
+  // 4xx와 503(잠시 뒤에)은 서버가 사장님께 보여 줄 문장을 보낸다 (분석 페이지 web/src/api.ts와 같은 규칙)
+  const said = body.error ?? body.detail;
+  if ((res.status >= 400 && res.status < 500) || (res.status === 503 && said)) throw new BadInput(said ?? "입력을 확인해 주세요.");
   if (!res.ok) throw new ServerError();
   return body as T;
 }

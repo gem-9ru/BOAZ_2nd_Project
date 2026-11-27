@@ -7,9 +7,7 @@ import datetime
 import json
 import logging
 import os
-import threading
 import time
-from contextlib import contextmanager
 from typing import Annotated, Dict, List, Optional
 
 from fastapi import FastAPI, File, Form, UploadFile
@@ -43,36 +41,26 @@ log = logging.getLogger("coach.api")
 
 MAX_KEYWORDS = 10
 MAX_MODIFIERS = 15   # 좋은 점 칩 (브랜드·가게 이름을 거른 뒤)
-_NAVER_LOCK = threading.Lock()   # naver_api의 조회일·오류는 모듈 전역 → 요청을 한 번에 하나씩
-NAVER_WAIT = 20   # 앞 요청을 이만큼(초)까지만 기다린다. 몰리면 끝없이 줄 서지 않고 '잠시 뒤'로 답한다 (감사 11)
-
-
-@contextmanager
-def _naver_turn():
-    if not _NAVER_LOCK.acquire(timeout=NAVER_WAIT):
-        raise HTTPException(status_code=503, detail="지금 찾는 사람이 많아요. 잠시 뒤에 다시 해 주세요.")
-    try:
-        yield
-    finally:
-        _NAVER_LOCK.release()
-
 app = FastAPI(title="광고 코치 v3", docs_url=None, redoc_url=None, openapi_url=None)   # 공개 주소라 경로 지도는 내보내지 않음
 
 # ── 공개 주소 보호 (감사 3·4, 2026-11-26): 터널로 온 요청은 주소마다 분당 횟수 제한, 본문 크기는 누구든 제한 ──
 RATE_PER_MIN = 30          # Claude·네이버를 부르는 경로, 공개 주소 하나당 1분에
-RATE_PATHS = {"/research", "/copies", "/assistant", "/audience/split", "/simulate", "/simulate/grid", "/analysis"}
+RATE_PATHS = {"/research", "/copies", "/assistant", "/audience/split", "/simulate", "/simulate/grid", "/analysis", "/settings"}
+COUNTED_GETS = ("/plan/", "/analysis/example", "/analysis/result/")   # 코드 맞히기, 세팅값을 넣은 예시(부를 때마다 분석을 새로 함)
 MAX_BODY = 64 * 1024       # 파일 올리기 말고는 작은 JSON뿐
 _HITS: Dict[str, List[float]] = {}   # shortcut: 서버 하나 메모리에만 센다, 서버를 여러 대 띄우면 공유 저장소로
 
 
 @app.middleware("http")
 async def _guard(request, call_next):
+    if request.method == "POST" and "content-length" not in request.headers:   # 길이를 안 밝힌(chunked) 본문은 크기를 못 막는다
+        return JSONResponse(status_code=411, content={"error": "보낸 내용의 길이를 알 수 없어요."})
     size = int(request.headers.get("content-length") or 0)
     limit = MAX_UPLOAD_BYTES + 64 * 1024 if request.url.path == "/analysis" else MAX_BODY
     if request.method == "POST" and size > limit:
         return JSONResponse(status_code=413, content={"error": "보낸 내용이 너무 커요."})
     ip = request.headers.get("cf-connecting-ip")   # Cloudflare 터널로 온 요청만 (내 컴퓨터에서 바로 부르면 없음)
-    counted = (request.method == "POST" and request.url.path in RATE_PATHS) or request.url.path.startswith(("/plan/", "/analysis/result/"))   # 코드 맞히기도 센다
+    counted = (request.method == "POST" and request.url.path in RATE_PATHS) or request.url.path.startswith(COUNTED_GETS)
     if ip and counted:
         now = time.time()
         hits = [t for t in _HITS.get(ip, []) if now - t < 60]
@@ -161,16 +149,15 @@ def _similar_words(product: str, kw) -> List[str]:
 
 def _research(body: ResearchIn) -> dict:
     seeds = [s for s in (body.seeds or [body.product]) if s.strip()]   # 검색 자료 요청용 (저장본 이름이 이 목록으로 정해짐)
-    with _naver_turn():
-        given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
-        code, cands = (given, []) if given else market.category_guess(body.product, _online())
-        if code:   # 정해진 분야는 빼고, 남은 가까운 후보는 [바꾸기]에서 먼저 보여 준다
-            cands = [c for c in cands if c != code]
-        off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
-        brand_check = lambda words: brands.classify(body.product, words, client=False if off else None)[0]   # noqa: E731
-        report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product,
-                              drop_words=brand_check)
-        why = naver_api.last_error()
+    given = body.category if body.category in {c["code"] for c in market.CATEGORIES} else None   # 모르는 code는 없는 셈
+    code, cands = (given, []) if given else market.category_guess(body.product, _online())
+    if code:   # 정해진 분야는 빼고, 남은 가까운 후보는 [바꾸기]에서 먼저 보여 준다
+        cands = [c for c in cands if c != code]
+    off = os.environ.get("COACH_NO_LLM") == "1" or not _online()
+    brand_check = lambda words: brands.classify(body.product, words, client=False if off else None)[0]   # noqa: E731
+    report = market.build(seeds, online=_online(), category=code, keep=body.keywords, product=body.product,
+                          drop_words=brand_check)
+    why = naver_api.last_error()
     mods = _good_points(body.product, report.modifiers if report else [])
     wide = {"category": _category_out(code, not given), "categories": [dict(c) for c in market.CATEGORIES],
             "category_candidates": [{"code": c, "name": _category_out(c, True)["name"]} for c in cands]}
@@ -213,8 +200,7 @@ def audience_split(body: SplitIn) -> dict:
     if body.category not in {c["code"] for c in market.CATEGORIES}:
         return {"female_by_age": {}}
     ages = {str(k): float(v) for k, v in body.ages.items() if str(k) in market.AGE_GROUPS}
-    with _naver_turn():
-        out = market.female_by_age(body.keyword.replace(" ", ""), body.category, ages, _online())
+    out = market.female_by_age(body.keyword.replace(" ", ""), body.category, ages, _online())
     log.info("audience split keyword=%s ages=%d", body.keyword, len(out))
     return {"female_by_age": out}
 
@@ -342,9 +328,10 @@ def _settings(raw: Optional[str]) -> Optional[dict]:
 
 
 @app.post("/analysis")
-async def analysis_upload(file: UploadFile = File(...), settings: Optional[str] = Form(None),
-                          settings_key: Optional[str] = Form(None)):
-    data = await file.read(MAX_UPLOAD_BYTES + 1)
+def analysis_upload(file: UploadFile = File(...), settings: Optional[str] = Form(None),
+                    settings_key: Optional[str] = Form(None)):
+    # async가 아닌 def: 분석(pandas·20만 번 뽑기)이 도는 동안 다른 요청이 멈추지 않게 FastAPI가 따로 돌린다
+    data = file.file.read(MAX_UPLOAD_BYTES + 1)
     if len(data) > MAX_UPLOAD_BYTES:
         return JSONResponse(status_code=400, content={"error": f"파일이 {MAX_UPLOAD_BYTES // 1024 // 1024}MB보다 커요. 광고 관리자에서 비교할 광고 세트만 골라 다시 내보내 주세요."})
     given = _settings(settings) or _SETTINGS.get(settings_key or "")   # 직접 넣은 5문항이 우선, 없으면 확장이 넘긴 세팅값

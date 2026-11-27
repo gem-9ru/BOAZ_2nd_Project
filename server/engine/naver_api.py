@@ -12,6 +12,7 @@ import hmac
 import json
 import logging
 import os
+import threading
 import time
 from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
@@ -35,6 +36,8 @@ KW_GAP = 1.5            # 키워드 도구 호출 사이 최소 간격(초)
 RETRY_WAIT = 6.0        # 429 뒤 쉬는 시간(초)
 BURST_COUNT, BURST_WINDOW, PAUSE_SECONDS = 2, 10.0, 300.0
 _STATE = {"rate_hits": [], "paused_until": 0.0, "last_kw": 0.0}
+_KW_LOCK = threading.Lock()   # _STATE(호출 간격·429 쉬기)는 모든 요청이 같이 쓴다 → 키워드 도구 호출만 한 줄로
+KW_WAIT = 20   # 앞 호출을 이만큼(초)까지만 기다린다. 몰리면 끝없이 줄 서지 않고 저장본으로 (감사 11)
 _sleep, _now = time.sleep, time.time
 
 
@@ -46,29 +49,34 @@ class NaverError(Exception):
         self.message, self.status = message, status
 
 
-# ── 마지막 오류 (앱이 "왜 실시간 조회가 안 됐는지" 보여 주기용) ───────────────
-_LAST = {"error": None}
+# ── 요청마다 따로: 마지막 오류·받은 날 (서버는 요청을 스레드마다 처리 → 두 사람의 기록이 섞이지 않게) ──
+_REQ = threading.local()
 UNKNOWN_ERROR = "네이버에서 값을 가져오는 중 문제가 생겼어요. 지금은 저장해 둔 값으로 보여 드려요."
 
 
 # ── 받은 날 (화면에 "조회일"을 보여 주기용) ───────────────────────────────
-_FETCHED: List[tuple] = []     # (받은 날 'YYYY-MM-DD', 부분 "product"|"baseline")
+def _fetched() -> List[tuple]:
+    """(받은 날 'YYYY-MM-DD', 부분 "product"|"baseline") 목록, 이 요청 것."""
+    if not hasattr(_REQ, "fetched"):
+        _REQ.fetched = []
+    return _REQ.fetched
 
 
 def reset_fetched() -> None:
     """조회일 기록을 비운다. 한 번의 조회 묶음(market.build)을 시작할 때 부른다."""
-    _FETCHED.clear()
+    _fetched().clear()
 
 
 def oldest_fetched() -> Optional[str]:
     """reset_fetched 뒤로 쓴 응답 중 가장 오래된 받은 날 'YYYY-MM-DD'. 없으면 None."""
-    return min(d for d, _ in _FETCHED) if _FETCHED else None
+    got = _fetched()
+    return min(d for d, _ in got) if got else None
 
 
 def fetched_parts() -> Dict[str, str]:
     """부분별 가장 오래된 받은 날. product = 이 상품의 검색어·연령, baseline = 분야 평균 (상품과 상관없는 비교 기준)."""
     out: Dict[str, str] = {}
-    for d, part in _FETCHED:
+    for d, part in _fetched():
         out[part] = min(out.get(part, d), d)
     return out
 
@@ -84,16 +92,16 @@ def part_of(kind: str, key: str) -> str:
 
 def _note_fetched(stamp: Optional[str], part: str = "product") -> None:
     if stamp:
-        _FETCHED.append((str(stamp)[:10], part))
+        _fetched().append((str(stamp)[:10], part))
 
 
 def last_error() -> Optional[str]:
     """가장 최근 네이버 호출이 실패했으면 쉬운 문장, 성공했으면 None. (키 값은 담기지 않음)"""
-    return _LAST["error"]
+    return getattr(_REQ, "error", None)
 
 
 def _set_error(message: Optional[str]) -> None:
-    _LAST["error"] = message
+    _REQ.error = message
 
 
 def _guarded(kind: str, key: str, online: bool, call: Callable[[], object]) -> Optional[dict]:
@@ -289,6 +297,15 @@ def keyword_tool_raw(hints: List[str]) -> Optional[dict]:
     keys = read_keys(AD_KEYS)
     if keys is None:
         return None
+    if not _KW_LOCK.acquire(timeout=KW_WAIT):
+        raise NaverError("지금 찾는 사람이 많아 네이버를 바로 부르지 못했어요. 잠시 뒤 다시 해 주세요.", 429)
+    try:
+        return _keyword_call(keys, hints)
+    finally:
+        _KW_LOCK.release()
+
+
+def _keyword_call(keys: Dict[str, str], hints: List[str]) -> Optional[dict]:
     if _paused():
         raise NaverError("네이버에 요청이 몰려 5분 동안 쉬는 중이에요. 지금은 저장해 둔 값으로 보여 드려요.", 429)
     gap = KW_GAP - (_now() - _STATE["last_kw"])

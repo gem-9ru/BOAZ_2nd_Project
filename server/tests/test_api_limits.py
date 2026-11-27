@@ -91,14 +91,63 @@ def test_public_code_lookups_are_counted():
 
 
 def test_naver_wait_is_bounded(monkeypatch):
-    """감사 11: 앞 요청이 끝나지 않으면 끝없이 줄 서지 않고 '잠시 뒤' (503)."""
-    monkeypatch.setattr(app_module, "NAVER_WAIT", 0.05)
-    app_module._NAVER_LOCK.acquire()
+    """감사 11: 앞 키워드 호출이 끝나지 않으면 끝없이 줄 서지 않고 실패 문장으로 (찾기는 저장본으로 이어감)."""
+    from server.engine import naver_api
+    monkeypatch.setattr(naver_api, "KW_WAIT", 0.05)
+    monkeypatch.setattr(naver_api, "read_keys", lambda names, env_file=None: {k: "x" for k in names})
+    naver_api._KW_LOCK.acquire()
     try:
-        r = TestClient(app).post("/research", json={"product": "쿠키"})
+        with pytest.raises(naver_api.NaverError, match="잠시 뒤"):
+            naver_api.keyword_tool_raw(["쿠키"])
     finally:
-        app_module._NAVER_LOCK.release()
-    assert r.status_code == 503 and "잠시 뒤" in r.json()["detail"]
+        naver_api._KW_LOCK.release()
+
+
+def test_two_searches_keep_their_own_naver_records():
+    """찾기 두 개가 동시에 돌아도 오류·받은 날 기록이 섞이지 않는다 (전체 잠금을 뺀 대신)."""
+    import threading
+    from server.engine import naver_api
+    seen = {}
+
+    def one(name, err, day):
+        naver_api.reset_fetched()
+        naver_api._set_error(err)
+        naver_api._note_fetched(day)
+        go.wait()
+        seen[name] = (naver_api.last_error(), naver_api.oldest_fetched())
+
+    go = threading.Event()
+    ts = [threading.Thread(target=one, args=("a", "막혔어요", "2026-11-01")), threading.Thread(target=one, args=("b", None, "2026-11-20"))]
+    [t.start() for t in ts]
+    go.set()
+    [t.join() for t in ts]
+    assert seen == {"a": ("막혔어요", "2026-11-01"), "b": (None, "2026-11-20")}
+
+
+def test_example_with_settings_and_settings_are_counted():
+    """감사 1: 세팅값을 넣은 예시는 부를 때마다 분석을 새로 하고 결과를 쌓는다 → 공개 주소에서는 센다."""
+    c = TestClient(app)
+    public = {"cf-connecting-ip": "203.0.113.5"}
+    key = c.post("/settings", json={"settings": {"meta.ad.media": "사진 1장"}}, headers=public).json()["key"]
+    codes = [c.get(f"/analysis/example?settings_key={key}", headers=public).status_code for _ in range(app_module.RATE_PER_MIN)]
+    assert codes[:-1] == [200] * (app_module.RATE_PER_MIN - 1) and codes[-1] == 429
+    assert c.post("/settings", json={"settings": {}}, headers=public).status_code == 429
+
+
+def test_body_without_length_is_refused():
+    """감사 6: 길이를 밝히지 않은(chunked) 본문은 크기 제한을 못 하니 받지 않는다."""
+    chunks = iter([b'{"product": "', b'x"}'])
+    r = TestClient(app).post("/copies", content=chunks, headers={"content-type": "application/json"})
+    assert r.status_code == 411
+
+
+def test_upload_still_works_and_does_not_block():
+    """감사 2: /analysis는 async가 아닌 def (분석이 다른 요청을 멈추지 않게)."""
+    import inspect
+    assert not inspect.iscoroutinefunction(app_module.analysis_upload)
+    with open(app_module.DEMO_CSV, "rb") as f:
+        r = TestClient(app).post("/analysis", files={"file": ("demo.csv", f.read(), "text/csv")})
+    assert r.status_code == 200 and r.json()["code"]
 
 
 def test_cache_files_are_capped(tmp_path, monkeypatch):
