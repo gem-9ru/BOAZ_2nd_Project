@@ -2,7 +2,7 @@ import type { Change } from "../../../lib/api";
 import type { FlowEvent, FlowState, Plan } from "../../../lib/flow";
 import { isoDate, META_DAILY_MIN, minBudget, scheduleDays } from "../../../lib/settings";
 import { Chat } from "../ui/Chat";
-import { Coach, PrimaryButton } from "../ui/Coach";
+import { Coach, PrimaryButton, QUIET_BUTTON, SECONDARY_BUTTON } from "../ui/Coach";
 
 /** v4.2 테스트안: 서버가 보내는 필드 (lib/api Change에 더해 오는 것) */
 type TestPlan = Change & { tag?: string; new_short?: string; reason?: string; tested?: boolean; what?: string; per_set?: number; days?: number;
@@ -114,7 +114,7 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
         </details>
       )}
       <Chat code={p.code} step="EX-03" greet={false} />
-      <button type="button" onClick={() => dispatch({ type: "startUpload" })} className="flex min-h-11 items-center self-start text-label text-soft underline">
+      <button type="button" onClick={() => dispatch({ type: "startUpload" })} className={QUIET_BUTTON}>
         다른 코드 넣기
       </button>
     </section>

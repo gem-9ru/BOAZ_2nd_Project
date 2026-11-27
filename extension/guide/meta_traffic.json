@@ -496,6 +496,9 @@
     "placeholder": "간단한 제목을 입력하세요"
    },
    {
+    "labelText": "제목"
+   },
+   {
     "role": "button",
     "text": "다음",
     "inDialog": true,
@@ -951,7 +954,7 @@
   "find": [
    {
     "role": "button",
-    "text": "분석 데이터"
+    "textStarts": "분석 데이터"
    }
   ],
   "say": "'분석 데이터'를 누르고 '일'과 '노출 위치'에 체크하세요. 기간은 광고를 돌린 날이 들어가게 맞춰 주세요",

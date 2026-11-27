@@ -193,7 +193,8 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
         <span className="min-w-0 truncate rounded-badge bg-sunk px-3 py-1.5 text-caption text-soft">{file ?? "새 분석"}</span>
         {/* 결과를 지우는 일이라 한 번 묻는다. 최종안: 오른쪽 위 작은 글자 링크 '다른 파일' */}
         {onLeave && <button type="button" onClick={onLeave} className="print:hidden inline-flex min-h-9 items-center text-caption text-soft underline hover:text-ink">다른 파일</button>}
-        <nav aria-label="단계" className="ml-auto print:hidden max-sm:w-full max-sm:overflow-x-auto">
+        {/* 업로드 화면에서는 단계 표시를 숨긴다: 눌러지지 않는 알약이 탭처럼 보였음 (처음 쓰는 사람 따라가기 5, 2026-11-27) */}
+        {step >= 0 && <nav aria-label="단계" className="ml-auto print:hidden max-sm:w-full max-sm:overflow-x-auto">
           <ol className="flex items-center gap-1 rounded-badge bg-sunk p-1">
             {STEPS.map((x, i) => {
               const can = step >= 0 && (i <= reached || (i === STEPS.length - 1 && !blocked));   // 차단이면 ③으로 건너뛰지 않음
@@ -208,7 +209,7 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
               );
             })}
           </ol>
-        </nav>
+        </nav>}
       </div>
     </header>
   );

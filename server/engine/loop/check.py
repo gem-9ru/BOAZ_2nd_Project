@@ -37,10 +37,12 @@ def run(bundle) -> Dict:
             continue
         if len(off) == len(adsets):
             who = "두 세트 모두" if len(adsets) == 2 else "모든 세트"
-            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)} {who} 하루 종일 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산",
+            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에는 {who} 광고가 안 나갔어요 → 그날은 빼고 비교했어요",
                              "later": f"{_md(date)}은 광고가 안 나가서 그날은 빼고 봤어요"})   # 알림 바 한 줄 (최종안)
         else:
-            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에 {', '.join(off)}만 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산"})
+            # 세트 이름은 사장님이 붙인 긴 이름이라 괄호에 참고로만 (처음 쓰는 사람 따라가기 11: 이름이 앞에 오면 무슨 말인지 몰랐음)
+            who = "한 세트" if len(off) == 1 else f"{len(off)}개 세트"
+            warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에 {who}만 광고가 안 나갔어요 ({', '.join(off)}) → 그날은 빼고 비교했어요"})
 
     if place is not None and len(place):
         for name, g in place.groupby("adset"):

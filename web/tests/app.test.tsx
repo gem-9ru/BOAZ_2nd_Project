@@ -48,7 +48,7 @@ describe("⓪ 업로드", () => {
     render(<App />);
     expect(screen.getByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();
     expect(screen.getByText("파일 하나만 올리면, 다음에 바꿔 볼 칸 1개를 뭉치가 찾아 드려요")).toBeTruthy();
-    expect(screen.getByText("광고 결과 파일(CSV)을 여기로 끌어다 놓기")).toBeTruthy();
+    expect(screen.getByText("광고 결과 파일(CSV·엑셀)을 여기로 끌어다 놓기")).toBeTruthy();
     expect(screen.getByText("새 분석")).toBeTruthy();
     for (const n of ["베이커리 실험 1 예시", "베이커리 실험 2 예시"]) expect(screen.getByRole("button", { name: n })).toBeTruthy();
     expect(screen.getAllByText("도움말", { selector: "summary span" }).length).toBe(1);
@@ -412,9 +412,9 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
     key(await slider(), "ArrowRight", 4);
     vi.stubGlobal("navigator", { clipboard: { writeText: () => Promise.resolve() } });
     fireEvent.click(screen.getByRole("button", { name: "확장 프로그램으로 보내기 →" }));
-    expect(await screen.findByText(/오른쪽 광고 어시스턴트로 보냈어요/)).toBeTruthy();
+    expect(await screen.findByText(/오른쪽 광고 어시스턴트 패널로 보냈어요/)).toBeTruthy();
     expect(new URLSearchParams(window.location.hash.slice(1)).get("budget")).toBe("10000");
-    expect((await screen.findByText(/보냈어요 · 세트당 10,000원 · 코드/)).textContent).toContain(oven.code);
+    expect((await screen.findByText(/패널로 보냈어요 · 세트당 10,000원 · 코드/)).textContent).toContain(oven.code);
   });
 
   it("one 더 자세히 fold: Test & Roll, backtest and evidence (6 virtual cases not used for the verdict)", async () => {

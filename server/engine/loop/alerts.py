@@ -38,10 +38,10 @@ def run(bundle, check: Dict, summary: Dict, settings: Optional[Dict] = None) -> 
     if "meta_placement" not in bundle.tables:
         missing.append("placement")
     for k in missing:
-        name = "노출 위치(분석 기준)" if k == "placement" else REQUIRED[k]
+        name = "노출 위치(분석 데이터)" if k == "placement" else REQUIRED[k]
         text = "노출 위치별로 나눠서 다시 내보내 주세요." if k == "placement" else f"'{name}' 열이 없어요."
         out.append(_a("block", "missing_column", text,
-                      f"광고 관리자 › 보고서 › 분석 기준에서 '일 · 노출 위치'를 고르고 '{name}' 열을 넣어 다시 내보내 주세요.", "AN-00"))
+                      f"광고 관리자 › 광고 세트 탭 › 표 위 '분석 데이터'에서 '일 · 노출 위치'에 체크하고 '{name}' 열이 보이게 해서 다시 내보내 주세요.", "AN-00"))
     if no_visits and "landing_page_views" in daily.columns:
         # 열은 있는데 칸이 다 비었으면 다시 내보내도 같다: 웹사이트에 픽셀이 없거나 성과 목표가 랜딩 페이지 조회가 아닌 경우
         out.append(_a("block", "missing_column", "'랜딩 페이지 조회' 칸이 다 비어 있어요.",

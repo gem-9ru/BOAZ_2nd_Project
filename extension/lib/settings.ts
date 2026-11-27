@@ -139,11 +139,13 @@ export function endDateFrom(choice: string, today: Date = new Date()): string {
 /** 시작일·종료일 (YYYY-MM-DD). 시각(HH:MM)은 사장님이 정했을 때만 — 없으면 광고 관리자 기본 시각 그대로 */
 export interface Schedule { start: string; end: string; startTime?: string; endTime?: string }
 
-/** 광고 기간 답 → 시작일·종료일. "14일"은 오늘부터, "2026-12-01 09:00~2026-12-14"는 사장님이 직접 고른 그대로 (시각은 선택). */
+/** 광고 기간 답 → 시작일·종료일. "14일"은 내일부터, "2026-12-01 09:00~2026-12-14"는 사장님이 직접 고른 그대로 (시각은 선택). */
 export function scheduleFrom(choice: string, today: Date = new Date()): Schedule {
   const m = /^(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?~(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?$/.exec(choice.trim());
   if (m) return { start: m[1]!, end: m[3]!, ...(m[2] ? { startTime: m[2] } : {}), ...(m[4] ? { endTime: m[4] } : {}) };
-  return { start: isoDate(today), end: endDateFrom(choice, today) };
+  // 내일 시작: 메타 심사에 보통 하루 안쪽이 걸려 오늘 시작하면 첫날이 비고 비교가 흔들린다 (분석 페이지 '시작은 하루 여유 있게'와 같게)
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+  return { start: isoDate(start), end: endDateFrom(choice, start) };
 }
 
 export function buildSettings(fields: Field[], answers: Record<string, string>, target: Target, copy: Copy, schedule: Schedule): Setting[] {

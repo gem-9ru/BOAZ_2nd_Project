@@ -210,7 +210,7 @@ export default function CopyStep({ state, dispatch }: Props) {
         <div className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-soft">{OTHER}</span>
           {chips(others)}
-          <p className="text-small text-soft">다른 가게·브랜드 이름이 보이면 고르지 마세요. 문구에 그대로 들어가요.</p>
+          <p className="text-small text-soft">다른 가게·브랜드 이름이나 다른 상품(틀·재료 등)이 보이면 고르지 마세요. 문구에 그대로 들어가요.</p>
         </div>
       )}
       {showPick && <div className="flex flex-col gap-2">
@@ -462,7 +462,7 @@ function Preview({ name, draft, photo, setPhoto, view, setView }: {
           </label>
         ))}
       </div>
-      {view !== "fb" && <p className="text-caption text-soft">{view === "ig" ? "인스타 피드는 제목 40자, 본문 125자가 권장돼요 (메타 광고 가이드). 제목이 실제로 보이는 자리는 광고 관리자 '광고 미리 보기'에서 확인하세요." : "스토리는 9:16 세로 사진이 권장돼요. 위 14%·아래 35%는 버튼에 가려질 수 있어 글자를 넣지 마세요 (메타 광고 가이드). 본문 줄 수는 휴대폰마다 달라요 (메타 도움말)."}</p>}
+      {view !== "fb" && <p className="text-caption text-soft">{view === "ig" ? "인스타 피드는 제목 40자, 본문 125자가 권장돼요 (메타 광고 가이드). 본문 칸의 150자는 페이스북 피드 권장 길이예요. 제목이 실제로 보이는 자리는 광고 관리자 '광고 미리 보기'에서 확인하세요." : "스토리는 9:16 세로 사진이 권장돼요. 위 14%·아래 35%는 버튼에 가려질 수 있어 글자를 넣지 마세요 (메타 광고 가이드). 본문 줄 수는 휴대폰마다 달라요 (메타 도움말)."}</p>}
       <FeedPreview name={name} headline={draft.headline} text={draft.text} photo={photo} kind={view} />
       <div className="flex items-center justify-between gap-2">
         <label className="inline-flex min-h-11 cursor-pointer items-center text-caption font-semibold text-accent-ink underline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent">

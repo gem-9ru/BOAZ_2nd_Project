@@ -92,14 +92,16 @@ export default function App() {
             </button>
           )}
         </div>
-        <ol className="mt-4 flex rounded-badge bg-on-accent/15 p-1 text-caption" aria-label="진행 단계">
+        {/* 진행 표시: 누르는 탭처럼 보이지 않게 알약 대신 밑줄 막대 (처음 쓰는 사람 따라가기 5, 2026-11-27) */}
+        <ol className="mt-4 flex gap-1.5 text-caption" aria-label="진행 단계">
           {STAGES.map((st, i) => (
             <li
               key={st.label}
               aria-current={i === current ? "step" : undefined}
-              className={`flex-1 rounded-badge py-1.5 text-center font-semibold ${i === current ? "bg-paper text-accent" : i < current ? "" : "font-medium"}`}
+              className={`flex-1 border-b-[3px] pb-1.5 text-center ${i === current ? "border-on-accent font-bold" : i < current ? "border-on-accent/60 font-semibold" : "border-on-accent/25 font-medium"}`}
             >
-              {i < current ? `✓ ${st.label}` : `${"①②③"[i]} ${st.label}`}
+              {/* 준비물을 묻는 동안은 '준비' (찾기 탭에서 준비물을 묻는 것처럼 보였음, 따라가기 8) */}
+              {i < current ? `✓ ${st.label}` : `${"①②③"[i]} ${i === 0 && state.step === "prep" ? "준비" : st.label}`}
               {i === 2 && ended && <><span aria-hidden="true" className="ml-1 text-warn-mark">●</span><span className="sr-only"> 결과를 볼 때예요</span></>}
             </li>
           ))}

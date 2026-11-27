@@ -9,7 +9,7 @@ const PREP = [
   "광고 세트 2개, 하나만 다르게 (예: 노출 위치만)",
   "세트마다 하루 약 1,350원 × 4일 (세트당 총 약 5,400원)",
   "총예산·연령·지역은 두 세트가 같게, 같은 날 같이 시작",
-  "끝나면 '분석 데이터'에서 '일'과 '노출 위치'를 골라 CSV로 내보내기",
+  "끝나면 표 위 '분석 데이터'에서 '일'과 '노출 위치'를 골라 내보내기(.csv)",
 ];
 
 /** ⓪ 업로드 (축소안 v5 · 기존 AN-00): 할 일은 하나, 파일 올리기. 내 광고 설정은 확장 프로그램에서 오면 자동이라 상태 한 줄만,
@@ -44,7 +44,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
           onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f && !busy) onFile(f); }}
           className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-sheet border-2 border-dashed px-6 pt-8 pb-7 text-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus ${over ? "border-accent bg-accent-soft" : "border-accent-line bg-surface"}`}>
           <Mungchi pose="wave" className="w-28" />
-          <span className="mt-1 text-title font-extrabold">광고 결과 파일(CSV)을 여기로 끌어다 놓기</span>
+          <span className="mt-1 text-title font-extrabold">광고 결과 파일(CSV·엑셀)을 여기로 끌어다 놓기</span>
           <span className="text-label text-soft">광고 관리자 › 보고서에서 받은 파일 그대로요</span>
           <span className="mt-4 inline-flex h-13 items-center rounded-button bg-button px-6 text-lead font-bold text-button-fg shadow-press">파일 고르기</span>
           <input id="csv" type="file" accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" disabled={busy} aria-label="광고 결과 파일 (CSV)"
@@ -75,7 +75,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
             <ol className="list-decimal pl-5">
               <li>광고 관리자 → <b>광고 세트</b> 탭에서 비교할 세트 체크</li>
               <li>날짜를 광고를 돌린 기간으로</li>
-              <li><b>보고서 › 분석 기준</b>에서 <b>일</b>과 <b>노출 위치</b>를 고른 뒤 내보내기(.csv)</li>
+              <li>표 위 <b>분석 데이터</b>에서 <b>일</b>과 <b>노출 위치</b>에 체크한 뒤 <b>내보내기</b>(.csv)</li>
             </ol>
           </section>
           <section className="flex flex-col gap-1">
@@ -88,7 +88,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
             <MySettings received={received} value={settings} onChange={onSettings} />
           </section>
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 font-bold">광고를 아직 안 돌렸다면: 5,000원씩 두 세트로 작게 <span className="tabular-nums font-normal text-soft">{done.filter(Boolean).length}/{PREP.length}</span></legend>
+            <legend className="mb-2 font-bold">광고를 아직 안 돌렸다면: 세트당 약 5,400원씩 두 세트로 작게 <span className="tabular-nums font-normal text-soft">{done.filter(Boolean).length}/{PREP.length}</span></legend>
             {PREP.map((t, i) => (
               <label key={t} className="flex items-start gap-2">
                 <input type="checkbox" checked={done[i]} onChange={() => setDone((d) => d.map((x, j) => (j === i ? !x : x)))} className="mt-1 accent-action" />{t}

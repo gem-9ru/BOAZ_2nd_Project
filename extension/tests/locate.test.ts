@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { isKorean, locate } from "../entrypoints/adsmanager.content/locate";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import type { GuideStepItem } from "../lib/guide";
+import { GUIDE as GUIDE_ENTRIES } from "../lib/guideList";
 
 const html = readFileSync(resolve(__dirname, "fixtures/adset.html"), "utf8");
 
@@ -690,5 +691,28 @@ describe("대표 계정: 제목이 아니라 그 아래 드롭박스를 짚는�
     document.body.innerHTML = `<h2 id="h">대표 계정</h2>`;
     const fb = (await steps()).find((e) => e.id === "meta.pre.fb_page")!;
     expect(locate(document, fb.find)?.id).toBe("h");
+  });
+});
+
+describe("제목 칸 (실제 화면 2026-11-27: 이름표·안내 글자가 칸에 붙어 있지 않음)", () => {
+  it("'제목' 글자에서 멀리 올라가야 나오는, 이름 없는 글상자도 찾는다 (기본 문구 칸과 헷갈리지 않게)", () => {
+    const deep = (inner: string) => `<div><div><div>${inner}</div></div></div>`;
+    document.body.innerHTML = `
+      <div>${deep('<span>기본 문구</span>')}<div><div><div><div><div><div contenteditable="true" aria-label="간단하게 광고를 소개하세요"></div></div></div></div></div></div></div>
+      <div>${deep('<span>제목</span>')}<div><div><div><div><div><div>간단한 제목을 입력하세요</div></div><textarea id="head" dir="auto"></textarea></div></div></div></div></div>`;
+    const entry = GUIDE_ENTRIES.find((e) => e.id === "meta.creative.copy.headline")!;
+    expect(locate(document, entry.find)?.id).toBe("head");
+  });
+});
+
+describe("말풍선이 펼쳐진 목록을 덮지 않게 (실제 화면 2026-11-27: '분석 데이터' 체크 목록은 단추 바로 아래)", () => {
+  it("보이는 role=menu 상자를 가리킨 칸과 합쳐서 피한다", async () => {
+    const { avoidBox } = await import("../entrypoints/adsmanager.content/Character");
+    document.body.innerHTML = `<div role="menu" id="m"></div>`;
+    const m = document.getElementById("m")!;
+    m.getBoundingClientRect = () => ({ left: 900, top: 220, right: 1090, bottom: 640, width: 190, height: 420, x: 900, y: 220, toJSON() {} }) as DOMRect;
+    expect(avoidBox({ left: 920, top: 180, right: 1090, bottom: 206 })).toEqual({ left: 900, top: 180, right: 1090, bottom: 640, width: 190, height: 460 });
+    m.getBoundingClientRect = () => ({ left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON() {} }) as DOMRect;   // 닫힌 목록은 무시
+    expect(avoidBox({ left: 920, top: 180, right: 1090, bottom: 206 }).bottom).toBe(206);
   });
 });

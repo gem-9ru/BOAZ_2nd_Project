@@ -1,5 +1,5 @@
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { Coach, PrimaryButton } from "../ui/Coach";
+import { Coach, PrimaryButton, QUIET_BUTTON, SECONDARY_BUTTON } from "../ui/Coach";
 
 /** 종료일 다음 날 → '12월 7일' */
 function nextDay(iso: string): string {
@@ -33,7 +33,7 @@ export default function WaitStep({ state, dispatch }: { state: FlowState; dispat
         </p>
       )}
       {!over && (   // 끝난 뒤에는 [결과 분석하기] 다음 화면에 내보내기 안내가 있다
-        <button type="button" onClick={() => dispatch({ type: "startExport" })} className="flex min-h-11 items-center text-left text-body underline">
+        <button type="button" onClick={() => dispatch({ type: "startExport" })} className={SECONDARY_BUTTON}>
           결과 내보내는 법 보기
         </button>
       )}
@@ -41,7 +41,7 @@ export default function WaitStep({ state, dispatch }: { state: FlowState; dispat
         <>
           {/* 끝나기 전엔 작은 글자 버튼: 큰 버튼과 같은 무게면 미리 누르기 쉽다 (QA R-01) */}
           <button type="button" onClick={() => dispatch({ type: "startUpload" })}
-            className="inline-flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            className={QUIET_BUTTON}>
             그래도 지금 결과 분석하기
           </button>
           <p className="-mt-3 text-caption text-soft">광고가 끝난 뒤 받아야 합계가 맞아요 → {day}부터 눌러 주세요.</p>

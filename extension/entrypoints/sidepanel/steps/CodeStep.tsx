@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { analysisPageUrl, plan as fetchPlan } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
+import { Coach, ErrorLine, PrimaryButton, QUIET_BUTTON, SECONDARY_BUTTON } from "../ui/Coach";
 
 /** 4자리로 맞춘다: 공백을 빼고 대문자로 (분석 페이지는 헷갈리는 O·0·I·1을 쓰지 않는다). */
 export function tidyCode(raw: string): string {
@@ -63,13 +63,13 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
       <Coach>{ended ? `광고가 끝났어요${period}. ` : ""}결과 파일을 받아서 다음에 바꿀 칸 1개를 찾아볼까요?</Coach>
       {!ended && state.endDate && (
         // 광고가 아직 안 끝났으면 기다리기로 돌아갈 길 (QA 목록 밖)
-        <button type="button" onClick={() => dispatch({ type: "backToWait" })} className="inline-flex min-h-11 items-center self-start text-label text-accent-ink underline">← 기다리기 화면으로</button>
+        <button type="button" onClick={() => dispatch({ type: "backToWait" })} className={QUIET_BUTTON}>← 기다리기 화면으로</button>
       )}
       <ol className="flex flex-col gap-3 text-body">
         <li className="flex gap-2"><Num i={0} />
           <span>광고 관리자에서 결과 파일 받기
-            <span className="block text-label text-soft">[내보내기]에서 <b>일 · 노출 위치</b>를 꼭 골라요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</span>
-            <button type="button" onClick={() => { mark(EXPORTING); dispatch({ type: "startExport" }); }} className="flex min-h-11 items-center text-label font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
+            <span className="block text-label text-soft">내보내기 전에 표 위 [분석 데이터]에서 <b>일 · 노출 위치</b>에 꼭 체크해요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</span>
+            <button type="button" onClick={() => { mark(EXPORTING); dispatch({ type: "startExport" }); }} className={`mt-2 ${SECONDARY_BUTTON}`}>내보내기 버튼 짚어 주기</button>
           </span></li>
         <li className="flex gap-2"><Num i={1} />
           <span>분석 페이지에 파일 올리기
