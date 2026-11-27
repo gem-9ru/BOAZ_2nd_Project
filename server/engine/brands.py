@@ -15,6 +15,7 @@ from . import copywriter
 log = logging.getLogger("coach.brands")
 MODEL = os.environ.get("COACH_BRAND_MODEL", "claude-sonnet-5-5")
 OTHER = "그 밖"
+MAX_KNOWN = 20000   # 기억할 (상품, 낱말) 수. 넘으면 비우고 다시 묻는다 (메모리가 끝없이 늘지 않게)
 
 _known: Dict[str, bool] = {}               # 낱말 → 브랜드인가
 _groups: Dict[Tuple[str, str], str] = {}   # (상품, 낱말) → 묶음 이름
@@ -70,6 +71,9 @@ def classify(product: str, words: Iterable[str], client=None) -> Tuple[Set[str],
         if client:
             try:
                 found, groups = _ask(client, product, unknown)
+                if len(_known) + len(unknown) > MAX_KNOWN:
+                    _known.clear()
+                    _groups.clear()
                 for w in unknown:
                     _known[w] = w in found
                     if w in groups:

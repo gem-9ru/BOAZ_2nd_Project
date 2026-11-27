@@ -7,13 +7,16 @@ import datetime
 import json
 import logging
 import os
+import secrets
 import time
+from collections import OrderedDict
 from typing import Annotated, Dict, List, Optional
 
-from fastapi import FastAPI, File, Form, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from server.engine import brands, copywriter, market, naver_api, specs
@@ -274,15 +277,10 @@ def fields() -> dict:
 
 
 # ── 분석 페이지: 0 검증 → 5 다음 세팅 (server/engine/loop) ────────────────────
-import secrets  # noqa: E402
-
-from fastapi import HTTPException  # noqa: E402
-
 DEMO_CSV = os.path.join(os.path.dirname(__file__), "data", "demo", "오븐로그_메타AB_20261117-20261120.csv")
 # 예시 2: 카페 모닝빈 (희수 실측, scripts/heesu_example.py 가 정리 엑셀에서 만든 파일 · 타깃과 노출 위치를 함께 바꾼 묶음 비교)
 EXAMPLES = {"ovenlog": DEMO_CSV,
             "heesu": os.path.join(os.path.dirname(__file__), "data", "demo", "모닝빈_메타AB_20261117-20261120.csv")}
-from collections import OrderedDict  # noqa: E402
 
 MAX_PLANS = 200          # 서버 메모리에 남기는 분석 결과 수 (넘으면 가장 오래된 것부터 지움)
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024   # 메타 결과 CSV는 보통 수십 KB
@@ -392,12 +390,11 @@ def simulate(body: SimulateIn):
     arm = next((a for a in (plan or {}).get("summary", {}).get("arms", []) if a["name"] == body.arm), None)
     if arm is None:
         raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
-    budget = max(body.budget, 0.0)
-    out = loop_simulate.run(arm, budget)
+    out = loop_simulate.run(arm, body.budget)
     # 써 본 적 없는 금액은 '가설' (화면에서 점선). Test & Roll은 따로 받은 전체 예산 기준.
-    return {**out, **loop_simulate.tried(arm, budget, body.days if body.days and body.days > 0 else None),
-            "next_test": loop_simulate.next_test_budget(max(body.total, 0.0), body.days or 4),
-            "judge": loop_simulate.judge_chance(arm, budget)}   # 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩)
+    return {**out, **loop_simulate.tried(arm, body.budget, body.days),
+            "next_test": loop_simulate.next_test_budget(body.total, body.days or 4),
+            "judge": loop_simulate.judge_chance(arm, body.budget)}   # 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩)
 
 
 class GridIn(BaseModel):
@@ -454,9 +451,6 @@ def assistant_reply(body: AssistantIn):
 
 
 # ── 분석 페이지 화면 (web/ 를 빌드한 web/dist) ────────────────────────────────
-from fastapi.responses import FileResponse  # noqa: E402
-from fastapi.staticfiles import StaticFiles  # noqa: E402
-
 WEB_DIST = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "web", "dist")
 
 

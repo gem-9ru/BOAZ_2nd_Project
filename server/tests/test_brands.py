@@ -32,6 +32,14 @@ def test_sends_only_words_and_parses_the_answer(monkeypatch):
     assert seen["output_config"]["format"]["type"] == "json_schema"
 
 
+def test_memory_is_capped(monkeypatch):
+    monkeypatch.setattr(brands, "MAX_KNOWN", 3)
+    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: (set(), {w: "기능" for w in ws}))
+    brands.classify("텀블러", ["보온", "유리"], client=object())
+    brands.classify("쿠키", ["버터", "초코"], client=object())
+    assert len(brands._known) == 2   # 넘치면 비우고 새로 물은 2개만 남김
+
+
 def test_remembers_words_and_asks_only_new_ones(monkeypatch):
     asked = []
     monkeypatch.setattr(brands, "_ask", lambda c, p, ws: (asked.append(list(ws)) or {"투썸"} & set(ws), {w: "기능" for w in ws if w != "투썸"}))
