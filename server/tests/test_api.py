@@ -72,8 +72,8 @@ def test_fields_are_the_eleven_questions():
     assert loc["ask"] == "손님이 상품을 어떻게 받나요?" and loc["options"] == ["택배로 보내요", "가게에 와서 사요", "배달해요"]
     assert loc["default"] is None and loc["custom"] == "area" and loc["custom_for"] == ["가게에 와서 사요", "배달해요"]
     assert loc["answer_as"] == {"택배로 보내요": "전국 (택배)"}
-    # 시작 전 준비물: 꼭 있어야 하는 3개 (없으면 광고를 낼 수 없음)
-    assert [f["id"] for f in fields if f["required"]] == ["meta.pre.fb_login", "meta.pre.fb_page", "meta.pre.payment"]
+    # 시작 전 준비물: 꼭 있어야 하는 2개 (결제 카드는 게시할 때만 필요해서 초안 만들기는 막지 않음, 화면 검토 3)
+    assert [f["id"] for f in fields if f["required"]] == ["meta.pre.fb_login", "meta.pre.fb_page"]
     assert all(f["stage"] == "사전 점검" for f in fields if f["id"].startswith("meta.pre."))
 
 
