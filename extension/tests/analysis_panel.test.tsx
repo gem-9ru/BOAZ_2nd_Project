@@ -3,6 +3,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { fakeBrowser } from "wxt/testing/fake-browser";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AnalysisAssistant from "../entrypoints/sidepanel/steps/AnalysisAssistant";
+import { nextMoney } from "../entrypoints/sidepanel/steps/PlanStep";
 import { parseAnalysisUrl } from "../lib/analysisTab";
 
 const ok = (b: unknown) => Promise.resolve(new Response(JSON.stringify(b), { status: 200 }));
@@ -104,7 +105,7 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "m", suggestions: [] })));
     const dispatch = vi.fn();
     render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "124", budget: 10000 }} dispatch={dispatch} />);
-    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: { ...plan, change: { ...plan.change, per_set: 10000 } }, sent: "124" }));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: { ...plan, change: { ...plan.change, per_set: 10000, picked: true } }, sent: "124" }));
   });
 
   it("the period picked on ③ (days in the address) replaces the plan's days, and the card shows amount · days", async () => {
@@ -113,7 +114,7 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     const dispatch = vi.fn();
     const tab = { tabId: 1, code: "AB12", step: "AN-06", send: "125", budget: 10000, days: 7 };
     const { rerender } = render(<AnalysisAssistant tab={tab} dispatch={dispatch} />);
-    const got = { ...plan, change: { ...plan.change, per_set: 10000, days: 7 } };
+    const got = { ...plan, change: { ...plan.change, per_set: 10000, picked: true, days: 7 } };
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: got, sent: "125" }));
     rerender(<AnalysisAssistant tab={tab} dispatch={dispatch} handled="125" plan={got as never} />);
     expect(screen.getByRole("region", { name: "받은 바꿀 칸" }).textContent).toContain("세트당 10,000원 · 7일");
@@ -125,6 +126,38 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "1" }} dispatch={() => {}} handled="1" plan={plan as never} />);
     // 3,000원 · 7일은 하루 최소(1,336원 × 7일 = 9,400원)보다 적다 → 다음 화면처럼 9,400원
     expect(screen.getByRole("region", { name: "받은 바꿀 칸" }).textContent).toContain("세트당 9,400원 · 7일");
+  });
+
+  it("a budget test (underspent ad): the amount the owner sent wins over the server's 'need more' amount", async () => {
+    const plan = { code: "AB12", action: "a", change: { field_id: "meta.adset.daily_budget", label: "예산", new: "넉넉하게", note: "n", per_set: 6000, days: 4 },
+      watch: [{ field_id: "meta.adset.daily_budget", path: "광고 세트 › 예산", text: "더 모아야", need_per_set: 82000 }], summary: [], badge: null };
+    vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "5", budget: 6000 }} dispatch={dispatch} />);
+    await waitFor(() => expect(dispatch).toHaveBeenCalled());
+    const got = dispatch.mock.calls[0]![0].plan;
+    expect(nextMoney(got, []).amount).toBe(6000);           // 사장님이 보낸 6,000원 (82,000원이 아니라)
+    expect(nextMoney({ ...plan } as never, []).amount).toBe(82000);   // 코드로 넣어 고른 금액이 없으면 '더 모아야 할 금액'
+  });
+
+  it("when the assistant cannot be reached on ①, the to-do line names no button (it may be blocked)", async () => {
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response("{}", { status: 500 }))));
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-01", send: null }} dispatch={() => {}} />);
+    expect(await screen.findByText("왼쪽 결론 화면의 안내를 따라 주세요.", { exact: false })).toBeTruthy();
+    expect(screen.queryByText(/\[이 테스트 준비하기 →\]/)).toBeNull();
+  });
+
+  it("[광고 관리자에서 다음 테스트 준비] reuses an Ads Manager tab that fell onto the login page", async () => {
+    const plan = { code: "AB12", action: "a", change: { field_id: "meta.ad.media", label: "l", new: "n", note: "n" }, summary: [], badge: null };
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    const update = vi.spyOn(fakeBrowser.tabs, "update").mockResolvedValue({} as never);
+    const create = vi.spyOn(fakeBrowser.tabs, "create").mockResolvedValue({} as never);
+    vi.spyOn(fakeBrowser.windows, "update").mockResolvedValue({} as never);
+    vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 4, windowId: 1, url: "https://www.facebook.com/login/?next=adsmanager" }] as never);
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "1" }} dispatch={() => {}} handled="1" plan={plan as never} />);
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자에서 다음 테스트 준비 ▶" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(4, { active: true }));
+    expect(create).not.toHaveBeenCalled();
   });
 
   it("sending twice quickly: a late answer for the first send does not overwrite the second", async () => {

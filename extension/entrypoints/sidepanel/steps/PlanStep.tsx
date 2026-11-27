@@ -5,7 +5,9 @@ import { Chat } from "../ui/Chat";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 /** v4.2 테스트안: 서버가 보내는 필드 (lib/api Change에 더해 오는 것) */
-type TestPlan = Change & { tag?: string; new_short?: string; reason?: string; tested?: boolean; what?: string; per_set?: number; days?: number };
+type TestPlan = Change & { tag?: string; new_short?: string; reason?: string; tested?: boolean; what?: string; per_set?: number; days?: number;
+  /** 분석 페이지에서 사장님이 직접 고른 금액(per_set)이면 true: 어떤 칸 테스트든 이 금액이 이긴다 */
+  picked?: boolean };
 
 const won = (n: number) => `${n.toLocaleString()}원`;
 const day = (iso: string) => { const [, m, d] = iso.split("-").map(Number); return `${m}월 ${d}일`; };
@@ -20,7 +22,7 @@ export function nextMoney(p: Plan, settings: FlowState["settings"], today = new 
   const last = lastStart && lastEnd ? scheduleDays({ start: lastStart, end: lastEnd }) : NaN;
   const days = c.days && c.days > 0 ? c.days : last > 0 ? last : 7;
   const at = (n: number) => isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + n));
-  const want = /budget/.test(c.field_id) ? p.watch?.find((w) => w.field_id === c.field_id)?.need_per_set : c.per_set;
+  const want = !c.picked && /budget/.test(c.field_id) ? p.watch?.find((w) => w.field_id === c.field_id)?.need_per_set : c.per_set;
   const amount = want ? Math.max(want, minBudget(days)) : null;
   return { startDate: at(1), endDate: at(days), days, want, amount, budget: amount ? won(amount) : val("meta.adset.lifetime_budget") || undefined };
 }

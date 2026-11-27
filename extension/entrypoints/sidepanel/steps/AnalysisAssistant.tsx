@@ -5,6 +5,7 @@ import type { FlowEvent, Plan, Step } from "../../../lib/flow";
 import { ADS_MANAGER_URL } from "../../../lib/guideList";
 import { AskForm, bubbleClass, useAsk, type Bubble } from "../ui/Chat";
 import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
+import { isLoginPage } from "./GuideStep";
 import { nextMoney } from "./PlanStep";
 
 const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: string }> = {
@@ -18,7 +19,8 @@ const ADS = /^https:\/\/(adsmanager|business)\.facebook\.com\//;
 /** 광고 관리자 탭을 앞으로 (없으면 지금 창에 새로 연다). 그 탭에서는 패널이 ③ 결과 화면·뭉치 안내로 바뀐다.
  *  사이드 패널은 창마다 따로라서 지금 창의 탭을 먼저 찾는다 (다른 창으로 넘어가면 이 패널은 분석 화면 그대로). */
 async function goAds() {
-  const find = async (q: { currentWindow?: boolean }) => (await browser.tabs.query(q).catch(() => [])).find((x) => ADS.test(x.url ?? ""));
+  // 로그인이 풀려 로그인 화면이 된 광고 관리자 탭도 그 탭으로 친다 (새 탭을 또 열지 않게, GuideStep과 같은 기준)
+  const find = async (q: { currentWindow?: boolean }) => (await browser.tabs.query(q).catch(() => [])).find((x) => ADS.test(x.url ?? "") || isLoginPage(x.url));
   const t = (await find({ currentWindow: true })) ?? (await find({}));
   if (t?.id == null) { await browser.tabs.create({ url: ADS_MANAGER_URL }); return; }
   await browser.tabs.update(t.id, { active: true });
@@ -26,8 +28,9 @@ async function goAds() {
 }
 
 /** 지금 왼쪽 분석 페이지에서 누를 것 한 줄 (웹 화면의 실제 버튼 이름) */
-function todoFor(step: string | null, blocked: boolean): string {
+function todoFor(step: string | null, blocked: boolean, offline: boolean): string {
   if (blocked) return "왼쪽 ■ 차단 알림부터 고쳐 주세요. 고치기 전에는 다음 화면으로 못 가요.";
+  if (step === "AN-01" && offline) return "왼쪽 결론 화면의 안내를 따라 주세요.";   // 알림을 못 받아 차단인지 모름 → 없을 수 있는 버튼 이름은 빼고
   if (step === "AN-01") return "왼쪽 결론 카드의 [이 테스트 준비하기 →]를 눌러요.";
   if (step === "AN-05" || step === "AN-06") return "왼쪽에서 세트당 예산·기간을 고르고 [확장 프로그램으로 보내기 →]를 눌러요.";
   return "왼쪽 아래 [준비하기 ▶]를 눌러요.";
@@ -48,6 +51,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
   const [loading, setLoading] = useState(false);   // 단계 첫 말을 기다리는 중
   const [sendError, setSendError] = useState<string | null>(null);
   const [receiving, setReceiving] = useState(false);   // 보내기를 받아 오는 중
+  const [offline, setOffline] = useState(false);   // 이 단계 설명·알림을 못 받음
   const [retry, setRetry] = useState(0);
   const seen = useRef(new Set<string>());
   const sent = useRef<string | null>(null);
@@ -63,9 +67,10 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
     seen.current.add(step);
     setLoading(true);
     askAssistant(code, step).finally(() => setLoading(false)).then((o) => {
+      setOffline(false);
       setBubbles((b) => [...b, ...(o.alerts ?? []).map((a) => ({ from: "assistant" as const, text: `${a.text} ${a.todo}`, alert: a })), { from: "assistant", text: o.message }]);
       setSuggestions(o.suggestions ?? []);
-    }, () => setBubbles((b) => [...b, { from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 분석 페이지의 내용은 그대로 보실 수 있어요." }]));
+    }, () => { setOffline(true); setBubbles((b) => [...b, { from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 분석 페이지의 내용은 그대로 보실 수 있어요." }]); });
   }, [code, step]);
 
   // AN-06 [확장 프로그램으로 보내기] → 테스트안을 받아 둔다. 받으면 아래 '받았어요' 카드의 버튼 하나로 광고 관리자(EX-03 결과 화면)에 간다
@@ -79,7 +84,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
     fetchPlan(code).finally(() => { if (sent.current === mine) setReceiving(false); }).then((got) => {
       if (sent.current !== mine) return;
       // 사장님이 ③에서 고른 예산·기간이 있으면 그 값으로 (서버 계획은 기본값 per_set·days)
-      const p = { ...got, change: { ...got.change, ...(tab.budget ? { per_set: tab.budget } : {}), ...(tab.days ? { days: tab.days } : {}) } };
+      const p = { ...got, change: { ...got.change, ...(tab.budget ? { per_set: tab.budget, picked: true } : {}), ...(tab.days ? { days: tab.days } : {}) } };
       dispatch({ type: "planLoaded", plan: p, sent: mine });
     }, (e: Error) => { if (sent.current !== mine) return; sent.current = null; setSendError(e.message); });
   }, [code, tab.send, tab.budget, tab.days, dispatch, handled, retry]);
@@ -128,7 +133,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
           <ErrorLine message={`바꿀 칸을 받지 못했어요. ${sendError}`} onRetry={() => setRetry((n) => n + 1)} />
           <p className="text-label">그래도 안 되면 광고 관리자 패널의 '보내기가 안 되면: 코드 4자리로 넣기'에 <b className="tracking-widest">{code}</b>를 넣어 주세요.</p>
         </div>
-      ) : <Todo>{receiving ? "보낸 바꿀 칸을 받는 중이에요…" : todoFor(step, blocked)}</Todo>}
+      ) : <Todo>{receiving ? "보낸 바꿀 칸을 받는 중이에요…" : todoFor(step, blocked, offline)}</Todo>}
       <div className="flex flex-col gap-2" aria-live="polite">
         {bubbles.map((b, i) => b.alert ? (
           <p key={i} className={`flex gap-2 rounded-button px-3 py-2 text-body ${SHAPE[b.alert.level].box}`}>
