@@ -420,7 +420,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         </>
       ) : (
         <>
-          {dropped.length > 0 && !segments.some((g) => dropped.includes(g.lead)) && (
+          {dropped.some((k) => !(state.droppedApplied ?? []).includes(k)) && !segments.some((g) => dropped.includes(g.lead)) && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-button bg-sunk px-3 py-2">
               <span className="text-caption">검색어 {dropped.length}개를 뺐어요. 남긴 말로 손님을 다시 볼 수 있어요.</span>
               <button type="button" onClick={onResearch}

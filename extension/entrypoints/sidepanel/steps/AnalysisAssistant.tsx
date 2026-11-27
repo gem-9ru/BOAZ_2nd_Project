@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { askAssistant, plan as fetchPlan, type AssistantAlert } from "../../../lib/api";
 import { ANALYSIS_STEPS, type AnalysisTab } from "../../../lib/analysisTab";
-import type { FlowEvent } from "../../../lib/flow";
+import type { FlowEvent, Plan } from "../../../lib/flow";
+import { ADS_MANAGER_URL } from "../../../lib/guideList";
 import { AskForm, bubbleClass, useAsk, type Bubble } from "../ui/Chat";
-import { Coach } from "../ui/Coach";
+import { Coach, ErrorLine, PrimaryButton } from "../ui/Coach";
 
 const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: string }> = {
   block: { mark: "■", name: "차단", box: "border-[1.5px] border-block-line bg-block-bg text-block-ink" },
@@ -11,13 +12,37 @@ const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: 
   info: { mark: "●", name: "참고", box: "border-[1.5px] border-info-line bg-info-bg text-info-ink" },
 };
 
+const ADS = /^https:\/\/(adsmanager|business)\.facebook\.com\//;
+
+/** 광고 관리자 탭을 앞으로 (없으면 새로 연다). 그 탭에서는 패널이 ③ 결과 화면·뭉치 안내로 바뀐다. */
+async function goAds() {
+  const t = (await browser.tabs.query({}).catch(() => [])).find((x) => ADS.test(x.url ?? ""));
+  if (t?.id == null) { await browser.tabs.create({ url: ADS_MANAGER_URL }); return; }
+  await browser.tabs.update(t.id, { active: true });
+  if (t.windowId != null) await browser.windows?.update?.(t.windowId, { focused: true });
+}
+
+/** 지금 왼쪽 분석 페이지에서 누를 것 한 줄 (웹 화면의 실제 버튼 이름) */
+function todoFor(step: string | null, blocked: boolean): string {
+  if (blocked) return "왼쪽 ■ 차단 알림부터 고쳐 주세요. 고치기 전에는 다음 화면으로 못 가요.";
+  if (step === "AN-01") return "왼쪽 결론 카드의 [이 테스트 준비하기 →]를 눌러요.";
+  if (step === "AN-05" || step === "AN-06") return "왼쪽에서 세트당 예산을 고르고 [확장 프로그램으로 보내기 →]를 눌러요.";
+  return "왼쪽 아래 [준비하기 ▶]를 눌러요.";
+}
+
 /** 분석 페이지 옆 광고 어시스턴트 (v4.2 AN-COM ④): 분석 페이지를 크롬 탭에 펼쳐 두면, 이 사이드 패널이 그 단계에 맞춰
  *  알림 말풍선을 먼저, 그다음 이 단계 요약 + 추천 질문 2개를 보여 준다. 질문하면 그 단계 결과(JSON)로만 설명한다.
  *  같은 알림은 처음 나오는 단계에서만 (서버가 단계별로 준다). AN-06 [확장 프로그램으로 보내기]를 누르면 테스트안을 받아 EX-03으로 이어진다. */
-export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab; dispatch: (ev: FlowEvent) => void }) {
+export default function AnalysisAssistant({ tab, dispatch, handled, plan }: { tab: AnalysisTab; dispatch: (ev: FlowEvent) => void;
+  /** 이미 받은 보내기 (저장된 상태). 탭을 오가도 같은 보내기는 다시 받지 않는다 */
+  handled?: string;
+  /** 받아 둔 테스트안 (보내기를 받았으면 '받았어요' 카드에 쓴다) */
+  plan?: Plan | null }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);   // 단계 첫 말을 기다리는 중
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
   const seen = useRef(new Set<string>());
   const sent = useRef<string | null>(null);
   const end = useRef<HTMLDivElement>(null);
@@ -37,42 +62,60 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
     }, () => setBubbles((b) => [...b, { from: "assistant", text: "지금은 어시스턴트에 연결하지 못했어요. 분석 페이지의 내용은 그대로 보실 수 있어요." }]));
   }, [code, step]);
 
-  // AN-06 [확장 프로그램으로 보내기] → 테스트안을 받아 둔다 (탭을 떠나면 EX-03 화면, [다음 테스트 세팅]을 눌러야 뭉치가 짚는다)
+  // AN-06 [확장 프로그램으로 보내기] → 테스트안을 받아 둔다. 받으면 아래 '받았어요' 카드의 버튼 하나로 광고 관리자(EX-03 결과 화면)에 간다
   useEffect(() => {
-    if (!code || !tab.send || sent.current === tab.send) return;
+    if (!code || !tab.send || sent.current === tab.send || handled === tab.send) return;
     sent.current = tab.send;
+    setSendError(null);
     fetchPlan(code).then((got) => {
       // 사장님이 ③에서 고른 예산이 있으면 그 금액으로 (서버 계획은 기본값 per_set)
       const p = tab.budget ? { ...got, change: { ...got.change, per_set: tab.budget } } : got;
-      dispatch({ type: "planLoaded", plan: p });
-      setBubbles((b) => [...b, { from: "assistant", text: `테스트안을 받았어요 (${p.change.path ?? p.change.label}). 이 탭을 떠나면 이 패널에 [다음 테스트 세팅]이 보여요. 누르면 광고 관리자에서 그 칸을 짚어 드려요. 게시는 사장님이 직접 해요.` }]);
-    }, (e: Error) => setBubbles((b) => [...b, { from: "assistant", text: e.message }]));
-  }, [code, tab.send, tab.budget, dispatch]);
+      dispatch({ type: "planLoaded", plan: p, sent: tab.send! });
+    }, (e: Error) => { sent.current = null; setSendError(e.message); });
+  }, [code, tab.send, tab.budget, dispatch, handled, retry]);
 
   useEffect(() => { end.current?.scrollIntoView?.({ block: "end" }); }, [bubbles]);
 
   if (!code) {
-    // AN-00 업로드: 아직 결과가 없으면 정해진 안내만
+    // AN-00 업로드: 아직 결과가 없으면 정해진 안내만 (할 일 한 줄 + 파일이 없을 때 갈 곳)
     return (
       <section aria-label="분석 페이지 어시스턴트" className="flex flex-col gap-3">
         <p className="text-caption font-semibold text-accent-ink">분석 페이지 · 업로드</p>
-        <Coach>안녕하세요! 돌려 본 광고 결과를 올려 주시면 다음에 바꿔 볼 칸 1개를 같이 찾아볼게요.</Coach>
-        <Coach>내보내기 할 때 분석 기준에서 <b>일</b>과 <b>노출 위치</b>를 꼭 골라 주세요.</Coach>
-        <details className="rounded-button bg-paper px-3 py-2 text-caption">
-          <summary className="cursor-pointer font-semibold text-accent-ink">CSV는 어디서 받아요?</summary>
+        <Todo>왼쪽 분석 페이지에 결과 파일(CSV)을 올려 주세요.</Todo>
+        <Coach>올려 주시면 다음에 바꿔 볼 칸 1개를 같이 찾아볼게요. 내보내기 할 때 분석 기준에서 <b>일</b>과 <b>노출 위치</b>를 꼭 골라 주세요.</Coach>
+        <button type="button" onClick={() => { dispatch({ type: "startExport" }); void goAds(); }}
+          className="flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline">파일이 아직 없으면: 광고 관리자에서 내보내기 짚어 주기</button>
+        <details className="rounded-button bg-paper px-3 py-2 text-label">
+          <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent-ink">CSV는 어디서 받아요?</summary>
           <p className="mt-1">광고 관리자 › 보고서 › 내보내기에서 분석 기준을 '일 · 노출 위치'로 고른 뒤 CSV로 받아요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</p>
         </details>
-        <details className="rounded-button bg-paper px-3 py-2 text-caption">
-          <summary className="cursor-pointer font-semibold text-accent-ink">광고 설정은 왜 필요해요?</summary>
+        <details className="rounded-button bg-paper px-3 py-2 text-label">
+          <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent-ink">광고 설정은 왜 필요해요?</summary>
           <p className="mt-1">내 광고 설정이 있어야 '내 세팅 카드'에서 칸마다 바꿀지·둘지를 알려 드려요. 확장 프로그램 ② 세팅에서 만든 값은 자동으로 넘어가요.</p>
         </details>
       </section>
     );
   }
 
+  const got = plan && tab.send && handled === tab.send ? plan : null;   // 이번 보내기를 받았음
+  const blocked = bubbles.some((b) => b.alert?.level === "block");
   return (
     <section aria-label="분석 페이지 어시스턴트" className="flex flex-col gap-2 rounded-card bg-accent-soft p-3">
-      <p className="text-caption font-semibold text-accent-ink">분석 페이지 · {step ? ANALYSIS_STEPS[step] : ""}</p>
+      <p className="text-caption font-semibold text-accent-ink">분석 페이지 · {step ? `${ANALYSIS_STEPS[step]} (3단계 중)` : ""}</p>
+      {got ? (
+        <section aria-label="받은 테스트안" className="flex flex-col gap-2 rounded-card border-2 border-accent bg-paper px-4 py-3">
+          <p className="text-label font-semibold text-accent-ink">✓ 테스트안을 받았어요</p>
+          <p className="text-caption text-soft">{got.change.path ?? got.change.label}</p>
+          <p className="text-body font-bold">{got.change.now ? `${got.change.now} → ` : ""}{(got.change as { new_short?: string }).new_short ?? got.change.new}</p>
+          <p className="text-label">분석은 끝났어요. 이제 광고 관리자에서 다음 테스트를 준비해요. 게시는 사장님이 직접 해요.</p>
+          <PrimaryButton onClick={() => void goAds()}>광고 관리자에서 다음 테스트 준비 ▶</PrimaryButton>
+        </section>
+      ) : sendError ? (
+        <div className="flex flex-col gap-1 rounded-button bg-paper px-3 py-2">
+          <ErrorLine message={`테스트안을 받지 못했어요. ${sendError}`} onRetry={() => setRetry((n) => n + 1)} />
+          <p className="text-label">그래도 안 되면 광고 관리자 패널의 '보내기가 안 되면: 코드 4자리로 넣기'에 <b className="tracking-widest">{code}</b>를 넣어 주세요.</p>
+        </div>
+      ) : <Todo>{todoFor(step, blocked)}</Todo>}
       <div className="flex flex-col gap-2" aria-live="polite">
         {bubbles.map((b, i) => b.alert ? (
           <p key={i} className={`flex gap-2 rounded-button px-3 py-2 text-body ${SHAPE[b.alert.level].box}`}>
@@ -88,5 +131,14 @@ export default function AnalysisAssistant({ tab, dispatch }: { tab: AnalysisTab;
       </div>
       <AskForm id="an-ask" label="광고 어시스턴트에게 묻기" suggestions={suggestions} busy={busy} onAsk={(q) => void ask(q)} />
     </section>
+  );
+}
+
+/** 지금 할 일 한 줄 (패널 맨 위 고정) */
+function Todo({ children }: { children: ReactNode }) {
+  return (
+    <p className="rounded-button border-2 border-accent bg-paper px-3 py-2 text-body font-semibold">
+      <span className="mr-1.5 text-label text-accent-ink">할 일</span>{children}
+    </p>
   );
 }

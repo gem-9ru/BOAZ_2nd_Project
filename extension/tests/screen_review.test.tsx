@@ -118,3 +118,136 @@ describe("26. 다음 테스트 목록 줄 key", () => {
     err.mockRestore();
   });
 });
+
+// ── 화면 검토 A·B·C 묶음 (2026-11-27) ──
+import { Question } from "../entrypoints/sidepanel/steps/QuestionStep";
+import AnalysisAssistant from "../entrypoints/sidepanel/steps/AnalysisAssistant";
+import { askedFields } from "../lib/settings";
+import { nextTestSteps } from "../lib/guide";
+import { FIELDS as fieldsJson } from "./fixtures-fields";
+
+describe("A. 답을 다시 정하는 길", () => {
+  const filled: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 5 },
+    answers: { "meta.pre.store_product": "올렸어요", "meta.pre.store_url": "https://a.kr", "meta.adset.end_date": "14일", "meta.adset.lifetime_budget": "3만 원",
+      "meta.adset.conversion_location": "인스타그램 프로필", "meta.ad.website_url": "https://www.instagram.com/old" } };
+
+  it("9. [② 답 바꾸기]: 준비물 답만 남기고 ② 질문으로, 지운 답은 미리 채우기용으로", () => {
+    const s = reduce(filled, { type: "editAnswers" });
+    expect(s).toMatchObject({ step: "questions", guide: null });
+    expect(Object.keys(s.answers)).toEqual(["meta.pre.store_product", "meta.pre.store_url"]);
+    expect(s.prevAnswers?.["meta.adset.lifetime_budget"]).toBe("3만 원");
+    render(<GuideStep state={filled} dispatch={vi.fn()} />);
+    expect(screen.getByRole("button", { name: /② 답 바꾸기/ })).toBeTruthy();
+  });
+
+  it("2. 세팅까지 간 뒤 준비물을 다시 답하면 클릭 주소 질문만 다시 (옛 주소가 남지 않게)", () => {
+    const s = reduce(filled, { type: "prepDone", missing: [] });
+    expect(s.step).toBe("questions");
+    expect(s.answers["meta.adset.conversion_location"]).toBeUndefined();
+    expect(s.answers["meta.ad.website_url"]).toBeUndefined();
+    expect(s.answers["meta.adset.lifetime_budget"]).toBe("3만 원");
+    expect(reduce(initialState(), { type: "prepDone", missing: [] }).step).toBe("find");   // 처음이면 그대로 ① 찾기
+  });
+
+  it("1. 준비물에서 주소를 받아도 클릭 주소 질문은 나온다 (미리 채움)", () => {
+    expect(askedFields(fieldsJson as never).map((f) => f.id)).toContain("meta.adset.conversion_location");
+  });
+
+  it("8. [← 이전 질문]으로 가면 직접 넣은 금액이 칸에 남아 있다", () => {
+    const s = reduce({ ...initialState(), answers: { "meta.adset.lifetime_budget": "25,000원" } }, { type: "unanswer", id: "meta.adset.lifetime_budget" });
+    const field = (fieldsJson as never as { id: string }[]).find((f) => f.id === "meta.adset.lifetime_budget") as never;
+    render(<Question field={field} answers={s.answers} prev={s.prevAnswers} keywords={[]} checked={[]} onCheck={() => {}} onAnswer={() => {}} />);
+    expect((screen.getByLabelText(/총예산/) as HTMLInputElement).value).toBe("25000");
+  });
+
+  it("18. 다음 테스트가 '일일 예산'을 바꾸라 해도 총예산 칸을 새 금액으로", () => {
+    const base = { ...initialState(), settings: [...settings, { fieldId: "meta.adset.lifetime_budget", label: "총예산", value: "3만 원" }] };
+    const s = reduce(base, { type: "startNextTest", fieldId: "meta.adset.daily_budget", label: "예산", value: "총예산을 넉넉하게", budget: "5만 원" });
+    expect(s.guide?.next).toBe("meta.adset.lifetime_budget");
+    expect(s.settings.find((x) => x.fieldId === "meta.adset.lifetime_budget")?.value).toBe("5만 원");
+    expect(s.settings.some((x) => x.fieldId === "meta.adset.daily_budget")).toBe(false);
+  });
+});
+
+describe("B. 사진 단계·분석 탭", () => {
+  const media = () => stepsFor("create", GUIDE, [], []).find((x) => x.entry.id === "meta.ad.media")!;
+
+  it("15. 사진 칸 1단계에서 [다 했어요]를 누르면 넘어가지 않고 남은 단계를 알린다 (한 번 더 누르면 넘어감)", () => {
+    document.documentElement.lang = "ko";
+    document.body.innerHTML = `<div role="button">크리에이티브 설정</div>`;
+    const seen: number[] = [];
+    const g = new Guide(document, [media(), money("next", "owner")], 0, (i) => seen.push(i), 0);
+    g.apply();
+    expect(seen).toEqual([]);
+    expect(g.view().text).toContain("단계가 남았어요");
+    g.apply();
+    expect(seen).toEqual([1]);
+  });
+
+  it("16. 다음 테스트에서 바꿀 칸이 사진이면 끝 신호로 바로 지나가지 않는다", () => {
+    const { send } = nextTestSteps(GUIDE, settings, "meta.ad.media");
+    expect(send.find((x) => x.entry.id === "meta.ad.media")!.entry.doneWhen).toBeUndefined();
+  });
+
+  it("16. [이전 칸]으로 사진 칸에 돌아오면 끝 신호가 보여도 그 칸에 머문다", () => {
+    document.documentElement.lang = "ko";
+    document.body.innerHTML = `<div role="button">크리에이티브 설정</div><input aria-label="간단하게 광고를 소개하세요">`;
+    const g = new Guide(document, [media(), money("next", "owner")], 1, () => {}, 0);
+    g.back();
+    expect(g.view().index).toBe(0);
+  });
+
+  it("23. 이미 받은 보내기는 분석 탭으로 돌아와도 다시 받지 않고, 결과를 받으면 남은 안내를 닫는다", async () => {
+    const fetchSpy = vi.fn((_u: string) => Promise.resolve(new Response(JSON.stringify({ message: "m", suggestions: [] }))));
+    vi.stubGlobal("fetch", fetchSpy);
+    const dispatch = vi.fn();
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "9" }} dispatch={dispatch} handled="9" />);
+    await wait();
+    expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("/plan/"))).toBe(false);
+    const s = reduce({ ...initialState(), step: "wait", guide: { mode: "export", index: 1 } }, { type: "planLoaded", plan: {} as never, sent: "9" });
+    expect(s).toMatchObject({ step: "plan", guide: null, planSent: "9" });
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("C. 작은 것들", () => {
+  it("12. 인스타 계정이 없으면 빈 괄호 대신 비워 두라는 말", () => {
+    const say = (v: string) => stepsFor("create", GUIDE, [{ fieldId: "meta.pre.ig_account", label: "", value: v }], []).find((x) => x.entry.id === "meta.pre.ig_account")!.entry.say;
+    expect(say("")).toContain("비워 두세요");
+    expect(say("")).not.toContain("()");
+    expect(say("ovenlog")).toContain("{value}");
+  });
+
+  it("5. 뺀 말로 다시 본 뒤에는 [뺀 말을 빼고 손님 다시 보기] 띠를 숨긴다", () => {
+    const s = reduce(initialState(), { type: "researched", research: { keywords: [] } as never, product: "쿠키", dropped: ["선물"] });
+    expect(s.droppedApplied).toEqual(["선물"]);
+  });
+});
+
+describe("남은 기획 항목 (2026-11-27)", () => {
+  it("11. 뭉치가 나가 있으면 지난 칸 이름을 눌러 그 칸으로 보낸다 (앞 칸으로만)", async () => {
+    const tab = await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage", active: true });
+    const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 3, away: true } }} dispatch={() => {}} />);
+    fireEvent.click(screen.getAllByRole("button", { name: /뭉치를 이 칸으로 보내기/ })[1]!);
+    await vi.waitFor(() => expect(send).toHaveBeenCalledWith(tab.id, { type: "guide:goto", index: 1 }));
+    expect(screen.getAllByRole("button", { name: /뭉치를 이 칸으로 보내기/ })).toHaveLength(3);   // 지금 칸·뒤 칸은 누를 수 없음
+  });
+
+  it("11. 뭉치 goTo는 지난 칸으로만 간다", () => {
+    document.documentElement.lang = "ko";
+    document.body.innerHTML = `<input aria-label="a"><input aria-label="b">`;
+    const step = (id: string): GuideStepItem => ({ entry: { id, mode: "create", page: {}, find: [{ aria: id }], say: id, done: "manual", fallback: { image: "", text: "" }, auto: "owner" } });
+    const g = new Guide(document, [step("a"), step("b"), step("c")], 1, () => {}, 0);
+    g.goTo(2);
+    expect(g.view().index).toBe(1);
+    g.goTo(0);
+    expect(g.view().index).toBe(0);
+  });
+
+  it("3. 결제 카드가 없어도 광고 관리자는 열 수 있고, 게시 칸에서 알린다", () => {
+    render(<GuideStep state={{ ...initialState(), step: "guide", settings, answers: { "meta.pre.payment": "아직이에요" }, guide: { mode: "create", index: 0 } }} dispatch={() => {}} />);
+    expect(screen.getByText(/결제 카드가 아직 없어요/)).toBeTruthy();
+    expect(screen.getByRole("button", { name: /광고 관리자 열기/ }).hasAttribute("disabled")).toBe(false);
+  });
+});

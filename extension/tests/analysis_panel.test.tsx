@@ -29,7 +29,8 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
   it("before upload (AN-00) it greets and explains the export without calling the server", () => {
     const f = vi.fn(); vi.stubGlobal("fetch", f);
     render(<AnalysisAssistant tab={{ tabId: 1, code: null, step: null, send: null }} dispatch={() => {}} />);
-    expect(screen.getByText(/돌려 본 광고 결과를 올려 주시면/)).toBeTruthy();
+    expect(screen.getByText(/왼쪽 분석 페이지에 결과 파일\(CSV\)을 올려 주세요/)).toBeTruthy();   // 할 일 한 줄
+    expect(screen.getByRole("button", { name: /광고 관리자에서 내보내기 짚어 주기/ })).toBeTruthy();
     expect(screen.getByText("CSV는 어디서 받아요?")).toBeTruthy();
     expect(f).not.toHaveBeenCalled();
   });
@@ -47,6 +48,7 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     const log = screen.getByText("AN-01 요약").parentElement!;
     expect(log.children[0]!.textContent).toContain("11/17 안 보여졌어요");   // 알림 말풍선이 먼저
     expect(screen.getByText(/분석 페이지 · ① 결론/)).toBeTruthy();
+    expect(screen.getByText(/\[이 테스트 준비하기 →\]를 눌러요/)).toBeTruthy();   // 지금 왼쪽에서 누를 것
     rerender(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-02", send: null }} dispatch={() => {}} />);
     expect(await screen.findByText("AN-02 요약")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "질문 하나" }));
@@ -58,12 +60,29 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     const plan = { code: "AB12", action: "한 번 더", change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로", note: "n", path: "광고 › 형식·미디어" }, summary: [], badge: null };
     vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "AN-06 요약", suggestions: [] })));
     const dispatch = vi.fn();
-    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "123" }} dispatch={dispatch} />);
-    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan }));
-    const said = await screen.findByText(/테스트안을 받았어요 \(광고 › 형식·미디어\)/);
-    // 탭만 바꿔서는 뭉치가 나오지 않는다 → 패널의 [다음 테스트 세팅]을 누르라고 말한다
-    expect(said.textContent).toContain("[다음 테스트 세팅]");
-    expect(said.textContent).not.toContain("광고 관리자로 가면");
+    const tab = { tabId: 1, code: "AB12", step: "AN-06", send: "123" };
+    const { rerender } = render(<AnalysisAssistant tab={tab} dispatch={dispatch} />);
+    expect(screen.getByText(/\[확장 프로그램으로 보내기 →\]를 눌러요/)).toBeTruthy();
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan, sent: "123" }));
+    // 받은 뒤(App이 planSent·plan을 넘김): '받았어요' 카드 + 광고 관리자로 가는 버튼 하나
+    const update = vi.spyOn(fakeBrowser.tabs, "update").mockResolvedValue({} as never);
+    vi.spyOn(fakeBrowser.windows, "update").mockResolvedValue({} as never);
+    vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 7, windowId: 1, url: "https://adsmanager.facebook.com/adsmanager/manage/campaigns" }] as never);
+    rerender(<AnalysisAssistant tab={tab} dispatch={dispatch} handled="123" plan={plan as never} />);
+    const card = screen.getByRole("region", { name: "받은 테스트안" });
+    expect(card.textContent).toContain("광고 › 형식·미디어");
+    fireEvent.click(screen.getByRole("button", { name: "광고 관리자에서 다음 테스트 준비 ▶" }));
+    await waitFor(() => expect(update).toHaveBeenCalledWith(7, { active: true }));
+  });
+
+  it("when the plan cannot be fetched it says how to retry and gives the code fallback", async () => {
+    vi.stubGlobal("fetch", vi.fn((u: string) => String(u).includes("/plan/")
+      ? Promise.resolve(new Response(JSON.stringify({ detail: "서버가 잠깐 쉬어요" }), { status: 500 }))
+      : ok({ message: "m", suggestions: [] })));
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "9" }} dispatch={() => {}} />);
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "다시 시도" })).toBeTruthy();
+    expect(screen.getByText(/코드 4자리로 넣기/).textContent).toContain("AB12");
   });
 
   it("the budget picked on ③ (budget in the address) replaces the plan's per-set amount", async () => {
@@ -71,7 +90,7 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "m", suggestions: [] })));
     const dispatch = vi.fn();
     render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "124", budget: 10000 }} dispatch={dispatch} />);
-    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: { ...plan, change: { ...plan.change, per_set: 10000 } } }));
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: { ...plan, change: { ...plan.change, per_set: 10000 } }, sent: "124" }));
   });
 });
 

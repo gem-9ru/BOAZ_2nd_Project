@@ -23,7 +23,7 @@ interface Props {
 
 /** ② 질문: 한 번에 하나씩. 다 답하면 광고 관리자에 넣을 세팅값 목록을 만든다. */
 export default function QuestionStep({ state, dispatch, fields, defaults: all }: Props) {
-  const asked = askedFields(fields, state.answers);
+  const asked = askedFields(fields);
   const defaults = all.filter((d) => !SETTING_ORDER.includes(d.id));   // 뭉치가 안내하는 칸은 '묻지 않고 둔 칸'이 아님
   const next = asked.find((f) => !(f.id in state.answers));
   const index = next ? asked.indexOf(next) : asked.length;
@@ -53,7 +53,7 @@ export default function QuestionStep({ state, dispatch, fields, defaults: all }:
         </button>
       )}
       {next && (
-        <Question key={next.id} field={next} answers={state.answers} keywords={state.keywords} checked={state.checks?.[next.id] ?? []}
+        <Question key={next.id} field={next} answers={state.answers} prev={state.prevAnswers} keywords={state.keywords} checked={state.checks?.[next.id] ?? []}
           onCheck={(index) => dispatch({ type: "toggleCheck", key: next.id, index })}
           onAnswer={(v, extra) => answer(next.id, v, extra)} />
       )}
@@ -106,8 +106,11 @@ function byEarlier(map: Record<string, Record<string, string>> | null | undefine
   return undefined;
 }
 
-export function Question({ field, answers, keywords, checked, onCheck, onAnswer, startHelp }: {
-  field: Field; answers: Record<string, string>; keywords: string[]; checked: number[]; onCheck: (index: number) => void;
+export function Question({ field, answers, prev = {}, keywords, checked, onCheck, onAnswer, startHelp }: {
+  field: Field; answers: Record<string, string>;
+  /** 지운 답 (이전 질문·답 바꾸기): 직접 넣었던 날짜·금액·주소·글자를 다시 채운다 */
+  prev?: Record<string, string>;
+  keywords: string[]; checked: number[]; onCheck: (index: number) => void;
   onAnswer: (v: string, extra?: Record<string, string>) => void;
   /** 처음부터 열어 둘 '만드는 법' (준비물 요약의 [만드는 법 보기]) */
   startHelp?: string;
@@ -115,14 +118,16 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer,
   const title = useRef<HTMLHeadingElement>(null);
   useEffect(() => title.current?.focus(), []);   // 새 질문이 나오면 화면 읽기·키보드가 그 질문부터
   const note = byEarlier(field.note_if, answers);
-  const [text, setText] = useState(field.default ?? "");
+  const was = prev[field.id];
+  const custom = was !== undefined && !field.options?.includes(was);   // 지난번에 직접 넣은 값 (날짜·금액·가게 주변)
+  const [text, setText] = useState(was ?? field.default ?? "");
   const [bad, setBad] = useState(false);
   const [helpFor, setHelpFor] = useState<string | null>(startHelp ?? null);   // 할 일이 있는 답을 골랐을 때 (예: 페이지 없어요)
   const help = helpFor ? field.help?.[helpFor] : undefined;
   const [picked, setPicked] = useState<string | null>(null);     // 이어 받을 주소가 있는 답을 골랐을 때 (예: 스토어 상품 페이지)
-  const [dates, setDates] = useState(false);                      // [날짜 직접 정하기]를 눌렀을 때
+  const [dates, setDates] = useState(custom && field.custom === "dates");                      // [날짜 직접 정하기]를 눌렀을 때
   const [areaFor, setAreaFor] = useState<string | null>(null);    // 가게·배달을 골랐을 때 (가게 주소·반경)
-  const [money, setMoney] = useState(false);                      // [금액 직접 넣기]를 눌렀을 때
+  const [money, setMoney] = useState(custom && field.custom === "won");                      // [금액 직접 넣기]를 눌렀을 때
   // 총예산 질문: 앞에서 고른 기간으로 '세트마다 적어도 ○원'을 알려 주고, 그보다 적은 금액엔 ▲ (EX-01 ④)
   const days = field.custom === "won" ? scheduleDays(scheduleFrom(answers["meta.adset.end_date"] ?? "14일")) : 0;
   const least = days > 0 ? minBudget(days) : 0;
@@ -143,7 +148,8 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer,
     const to = thenField(o);
     if (!to) return onAnswer(o);
     // 미리 채우기: 틀 → (같은 답을 골랐던 적이 있으면) 그때 넣은 주소. 다른 답의 주소는 쓰지 않음 (인스타 주소가 상품 주소로 새지 않게)
-    setPicked(o); setUrl(fill(field.then_ask?.prefill?.[o], answers) || (answers[field.id] === o ? answers[to] ?? "" : "")); setBad(false);
+    const before = answers[field.id] ?? was;
+    setPicked(o); setUrl(fill(field.then_ask?.prefill?.[o], answers) || (before === o ? answers[to] ?? prev[to] ?? "" : "")); setBad(false);
   };
   const pick = (o: string) => {
     if (field.help?.[o]) return setHelpFor(o);
@@ -174,11 +180,11 @@ export function Question({ field, answers, keywords, checked, onCheck, onAnswer,
         {least > 0 && <p className="text-caption text-ink mt-1">광고 기간이 {days}일이라 적어도 약 {least.toLocaleString()}원 (하루 최소 약 1,336원 × {days}일)은 넣어야 광고가 나가요.</p>}
       </Coach>
       {money ? (
-        <WonInput least={least} onBack={() => setMoney(false)} onDone={(v) => onAnswer(v)} />
+        <WonInput least={least} initial={custom ? was : undefined} onBack={() => setMoney(false)} onDone={(v) => onAnswer(v)} />
       ) : areaFor ? (
-        <ShopArea way={areaFor} onBack={() => setAreaFor(null)} onDone={(v) => onAnswer(v)} />
+        <ShopArea way={areaFor} initial={was} onBack={() => setAreaFor(null)} onDone={(v) => onAnswer(v)} />
       ) : dates ? (
-        <DateRange onBack={() => setDates(false)} onDone={(v) => onAnswer(v)} />
+        <DateRange initial={custom ? was : undefined} onBack={() => setDates(false)} onDone={(v) => onAnswer(v)} />
       ) : then && picked ? (
         <div className="flex flex-col gap-2">
           <p className="text-caption"><span className="font-semibold">{picked}</span>로 보낼게요.</p>
@@ -304,13 +310,14 @@ function monthDay(iso: string, time = ""): string {
 }
 
 /** 시작일·종료일 고르기 (시각은 선택). 시작일은 오늘부터, 종료일은 시작일 다음 날부터. 기간은 시작일·종료일을 모두 셈 */
-function DateRange({ onBack, onDone }: { onBack: () => void; onDone: (value: string) => void }) {
+function DateRange({ initial, onBack, onDone }: { initial?: string; onBack: () => void; onDone: (value: string) => void }) {
   const now = new Date();
   const today = isoDate(now);
-  const [start, setStart] = useState(today);
-  const [end, setEnd] = useState("");
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const got = initial ? scheduleFrom(initial) : undefined;   // 지난번에 고른 날짜·시각
+  const [start, setStart] = useState(got?.start ?? today);
+  const [end, setEnd] = useState(got?.end ?? "");
+  const [startTime, setStartTime] = useState(got?.startTime ?? "");
+  const [endTime, setEndTime] = useState(got?.endTime ?? "");
   const [tried, setTried] = useState(false);
   const pad = (n: number) => String(n).padStart(2, "0");
   const startBad = Boolean(start) && start < today;
@@ -361,8 +368,8 @@ function DateRange({ onBack, onDone }: { onBack: () => void; onDone: (value: str
 }
 
 /** 총예산 직접 넣기 (원). 하루 최소 × 기간보다 적으면 ▲로 알려 주되 막지는 않는다 (사장님이 정함). 답: '25,000원' */
-function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void; onDone: (value: string) => void }) {
-  const [raw, setRaw] = useState("");
+function WonInput({ least, initial, onBack, onDone }: { least: number; initial?: string; onBack: () => void; onDone: (value: string) => void }) {
+  const [raw, setRaw] = useState(initial ? String(parseWon(initial) ?? "") : "");
   const n = parseWon(raw);
   const short = n !== null && least > 0 && n < least;
   const unread = raw.trim() !== "" && n === null;   // 숫자로 못 읽음 → 왜 [다음]이 안 눌리는지 알려 줌
@@ -389,9 +396,10 @@ function WonInput({ least, onBack, onDone }: { least: number; onBack: () => void
 const RADII = ["3km", "5km", "10km"];
 
 /** 가게·배달: 가게 주소(시·구·동)와 반경. 값은 세팅 목록·뭉치 안내에 그대로 보인다 (지도에서 고르는 건 사장님) */
-function ShopArea({ way, onBack, onDone }: { way: string; onBack: () => void; onDone: (value: string) => void }) {
-  const [address, setAddress] = useState("");
-  const [radius, setRadius] = useState("5km");
+function ShopArea({ way, initial, onBack, onDone }: { way: string; initial?: string; onBack: () => void; onDone: (value: string) => void }) {
+  const got = /^가게 주변 (\S+) · (.+)$/.exec(initial ?? "");   // 지난번 답 '가게 주변 5km · 서울 마포구 망원동'
+  const [address, setAddress] = useState(got?.[2] ?? "");
+  const [radius, setRadius] = useState(got && RADII.includes(got[1]!) ? got[1]! : "5km");
   const place = address.trim().replace(/\s+/g, " ");
   return (
     <div className="flex flex-col gap-3">

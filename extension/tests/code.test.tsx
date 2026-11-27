@@ -44,7 +44,7 @@ describe("③ 코드 넣기", () => {
     fireEvent.change(box, { target: { value: "75" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
     expect(screen.getByRole("alert").textContent).toContain("4자리");
-    expect(screen.getByRole("alert").textContent).toContain("⑥ 보내기");   // 분석 페이지에 실제로 코드가 있는 곳
+    expect(screen.getByRole("alert").textContent).toContain("③ 준비하기");   // 분석 페이지에 실제로 코드가 있는 곳 (축소안 v5: 3단계)
     expect(screen.getByRole("alert").textContent).not.toContain("다음에 할 일");
     fireEvent.change(box, { target: { value: "ZZZZ" } });
     fireEvent.click(screen.getByRole("button", { name: "가져오기" }));
@@ -63,8 +63,7 @@ describe("③ 다음에 할 일 (코드로 받은 것)", () => {
   it("flow: planLoaded → plan step, and the edit guide uses the plan's change", () => {
     const s = reduce({ ...initialState(), step: "upload" }, { type: "planLoaded", plan });
     expect(s.step).toBe("plan");
-    const fix = reduce(s, { type: "startFix" });
-    expect(stepsFor("edit", GUIDE, [], fix.plan ? [fix.plan.change] : []).map((x) => x.entry.id)).toEqual(["meta.adset.end_date"]);
+    expect(stepsFor("edit", GUIDE, [], s.plan ? [s.plan.change] : []).map((x) => x.entry.id)).toEqual(["meta.adset.end_date"]);
   });
 });
 
@@ -73,7 +72,7 @@ describe("③ 코드 넣기: 쉬운 말", () => {
     render(<CodeStep state={{ ...initialState(), step: "upload" }} dispatch={() => {}} />);
     const text = document.body.textContent ?? "";
     expect(text).not.toMatch(/분석 기준|테스트안/);
-    expect(text).toMatch(/⑥ 보내기/);
+    expect(text).toMatch(/\[확장 프로그램으로 보내기\]/);
   });
 });
 

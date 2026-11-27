@@ -109,6 +109,10 @@ export class Guide {
   private stageMiss = 0;
   private stageShown = -1;
   private stageBack = false;
+  /** 하위 단계 중간에 [다 했어요]를 누름 (화면 검토 15): 한 번은 남은 단계를 알려 주고, 같은 단계에서 또 누르면 넘어간다 */
+  private earlyPress = "";
+  /** [이전 칸]으로 돌아온 칸: 끝 신호(doneWhen)가 이미 보여도 바로 지나가지 않는다 (사진을 바꾸러 돌아옴, 화면 검토 16) */
+  private cameBack = false;
 
   constructor(
     private doc: Document,
@@ -136,7 +140,9 @@ export class Guide {
         : "열린 창 안의 남은 단계는 그대로 두고 오른쪽 아래 '다음'으로 끝까지 넘긴 뒤 '완료'를 눌러 창을 닫아 주세요. 창이 닫히면 이 칸을 짚을게요." };
     if (this.surveying) return { ...v, found: false, target: undefined, auto: this.auto, text: `화면을 먼저 둘러보고 칸 위치를 적어 둘게요 (${this.surveying})` };
     return { ...v, auto: this.auto, waiting: this.waiting,
-      text: this.waiting === "owner" ? `${v.text} 다 맞췄으면 '다 했어요'를 누르세요.`
+      text: this.earlyPress === `${this.index}:${this.stage}` && item?.entry.stages
+        ? `아직 이 칸의 단계가 남았어요 (${this.stage + 1}/${item.entry.stages.length}). ${v.text} 정말 다 했으면 '다 했어요'를 한 번 더 눌러 주세요.`
+        : this.waiting === "owner" ? `${v.text} 다 맞췄으면 '다 했어요'를 누르세요.`
         : this.waiting === "publish" ? "여기까지 왔어요. 게시는 내용을 확인하고 사장님이 직접 눌러 주세요." : v.text };
   }
 
@@ -391,7 +397,16 @@ export class Guide {
     if (this.languageOk && item?.entry.stages) {
       if (!el && this.ensureLevel()) return;
       const st = item.entry.stages[this.stage];
-      if (ownerDone || !el || !st || st.by === "owner") return this.advance();   // 사장님 차례(사진)에서 누르면 = 다 했어요
+      if (ownerDone || !el || !st || st.by === "owner") {   // 사장님 차례(사진)에서 누르면 = 다 했어요
+        const key = `${this.index}:${this.stage}`;
+        if (el && st && this.stage < item.entry.stages.length - 1 && this.earlyPress !== key) {
+          this.earlyPress = key;   // 마지막 단계 전: 넘기지 않고 남은 단계를 다시 찾는다 (사진을 고르지 않은 채 다음 칸으로 가지 않게)
+          this.recheck();
+          if (this.earlyPress === `${this.index}:${this.stage}`) this.waiting = "owner";   // 그대로면 단추는 [다 했어요] (한 번 더 = 넘김)
+          return;
+        }
+        return this.advance();
+      }
       if (isPublishLike(el)) return;
       this.hintPresses += 1;
       el.click();
@@ -540,10 +555,19 @@ export class Guide {
     this.stop();
   }
 
+  /** 패널 목록에서 지난 칸을 눌렀을 때 그 칸으로 (설계서 EX-01 ②). 앞 칸으로만: 돈 확인을 건너뛰어 게시 칸에 가지 않게 */
+  goTo(index: number): void {
+    if (this.dead || index < 0 || index >= this.index) return;
+    this.moveTo(index);
+    this.cameBack = true;
+    if (!this.ensureLevel()) this.seek();
+  }
+
   /** [이전 칸]: 한 칸 뒤로 (첫 칸이면 그대로). */
   back(): void {
     if (this.index === 0) return;
     this.moveTo(this.index - 1);
+    this.cameBack = true;
     if (!this.ensureLevel()) this.seek();
   }
 
@@ -566,6 +590,8 @@ export class Guide {
     this.hintDone = 0;
     this.money = null;
     this.unseenAt = -1;
+    this.earlyPress = "";
+    this.cameBack = false;
     this.resetStage();
     this.index = index;
     this.tries = 0;
@@ -582,7 +608,7 @@ export class Guide {
       return;
     }
     // 끝 신호(doneWhen)가 보이면 이 칸은 끝 (예: 캠페인 만들기 창을 다 지나 '카테고리' 칸이 뜸)
-    if (item?.entry.doneWhen && this.languageOk && locateWith(this.doc, item.entry.doneWhen)) return this.advance();
+    if (item?.entry.doneWhen && !this.cameBack && this.languageOk && locateWith(this.doc, item.entry.doneWhen)) return this.advance();
     const dialog = openDialog(this.doc);
     // 창 밖 칸(웹사이트 URL)은 창 안의 같은 칸에 넣지 않는다: 창 안에 넣은 값은 [완료] 뒤 광고 화면 칸에 남지 않았다 (2026-11-26 실제 화면)
     const hit = item && this.languageOk && !(dialog && item.entry.outsideDialog) ? locateWith(dialog ?? this.doc, item.entry.find) : null;
@@ -630,7 +656,7 @@ export class Guide {
     this.behindDialog = false;
     const dialog = openDialog(this.doc);
     const root = dialog ?? this.doc;
-    if (item.entry.doneWhen && locateWith(root, item.entry.doneWhen)) return this.advance();
+    if (item.entry.doneWhen && !this.cameBack && locateWith(root, item.entry.doneWhen)) return this.advance();
     let found: { at: number; el: HTMLElement; matched: number } | null = null;
     for (let at = stages.length - 1; at >= 0 && !found; at -= 1) {
       const st = stages[at]!;

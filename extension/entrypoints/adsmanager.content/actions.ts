@@ -336,7 +336,7 @@ export async function moneyProblems(doc: Document, value: string, pace: Pace = r
   const end = endAnchor(doc);
   const endValue = end && end.on ? endBox(doc, end.anchor)?.value.trim() : "";
   if (!end) out.push(`종료 날짜 칸을 찾지 못했어요 → '예산 및 일정'에서 종료 날짜가 들어 있는지 확인해 주세요${UNSEEN}`);
-  else if (!endValue) out.push("종료 날짜가 없어요 → '종료 날짜 설정'을 켜고 날짜를 넣어 주세요 (없으면 끌 때까지 계속 나가요)");
+  else if (!endValue) out.push(`종료 날짜가 없어요 → ${end.isSwitch ? "'종료 날짜 설정'을 켜고 날짜를" : "'종료 날짜 기간' 아래 날짜 칸에 날짜를"} 넣어 주세요 (없으면 끌 때까지 계속 나가요)`);
   else if ((dateOf(endValue) ?? "9999") < isoDate(new Date())) out.push("종료 날짜가 이미 지났어요 → 오늘 이후 날짜로 바꿔 주세요");
   // 메타 자체 경고: '예산은 ₩40,080.00 이상이어야 하며, 그렇지 않으면 광고가 게재되지 않을 수 있습니다' (하루 최소 × 기간보다 적을 때)
   const low = Array.from(doc.querySelectorAll<HTMLElement>("body *")).map((e) => (e.children.length ? "" : textOf(e)))

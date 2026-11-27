@@ -172,7 +172,7 @@
     "heading": "예산 및 일정"
    }
   ],
-  "say": "'종료 날짜 설정'을 켜고 {value}(으)로 넣은 뒤 '다음 칸'을 누르세요. 시각이 있으면 시간·분 칸에 직접 입력해 주세요",
+  "say": "종료 날짜를 {value}(으)로 넣어요. 총예산이면 '종료 날짜 기간' 아래 날짜 칸에, 일일 예산이면 '종료 날짜 설정'을 켠 뒤 날짜 칸에 넣어요. 시각이 있으면 시간·분 칸에 직접 입력해 주세요",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.adset.end_date.png",
@@ -286,7 +286,18 @@
    "text": "'대표 계정' 구역의 'Instagram 프로필'에서 계정을 골라 주세요"
   },
   "auto": "owner",
-  "level": "ad"
+  "level": "ad",
+  "variants": [
+   {
+    "when": {
+     "field": "meta.pre.ig_account",
+     "match": "^\\s*$"
+    },
+    "set": {
+     "say": "여기는 사장님이 직접 눌러 주세요: 인스타그램 계정이 없으면 'Instagram 프로필'은 비워 두세요 (광고는 페이스북 페이지 이름으로 나가요). 계정이 있으면 골라 주세요."
+    }
+   }
+  ]
  },
  {
   "id": "meta.ad.format",

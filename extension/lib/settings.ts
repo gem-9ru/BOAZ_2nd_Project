@@ -94,13 +94,13 @@ export function routeFromPrep(answers: Record<string, string>): Record<string, s
   return {};
 }
 
-export function askedFields(fields: Field[], answers: Record<string, string> = {}): Field[] {
+export function askedFields(fields: Field[]): Field[] {
   const follow = new Set(fields.flatMap((f) => {                                   // 다른 질문에서 이어 받는 칸
     const to = f.then_ask?.field;
     return !to ? [] : typeof to === "string" ? [to] : Object.values(to);
   }));
-  const routed = routeFromPrep(answers);
-  return fields.filter((f) => !PREFILLED.has(f.id) && !NOT_ASKED.has(f.id) && !follow.has(f.id) && !(f.id in routed) && f.stage !== PREP_STAGE);
+  // 준비물에서 받은 주소로 갈 곳이 정해져도 '클릭 주소' 질문은 미리 채운 채 다시 보여 준다 (확인만 하고 [다음], 체크리스트 설계서 47행, 화면 검토 1)
+  return fields.filter((f) => !PREFILLED.has(f.id) && !NOT_ASKED.has(f.id) && !follow.has(f.id) && f.stage !== PREP_STAGE);
 }
 
 /** 메타가 받는 하루 최소 예산 약값 (원) — 오븐로그 11/17 사례, 서버 rules.yaml loop.meta_daily_min과 같은 값 (설계서 v4.2 EX-01 ④). */

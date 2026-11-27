@@ -4,6 +4,7 @@ import { initialState, reduce, type FlowEvent, type FlowState, type Step } from 
 import { useAnalysisTab } from "../../lib/analysisTab";
 import { loadState, saveState, STATE_KEY } from "../../lib/storage";
 import AnalysisAssistant from "./steps/AnalysisAssistant";
+import { forgetCopyWork } from "./steps/CopyStep";
 import CopyStep from "./steps/CopyStep";
 import FindStep from "./steps/FindStep";
 import GuideStep from "./steps/GuideStep";
@@ -18,7 +19,7 @@ import { HomeSeat } from "./ui/HomeSeat";
 const STAGES: { label: string; steps: Step[] }[] = [
   { label: "찾기", steps: ["prep", "find"] },
   { label: "세팅", steps: ["copy", "questions", "guide", "wait"] },
-  { label: "분석", steps: ["upload", "plan", "fix"] },
+  { label: "분석", steps: ["upload", "plan"] },
 ];
 
 type Action = FlowEvent | { type: "__load"; state: FlowState };
@@ -61,7 +62,10 @@ export default function App() {
 
   // 분석 페이지 탭을 보고 있으면 이 패널은 그 페이지 옆 광고 어시스턴트가 된다 (v4.2 AN-COM ④)
   const analysis = useAnalysisTab();
-  const current = analysis ? 2 : STAGES.findIndex((st) => st.steps.includes(state.step));
+  // 광고가 끝났으면(종료일 다음 날부터) 기다리기 화면도 ③ 분석 차례로 + ③에 점 (설계서 EX-02 ①, 화면 검토 24)
+  const end = state.endDate?.slice(0, 10);
+  const ended = state.step === "wait" && Boolean(end) && new Date(`${end}T23:59:59`) < new Date();
+  const current = analysis || ended ? 2 : STAGES.findIndex((st) => st.steps.includes(state.step));
 
   return (
     <main className="min-h-screen flex flex-col gap-6 pb-4">
@@ -76,7 +80,7 @@ export default function App() {
             <p className="text-small opacity-80">메타 광고, 한 칸씩 같이 채워요</p>
           </div>
           {state.step !== "find" && state.step !== "prep" && (
-            <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) dispatch({ type: "reset" }); }}
+            <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) { forgetCopyWork(); dispatch({ type: "reset" }); } }}
               className="ml-auto min-h-8 shrink-0 rounded-badge bg-on-accent/15 px-2.5 text-small font-semibold">
               ↺ 처음부터
             </button>
@@ -90,12 +94,13 @@ export default function App() {
               className={`flex-1 rounded-badge py-1.5 text-center font-semibold ${i === current ? "bg-paper text-accent" : i < current ? "opacity-95" : "opacity-75"}`}
             >
               {i < current ? `✓ ${st.label}` : `${"①②③"[i]} ${st.label}`}
+              {i === 2 && ended && <><span aria-hidden="true" className="ml-1 text-warn-mark">●</span><span className="sr-only"> 결과를 볼 때예요</span></>}
             </li>
           ))}
         </ol>
       </header>
       <div className="flex flex-col gap-6 px-4">
-      {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} />}
+      {analysis && <AnalysisAssistant tab={analysis} dispatch={dispatch} handled={state.planSent} plan={state.plan} />}
       {!analysis && <>
       {state.guide && state.step !== "prep" && <GuideStep state={state} dispatch={dispatch} />}
       {!state.guide && state.step === "wait" && <WaitStep state={state} dispatch={dispatch} />}

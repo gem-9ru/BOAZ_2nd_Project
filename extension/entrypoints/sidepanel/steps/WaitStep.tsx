@@ -17,22 +17,26 @@ export default function WaitStep({ state, dispatch }: { state: FlowState; dispat
   const later = y && m && d ? new Date(y, m - 1, d) > new Date() : false;   // 예약 광고: 시작일이 오늘보다 뒤
   const end = state.endDate?.slice(0, 10);
   const running = end ? new Date(`${end}T23:59:59`) >= new Date() : false;   // 아직 안 끝남 → 분석은 작은 버튼
+  const over = Boolean(end) && !running;   // 광고가 끝남
   const budget = state.settings.find((x) => x.fieldId === "meta.adset.lifetime_budget")?.value;
   return (
     <section className="flex flex-col gap-5">
       <Coach>
+        {!running && end ? "광고가 끝났어요. 결과 파일을 받아 분석해 볼 차례예요 → 아래 [결과 분석하기]를 눌러 주세요." : <>
         {later && `광고는 ${m}월 ${d}일에 시작해요. `}
-        {day ? `${day}에 결과를 보러 오세요.` : "광고가 끝나면 결과를 보러 오세요."} 알림은 따로 가지 않아요. 그날 이 패널을 다시 열면 이 화면이 그대로 있어요.
+        {day ? `${day}에 결과를 보러 오세요.` : "광고가 끝나면 결과를 보러 오세요."} 알림은 따로 가지 않아요. 그날 이 패널을 다시 열면 이 화면이 그대로 있어요.</>}
       </Coach>
-      {(budget || end) && (
+      {!over && (budget || end) && (   // 끝난 뒤에는 '나가요·멈춰요'(앞으로 일)를 빼고 할 일 하나만
         <p className="rounded-card border border-line bg-paper px-3 py-2 text-body">
           {budget && `광고 세트 하나에 총 ${budget}까지만 나가요 (세트가 2개면 2배). `}
           {end && `${md(end)}이 지나면 저절로 멈춰요.`}
         </p>
       )}
-      <button type="button" onClick={() => dispatch({ type: "startExport" })} className="flex min-h-11 items-center text-left text-body underline">
-        결과 내보내는 법 보기
-      </button>
+      {!over && (   // 끝난 뒤에는 [결과 분석하기] 다음 화면에 내보내기 안내가 있다
+        <button type="button" onClick={() => dispatch({ type: "startExport" })} className="flex min-h-11 items-center text-left text-body underline">
+          결과 내보내는 법 보기
+        </button>
+      )}
       {running ? (
         <>
           <button type="button" onClick={() => dispatch({ type: "startUpload" })}

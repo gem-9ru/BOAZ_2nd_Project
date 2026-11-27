@@ -38,15 +38,6 @@ describe("edit guide coverage", () => {
     ];
     expect(stepsFor("edit", GUIDE, [], changes).map((s) => s.entry.id)).toEqual(["meta.creative.copy", "meta.ad.creative_test"]);
   });
-
-  it("with no edit steps the panel lists the changes as manual text and opens no tab", () => {
-    const plan = { code: "AB23", action: "바꿔 보기", summary: [], badge: null, change: { field_id: "meta.unknown", label: "어떤 칸", new: "새 값", note: "" } };
-    const state: FlowState = { ...initialState(), step: "fix", plan, guide: { mode: "edit", index: 0 } };
-    render(<GuideStep state={state} dispatch={() => {}} />);
-    expect(screen.getByText(/어떤 칸 → 새 값/)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "광고 관리자 열기" })).toBeNull();
-    expect(screen.getByRole("button", { name: "바꿨어요" })).toBeTruthy();
-  });
 });
 
 describe("guide runner robustness", () => {

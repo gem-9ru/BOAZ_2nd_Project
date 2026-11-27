@@ -77,23 +77,14 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
           <p className="text-soft">분석 페이지 권장은 세트당 {won(m.want)}인데, {m.days}일이면 메타 최소(하루 약 {won(META_DAILY_MIN)} × {m.days}일)보다 적어서 올렸어요.</p>
         )}
         <p>{day(m.startDate)} ~ {day(m.endDate)} ({m.days}일) · 내일 시작, 지난번과 같은 길이</p>
-        <p>지난 광고는 끝났어요. 지난 세트를 복제해 두 세트를 새로 같이 돌려요: 하나는 지난번 그대로, 하나는 이 칸만 바꿔서. 두 세트 모두 이 금액·날짜로 맞춰야 정한 돈만 나가요.</p>
+        <p>두 세트(지난번 그대로 · 이 칸만 바꾼 것) 모두 이 금액·날짜로 맞춰야 정한 돈만 나가요.</p>
       </section>
-      <PrimaryButton onClick={() => dispatch({ type: "startNextTest", fieldId: c.field_id, label: c.label, value: c.what ?? c.new_short ?? c.new,
-        startDate: m.startDate, endDate: m.endDate, budget: m.budget })}>
-        다음 테스트 세팅 ▶
-      </PrimaryButton>
-      <p className="-mt-2 text-caption text-soft">② 세팅 목록으로 가요. 뭉치가 바꿀 칸 · 금액 · 날짜 · 게시 전 돈 확인만 짚어요. 게시는 직접 해 주세요.</p>
-      {(p.keep?.length ?? 0) > 0 && (
-        <ul className="flex flex-col gap-1.5 text-caption">
-          {p.keep!.map((k) => (
-            <li key={k.field_id} className="flex gap-2"><span className="shrink-0 rounded-badge bg-sunk px-2 py-0.5 font-semibold">유지</span><span>{k.path}: {k.value}</span></li>
-          ))}
-        </ul>
-      )}
       {(c.checklist?.length ?? 0) > 0 && (
         <div className="flex flex-col gap-1.5">
-          <p className="text-caption font-semibold text-soft">다음 테스트 체크리스트</p>
+          <div className="flex items-baseline gap-2">
+            <p className="text-label font-semibold text-soft">다음 테스트 체크리스트</p>
+            <span className="text-label font-semibold text-accent-ink">{ticked.length}/{c.checklist!.length}</span>
+          </div>
           <ul className="flex flex-col text-body">
             {c.checklist!.map((t, i) => (
               <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3">
@@ -102,6 +93,17 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
             ))}
           </ul>
         </div>
+      )}
+      <PrimaryButton onClick={() => dispatch({ type: "startNextTest", fieldId: c.field_id, label: c.label, value: c.what ?? c.new_short ?? c.new,
+        startDate: m.startDate, endDate: m.endDate, budget: m.budget })}>
+        다음 테스트 세팅 ▶
+      </PrimaryButton>
+      <p className="-mt-2 text-caption text-soft">② 세팅 목록으로 가요. 뭉치가 바꿀 칸 · 금액 · 날짜 · 게시 전 돈 확인만 짚어요. 게시는 직접 해 주세요.</p>
+      {(p.keep?.length ?? 0) > 0 && (
+        <details className="rounded-button bg-paper px-3 py-2 text-label">
+          <summary className="flex min-h-11 cursor-pointer items-center font-semibold text-accent-ink">유지하는 칸 ({p.keep!.length})</summary>
+          <ul className="mt-1 flex list-disc flex-col gap-1 pl-4">{p.keep!.map((k) => <li key={k.field_id}>{k.path}: {k.value}</li>)}</ul>
+        </details>
       )}
       {cautions.length > 0 && (
         <details className="rounded-button bg-paper px-3 py-2 text-body">

@@ -90,6 +90,7 @@ export default function CopyStep({ state, dispatch }: Props) {
     setAdded((a) => [...new Set([...a, ...typed])]);
     setStrengths("");
   }
+  // 칩이 있으면 하나는 고르거나 적어야 한다. 칩이 없는 예전 저장본·자료 없음은 비워도 쓸 수 있게 일부러 둔다 (tests/copy.test.tsx 'old state…')
   const blocked = hasMods && all.length === 0;
   const toggle = (w: string) => setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : [...p, w]));
 

@@ -91,7 +91,7 @@ describe("14. 게시 칸에서 패널의 [다음 칸]", () => {
     const last = GUIDE.filter((e) => e.mode === "create").length - 1;
     await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage", active: true });
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
-    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: last } };
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: last, away: true } };
     render(<GuideStep state={state} dispatch={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: "다음 칸" }));
     await waitFor(() => expect(screen.getByText(/게시는 사장님이 직접/)).toBeTruthy());

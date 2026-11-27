@@ -56,6 +56,11 @@ export default defineContentScript({
 
     browser.runtime.onMessage.addListener((msg: GuideMsg) => {
       // 패널의 [이전 칸] [다음 칸]
+      if (msg.type === "guide:goto" && guide) {
+        guide.goTo(msg.index);
+        render();
+        return;
+      }
       if (msg.type === "guide:move" && guide) {
         if (msg.delta < 0) guide.back(); else guide.apply();
         render();

@@ -40,13 +40,13 @@ describe("2. 기다리기: 돈이 얼마까지만 나가는지", () => {
   });
 });
 
-describe("3. 결과 화면: 주 버튼이 위로", () => {
-  it("[다음 테스트 세팅] comes right after the money box, before the checklist and the chatbot", () => {
+describe("3. 결과 화면: 체크리스트를 보고 주 버튼 (설계서 EX-03 ④ → ⑤)", () => {
+  it("[다음 테스트 세팅] comes after the money box and the checklist, before the chatbot", () => {
     render(<PlanStep state={{ ...initialState(), step: "plan", plan }} dispatch={() => {}} />);
     const go = screen.getByRole("button", { name: "다음 테스트 세팅 ▶" });
     const before = (a: Node, b: Node) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
     expect(before(screen.getByRole("region", { name: "다음 테스트 돈·기간" }), go)).toBe(true);
-    expect(before(go, screen.getByText("두 세트는 같은 날 같이 시작"))).toBe(true);
+    expect(before(screen.getByText("두 세트는 같은 날 같이 시작"), go)).toBe(true);
     expect(before(go, screen.getByRole("region", { name: "광고 어시스턴트" }))).toBe(true);
   });
 });

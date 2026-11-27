@@ -79,6 +79,7 @@ export type GuideMsg =
       /** EX-03 다음 테스트: 첫 칸(바꿀 칸 1개)만 밝게, 나머지 화면은 흐리게 + '나머지는 그대로(유지)' */
       focus?: boolean }
   | { type: "guide:move"; delta: number }                                  // 패널 → 캐릭터: [이전 칸]·[다음 칸]
+  | { type: "guide:goto"; index: number }                                  // 패널 → 캐릭터: 목록에서 지난 칸을 눌러 그 칸으로 (설계서 EX-01 ②)
   | { type: "guide:progress"; index: number; total: number }               // 캐릭터 → 배경: 몇 번째 칸까지 왔나
   | { type: "guide:closed" };                                              // 캐릭터 → 배경: 집에 돌아감
 
@@ -135,6 +136,11 @@ export function stepsFor(mode: GuideEntry["mode"], entries: GuideEntry[], settin
 export function nextTestSteps(entries: GuideEntry[], settings: Setting[], fieldId: string): { all: GuideStepItem[]; send: GuideStepItem[] } {
   const all = stepsFor("create", entries, settings, []);
   let target = all.find((s) => s.entry.id === fieldId);
+  if (target?.entry.doneWhen) {
+    // 복제한 광고엔 다음 칸(문구)이 이미 있어 끝 신호가 바로 보인다 → 바꿀 칸이 사진이면 끝 신호 없이 사장님이 마칠 때까지 (화면 검토 16)
+    const { doneWhen: _skip, ...entry } = target.entry;
+    all[all.indexOf(target)] = target = { ...target, entry };
+  }
   if (!target) {
     const edit = entries.find((e) => e.mode === "edit" && e.id === fieldId);
     if (edit) {

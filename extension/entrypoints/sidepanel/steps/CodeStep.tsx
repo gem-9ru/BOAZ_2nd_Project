@@ -19,7 +19,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   async function load() {
     const c = tidyCode(code);
     if (c.length !== 4) {
-      setError("코드는 4자리예요. 분석 페이지 마지막 ⑥ 보내기에 있는 글자 4개를 넣어 주세요.");
+      setError("코드는 4자리예요. 분석 페이지 ③ 준비하기에서 [확장 프로그램으로 보내기]를 누르면 나오는 글자 4개예요.");
       return;
     }
     setBusy(true);
@@ -40,31 +40,40 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   const endIso = pick("meta.adset.end_date")?.slice(0, 10);
   const end = endIso && /^\d{4}-\d{2}-\d{2}$/.test(endIso) ? `${Number(endIso.slice(5, 7))}월 ${Number(endIso.slice(8))}일` : endIso;   // 다른 화면처럼 '11월 20일'
   const budget = pick("meta.adset.lifetime_budget");
+  const startIso = pick("meta.adset.start_date")?.slice(0, 10);
+  const md = (iso?: string) => (iso && /^\d{4}-\d{2}-\d{2}$/.test(iso) ? `${Number(iso.slice(5, 7))}/${Number(iso.slice(8))}` : null);
+  const ended = Boolean(endIso) && new Date(`${endIso}T23:59:59`) < new Date();
+  const period = md(startIso) && md(endIso) ? ` (${md(startIso)}~${md(endIso)})` : "";
+  // EX-02 ③ 받은 단계는 ✓ (체크 저장소를 같이 쓴다: 분석 탭에 다녀와도 남는다)
+  const doneKey = `upload:${endIso ?? ""}`;
+  const done = state.checks?.[doneKey] ?? [];
+  const mark = (i: number) => { if (!done.includes(i)) dispatch({ type: "toggleCheck", key: doneKey, index: i }); };
+  const Num = ({ i }: { i: number }) => done.includes(i)
+    ? <span className="font-bold text-adopt">✓<span className="sr-only"> 했어요</span></span>
+    : <span className="font-bold text-accent-ink">{i + 1}</span>;
   return (
     <section className="flex flex-col gap-4">
-      <Coach>광고가 끝났으면 결과 파일을 받아 분석 페이지에 올려요. 다음에 바꿔 볼 칸 1개를 찾아 드려요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</Coach>
-      <ol className="flex flex-col gap-2 text-body">
-        <li className="flex gap-2"><span className="font-bold text-accent-ink">1</span>
-          <span>광고 관리자에서 결과 파일 받기: [내보내기]에서 <b>일 · 노출 위치</b>를 꼭 고르기
-            <button type="button" onClick={() => dispatch({ type: "startExport" })} className="flex min-h-11 items-center text-label font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
+      <Coach>{ended ? `광고가 끝났어요${period}. ` : ""}결과 파일을 받아서 다음에 바꿀 칸 1개를 찾아볼까요?</Coach>
+      <ol className="flex flex-col gap-3 text-body">
+        <li className="flex gap-2"><Num i={0} />
+          <span>광고 관리자에서 결과 파일 받기
+            <span className="block text-label text-soft">[내보내기]에서 <b>일 · 노출 위치</b>를 꼭 골라요. 광고가 끝난 뒤 받아야 기간 합계가 맞아요.</span>
+            <button type="button" onClick={() => { mark(0); dispatch({ type: "startExport" }); }} className="flex min-h-11 items-center text-label font-semibold text-accent-ink underline">내보내기 버튼 짚어 주기</button>
           </span></li>
-        <li className="flex gap-2"><span className="font-bold text-accent-ink">2</span>
-          <span>분석 페이지에 받은 파일을 올리기
-            {Object.keys(settings).length > 0 && <span className="block text-caption text-soft">이번 세팅값({Object.keys(settings).length}칸)은 자동으로 함께 넘어가요</span>}
-            <button type="button" onClick={async () => { await browser.tabs.create({ url: await analysisPageUrl(settings) }); }}
-              className="mt-2 block min-h-12 w-full rounded-button bg-accent px-4 font-semibold text-on-accent hover:bg-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">분석 페이지 열기 (새 창)</button>
+        <li className="flex gap-2"><Num i={1} />
+          <span>분석 페이지에 파일 올리기
+            <span className="block text-label text-soft">끝까지 보고 [확장 프로그램으로 보내기]를 누르면 바꿀 칸이 이 패널로 와요.</span>
           </span></li>
-        <li className="flex gap-2"><span className="font-bold text-accent-ink">3</span><span>분석 페이지 마지막 ⑥ 보내기에서 [확장 프로그램으로 보내기]를 누르면 바꿀 칸이 여기로 와요. 안 오면 아래 '코드로 넣기'를 펼쳐 거기 있는 코드 4자리를 넣어 주세요.</span></li>
       </ol>
       {(summary || media) && (
-        <section aria-label="이번 광고 세팅" className="flex flex-col gap-1 rounded-card border border-line bg-paper px-3 py-2 text-caption">
-          <p className="font-semibold">이번 광고 세팅</p>
+        <section aria-label="이번 광고 세팅" className="flex flex-col gap-1 rounded-card border border-line bg-paper px-3 py-2 text-label">
+          <p className="font-semibold">이번 광고 세팅{Object.keys(settings).length > 0 ? ` · ${Object.keys(settings).length}칸은 분석 페이지로 자동으로 넘어가요` : ""}</p>
           {summary && <p>{summary}</p>}
           {media && <p>소재: {media}</p>}
           {end && <p>종료 날짜: {end}{budget ? ` · 세트당 총 ${budget}` : " · 예산은 광고 관리자에 넣은 값 그대로예요"}</p>}
-          <p className="text-soft">광고가 끝난 뒤 받아야 기간 합계가 맞아요</p>
         </section>
       )}
+      <PrimaryButton onClick={async () => { mark(1); await browser.tabs.create({ url: await analysisPageUrl(settings) }); }}>분석 페이지 열기 (새 창)</PrimaryButton>
       <details className="rounded-button bg-paper px-3 py-2">
         <summary className="flex min-h-11 cursor-pointer items-center text-label font-semibold text-accent-ink">보내기가 안 되면: 코드 4자리로 넣기</summary>
       <form className="mt-2 flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void load(); }}>

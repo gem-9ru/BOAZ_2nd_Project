@@ -48,17 +48,12 @@ describe("flow", () => {
     expect(s.guide).toBeNull();
   });
 
-  it("planLoaded → plan, startFix → fix with edit guide at 0, guideDone → wait", () => {
+  it("planLoaded → plan (수정 모드 [그 칸으로 이동]은 없앰: 다음 테스트로만 바꾼다)", () => {
     let s = reduce(reduce(toGuide(), { type: "guideDone" }), { type: "startUpload" });
     expect(s.step).toBe("upload");
     s = reduce(s, { type: "planLoaded", plan: { code: "AB23", action: "한 번 더", summary: [], badge: null,
       change: { field_id: "meta.adset.end_date", label: "종료 날짜", new: "7일 더", note: "" } } });
     expect(s.step).toBe("plan");
-    s = reduce(s, { type: "startFix" });
-    expect(s.step).toBe("fix");
-    expect(s.guide).toEqual({ mode: "edit", index: 0 });
-    s = reduce(s, { type: "guideDone" });
-    expect(s.step).toBe("wait");
   });
 
   it("guideProgress moves index only while guiding", () => {
@@ -83,7 +78,9 @@ describe("flow", () => {
   });
 
   it("reset returns to initial state", () => {
-    expect(reduce(toGuide(), { type: "reset" })).toEqual(initialState());
+    const { rev, ...rest } = reduce(toGuide(), { type: "reset" });
+    expect(rest).toEqual(initialState());
+    expect(rev).toBeGreaterThan(1_000_000_000_000);   // 지금 시각: 저장소의 옛 진행보다 늘 새 것 (화면 검토 21)
   });
 });
 

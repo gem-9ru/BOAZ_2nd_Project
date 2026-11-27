@@ -77,6 +77,7 @@ export default function GuideStep({ state, dispatch }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [login, setLogin] = useState(false);   // 로그인 화면에서 사장님을 기다리는 중
+  const away = Boolean(state.guide?.away);   // 뭉치가 광고 관리자에 나가 있음
 
   async function open() {
     setBusy(true);
@@ -87,6 +88,7 @@ export default function GuideStep({ state, dispatch }: Props) {
     if (tab.id && !(await waitForAds(tab, () => { setLogin(true); setBusy(false); }))) {
       setLogin(false);
       setBusy(false);
+      dispatch({ type: "guideClosed" });   // 뭉치가 못 나갔다 → 집으로 (화면 검토 10)
       setError("광고 관리자 화면이 뜨지 않았어요 → 로그인한 뒤 '광고 관리자 열기'를 다시 눌러 주세요.");
       return;
     }
@@ -104,6 +106,13 @@ export default function GuideStep({ state, dispatch }: Props) {
     if (!ok) setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
   }
 
+  // 목록에서 지난 칸을 누르면 뭉치를 그 칸으로 (설계서 EX-01 ②)
+  async function goTo(i: number) {
+    const tab = await findAdsTab();
+    if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
+    await browser.tabs.sendMessage(tab.id, { type: "guide:goto", index: i } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
+  }
+
   // [이전 칸] [다음 칸]: 광고 관리자 탭의 캐릭터를 움직인다 (진행은 배경 스크립트가 저장소에 쓴다).
   async function move(delta: 1 | -1) {
     // 게시 칸에서 [다음 칸]은 게시하지 않았는데 '끝남'으로 넘어간다 → 막는다 (감사 14)
@@ -114,21 +123,6 @@ export default function GuideStep({ state, dispatch }: Props) {
     const tab = await findAdsTab();
     if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
     await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
-  }
-
-  // 수정 안내 목록에 없는 칸만 바뀌었으면: 탭을 열지 않고 글로 알려 준다.
-  if (mode === "edit" && steps.length === 0) {
-    return (
-      <section className="flex flex-col gap-5">
-        <Coach>이 칸들은 광고 관리자에서 직접 바꿔 주세요.</Coach>
-        <ul className="flex flex-col gap-2">
-          {changes.map((c) => (
-            <li key={c.field_id} className="text-body">{c.label} → {c.new}</li>
-          ))}
-        </ul>
-        <PrimaryButton onClick={() => dispatch({ type: "guideDone" })}>바꿨어요</PrimaryButton>
-      </section>
-    );
   }
 
   const target = next?.send.find((s) => s.entry.id === state.guide?.next);   // 바꿀 칸 (앞에 복제·예산 공유 끄기 칸이 올 수 있음)
@@ -180,7 +174,9 @@ export default function GuideStep({ state, dispatch }: Props) {
                   : <span aria-hidden="true" className={`inline-grid size-5.5 shrink-0 place-items-center rounded-badge border-2 text-small font-bold ${done ? "border-ok bg-ok text-on-accent" : now ? "border-accent bg-accent text-on-accent" : "border-line bg-paper text-soft"}`}>{done ? "✓" : n + 1}</span>}
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex items-center gap-1.5">
-                    <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>
+                    {away && i >= 0 && i < index
+                      ? <button type="button" onClick={() => void goTo(i)} className="min-h-8 text-left text-soft underline decoration-dotted" aria-label={`${label}: 뭉치를 이 칸으로 보내기`}>{label}<span className="sr-only"> (끝남)</span></button>
+                      : <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>}
                     {now && !publish && <span className="rounded-badge bg-accent px-1.5 text-small font-bold text-on-accent">지금</span>}
                     {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
                     {s.value && <span className={`ml-auto max-w-48 truncate text-right font-semibold ${now ? "text-accent" : "text-ink"}`}>{shownDates(s.value)}</span>}
@@ -206,10 +202,13 @@ export default function GuideStep({ state, dispatch }: Props) {
           <button type="button" onClick={() => dispatch({ type: "openPrep" })} className="self-start font-semibold underline">준비물 다시 보기</button>
         </div>
       )}
-      <div className="flex flex-col gap-2">
-        <PrimaryButton onClick={open} busy={busy} disabled={mode === "create" && (state.prepMissing?.length ?? 0) > 0}>광고 관리자 열기 <span aria-hidden="true" className="opacity-80">↗</span></PrimaryButton>
+      {!away && <div className="flex flex-col gap-2">
+        {/* 로그인을 기다리는 동안은 다시 누르지 못하게: 기다림이 두 번 돌면 뭉치를 두 번 부르거나 늦게 오류가 뜬다 (화면 검토 10) */}
+        <PrimaryButton onClick={open} busy={busy} disabled={login || (mode === "create" && (state.prepMissing?.length ?? 0) > 0)}>
+          {login ? "로그인을 기다리는 중…" : <>광고 관리자 열기 <span aria-hidden="true" className="opacity-80">↗</span></>}
+        </PrimaryButton>
         <p className="text-center text-small text-soft">어시스턴트는 결제·게시를 대신 누르지 않아요</p>
-      </div>
+      </div>}
       {mode === "export" && (
         // 뭉치 없이 파일을 받았거나 뭉치를 닫았어도 다음 화면(분석 페이지 열기·코드 넣기)으로 갈 수 있게 (화면 검토 22)
         <button type="button" onClick={() => dispatch({ type: "closeExport" })} className="min-h-11 self-start text-label text-accent-ink underline">← 파일을 받았어요 · 돌아가기</button>
@@ -218,15 +217,25 @@ export default function GuideStep({ state, dispatch }: Props) {
         // 다음 테스트를 누른 뒤 마음이 바뀌면: 지난 세팅·날짜·금액으로 되돌리고 결과 화면으로
         <button type="button" onClick={() => dispatch({ type: "backToPlan" })} className="min-h-11 self-start text-label text-accent-ink underline">← 결과 화면으로 돌아가기</button>
       )}
-      <div className="flex gap-2">
+      {/* 설계서 EX-01 ⑥: 뭉치가 광고 관리자에 나가 있으면 [이전 칸][다음 칸], 아니면 [광고 관리자 열기] 하나만 */}
+      {away && <p className="text-small text-soft">지난 칸 이름을 누르면 뭉치가 그 칸으로 가요.</p>}
+      {away && <div className="flex gap-2">
         <button type="button" onClick={() => void move(-1)} disabled={index === 0}
           className="flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">이전 칸</button>
         <button type="button" onClick={() => void move(1)} disabled={index >= total}
           className="flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">다음 칸</button>
-      </div>
+      </div>}
+      {away && (
+        // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
+        <button type="button" onClick={open} className="min-h-11 self-start text-label text-accent-ink underline">뭉치 다시 부르기</button>
+      )}
       {index > 0 && (
         // 초안을 지웠거나 다시 만들 때: 1번 칸으로 (뭉치는 [광고 관리자 열기]로 다시 부른다)
-        <button type="button" onClick={() => dispatch({ type: "guideProgress", index: 0 })} className="min-h-11 self-start text-label text-accent-ink underline">처음부터</button>
+        <button type="button" onClick={() => dispatch({ type: "guideProgress", index: 0 })} className="min-h-11 self-start text-label text-accent-ink underline">1번 칸부터 다시</button>
+      )}
+      {mode === "create" && !next && (
+        // 기간·금액·지역·클릭 주소를 바꾸려면 ② 질문으로 (① 찾기·문구·준비물 답은 그대로, 날짜는 오늘 기준으로 다시, 화면 검토 9)
+        <button type="button" onClick={() => dispatch({ type: "editAnswers" })} className="min-h-11 self-start text-label text-accent-ink underline">← ② 답 바꾸기 (기간·금액·지역·클릭 주소)</button>
       )}
     </section>
   );
@@ -270,11 +279,16 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
   }
   if (publish) {
     const empty = REQUIRED.map((f) => state.settings.find((x) => x.fieldId === f)).filter((x) => x && !x.value.trim());
-    if (!empty.length) return null;
+    // 결제 카드는 게시할 때만 필요해서 [광고 관리자 열기]는 막지 않고, 게시 칸에서 알린다 (meta_fields.yaml payment why, 화면 검토 3)
+    const noCard = state.answers["meta.pre.payment"] === "아직이에요";
+    if (!empty.length && !noCard) return null;
     return (
       <span role="status" className="flex gap-1.5 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-2 py-1 text-warn">
         <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>
-        <span>{empty.map((x) => x!.label).join(" · ")} 칸이 비어 있어요 → 채운 뒤 게시해 주세요.</span>
+        <span>
+          {empty.length > 0 && `${empty.map((x) => x!.label).join(" · ")} 칸이 비어 있어요 → 채운 뒤 게시해 주세요. `}
+          {noCard && "결제 카드가 아직 없어요 → 메타 결제 설정에서 카드를 등록해야 게시돼요 (카드 정보는 사장님이 직접 넣어요)."}
+        </span>
       </span>
     );
   }

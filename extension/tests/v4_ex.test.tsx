@@ -52,8 +52,9 @@ describe("EX-01 ② 세팅", () => {
   it("panel has [이전 칸] [다음 칸] that move the character on the Ads Manager tab", async () => {
     const tab = await fakeBrowser.tabs.create({ url: "https://adsmanager.facebook.com/adsmanager/manage" });
     const send = vi.spyOn(fakeBrowser.tabs, "sendMessage").mockResolvedValue(undefined);
-    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 3 } };
+    const state: FlowState = { ...initialState(), step: "guide", settings, guide: { mode: "create", index: 3, away: true } };   // 뭉치가 나가 있을 때만 (EX-01 ⑥)
     render(<GuideStep state={state} dispatch={() => {}} />);
+    expect(screen.queryByRole("button", { name: /광고 관리자 열기/ })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "다음 칸" }));
     await waitFor(() => expect(send).toHaveBeenCalledWith(tab.id, { type: "guide:move", delta: 1 }));
     fireEvent.click(screen.getByRole("button", { name: "이전 칸" }));
@@ -218,7 +219,7 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     // 서버는 세트당 5,000원을 권하지만 4일이면 메타 최소(1,336원 × 4일 ≈ 5,400원)보다 적어서 올린다
     expect(box.textContent).toContain("두 세트 × 세트당 5,400원 = 합계 10,800원");
     expect(box.textContent).toContain("11월 27일 ~ 11월 30일 (4일)");
-    expect(box.textContent).toMatch(/지난 광고는 끝났어요/);
+    expect(box.textContent).toMatch(/두 세트.*이 금액·날짜로 맞춰야/);
     expect(box.textContent).toMatch(/메타 최소/);
   });
 

@@ -272,9 +272,9 @@ describe("스마트스토어에 아직 안 올렸어요 → 체크리스트와 �
   const atLoc = asked.findIndex((f) => f.id === "meta.adset.conversion_location");
   const upToLoc = Object.fromEntries(asked.slice(0, atLoc).map((f) => [f.id, f.default || "x"]));
 
-  it("Instagram address from 준비물 → ② does not ask the click destination again; settings use it", () => {
+  it("Instagram address from 준비물 → settings use it (클릭 주소 질문은 미리 채운 채 다시 보여 줌, 화면 검토 1)", () => {
     const answers = { ...upToLoc, "meta.pre.store_product": "아직이에요", "meta.pre.insta_url": "https://www.instagram.com/ovenlog" };
-    expect(askedFields(FIELDS, answers).map((f) => f.id)).not.toContain("meta.adset.conversion_location");
+    expect(askedFields(FIELDS).map((f) => f.id)).toContain("meta.adset.conversion_location");
     const s = buildSettings(FIELDS, answers, target, copy, { start: "2026-11-29", end: "2026-12-05" });
     expect(s.find((x) => x.fieldId === "meta.adset.conversion_location")!.value).toBe("인스타그램 프로필");
     expect(s.find((x) => x.fieldId === "meta.ad.website_url")!.value).toBe("https://www.instagram.com/ovenlog");
@@ -290,9 +290,8 @@ describe("스마트스토어에 아직 안 올렸어요 → 체크리스트와 �
     expect(dispatch).toHaveBeenCalledWith({ type: "answer", id: "meta.adset.conversion_location", value: "인스타그램 프로필" });
   });
 
-  it("store address from 준비물 → ② does not ask again; 스토어 상품 페이지 with that address", () => {
+  it("store address from 준비물 → 스토어 상품 페이지 with that address", () => {
     const answers = { ...upToLoc, "meta.pre.store_product": "올렸어요", "meta.pre.store_url": "https://smartstore.naver.com/ovenlog/products/1" };
-    expect(askedFields(FIELDS, answers).map((f) => f.id)).not.toContain("meta.adset.conversion_location");
     const s = buildSettings(FIELDS, answers, target, copy, { start: "2026-11-29", end: "2026-12-05" });
     expect(s.find((x) => x.fieldId === "meta.adset.conversion_location")!.value).toBe("스토어 상품 페이지");
     expect(s.find((x) => x.fieldId === "meta.ad.website_url")!.value).toBe("https://smartstore.naver.com/ovenlog/products/1");
