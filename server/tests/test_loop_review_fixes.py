@@ -6,7 +6,7 @@ from server.engine.loop.run import run
 from server.engine.meta_export import read_export
 
 OVEN = "server/data/demo/오븐로그_메타AB_20261117-20261120.csv"
-HEESU = "server/data/demo/희수_메타AB_20261117-20261120.csv"
+HEESU = "server/data/demo/모닝빈_메타AB_20261117-20261120.csv"
 
 
 def _csv(sets=(("A_자동노출위치", range(4)), ("B_수동노출위치", range(4))), lpv="same"):

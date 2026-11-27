@@ -46,6 +46,13 @@ export function Signal({ kind }: { kind: SignalKind }) {
   return <span aria-label="아직 몰라요" className="inline-grid size-4 place-items-center text-caption text-hold">–</span>;
 }
 
+/** 기준값 비교 신호 글자 (①b): ✓ 괜찮아요 · ↓ 기준보다 낮아요 · – 아직 몰라요. 판정 배지(확실해요·○ 쪽이에요)와 다른 모양 */
+export const SIGNAL_WORD = { ok: "✓ 괜찮아요", low: "↓ 기준보다 낮아요", unknown: "– 아직 몰라요" } as const;
+export function SignalTag({ signal }: { signal: keyof typeof SIGNAL_WORD }) {
+  const look = signal === "ok" ? "bg-ok-bg text-ok-ink" : signal === "low" ? "bg-accent-soft text-accent-ink" : "bg-hold-bg text-hold";
+  return <span className={`inline-flex whitespace-nowrap rounded-badge px-2.5 py-1 text-caption font-bold ${look}`}>{SIGNAL_WORD[signal]}</span>;
+}
+
 export function AlertLine({ a }: { a: Alert }) {
   return (
     <li className="flex items-start gap-2 text-body">

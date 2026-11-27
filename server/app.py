@@ -293,9 +293,9 @@ import secrets  # noqa: E402
 from fastapi import HTTPException  # noqa: E402
 
 DEMO_CSV = os.path.join(os.path.dirname(__file__), "data", "demo", "오븐로그_메타AB_20261117-20261120.csv")
-# 예시 2: 희수 실험 (scripts/heesu_example.py 가 정리 엑셀에서 만든 파일 · 타깃과 노출 위치를 함께 바꾼 묶음 비교)
+# 예시 2: 카페 모닝빈 (희수 실측, scripts/heesu_example.py 가 정리 엑셀에서 만든 파일 · 타깃과 노출 위치를 함께 바꾼 묶음 비교)
 EXAMPLES = {"ovenlog": DEMO_CSV,
-            "heesu": os.path.join(os.path.dirname(__file__), "data", "demo", "희수_메타AB_20261117-20261120.csv")}
+            "heesu": os.path.join(os.path.dirname(__file__), "data", "demo", "모닝빈_메타AB_20261117-20261120.csv")}
 from collections import OrderedDict  # noqa: E402
 
 MAX_PLANS = 200          # 서버 메모리에 남기는 분석 결과 수 (넘으면 가장 오래된 것부터 지움)

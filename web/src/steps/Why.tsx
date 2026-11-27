@@ -4,7 +4,7 @@ import { Fold, Folds, josa, md, pct, people, TestTag, VerdictBadge, won, wordOf 
 import { FunnelDetail, funnelPreview } from "./WhyFunnel";
 import { SettingsDetail, settingPreview } from "./WhySettings";
 import { CostPerCustomer, Method, Places, PlacesLead, short } from "./WhyCompare";
-import { armName } from "./shared";
+import { armName, SignalTag } from "./shared";
 import { sameMoney } from "./shared";
 
 /** ② 왜 그런지 (축소안 v5 · 기존 AN-02 + AN-03 + AN-04 합침): 한 줄 답 → 이유 3줄(판정 배지로 끝나는 문장) → 접기 6줄.
@@ -41,10 +41,18 @@ export function Why({ r }: { r: Result }) {
         )} tag={<TestTag text={c.tag ?? "테스트 제안"} />} sub={c.field_id === "meta.ad.media" && c.now ? `그런데 소재는 ${c.now}${batchim(c.now) ? "이었어요" : "였어요"} → 이번에 테스트할 칸` : "→ 이번에 테스트할 칸"}>
         {firstSentence(c.reason ?? c.note)}
       </Reason>
+      {/* ①b 세트 1개: 이유 2·3은 A/B 비교 대신 '기준 대비' 문장 (같은 틀, 배지 대신 ✓ / ↓ / – 신호) */}
+      {r.summary.arms.length === 1 && (r.baseline ?? []).map((b, i) => (
+        <Reason key={b.key} n={i + 2} tag={<SignalTag signal={b.signal} />}
+          sub={`기준 ${b.standard}${b.why ? ` · ${b.why}` : ""}`}
+          graph={b.key === "visit_rate" && <Bars label={`${b.label} (기준 ${b.standard})`} rows={[{ name: "내 세트", value: b.value, text: b.text.split(" (")[0]!, on: b.signal === "ok" }]} />}>
+          {b.label}: {b.text}
+        </Reason>
+      ))}
       {keep && keepValue && (
         <Reason n={2} graph={cpm && <Ranges m={cpm} names={arms.map((a, i) => armName(a.name, i))} />} tag={keepBadge && <VerdictBadge word={keepBadge} small />}
           sub={keep.field_id === "meta.adset.placements" && meta
-            ? "메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (희수 실험은 36%)"
+            ? "메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (모닝빈은 36%)"
             : "지금처럼 그대로 두세요"}>
           {keep.title ?? `${josa(keep.path.split(" › ").pop()!, "은는")} ${josa(keepValue, "이가")} ${keepWord!.replace("싸요", "쌌어요")}`}
         </Reason>

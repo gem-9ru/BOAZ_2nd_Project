@@ -1,7 +1,7 @@
 """분석 루프 전체를 한 번에: 업로드한 메타 결과 파일(Bundle) → 화면 7블록에 쓸 dict."""
 from typing import Dict, Optional
 
-from . import alerts as alerts_mod, backtest, check, funnel, matrix, next_step, posterior, summary, verdict
+from . import alerts as alerts_mod, backtest, baseline, check, funnel, matrix, next_step, posterior, summary, verdict
 from .. import analyze as diagnose
 
 
@@ -38,6 +38,7 @@ def run(bundle, seed: int = 0, settings: Optional[Dict] = None) -> Dict:
         "placements_by_set": posterior.shrink(s.get("placements_by_set") or []) if s.get("placements_by_set") else [],
         "funnel": funnel.run(arms),
         "verdict": v,
+        "baseline": baseline.run(arms),   # 세트 1개: 기준값과 비교한 신호 (축소안 v5 ①b)
         "replay": replay,
         "diagnosis": {"status": diag["status"], "finding": diag["finding"]},
         "next": next_step.run(v, diag, m["change"]),

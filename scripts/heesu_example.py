@@ -1,7 +1,7 @@
 """희수 실험 정리 엑셀 → 분석 서버가 읽는 세로형 CSV (오븐로그 정리본과 같은 모양).
 
 사용: .venv/bin/python scripts/heesu_example.py ~/Downloads/트래픽_메타AB_20261117-20261120.xlsx
-출력: server/data/demo/희수_메타AB_20261117-20261120.csv
+출력: server/data/demo/모닝빈_메타AB_20261117-20261120.csv
 
 - '노출 위치' 시트 → 3_노출위치 (세트 × 노출 위치 기간 합계: 지출·노출·도달·링크 클릭·랜딩 페이지 조회)
 - '일자별(부록)' 시트 → 5_부록_일자별 (지출·노출·도달·링크 클릭)
@@ -16,7 +16,7 @@ from pathlib import Path
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "server" / "data" / "demo" / "희수_메타AB_20261117-20261120.csv"
+OUT = ROOT / "server" / "data" / "demo" / "모닝빈_메타AB_20261117-20261120.csv"
 NAMES = {"A": "A_어드밴티지노출위치·자동타겟 (메타 기본: 어드밴티지+ 타겟·노출 위치)",
          "B": "B_수동노출위치·연령20~39 (우리 설정: 20~39세·노출 위치 직접)"}
 PLATFORM = {"Instagram": "instagram", "Facebook": "facebook"}
@@ -51,7 +51,7 @@ def convert(xlsx: Path) -> list:
     place = _sheet(xlsx, "노출 위치")
     daily = _sheet(xlsx, "일자별(부록)")
     rows = [["section", "ad_set", "date", "platform", "position", "metric", "value", "note"],
-            ["0_설정", "", "", "", "", "원본", "희수 실험 정리 엑셀 (트래픽_메타AB_20261117-20261120.xlsx)", ""],
+            ["0_설정", "", "", "", "", "원본", "모닝빈 실험 정리 엑셀 (트래픽_메타AB_20261117-20261120.xlsx)", ""],
             ["0_설정", "", "", "", "", "비교 방식", "메타 기본 세팅 vs 우리가 정한 세팅 묶음 비교 (타깃과 노출 위치가 함께 다름)", ""],
             ["0_설정", "", "", "", "", "예산", "캠페인별 총예산 ₩5,400 (합계 ₩10,800)", ""]]
     period = "2026-11-17~2026-11-20"

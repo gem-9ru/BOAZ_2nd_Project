@@ -1,7 +1,7 @@
 import type { Change, Result } from "../api";
-import { BigButton, Fold, Folds, GRADE_LABEL, josa, md, TestTag, VerdictBadge, won } from "../ui";
+import { AlertMark, BigButton, Fold, Folds, GRADE_LABEL, josa, md, TestTag, VerdictBadge, won } from "../ui";
 import { Mungchi } from "../ui/Mungchi";
-import { armName } from "./shared";
+import { armName, SIGNAL_WORD } from "./shared";
 
 /** ① 결론 (축소안 v5 · 기존 AN-01): 결론 카드 1장 + 주 버튼 [이 테스트 준비하기 →] + 나머지 칸 요약 2개 + 접기 2줄.
  *  결론은 돌려 본 적 없는 선택지라 판정 배지 대신 '테스트 제안' 태그. 숫자는 이유 한 줄 속 하나만. */
@@ -20,6 +20,8 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
   const days = period ? `${md(period.first)}~${md(period.last).split("/").pop()}` : `${read.days}일`;
   const [keepWord, keepBadge] = (keep?.reason ?? "").split(" · ");
   const row = c.rule?.row ?? c.row;
+  const one = arms.length === 1;   // ①b 세트가 1개: 비교 대신 기준값
+  const base = [...(r.baseline ?? [])].sort((x, y) => ORDER.indexOf(x.key) - ORDER.indexOf(y.key)).slice(0, 2);
   return (
     <>
       <section aria-label="테스트할 칸" className="relative flex flex-col items-start gap-2 rounded-card border-2 border-accent bg-surface p-card shadow-hero sm:pr-56">
@@ -28,10 +30,27 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
         <p className="rounded-badge bg-accent-faint px-2.5 py-1 text-caption font-bold text-accent">{c.path ?? c.label}</p>
         <p className="flex flex-wrap items-center gap-2 text-headline font-extrabold leading-snug">{headline(c)} <TestTag text={c.tag ?? "테스트 제안"} /></p>
         <p className="text-body leading-relaxed">{boldPct(c.reason ?? c.note)}</p>
-        {c.unknown && <p className="text-label text-soft">{c.unknown}</p>}
+        {one ? <p className="text-label text-soft">세트가 1개라 비교할 대상이 없었어요. 이번에 두 세트로 돌리면 처음으로 '어느 쪽이 나은지'를 알 수 있어요.</p>
+          : c.unknown && <p className="text-label text-soft">{c.unknown}</p>}
         <div className="pt-3"><BigButton onClick={onPrep}>이 테스트 준비하기 →</BigButton></div>
       </section>
-      <ul className="grid gap-3.5 sm:grid-cols-2" aria-label="나머지 칸">
+      {one && base.length > 0 && <>
+        <ul className="grid gap-3.5 sm:grid-cols-2" aria-label="기준값과 비교">
+          {base.map((b) => (
+            <li key={b.key} className="flex flex-col items-start gap-1 rounded-card border border-line bg-surface px-5 py-4 text-label shadow-card">
+              <b className={`text-title font-extrabold ${b.signal === "ok" ? "text-ok-ink" : b.signal === "low" ? "text-accent-ink" : "text-hold"}`}>{SIGNAL_WORD[b.signal]}</b>
+              <b className="mt-1 text-body">{b.label}</b>
+              <span>{b.text} · 기준 {b.standard}</span>
+              {b.why && <span className="text-caption text-soft">{b.why}</span>}
+            </li>
+          ))}
+        </ul>
+        <p className="flex items-start gap-2 rounded-soft border-[1.5px] border-info-line bg-info-bg px-4 py-2.5 text-label text-info-ink">
+          <AlertMark level="info" />
+          <span>세트가 1개일 때는 <b>'확실해요 / ○ 쪽이에요'가 나오지 않아요.</b> 대신 기준값과 비교해 ✓ 괜찮아요 / ↓ 기준보다 낮아요 / – 아직 몰라요로만 보여 줘요. 클릭이 30번이 안 되면 숫자가 좋아 보여도 '– 아직 몰라요'예요.</span>
+        </p>
+      </>}
+      {!(one && base.length > 0) && <ul className="grid gap-3.5 sm:grid-cols-2" aria-label="나머지 칸">
         <li className="flex flex-col items-start gap-1 rounded-card border border-line bg-surface px-5 py-4 text-label shadow-card">
           <Tag tone="keep">✓ 그대로</Tag>
           {keep ? <>
@@ -51,13 +70,17 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
             <span>{watch.map((w) => w.short ?? w.text).join(" · ")}</span>
           </> : <span className="text-soft">이번엔 없어요</span>}
         </li>
-      </ul>
+      </ul>}
       <Folds label="궁금하면 열어 보세요">
         <Fold label="파일 확인 결과" preview={`${days} · 광고비 ${won(spend)} · 클릭 ${clicks.toLocaleString()}번`}>
           <p><span aria-hidden="true" className="font-bold text-ok">✓ </span>기간 {days} ({read.days}일) · 광고 세트 {read.adsets}개 · 광고비 {won(spend)} · 보여진 횟수 {imps.toLocaleString()}번 · 클릭 {clicks.toLocaleString()}번{off > 0 && ` · 안 보여진 날 ${off}일`}</p>
           <p className="text-soft">{r.check.totals.every((t) => t.match) ? "일자별 합계와 노출 위치별 합계가 맞아요." : "일자별 합계와 노출 위치별 합계가 안 맞아요."}</p>
         </Fold>
-        <Fold label="자주 묻는 질문 · 왜 이 칸이에요?" preview="펼치면 답">
+        <Fold label={one ? "자주 묻는 질문 · 왜 두 세트로 돌려야 해요?" : "자주 묻는 질문 · 왜 이 칸이에요?"} preview="펼치면 답">
+          {one && <div className="flex flex-col gap-1">
+            <p className="font-semibold">왜 두 세트로 돌려야 해요?</p>
+            <p className="text-soft">세트가 하나면 숫자가 좋은지 나쁜지를 기준값으로만 짐작할 수 있어요. 같은 날 같이 돌린 두 세트를 비교해야 '바꾼 칸 덕분인지'를 알 수 있어요. 그래서 지금 세트는 그대로 두고, 이 칸만 바꾼 세트를 하나 더 만들어요.</p>
+          </div>}
           <div className="flex flex-col gap-1">
             <p className="font-semibold">왜 이 칸이에요?</p>
             <p className="text-soft">{row === "-" ? "위에서부터 막힌 단계도, 돈이 몰린 자리도 없어서 문구 하나만 바꿔 비교하는 걸 제안해요."
@@ -75,6 +98,8 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
     </>
   );
 }
+
+const ORDER = ["visit_rate", "frequency", "ctr"];   // ①b 요약 카드 순서 (와이어: 도착 → 본 횟수)
 
 /** 결론 한 줄 답: '세로 소재를 넣은 세트를 하나 더 만들어, 지금 세트와 같이 돌려 보면 돼요' */
 export function oneLine(c: Change, lead = "") {

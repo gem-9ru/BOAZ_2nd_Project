@@ -186,7 +186,7 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
   );
 }
 
-const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "오븐로그_메타AB_20261117-20261120.csv", heesu: "희수_메타AB_20261117-20261120.csv" };
+const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "오븐로그_메타AB_20261117-20261120.csv", heesu: "모닝빈_메타AB_20261117-20261120.csv" };
 const ORDER = SCREEN_ORDER;
 const NAME = { block: "차단", warn: "주의", info: "참고" } as const;
 

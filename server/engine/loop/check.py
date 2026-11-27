@@ -38,7 +38,9 @@ def run(bundle) -> Dict:
         if len(off) == len(adsets):
             who = "두 세트 모두" if len(adsets) == 2 else "모든 세트"
             warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)} {who} 하루 종일 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산",
-                             "later": f"{_md(date)}은 {who} 하루 종일 안 보여졌어요 → 이 날은 비교에서 뺐어요"})   # 알림 바 (축소안 v5)
+                             # 알림 바 (축소안 v5 · ①b): 세트가 1개면 '비교'가 없어서 '빼고 봤어요'
+                             "later": f"{_md(date)}은 {who} 하루 종일 안 보여졌어요 → 이 날은 비교에서 뺐어요" if len(adsets) > 1
+                             else f"{_md(date)}은 하루 종일 안 보여졌어요 → 이 날은 빼고 봤어요"})
         else:
             warnings.append({"kind": "no_delivery", "date": str(date.date()), "text": f"{_md(date)}에 {', '.join(off)}만 안 보여졌어요 → 관련 칸: 시작 시간 · 총예산"})
 

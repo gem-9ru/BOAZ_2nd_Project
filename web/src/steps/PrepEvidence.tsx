@@ -32,7 +32,7 @@ export function Evidence({ r }: { r: Result }) {
           </>}
           {tab === "우리 실측 2건" && <>
             <p>· 오븐로그: 수동 노출 위치가 광고비(CPM) {ok ? ok.reason.replace("↓ 광고비 ", "").replace(" 싸요 · 확실해요", "") : "15%"} 저렴 · 판정 {DEV_LABEL["채택"]}</p>
-            <p>· 희수 실험: 수동 세트 광고비(CPM) 36% 저렴 — 두 실측이 같은 방향이에요.</p>
+            <p>· 모닝빈: 수동 세트 광고비(CPM) 36% 저렴 — 두 실측이 같은 방향이에요.</p>
             {r.verdict && <p>· 방문 1명당 비용 판정: {DEV_LABEL[r.verdict.badge.level]} ({Math.round(r.verdict.badge.prob * 100)}%){r.verdict.badge.capped ? ` · ${r.verdict.badge.capped.join(", ")}` : ""}</p>}
             {c.rule && <p>· 이번 결론 규칙(진단 {c.rule.row}번): {DEV_LABEL[c.rule.level]} · 효과는 {DEV_LABEL[c.certainty?.level ?? "보류"]} (돌려 본 적 없음)</p>}
           </>}

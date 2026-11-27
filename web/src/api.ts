@@ -46,6 +46,8 @@ export interface Result {
   summary: { arms: Arm[]; placements: { placement: string; label: string; spend: number; share: number }[] };
   verdict: Verdict | null;
   replay: { date: string; prob: number; min_visits?: number; word?: string }[];
+  /** 세트 1개: 기준값과 비교한 신호 (축소안 v5 ①b). 두 세트 이상이면 빈 목록 */
+  baseline?: BaselineRow[];
   diagnosis: { status: string; finding: { title: string; message: string } };
   next: { action: string; change: Change; summary: string[] };
 }
@@ -74,7 +76,7 @@ export const analyzeFile = (file: File, extra: { settingsKey?: string | null; se
   else if (extra.settingsKey) fd.append("settings_key", extra.settingsKey);
   return call<Result>("/analysis", { method: "POST", body: fd });
 };
-/** 예시: ovenlog = 오븐로그 A/B 실측, heesu = 희수 실험 (타깃·노출 위치 묶음 비교) */
+/** 예시: ovenlog = 오븐로그 A/B 실측, heesu = 카페 모닝빈 실험 (희수 실측 · 타깃·노출 위치 묶음 비교) */
 export type ExampleName = "ovenlog" | "heesu";
 export const example = (settingsKey?: string | null, name: ExampleName = "ovenlog") => {
   const q = new URLSearchParams(settingsKey ? { settings_key: settingsKey } : {});
@@ -84,3 +86,5 @@ export const example = (settingsKey?: string | null, name: ExampleName = "ovenlo
 export const simulate = (code: string, arm: string, budget: number, total = 100000, days?: number) =>
   call<Simulation>("/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, budget, total, days }) });
 export const receivedSettings = (key: string) => call<{ count: number }>(`/settings/${encodeURIComponent(key)}`);
+export interface BaselineRow { key: string; label: string; value: number; range: [number, number] | null; standard: string;
+  signal: "ok" | "low" | "unknown"; text: string; why: string | null }

@@ -62,7 +62,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-body text-soft">파일이 없나요?</span>
         <Example icon="🍪" onClick={() => onExample("ovenlog")} disabled={busy}>오븐로그 예시로 보기</Example>
-        <Example icon="🧪" onClick={() => onExample("heesu")} disabled={busy}>희수 실험 예시로 보기</Example>
+        <Example icon="☕" onClick={() => onExample("heesu")} disabled={busy}>모닝빈 예시로 보기</Example>
       </div>
 
       <Folds label="도움말">

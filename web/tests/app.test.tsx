@@ -44,7 +44,7 @@ describe("⓪ 업로드", () => {
     expect(screen.getByText("파일을 올리면 눌러져요")).toBeTruthy();
     expect(screen.getByText("새 분석")).toBeTruthy();
     expect(screen.getByRole("button", { name: "내 광고 설정 5개만 직접 입력하기 ▸" })).toBeTruthy();
-    for (const n of ["오븐로그 예시로 보기", "희수 실험 예시로 보기"]) expect(screen.getByRole("button", { name: n })).toBeTruthy();
+    for (const n of ["오븐로그 예시로 보기", "모닝빈 예시로 보기"]) expect(screen.getByRole("button", { name: n })).toBeTruthy();
     for (const t of ["결과 파일은 어떻게 받아요?", "꼭 있어야 하는 열", "내 광고 설정이 없어요", "아직 광고를 안 돌려 봤어요"]) expect(screen.getByText(t)).toBeTruthy();
     expect(screen.getByText("지출 금액 · 노출 · 링크 클릭 · 랜딩 페이지 조회")).toBeTruthy();   // 닫힌 줄에도 핵심 한 줄
     expect((screen.getByRole("button", { name: "분석 시작 ▶" }) as HTMLButtonElement).disabled).toBe(true);
@@ -201,6 +201,21 @@ describe("① 결론", () => {
   });
 });
 
+describe("①b 세트가 1개일 때", () => {
+  it("same conclusion card, but 'no comparison' line, two baseline cards, the info box, and a two-sets FAQ", async () => {
+    show(oneSet);
+    expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
+    expect(screen.getByText(/세트가 1개라 비교할 대상이 없었어요/)).toBeTruthy();
+    const cards = screen.getByRole("list", { name: "기준값과 비교" });
+    expect(within(cards).getByText("누른 뒤 페이지 도착")).toBeTruthy();
+    expect(within(cards).getByText("43% (범위 28%~60%) · 기준 60%")).toBeTruthy();
+    expect(within(cards).getAllByText("– 아직 몰라요").length).toBe(2);
+    expect(screen.getByText(/'확실해요 \/ ○ 쪽이에요'가 나오지 않아요/)).toBeTruthy();
+    expect(screen.getByText("자주 묻는 질문 · 왜 두 세트로 돌려야 해요?")).toBeTruthy();
+    expect(screen.queryByRole("list", { name: "나머지 칸" })).toBeNull();
+  });
+});
+
 describe("② 왜 그런지", () => {
   async function why(result: unknown = oven) {
     show(result);
@@ -254,6 +269,14 @@ describe("② 왜 그런지", () => {
     await why(twoSets);
     expect(screen.getByText(/A가 나을 확률 95%/)).toBeTruthy();
     expect(screen.queryByText(/B가 나을 확률/)).toBeNull();
+  });
+
+  it("a single ad set (①b): ② uses '기준 대비' reasons with ✓ / ↓ / – instead of verdict badges", async () => {
+    await why(oneSet);
+    expect(screen.getByText(/누른 뒤 페이지 도착: 43% \(범위 28%~60%\)/)).toBeTruthy();
+    expect(screen.getAllByText("– 아직 몰라요").length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/클릭 23번이라 30번이 안 돼요 → 판정 안 함/).length).toBeGreaterThan(0);
+    expect(screen.queryByText(/확실해요|쪽이에요/)).toBeNull();
   });
 
   it("a single ad set: no A/B reason, the funnel row 1 is '–'", async () => {
