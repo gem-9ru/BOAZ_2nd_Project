@@ -23,4 +23,5 @@ def test_enough_clicks_gives_ok_or_low():
     rows = {r["key"]: r for r in baseline.run([arm(link_clicks=40.0, landing_page_views=12.0, frequency_min=1.6)])}
     assert rows["visit_rate"]["signal"] == "low"   # 30% < 60%
     assert rows["ctr"]["signal"] == "ok"           # 1,000번에 40번 ≥ 10번
-    assert rows["frequency"]["signal"] == "ok" and rows["frequency"]["why"] is None
+    assert rows["frequency"]["signal"] == "unknown" and rows["frequency"]["text"] == "적어도 1.6번"   # 아래쪽 값이라 단정하지 않음
+    assert {r["key"]: r for r in baseline.run([arm(link_clicks=40.0, frequency_min=3.0)])}["frequency"]["signal"] == "low"

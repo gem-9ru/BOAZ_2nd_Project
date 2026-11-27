@@ -32,7 +32,7 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
     const t = setTimeout(() => {
       Promise.all([budget, budget * 2, budget * 4].map((b) => simulate(r.code, arm.name, b, total, days)))
         .then((s) => { setSims(s); setError(null); }, (e: Error) => setError(e.message));
-    }, 250);
+    }, compare ? 600 : 250);   // 슬라이더를 끄는 동안 서버에 너무 자주 묻지 않게 (분당 요청 제한)
     return () => clearTimeout(t);
   }, [r.code, arm, budget, total, days]);
 
@@ -51,7 +51,7 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
   const who = armName(arm.name, bi);
   const roll = nt && (
         <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
-          summary={start >= nt.per_set_lo && start <= nt.per_set_hi ? `세트당 총 ${won(start)}이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요`
+          summary={budget >= nt.per_set_lo && budget <= nt.per_set_hi ? `세트당 총 ${won(budget)}이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요`
             : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
@@ -93,7 +93,8 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
         <ul className="flex flex-col gap-3" aria-live="polite">
           {budgets.map((b, i) => {
             const s = sims[i];
-            const tried = s?.tried ?? b <= spent;   // 서버가 총액·하루 금액(기간)을 같이 봐요
+            // ③ 슬라이더와 같은 기준: '써 본 금액' = 하루 금액이 써 본 최대 이하 (최종안(1) '하루 2,643원(써 본 최대)'). 따로 볼 땐 총액까지
+            const tried = compare ? s?.daily_tried ?? true : s?.tried ?? b <= spent;
             const at = (x: number) => `${(x / max) * 100}%`;
             return (
               <li key={b} className="flex flex-col gap-1">
@@ -114,7 +115,7 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
           })}
         </ul>
         <p className="text-caption text-soft">실선 = 써 본 금액 · 점선 = 써 본 적 없는 금액 · 진한 보라 점 = 보통 값</p>
-        {!first?.tried && first && <p className="text-caption text-soft">
+        {first && !(compare ? first.daily_tried ?? true : first.tried) && <p className="text-caption text-soft">
           {first.daily_tried === false
             ? `하루 ${won(first.daily)}은 써 본 적 없어서 가설이에요 (하루 최대 ${won(first.daily_max)}까지 써 봤어요).`
             : `이 금액은 써 본 적 없어서 범위가 넓어요 (세트당 ${won(spent)}까지만 써 봤어요).`}
@@ -123,7 +124,7 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
         {error && <p role="alert" className="text-body text-warn">{error}</p>}
       </Card>
       {part === "all" && roll}
-      <HowCalculated easy="실측으로 맞춘 범위에서 광고비·누르는 정도·페이지 도착을 무작위로 뽑아 수만 번 가상으로 돌려 보고, 가운데 80%를 보여 드려요.">
+      <HowCalculated title={compare ? "계산 방법" : undefined} easy="실측으로 맞춘 범위에서 광고비·누르는 정도·페이지 도착을 무작위로 뽑아 수만 번 가상으로 돌려 보고, 가운데 80%를 보여 드려요.">
         <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 방문자. 골라 뽑지 않고 전체 분포를 써요.</p>
         <p>한계: {first?.limits ?? "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>
         {nt && <p>Test & Roll (Feit & Berman 2019): 실측으로 맞춘 몫 {(nt.share_lo * 100).toFixed(1)}~{Math.round(nt.share_hi * 100)}%.</p>}

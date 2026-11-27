@@ -314,6 +314,8 @@ def _store(result: dict) -> dict:
     return {**result, "code": code}
 
 
+# 예시의 내 광고 설정: 베이커리 실험 2(오븐로그)는 실제로 정사각 1장 + AI 이미지 2장을 썼다 (최종안(1) 화면이 이 설정을 받은 상태)
+EXAMPLE_SETTINGS: Dict[str, Dict[str, str]] = {"ovenlog": {"meta.ad.media": "정사각 1장 + AI 이미지 2장"}}
 _EXAMPLE_PLANS: Dict[str, dict] = {}   # 예시 결과: 정해진 코드로 따로 둔다 (예시를 여러 번 눌러도 사장님 결과가 밀려 지워지지 않게, 감사 10)
 
 
@@ -358,7 +360,7 @@ def analysis_example(settings_key: Optional[str] = None, name: str = "ovenlog"):
         return _loop(read_export(EXAMPLES[name]), given)
     code = "EX" + str(sorted(EXAMPLES).index(name) + 1).zfill(2)   # EX01, EX02 (보통 코드에 없는 모양: 숫자 0·1은 안 씀)
     if code not in _EXAMPLE_PLANS:
-        _EXAMPLE_PLANS[code] = loop_run.run(read_export(EXAMPLES[name]), settings=None)
+        _EXAMPLE_PLANS[code] = loop_run.run(read_export(EXAMPLES[name]), settings=EXAMPLE_SETTINGS.get(name))
     return {**_EXAMPLE_PLANS[code], "code": code}
 
 

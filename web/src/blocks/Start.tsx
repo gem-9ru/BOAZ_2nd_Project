@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { Alert, ExampleName } from "../api";
 import { AlertLine } from "../steps/shared";
 import { Button, Fold, Folds, Title } from "../ui";
@@ -20,7 +20,14 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
   received: number | null; settings: Settings; onSettings: (s: Settings) => void;
 }) {
   const [over, setOver] = useState(false);
-  const [mine, setMine] = useState(false);   // '5개만 직접 입력하기' 링크 → 접기 3번째 줄을 연다
+  const [mine, setMine] = useState(0);   // '5개만 직접 입력하기' 링크를 누른 횟수 → 누를 때마다 도움말을 (다시) 열고 그 질문으로 내려간다
+  // 링크를 누르면 열린 도움말의 '내 광고 설정' 칸으로 내려가고 첫 질문에 초점 (누른 자리에서 아무 일도 없어 보이지 않게)
+  useEffect(() => {
+    if (!mine) return;
+    const el = document.getElementById("my-settings");
+    el?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    el?.querySelector<HTMLInputElement>("input")?.focus({ preventScroll: true });
+  }, [mine]);
   const [done, setDone] = useState<boolean[]>(PREP.map(() => false));
   const ready = !!checked && !checked.blocks.length && !busy;
   return (
@@ -45,7 +52,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
             onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
           {received !== null
             ? <span className="mt-4 rounded-badge bg-ok-bg px-3 py-1.5 text-caption text-ink"><span aria-hidden="true" className="font-bold text-ok">✓ </span>내 광고 설정은 확장 프로그램에서 자동으로 받았어요</span>
-            : <button type="button" onClick={(e) => { e.preventDefault(); setMine(true); }} className="mt-4 text-caption text-accent-ink underline">내 광고 설정 5개만 직접 입력하기 ▸</button>}
+            : <button type="button" onClick={(e) => { e.preventDefault(); setMine((n) => n + 1); }} className="mt-4 text-caption text-accent-ink underline">내 광고 설정 5개만 직접 입력하기 ▸</button>}
         </label>
         {busy && <p role="status" className="text-body text-soft">파일을 읽고 계산하는 중이에요…</p>}
         {error && <p id="csv-error" role="alert" className="rounded-soft border-[1.5px] border-block-line bg-block-bg px-4 py-3 text-body text-block-ink">{error}</p>}
@@ -62,7 +69,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
 
       {/* 최종안: 접기는 '도움말' 1개 (결과 파일 받는 법 · 꼭 있어야 하는 열 · 내 광고 설정 · 광고를 아직 안 돌렸을 때) */}
       <Folds label="도움말">
-        <Fold key={mine ? "help-open" : "help"} open={mine} label="도움말" preview="결과 파일 받는 법 · 꼭 있어야 하는 열 · 광고를 아직 안 돌렸을 때">
+        <Fold key={`help-${mine}`} open={mine > 0} label="도움말" preview="결과 파일 받는 법 · 꼭 있어야 하는 열 · 광고를 아직 안 돌렸을 때">
           <section className="flex flex-col gap-1">
             <h2 className="font-bold">결과 파일은 어떻게 받아요?</h2>
             <ol className="list-decimal pl-5">
@@ -76,7 +83,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
             <ul className="flex flex-wrap gap-x-3">{["지출 금액", "노출", "링크 클릭", "랜딩 페이지 조회"].map((c) => <li key={c}>✓ {c}</li>)}</ul>
             <p className="text-soft">'조회'는 랜딩 페이지 조회가 아니에요. '랜딩 페이지 조회'를 골라 주세요. (없으면 '들어온 사람'을 계산하지 못해요)</p>
           </section>
-          <section className="flex flex-col gap-1">
+          <section id="my-settings" className="flex scroll-mt-4 flex-col gap-1">
             <h2 className="font-bold">내 광고 설정이 없어요</h2>
             <MySettings received={received} value={settings} onChange={onSettings} />
           </section>

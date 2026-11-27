@@ -38,6 +38,9 @@ def run(arms: List[Dict]) -> List[Dict]:
             vr >= need, f"{vr:.0%} (범위 {lo:.0%}~{hi:.0%})")
     if a.get("frequency_min"):
         fmax = cfg["alerts"]["frequency_max"]
-        add("frequency", "한 사람이 본 횟수", a["frequency_min"], None, f"{fmax}번 이하",
-            a["frequency_min"] <= fmax, f"평균 {a['frequency_min']:.1f}번")
+        # frequency_min = 노출 ÷ 날마다 본 사람 수의 합 → 실제 평균보다 작거나 같다 (아래쪽 값). 그래서 '적어도'로 말하고,
+        # 기준 이하여도 '✓ 괜찮아요'라고 단정하지 않는다 (넘으면 확실히 ↓)
+        f = a["frequency_min"]
+        out.append({"key": "frequency", "label": "한 사람이 본 횟수", "value": f, "range": None, "standard": f"{fmax}번 이하",
+                    "signal": "unknown" if few or f <= fmax else "low", "text": f"적어도 {f:.1f}번", "why": why})
     return out

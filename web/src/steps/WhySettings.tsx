@@ -11,11 +11,11 @@ export function settingItems(r: Result): Item[] {
   const m = r.matrix;
   const full = m.settings ?? [];
   const items: Item[] = full.map((x) => ({ field_id: x.field_id, path: x.path, kind: x.kind, text: x.note, value: x.value }));
-  if (!full.length) {
-    if (m.change?.path) items.push({ field_id: m.change.field_id, path: m.change.path, kind: "테스트", text: m.change.reason ?? "", value: m.change.now ?? undefined });
-    m.keep.forEach((k) => items.push({ field_id: k.field_id, path: k.path, kind: "그대로", text: k.reason, value: k.value }));
-    m.watch.forEach((w) => { if (!items.some((x) => x.path === w.path)) items.push({ field_id: w.field_id, path: w.path, kind: "다시 보기", text: w.text }); });
-  }
+  // 받은 설정에 없는 칸도 결과 파일로 알 수 있으면 넣는다 (설정을 몇 칸만 받았어도 그대로·다시 보기 칸이 빠지지 않게)
+  const add = (x: Item) => { if (!items.some((y) => y.path === x.path)) items.push(x); };
+  if (m.change?.path) add({ field_id: m.change.field_id, path: m.change.path, kind: "테스트", text: m.change.reason ?? "", value: m.change.now ?? undefined });
+  m.keep.forEach((k) => add({ field_id: k.field_id, path: k.path, kind: "그대로", text: k.reason, value: k.value }));
+  m.watch.forEach((w) => add({ field_id: w.field_id, path: w.path, kind: "다시 보기", text: w.text }));
   items.sort((a, b) => ORDER.indexOf(a.path.split(" › ")[0]!) - ORDER.indexOf(b.path.split(" › ")[0]!));
   return items;
 }

@@ -172,6 +172,8 @@ export function josa(word: string, pair: "이가" | "을를" | "은는" | "과�
   const has = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0;
   return word + (has ? pair[0] : pair[1]);
 }
+/** 칸 이름의 가운뎃점은 앞뒤를 띄운다: '광고 › 형식·미디어' → '광고 › 형식 · 미디어' (최종안(1) 표기) */
+export const spaced = (s: string) => s.replace(/(\S)·(\S)/g, "$1 · $2");
 /** '2026-11-18' → '11/18' */
 export function md(d: string | undefined): string {
   if (!d) return "";

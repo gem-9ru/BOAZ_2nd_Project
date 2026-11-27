@@ -94,7 +94,7 @@ const paren = (s: string) => (s.includes(" ") ? `${s.replace(" ", "(")})` : s); 
 function reasonOne(r: Result): string {
   const c = r.matrix.change ?? r.next.change;
   const top = r.placements[0];
-  if ((c.rule?.row ?? c.row) === "5" && top && (c.reason ?? "").includes("없었어요")) return `돈이 ${short(top.label)}로 갔는데, ${josa(c.what ?? "맞는 소재", "이가")} 없었어요`;
+  if ((c.rule?.row ?? c.row) === "5" && top && (c.reason ?? "").includes("없었어요")) return `돈이 ${ro(short(top.label))} 갔는데, ${josa(c.what ?? "맞는 소재", "이가")} 없었어요`;
   return firstSentence(c.reason ?? c.note);
 }
 
@@ -119,8 +119,8 @@ export function answer(r: Result): string {
   const top = r.placements[0];
   if (row === "5" && top) {
     const spot = short(top.label).replace(/^(인스타|페북) /, "");
-    return (c.reason ?? "").includes("없었어요") ? `돈은 ${spot}로 갔는데 ${josa(c.what ?? "맞는 소재", "이가")} 없었고, 나머지 설정은 괜찮았어요`
-      : `돈은 ${spot}로 몰렸고, 나머지 설정은 괜찮았어요`;
+    return (c.reason ?? "").includes("없었어요") ? `돈은 ${ro(spot)} 갔는데 ${josa(c.what ?? "맞는 소재", "이가")} 없었고, 나머지 설정은 괜찮았어요`
+      : `돈은 ${ro(spot)} 몰렸고, 나머지 설정은 괜찮았어요`;
   }
   if (row === "-") return "크게 막힌 곳이 없어서 문구 하나만 바꿔 비교해 봐요";
   const stage = r.matrix.rows.find((x) => x.row === row)?.stage;
@@ -130,6 +130,13 @@ export function answer(r: Result): string {
 /** '…나갔는데, 세로 소재가 없었어요.' → '…나갔어요' / '…나갔어요. 그 자리에 …' → '…나갔어요' */
 function firstSentence(s: string): string {
   return s.split(". ")[0]!.replace(/\.$/, "").replace(/는데, .*$/, "어요");
+}
+
+/** 로/으로: 받침이 있으면 '으로', 없거나 ㄹ 받침이면 '로' ('릴스로', '탐색 탭으로', '피드로') */
+function ro(w: string): string {
+  const c = w.trim().slice(-1).charCodeAt(0);
+  const has = c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0 && (c - 0xac00) % 28 !== 8;
+  return `${w}${has ? "으로" : "로"}`;
 }
 
 function batchim(w: string): boolean {

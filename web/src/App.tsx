@@ -44,7 +44,12 @@ export default function App() {
     if (!checked) return;
     // 올린 뒤 세팅을 바꿨으면 그 세팅으로 다시 계산, 아니면 검사 때 계산한 결과를 그대로
     if (checked.given !== given()) void load(() => analyzeFile(checked.file, received !== null ? { settingsKey } : { settings }));
-    else { setResult(checked.result); setStep(0); setReached(0); window.scrollTo({ top: 0 }); }
+    else show(checked.result);
+  }
+  /** 결과를 띄운다: 업로드 화면을 기록에 남겨서 ①에서 [뒤로]를 누르면 업로드로 돌아오게 */
+  function show(res: Result) {
+    window.history.pushState(null, "", window.location.href);   // 새 칸 → 아래 효과가 이 칸의 # 를 결과 코드로 바꾼다
+    setResult(res); setStep(0); setReached(0); window.scrollTo({ top: 0 });
   }
   /** 결과를 닫고 업로드 화면으로 (결과가 사라져서 한 번 묻는다). */
   function leave() {
@@ -54,23 +59,32 @@ export default function App() {
   async function load(get: () => Promise<Result>) {
     setBusy(true);
     setError(null);
-    try { setResult(await get()); setStep(0); setReached(0); window.scrollTo({ top: 0 }); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    try { show(await get()); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   }
   /** 단계 이동: 브라우저 기록에 한 칸 쌓아서 [뒤로]가 앞 단계로 오게 한다 (아래 popstate). */
   function go(i: number) {
     if (i !== step) window.history.pushState(null, "", window.location.href);   // 새 칸 → 아래 효과가 이 칸의 # 를 새 단계로 바꾼다
     setStep(i); setReached((r) => Math.max(r, i)); window.scrollTo({ top: 0 });
   }
-  // 브라우저 [뒤로]·[앞으로]: 주소 #의 step으로 단계를 맞춘다 (결과는 메모리에만 있어서 페이지를 떠나면 사라지므로)
+  // 브라우저 [뒤로]·[앞으로]: 주소 #의 step으로 단계를 맞춘다 (결과는 메모리에만 있어서 페이지를 떠나면 사라지므로).
+  // 결과 코드가 없거나 다른 결과의 기록이면 업로드 화면으로. 아직 못 가는 단계(차단·안 거친 ②)로는 가지 않는다
+  const kept = useRef<Result | null>(null);   // [뒤로]로 업로드에 왔을 때의 결과 → [앞으로]를 누르면 다시 연다
   useEffect(() => {
     const onPop = () => {
-      const id = new URLSearchParams(window.location.hash.slice(1)).get("step");
-      const i = STEPS.findIndex((x) => x.id === id);
-      if (i >= 0) setStep(i);
+      const q = new URLSearchParams(window.location.hash.slice(1));
+      if (!result) {
+        if (q.get("code") && q.get("code") === kept.current?.code) { setResult(kept.current); setStep(0); setReached(0); }
+        else if (q.get("code")) window.history.replaceState(null, "", window.location.pathname);   // 다시 열 수 없는 결과의 주소는 지운다
+        return;
+      }
+      if (q.get("code") !== result.code) { kept.current = result; setResult(null); return; }
+      const i = STEPS.findIndex((x) => x.id === q.get("step"));
+      const can = i >= 0 && !(result.blocked && i > 0) && (i <= reached || i === STEPS.length - 1);
+      if (can) setStep(i);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
-  }, []);
+  }, [result, reached]);
   // 결과가 있는 동안 페이지를 떠나려 하면 브라우저가 한 번 묻는다 (결과는 다시 볼 수 없어요)
   useEffect(() => {
     if (!result) return;
@@ -87,10 +101,11 @@ export default function App() {
     if (window.location.hash !== next) window.history.replaceState(null, "", next === "#" ? window.location.pathname : next);
   }, [result, step, settingsKey]);
   /** ③ [확장 프로그램으로 보내기]: 옆 패널이 주소의 send를 보고 테스트안을 받는다. 고른 세트당 예산도 같이 (budget). */
-  function sendToExtension(budget?: number) {
+  function sendToExtension(budget?: number, days?: number) {
     const q = new URLSearchParams(window.location.hash.slice(1));
     q.set("send", String(Date.now()));
     if (budget) q.set("budget", String(budget));
+    if (days) q.set("days", String(days));   // 4일/7일 (확장이 읽으면 기간도 맞춘다)
     window.history.replaceState(null, "", `#${q.toString()}`);
   }
 
@@ -134,7 +149,7 @@ export default function App() {
         )}
         {step === 0 && !result.blocked && <Conclusion r={result} onPrep={() => go(2)} onWhy={() => go(1)} />}
         {step === 1 && <Why r={result} />}
-        {step === 2 && <Prep r={result} onCopied={showToast} onSend={sendToExtension} onReload={() => setResult(null)} onBack={() => go(1)} />}
+        {step === 2 && <Prep r={result} onCopied={showToast} onSend={sendToExtension} onReload={() => { setResult(null); setChecked(null); }} onBack={() => go(1)} />}
         {/* 최종안: ①은 결론 카드 안 [이 테스트 준비하기] + '왜 이 칸인지 보기' 글자 링크, ③은 보내기 줄에 [◀ 왜 그런지] → 여기선 ②만 */}
         {step === 1 && (
           <nav aria-label="이전 다음" className="flex flex-wrap items-center justify-between gap-3 pt-2 print:hidden">

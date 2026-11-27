@@ -69,6 +69,18 @@ describe("⓪ 업로드", () => {
     await waitFor(() => expect(f.mock.calls.some(([u, o]) => String(u).endsWith("/analysis") && JSON.parse(String((o?.body as FormData).get("settings"))).hasOwnProperty("meta.campaign.objective"))).toBe(true));
   });
 
+  it("the settings link reopens 도움말 every time, even after it was closed", () => {
+    vi.stubGlobal("fetch", vi.fn(() => ok({})));
+    render(<App />);
+    const link = screen.getByRole("button", { name: "내 광고 설정 5개만 직접 입력하기 ▸" });
+    fireEvent.click(link);
+    expect(screen.getByRole("group", { name: "캠페인 목표" })).toBeTruthy();
+    open("도움말");   // 닫기
+    expect(screen.queryByRole("group", { name: "캠페인 목표" })).toBeNull();
+    fireEvent.click(link);
+    expect(screen.getByRole("group", { name: "캠페인 목표" })).toBeTruthy();
+  });
+
   it("from the extension: says it was received instead of the link, and uploads with the key", async () => {
     window.history.replaceState(null, "", "/#s=K3yK3yK3yK3yK3y");
     const f = vi.fn((url: string, init?: RequestInit) => ok(String(url).includes("/settings/") ? { count: 14, settings: {} } : init?.method === "POST" ? oven : {}));
@@ -136,10 +148,10 @@ describe("① 결론", () => {
     expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
     expect(screen.getByText("나머지 칸은 그대로 둬야 무엇 덕분인지 알 수 있어요")).toBeTruthy();
     const card = screen.getByRole("region", { name: "테스트할 칸" });
-    expect(within(card).getByText("광고 › 형식·미디어")).toBeTruthy();
-    expect(within(card).getByText("세로(9:16) 소재를 넣은 세트를 하나 더 만들어 같이 돌려 보세요")).toBeTruthy();
+    expect(within(card).getByText("광고 › 형식 · 미디어")).toBeTruthy();
+    expect(within(card).getByText(/^세로\(9:16\) 소재를 넣은 세트를/).textContent).toBe("세로(9:16) 소재를 넣은 세트를 하나 더 만들어 같이 돌려 보세요");
     expect(within(card).getByText("테스트 제안")).toBeTruthy();
-    expect(card.textContent).toContain("돈의 72%가 인스타 릴스");
+    expect(card.textContent).toContain("돈의 72%가 인스타 릴스(세로 화면)에서 나갔는데, 세로 소재가 없었어요.");
     expect(within(card).getByText("세로 소재가 방문자를 더 데려올지는 이번 테스트로 확인해요.")).toBeTruthy();
     expect(within(card).getByRole("button", { name: "왜 이 칸인지 보기" })).toBeTruthy();
     const rest = screen.getByRole("list", { name: "나머지 칸" });
@@ -205,6 +217,16 @@ describe("① 결론", () => {
     expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
   });
 
+  it("browser [뒤로] on ① goes back to the upload screen", async () => {
+    show();
+    await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요");
+    window.history.replaceState(null, "", window.location.pathname);
+    fireEvent.popState(window);
+    expect(await screen.findByRole("heading", { level: 1, name: "돌려 본 광고 결과를 올려 주세요" })).toBeTruthy();    window.history.replaceState(null, "", window.location.pathname + "#code=" + oven.code + "&step=AN-01");   // [앞으로]
+    fireEvent.popState(window);
+    expect(await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요")).toBeTruthy();
+  });
+
   it("[다른 파일] (small link) asks first, because the result would be lost", async () => {
     show();
     await h1("다음엔 이 칸 1개만 바꿔서 테스트해 보세요");
@@ -242,7 +264,7 @@ describe("② 왜 그런지", () => {
     expect(screen.getByText("이유 3가지와 그 근거 숫자예요. 위에서부터 읽으면 돼요")).toBeTruthy();
     const reasons = [...document.querySelectorAll("main section")].filter((x) => x.querySelector("figure"));
     expect(reasons.map((x) => x.querySelector("p")!.firstChild!.textContent)).toEqual([
-      "돈의 72%가 인스타 릴스(세로 화면)에서 나갔어요", "같은 돈으로 방문자를 B(수동)가 더 데려왔어요", "광고비 자체는 확실히 B가 쌌어요"]);
+      "돈이 인스타 릴스로 갔는데, 세로 소재가 없었어요", "같은 돈으로 방문자를 B(수동)가 더 데려왔어요", "광고비 자체는 확실히 B가 쌌어요"]);
     expect(screen.getByText("세트당 5,308원으로 방문자 A 10명 · B 14명")).toBeTruthy();
     expect(screen.getByText(/B가 나을 확률/).textContent).toMatch(/B가 나을 확률 79% · 날짜가 쌓일수록 26% → 65% → 79%로 B 쪽으로 굳어지는 중/);
     expect(screen.getByText("광고 1,000번 보여 주는 데 드는 돈 · 두 범위가 안 겹쳐요")).toBeTruthy();
@@ -300,6 +322,9 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
   it("one slider from 3천 to 10만 원 starting at the recommended amount, period chips, and the visitor range as the answer", async () => {
     const f = await prep();
     expect(screen.getByText("지금 세트는 그대로 두고, 세로 소재를 넣은 세트 하나만 더 만들면 돼요")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "지금 세트" })).getByText("정사각 1 + AI 이미지 2")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "지금 세트" })).getByText("노출 위치 직접 고르기 · 나머지 그대로")).toBeTruthy();
+    expect(within(screen.getByRole("region", { name: "새 세트" })).getByText("광고 › 형식 · 미디어")).toBeTruthy();
     expect(screen.getByRole("heading", { name: /세트당 얼마로 돌릴까요\?/ })).toBeTruthy();
     const s = await slider();
     expect(s.getAttribute("aria-valuemin")).toBe("3000");
@@ -329,7 +354,7 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
     await waitFor(() => expect(f.mock.calls.filter(([u]) => String(u).includes("/simulate/grid")).length).toBe(2));
   });
 
-  it("under Meta's daily minimum warns with what to do; 7 days makes the same amount too small per day", async () => {
+  it("under Meta's daily minimum warns with what to do; an amount the owner picked stays, but 7 days shows the warning for it", async () => {
     await prep();
     const s = await slider();
     key(s, "ArrowLeft");   // 5,000원
@@ -337,7 +362,27 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
     key(s, "ArrowRight");   // 6,000원 → 4일이면 괜찮음
     expect(screen.queryByText(/하루 최소/)).toBeNull();
     fireEvent.click(screen.getByRole("radio", { name: "7일" }));
-    expect(await screen.findByText(/하루 860원은 메타 하루 최소/)).toBeTruthy();
+    expect(await screen.findByText(/하루 860원은 메타 하루 최소/)).toBeTruthy();   // 사장님이 고른 금액은 그대로
+  });
+
+  it("untouched slider follows the recommendation: 7일 moves it to the smallest amount over the daily minimum; checklist says 7일", async () => {
+    await prep();
+    const s = await slider();
+    expect(s.getAttribute("aria-valuetext")).toBe("6,000원 (추천)");
+    expect(screen.getByText("4일 동안 그대로 두기")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "7일" }));
+    await waitFor(() => expect(s.getAttribute("aria-valuetext")).toBe("10,000원 (추천)"));   // 1,336 × 7 = 9,352원 → 10,000원
+    expect(screen.queryByText(/메타 하루 최소/)).toBeNull();
+    expect(screen.getByText("7일 동안 그대로 두기")).toBeTruthy();
+  });
+
+  it("the price bubble stays inside the card at both ends", async () => {
+    await prep();
+    const s = await slider();
+    key(s, "Home");
+    expect(screen.getByText("3,000원", { selector: "span.absolute" }).className).toMatch(/translate-x-\[0\.75rem\]/);
+    key(s, "End");
+    expect(screen.getByText("100,000원", { selector: "span.absolute" }).className).toMatch(/calc\(100%-0\.75rem\)/);
   });
 
   it("🔎 inside the budget box compares 2x and 4x of the picked amount with solid/dotted lines", async () => {
@@ -347,12 +392,14 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
     expect(await screen.findByRole("heading", { name: "금액을 2배·4배로 하면" })).toBeTruthy();
     expect(await screen.findByText("12,000원")).toBeTruthy();
     expect(screen.getByText(/실선 = 써 본 금액 · 점선 = 써 본 적 없는 금액/)).toBeTruthy();
+    expect(screen.getAllByText("이 숫자는 어떻게 나왔나요?").length).toBe(1);
+    expect(screen.getByText("계산 방법")).toBeTruthy();
   });
 
   it("the 4-item checklist (final wording) and send with the picked budget; the code stays on screen", async () => {
     await prep();
     expect(screen.getByRole("heading", { name: /돌리기 전에 4가지만/ })).toBeTruthy();
-    for (const t of ["두 세트를 같은 날 같이 시작, 시작은 하루 여유 있게", "바꾸는 칸은 형식·미디어 1개만", "4일 동안 그대로 두기"]) expect(screen.getByText(t)).toBeTruthy();
+    for (const t of ["두 세트를 같은 날 같이 시작, 시작은 하루 여유 있게", "바꾸는 칸은 형식 · 미디어 1개만", "4일 동안 그대로 두기"]) expect(screen.getByText(t)).toBeTruthy();
     expect(screen.getByText("딱 하루만").tagName).toBe("B");
     expect(document.body.textContent).not.toMatch(/ALT-/);
     key(await slider(), "ArrowRight", 4);

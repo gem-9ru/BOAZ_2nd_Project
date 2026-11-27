@@ -1,5 +1,5 @@
 import type { Change, Result } from "../api";
-import { AlertMark, BigButton, josa, TestTag, VerdictBadge } from "../ui";
+import { AlertMark, BigButton, josa, spaced, TestTag, VerdictBadge } from "../ui";
 import { Mungchi } from "../ui/Mungchi";
 import { SIGNAL_WORD } from "./shared";
 
@@ -20,8 +20,8 @@ export function Conclusion({ r, onPrep, onWhy }: { r: Result; onPrep: () => void
       <section aria-label="테스트할 칸" className="relative flex flex-col items-start gap-2 rounded-card border-2 border-accent bg-surface p-card shadow-hero sm:pr-56">
         <span aria-hidden="true" className="absolute top-4 right-36 rounded-button rounded-br-mark bg-accent-soft px-3 py-1.5 text-caption font-bold text-accent max-sm:hidden">여기예요!</span>
         <Mungchi pose="point" className="absolute right-5 bottom-3 w-40 max-sm:hidden" />
-        <p className="flex flex-wrap items-center gap-2"><span className="rounded-badge bg-accent-faint px-2.5 py-1 text-caption font-bold text-accent">{c.path ?? c.label}</span> <TestTag text={c.tag ?? "테스트 제안"} /></p>
-        <p className="text-headline font-extrabold leading-snug">{c.new.replace(/만들어 보세요$/, "만들어 같이 돌려 보세요")}</p>
+        <p className="flex flex-wrap items-center gap-2"><span className="rounded-badge bg-accent-faint px-2.5 py-1 text-caption font-bold text-accent">{spaced(c.path ?? c.label)}</span> <TestTag text={c.tag ?? "테스트 제안"} /></p>
+        <p className="text-headline font-extrabold leading-snug">{lineBreak(c.new.replace(/만들어 보세요$/, "만들어 같이 돌려 보세요"))}</p>
         <p className="text-body leading-relaxed">{boldPct(c.reason ?? c.note)}</p>
         {one ? <p className="text-label text-soft">세트가 1개라 비교할 대상이 없었어요. 이번에 두 세트로 돌리면 처음으로 '어느 쪽이 나은지'를 알 수 있어요.</p>
           : c.unknown && <p className="text-label text-soft">{c.unknown}</p>}
@@ -80,6 +80,12 @@ export function oneLine(c: Change, lead = "") {
     : `${lead}${c.label} 칸만 바꾼 세트를 하나 더 만들어, 지금 세트와 같이 돌려 보면 돼요`;
 }
 
+
+/** 결론 카드 제목: '…세트를' 뒤에서 줄을 바꾼다 (최종안(1)). 휴대폰은 저절로 줄바꿈 */
+function lineBreak(s: string) {
+  const i = s.indexOf("세트를 ");
+  return i < 0 ? s : <>{s.slice(0, i + 4)}<br className="max-sm:hidden" />{s.slice(i + 4)}</>;
+}
 
 /** 칸 상태 태그 (그대로 = 초록, 다시 보기 = 주황). 판정 배지와 다른 모양(작은 알약). */
 export function Tag({ tone, children }: { tone: "keep" | "watch"; children: string }) {

@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { simulateGrid, type GridRow, type Result } from "../api";
 import { Simulator } from "../blocks/Simulator";
-import { AlertMark, BigButton, Fold, Folds, Ghost, md, Sub, TestTag, won } from "../ui";
+import { AlertMark, BigButton, Fold, Folds, Ghost, md, spaced, Sub, TestTag, won } from "../ui";
 import { armName } from "./shared";
 import { Mungchi } from "../ui/Mungchi";
 import type { Result as R } from "../api";
@@ -13,13 +13,14 @@ import { oneLine } from "./Conclusion";
  *  예산은 칩 대신 슬라이더 1개 (최종안 A: '왜 하필 이 금액?'이 안 나오게). 3,000~30,000원 1,000원 단위 결과표를 서버가 한 번에 계산해 두고,
  *  움직일 때마다 '방문자 보통 ○명 (적게 ~ 많이)' 한 줄만 바뀐다. 처음 위치는 추천 금액(서버 per_set, 하루 최소를 넘는 가장 작은 금액).
  *  이 페이지는 결제·게시를 하지 않는다. */
-export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onCopied: (msg: string) => void; onSend?: (budget: number) => void; onReload?: () => void; onBack?: () => void }) {
+export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onCopied: (msg: string) => void; onSend?: (budget: number, days: number) => void; onReload?: () => void; onBack?: () => void }) {
   const c = r.matrix.change ?? r.next.change;
   const keep = r.matrix.keep[0];
   const checklist = c.checklist ?? r.alerts.filter((a) => a.level === "warn").map((a) => a.todo);
   const [days, setDays] = useState(c.days ?? (r.check.read.days === 7 ? 7 : 4));
-  const start = c.per_set ?? 6000;
-  const [budget, setBudget] = useState(start);
+  const perSet = c.per_set ?? 6000;
+  const [budget, setBudget] = useState(perSet);
+  const [touched, setTouched] = useState(false);   // 사장님이 슬라이더를 움직였는지 (안 움직였으면 추천 금액을 따라간다)
   const { grid, error, mid, manyFrom } = useGrid(r, days);
   const armsAll = r.summary.arms;
   const bi = r.verdict?.badge.better === "A" || armsAll.length < 2 ? 0 : 1;
@@ -32,7 +33,16 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
   const idx = Math.max(0, rows.findIndex((x) => x.budget === budget));
   const lowEnd = Math.max(lo, ...rows.filter((x) => x.below_daily_min).map((x) => x.budget));   // 빗금: 하루 금액이 메타 최소보다 적은 금액까지
   const tested = Math.max(lo, ...rows.filter((x) => x.daily_tried).map((x) => x.budget));       // 써 본 범위 (하루 최대 × 기간)
-  const pick = (i: number) => { const x = rows[Math.min(rows.length - 1, Math.max(0, i))]; if (x) setBudget(x.budget); };
+  // 추천 = 서버 금액(per_set) 이상이면서 고른 기간에 하루 최소를 넘는 가장 작은 칸 (7일이면 더 커진다). 범위 밖이면 끝 칸
+  const start = rows.find((x) => x.budget >= perSet && !x.below_daily_min)?.budget ?? rows[rows.length - 1]?.budget ?? perSet;
+  // 결과표가 오거나 기간이 바뀌면: 안 움직였으면 추천으로, 움직였는데 표에 없는 금액이면 가장 가까운 칸으로
+  useEffect(() => {
+    if (!rows.length) return;
+    if (!touched) setBudget(start);
+    else if (!rows.some((x) => x.budget === budget)) setBudget(rows.reduce((a, x) => (Math.abs(x.budget - budget) < Math.abs(a.budget - budget) ? x : a)).budget);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grid, start]);
+  const pick = (i: number) => { const x = rows[Math.min(rows.length - 1, Math.max(0, i))]; if (x) { setBudget(x.budget); setTouched(true); } };
   const nearest = (pos: number) => rows.reduce((best, x, i) => (Math.abs(at(x.budget) - pos) < Math.abs(at(rows[best]!.budget) - pos) ? i : best), 0);
   const bt = r.backtest;
 
@@ -40,7 +50,7 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
   // 보낸 결과는 버튼 아래에 남긴다 (코드는 패널이 안 열려 있을 때 꼭 필요해서 잠깐 뜨는 알림에만 두지 않음)
   const [sent, setSent] = useState<{ budget: number; copied: boolean } | null>(null);
   function send() {
-    onSend?.(budget);
+    onSend?.(budget, days);
     navigator.clipboard.writeText(r.code).then(() => setSent({ budget, copied: true }), () => setSent({ budget, copied: false }));
     onCopied("오른쪽 광고 어시스턴트로 보냈어요");
   }
@@ -57,13 +67,13 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
       <div className="grid gap-3.5 sm:grid-cols-2">
         <section aria-label="지금 세트" className="flex flex-col gap-1 rounded-card border border-line bg-surface px-5 py-4 text-label shadow-card">
           <span className="text-caption text-soft">지금 세트 · 그대로</span>
-          <b className="text-lead font-extrabold">{c.now ?? "지금 그대로"}</b>
-          <span className="text-caption text-soft">{keep ? `${keep.path.split(" › ").pop()} ${keep.value.split(/[(,]/)[0]!.trim()} · ` : ""}나머지 그대로</span>
+          <b className="text-lead font-extrabold">{c.now ? c.now.replace(/(\d)장/g, "$1") : "지금 그대로"}</b>
+          <span className="text-caption text-soft">{keep ? `${keep.title ?? `${keep.path.split(" › ").pop()} ${keep.value.split(/[(,]/)[0]!.trim()}`} · ` : ""}나머지 그대로</span>
         </section>
         <section aria-label="새 세트" className="flex flex-col gap-1 rounded-card border-2 border-accent bg-linear-160 from-surface to-accent-faint px-5 py-4 text-label shadow-card">
           <span className="text-caption text-soft">새 세트 · 복제해서 이 칸만</span>
           <span className="flex flex-wrap items-center gap-2"><b className="text-lead font-extrabold">{c.new_short ?? c.new}</b> <TestTag text={c.tag ?? "테스트 제안"} /></span>
-          <span className="text-caption text-soft">{c.path ?? c.label}</span>
+          <span className="text-caption text-soft">{spaced(c.path ?? c.label)}</span>
         </section>
       </div>
 
@@ -84,10 +94,14 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
               </span>
             </>}
             <span aria-hidden="true" className="absolute -bottom-6 -translate-x-1/2 rounded-badge bg-belly px-2 text-small font-bold text-belly-ink" style={{ left: `${at(start)}%` }}>추천</span>
-            <span aria-hidden="true" className="absolute -top-11 -translate-x-1/2 whitespace-nowrap rounded-button bg-accent px-2.5 py-0.5 text-label font-extrabold text-on-accent" style={{ left: `${at(budget)}%` }}>{plain(budget)}</span>
+            <span aria-hidden="true" className={`absolute -top-11 whitespace-nowrap rounded-button bg-accent px-2.5 py-0.5 text-label font-extrabold text-on-accent ${edge(at(budget))}`} style={{ left: `${at(budget)}%` }}>{plain(budget)}</span>
             {/* 길이 두 구간이라 위치(0~1000)로 움직이고 가장 가까운 금액에 붙는다. 화살표 키는 한 칸씩 */}
             <input type="range" className="budget-range relative" min={0} max={1000} step={1} value={Math.round(at(budget) * 10)}
-              onChange={(e) => pick(nearest(Number(e.target.value) / 10))}
+              onChange={(e) => {
+                // 화면 낭독기는 0.1칸씩 올리고 내려서, 같은 금액에 다시 붙으면 그 방향으로 한 칸 옮긴다
+                const pos = Number(e.target.value) / 10, i = nearest(pos);
+                pick(i === idx && Math.abs(pos - at(budget)) > 0.05 ? idx + Math.sign(pos - at(budget)) : i);
+              }}
               onKeyDown={(e) => {
                 const move = { ArrowRight: 1, ArrowUp: 1, ArrowLeft: -1, ArrowDown: -1, PageUp: 5, PageDown: -5 }[e.key];
                 if (move !== undefined) { e.preventDefault(); pick(idx + move); }
@@ -148,7 +162,7 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
         <h2 id="check-title" className="text-body font-extrabold"><span aria-hidden="true">📝 </span>돌리기 전에 {checklist.length}가지만</h2>
         <ul className="flex flex-col">
           {checklist.map((t) => (
-            <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3 text-body"><input type="checkbox" className="size-5 shrink-0 accent-action" /><span>{boldOnce(t)}</span></label></li>
+            <li key={t}><label className="flex min-h-11 cursor-pointer items-center gap-3 text-body"><input type="checkbox" className="size-5 shrink-0 accent-action" /><span>{boldOnce(spaced(t.replace(/^\d+일 동안/, `${days}일 동안`)))}</span></label></li>
           ))}
         </ul>
       </section>
@@ -156,7 +170,7 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
       {/* 최종안: 접기는 '더 자세히' 1개 */}
       <Folds label="더 자세히">
         <Fold label="더 자세히" preview="전체 예산으로 정하기 (Test & Roll) · 예측이 맞았나 · 근거">
-          <Sub title="전체 예산으로 정하기" note="Test & Roll: 전체의 약 8~20%"><Simulator r={r} onReload={onReload} part="roll" /></Sub>
+          <Sub title="전체 예산으로 정하기" note="Test & Roll: 전체의 약 8~20%"><Simulator r={r} onReload={onReload} part="roll" budget={budget} days={days} /></Sub>
           {btLine && <Sub title="예측이 맞았나?" note={btLine}><Backtest r={r} /></Sub>}
           <Sub title="근거" note="메타 공식 신호 · 우리 실측 2건 · 논문 · 가상 케이스 · 한계"><Evidence r={r} /></Sub>
         </Fold>
@@ -183,6 +197,9 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
   );
 }
 
+/** 금액 말풍선이 양 끝에서 카드 밖으로 나가지 않게: 왼쪽 끝은 왼쪽 맞춤, 오른쪽 끝은 오른쪽 맞춤 */
+const edge = (pos: number) => (pos < 6 ? "-translate-x-[0.75rem]" : pos > 94 ? "-translate-x-[calc(100%-0.75rem)]" : "-translate-x-1/2");
+
 /** 체크리스트의 '딱 하루만'은 굵게 (최종안: '될 때까지 늘린 것 아니냐'는 질문을 막는 규칙이라 눈에 띄게) */
 function boldOnce(t: string) {
   const i = t.indexOf("딱 하루만");
@@ -206,10 +223,14 @@ function useGrid(r: Result, days: number) {
   useEffect(() => {
     if (!arm || got[days]) return;
     let live = true;
+    setError(null);
     simulateGrid(r.code, arm.name, days).then((g) => { if (live) setGot((x) => ({ ...x, [days]: g })); }, (e: Error) => { if (live) setError(e.message); });
     return () => { live = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [r.code, arm?.name, days]);
-  const g = got[days];
+  // 새 기간의 표가 오는 동안은 앞 기간의 표를 그대로 둔다 (슬라이더가 사라졌다 나타나며 깜빡이지 않게)
+  const last = useRef<{ rows: GridRow[]; mid: number; many_from: number } | undefined>(undefined);
+  if (got[days]) last.current = got[days];
+  const g = got[days] ?? last.current;
   return { grid: g?.rows ?? null, error, mid: g?.mid ?? 30000, manyFrom: g?.many_from ?? 50000 };
 }
