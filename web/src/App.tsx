@@ -20,7 +20,7 @@ export default function App() {
   const [restoring, setRestoring] = useState(() => {
     const q = new URLSearchParams(window.location.hash.slice(1));
     const code = q.get("code");
-    return code && /^[A-Z0-9]{4}$/.test(code) ? { code, step: q.get("step") } : null;
+    return code && /^[A-Z0-9]{6}$/.test(code) ? { code, step: q.get("step") } : null;
   });
   const [step, setStep] = useState(0);
   const [reached, setReached] = useState(0);

@@ -190,7 +190,7 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
         <p role="status" className="-mt-2 flex flex-wrap items-center gap-2 rounded-soft border-[1.5px] border-ok-line bg-ok-bg px-4 py-2.5 text-label text-ok-ink">
           <AlertMark level="ok" />
           <span>패널로 보냈어요 · 세트당 {plain(sent.budget)} · 코드 <b className="tracking-widest tabular-nums">{r.code}</b>{sent.copied ? " (복사됨)" : ""}</span>
-          <span className="text-soft">패널이 닫혀 있었다면 받지 못했어요 → 확장 프로그램 아이콘을 눌러 패널을 열고, ③ 분석 › [코드 4자리로 넣기]에 이 코드를 넣어 주세요</span>
+          <span className="text-soft">패널이 닫혀 있었다면 받지 못했어요 → 확장 프로그램 아이콘을 눌러 패널을 열고, ③ 분석 › [코드 6자리로 넣기]에 이 코드를 넣어 주세요</span>
         </p>
       )}
     </>

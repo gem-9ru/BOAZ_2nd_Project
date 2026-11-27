@@ -136,7 +136,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
       ) : sendError ? (
         <div className="flex flex-col gap-1 rounded-button bg-paper px-3 py-2">
           <ErrorLine message={`바꿀 칸을 받지 못했어요. ${sendError}`} onRetry={() => setRetry((n) => n + 1)} />
-          <p className="text-label">그래도 안 되면 광고 관리자 패널의 '보내기가 안 되면: 코드 4자리로 넣기'에 <b className="tracking-widest">{code}</b>를 넣어 주세요.</p>
+          <p className="text-label">그래도 안 되면 광고 관리자 패널의 '보내기가 안 되면: 코드 6자리로 넣기'에 <b className="tracking-widest">{code}</b>를 넣어 주세요.</p>
         </div>
       ) : <Todo>{receiving ? "보낸 바꿀 칸을 받는 중이에요…" : todoFor(step, blocked, offline)}</Todo>}
       <div className="flex flex-col gap-2" aria-live="polite">

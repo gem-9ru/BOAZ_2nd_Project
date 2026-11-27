@@ -17,7 +17,7 @@ def test_upload_returns_all_blocks_and_a_4_letter_code():
     assert r.status_code == 200
     body = r.json()
     assert {"check", "summary", "verdict", "replay", "next", "placements", "code"} <= set(body)
-    assert len(body["code"]) == 4 and body["code"].isalnum()
+    assert len(body["code"]) == 6 and body["code"].isalnum()
 
 
 def test_example_is_the_ovenlog_file():

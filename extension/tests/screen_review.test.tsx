@@ -346,7 +346,7 @@ describe("QA 2026-11-27: 머리 단계 표시 (H-04·H-05)", () => {
   });
 
   it("H-05. 분석 탭을 보고 있어도 광고 켜기 전(문구)이면 ② 세팅 그대로", async () => {
-    await app({ step: "copy" }, "http://localhost:8000/analysis#code=AB12&step=AN-01");
+    await app({ step: "copy" }, "http://localhost:8000/analysis#code=AB12CD&step=AN-01");
     await vi.waitFor(() => expect(screen.getByText(/② 세팅/).closest("li")!.getAttribute("aria-current")).toBe("step"));
     vi.restoreAllMocks(); vi.unstubAllGlobals();
   });

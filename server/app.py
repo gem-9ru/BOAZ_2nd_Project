@@ -289,9 +289,9 @@ _CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"   # 헷갈리는 O·0·I·1 제
 
 
 def _store(result: dict) -> dict:
-    code = "".join(secrets.choice(_CODE_CHARS) for _ in range(4))
+    code = "".join(secrets.choice(_CODE_CHARS) for _ in range(6))
     while code in _PLANS:
-        code = "".join(secrets.choice(_CODE_CHARS) for _ in range(4))
+        code = "".join(secrets.choice(_CODE_CHARS) for _ in range(6))
     _PLANS[code] = result
     while len(_PLANS) > MAX_PLANS:
         _PLANS.popitem(last=False)

@@ -509,7 +509,7 @@
    "다음에 테스트할 것: 광고 › 웹사이트 URL → 주소·속도 점검"
   ]
  },
- "code": "ONE1",
+ "code": "ONE1CD",
  "baseline": [
   {
    "key": "ctr",

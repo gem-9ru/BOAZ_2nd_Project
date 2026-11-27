@@ -439,21 +439,21 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
 
 describe("QA 2026-11-27: 새로고침해도 같은 결과·단계 (N-06)", () => {
   it("주소에 결과 코드가 있으면 서버에서 다시 받아 그 단계로 연다", async () => {
-    const f = vi.fn((url: string) => ok({ ...oven, code: "AB23" }));
+    const f = vi.fn((url: string) => ok({ ...oven, code: "AB23CD" }));
     vi.stubGlobal("fetch", f);
-    window.history.replaceState(null, "", "/analysis#code=AB23&step=AN-02");
+    window.history.replaceState(null, "", "/analysis#code=AB23CD&step=AN-02");
     render(<App />);
-    await waitFor(() => expect(f.mock.calls.some((c) => String(c[0]).includes("/analysis/result/AB23"))).toBe(true));
-    await waitFor(() => expect(window.location.hash).toContain("code=AB23"));
+    await waitFor(() => expect(f.mock.calls.some((c) => String(c[0]).includes("/analysis/result/AB23CD"))).toBe(true));
+    await waitFor(() => expect(window.location.hash).toContain("code=AB23CD"));
     expect(window.location.hash).toContain("step=AN-02");
     window.history.replaceState(null, "", "/analysis");
   });
 
   it("서버에서 지워졌으면 업로드 화면 그대로 (코드는 주소에서 지움)", async () => {
     vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ detail: "지워졌어요" }), { status: 404 }))));
-    window.history.replaceState(null, "", "/analysis#code=ZZZZ&step=AN-02");
+    window.history.replaceState(null, "", "/analysis#code=ZZZZZZ&step=AN-02");
     render(<App />);
-    await waitFor(() => expect(window.location.hash).not.toContain("code=ZZZZ"));
+    await waitFor(() => expect(window.location.hash).not.toContain("code=ZZZZZZ"));
     expect(screen.getByLabelText("광고 결과 파일 (CSV)")).toBeTruthy();
   });
 });

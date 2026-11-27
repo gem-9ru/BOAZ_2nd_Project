@@ -4,7 +4,7 @@ import { routeFromPrep } from "./settings";
 
 export type Step = "prep" | "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan";
 
-/** 분석 페이지가 4자리 코드로 넘겨주는 '다음에 할 일' (서버 GET /plan/{code}). */
+/** 분석 페이지가 6자리 코드로 넘겨주는 '다음에 할 일' (서버 GET /plan/{code}). */
 export interface Plan {
   code: string;
   action: string;
