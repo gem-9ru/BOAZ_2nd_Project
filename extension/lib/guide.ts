@@ -79,7 +79,9 @@ export type GuideMsg =
       /** EX-03 다음 테스트: 첫 칸(바꿀 칸 1개)만 밝게, 나머지 화면은 흐리게 + '나머지는 그대로(유지)' */
       focus?: boolean;
       /** 이번 안내 표시: 진행 메시지에 그대로 실어 보낸다 (예전 뭉치 진행 거르기) */
-      sig?: string }
+      sig?: string;
+      /** 패널 둥지에서 지금 막 걸어 나왔다: 광고 관리자 뭉치는 그 걸음(NEST_EXIT_MS)만큼 기다렸다가 들어온다 */
+      fromNest?: boolean }
   | { type: "guide:move"; delta: number }                                  // 패널 → 캐릭터: [이전 칸]·[다음 칸]
   | { type: "guide:goto"; index: number }                                  // 패널 → 캐릭터: 목록에서 지난 칸을 눌러 그 칸으로 (설계서 EX-01 ②)
   | { type: "guide:progress"; index: number; total: number; sig?: string } // 캐릭터 → 배경: 몇 번째 칸까지 왔나 (sig = 받은 안내 묶음 표시)

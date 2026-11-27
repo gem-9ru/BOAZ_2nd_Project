@@ -39,9 +39,10 @@ export function travelMs(distance: number, s: Speeds): number {
   return (distance / speed) * 1000;
 }
 
-/** 집: 광고 관리자 화면의 오른쪽 위 끝 (사이드 패널 제목 왼쪽 집과 맞닿은 쪽). 반쯤 화면 밖에서 걸어 나온다. */
-export function home(vp: Viewport, size: number): Point {
-  return { x: vp.width - size * 0.35, y: 16 };
+/** 집 쪽 출입구: 광고 관리자 화면 오른쪽 위 끝 바로 바깥 (사이드 패널 제목 왼쪽 둥지와 맞닿은 쪽).
+ *  패널 둥지에서 걸어 나온 뭉치가 여기서 화면 안으로 걸어 들어오고, 닫으면 여기로 걸어 나가 패널 둥지로 돌아간다. */
+export function home(vp: Viewport): Point {
+  return { x: vp.width, y: 16 };
 }
 
 /** 칸 옆 서는 자리: 오른쪽에 자리가 있으면 오른쪽(왼쪽을 가리킴), 없으면 왼쪽. 손 높이를 칸 가운데에 맞춘다. */
@@ -183,4 +184,26 @@ export function blendPose(a: Pose, b: Pose, k: number): Pose {
 export function smooth(k: number): number {
   const x = Math.min(Math.max(k, 0), 1);
   return x * x * (3 - 2 * x);
+}
+
+/** 패널 둥지 ↔ 광고 관리자 길: 둥지 입구에서 폴짝 나와 패널 왼쪽 끝(광고 관리자 쪽)으로 걸어 나가고, 들어올 땐 거꾸로.
+ *  단위는 3D 모델 단위 (뭉치 키 약 3). 광고 관리자 쪽 뭉치는 NEST_EXIT_MS 뒤에 나타난다. */
+export const NEST_TRIP = { inZ: 0.2, outZ: 2.6, peak: 1.1, hopMs: 450, walk: 3.4 } as const;
+export const NEST_EXIT_MS = 1900;
+
+export interface TripAt { x: number; y: number; z: number; heading: number; walking: boolean; done: boolean }
+
+/** elapsed(ms) 시점의 위치. exitX = 패널 왼쪽 끝 너머(음수). leaving = 나가는 중, 아니면 들어오는 중 */
+export function nestTrip(elapsed: number, exitX: number, leaving: boolean): TripAt {
+  const { inZ, outZ, peak, hopMs, walk } = NEST_TRIP;
+  const walkMs = (Math.abs(exitX) / walk) * 1000;
+  const hop = (k: number, from: number, to: number) => ({ z: from + (to - from) * k, y: peak * 4 * k * (1 - k) });
+  if (leaving) {
+    if (elapsed < hopMs) return { x: 0, ...hop(elapsed / hopMs, inZ, outZ), heading: 0, walking: true, done: false };
+    const k = Math.min(1, (elapsed - hopMs) / walkMs);
+    return { x: exitX * k, y: 0, z: outZ, heading: headingYaw(-1, 0), walking: k < 1, done: k >= 1 };
+  }
+  if (elapsed < walkMs) return { x: exitX * (1 - elapsed / walkMs), y: 0, z: outZ, heading: headingYaw(1, 0), walking: true, done: false };
+  const k = Math.min(1, (elapsed - walkMs) / hopMs);
+  return { x: 0, ...hop(k, outZ, inZ), heading: k < 1 ? Math.PI : 0, walking: k < 1, done: k >= 1 };
 }

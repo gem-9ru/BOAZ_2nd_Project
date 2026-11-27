@@ -98,12 +98,15 @@ export default function GuideStep({ state, dispatch }: Props) {
     // sig: 이번에 보내는 안내 표시 — 예전 뭉치의 진행은 배경이 버린다 (재검토 B9)
     const sig = `${guideSignature(steps)}@${Date.now()}`;
     dispatch({ type: "guideOpened", sig });   // 뭉치가 집을 나선다
-    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index, sig, ...(next ? { focus: true } : {}) } satisfies GuideMsg);
+    // fromNest: 집에 있던 뭉치가 지금 막 둥지를 나섰을 때만 (이미 나가 있었거나 새로고침 뒤 다시 부를 땐 기다리지 않음)
+    let fromNest = !away;
+    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index, sig, ...(next ? { focus: true } : {}), ...(fromNest ? { fromNest: true } : {}) } satisfies GuideMsg);
     let ok = await sendWithRetry(send, 2, 800);
     if (!ok && tab.id) {
       // 확장을 다시 불러오기 전에 열린 탭은 뭉치 스크립트가 없다 → 새로고침해서 넣고 다시 부른다
       let reloaded = false;
       try { await browser.tabs.reload(tab.id); reloaded = true; } catch { /* 새로고침 못 함 → 아래 ▲ 안내 */ }
+      fromNest = false;
       if (reloaded) ok = await sendWithRetry(send);
     }
     setBusy(false);

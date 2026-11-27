@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Character3D } from "../../lib/character3d/Character3D";
-import { bubbleSpot, gaitFor, handPoint, headingYaw, home, pointAngle, standSpot, travelAt, type Mode, type Point, type Side } from "../../lib/character3d/motion";
+import { bubbleSpot, gaitFor, handPoint, headingYaw, home, NEST_EXIT_MS, pointAngle, standSpot, travelAt, type Mode, type Point, type Side } from "../../lib/character3d/motion";
 import { groupOf } from "../../lib/guide";
 import type { GuideView } from "./guideRunner";
 import { isChoice, reveal } from "./locate";
@@ -15,6 +15,8 @@ interface Props {
   keepOthers?: boolean;
   /** 뭉치가 칸 옆에 도착해 가리키면 그 칸, 다시 걷기 시작하면 null (자동 진행은 도착한 뒤에 누르고 넣는다) */
   onArrive?: (el: HTMLElement | null) => void;
+  /** 패널 둥지에서 지금 막 걸어 나왔으면 true: 처음 들어올 때 그 걸음(NEST_EXIT_MS)만큼 기다린다 */
+  fromNest?: boolean;
 }
 
 const BUBBLE_GAP = 4;
@@ -44,19 +46,20 @@ function num(el: Element | null, name: string, fallback: number): number {
 /** 광고 관리자 위의 뭉치(3D) + 말풍선.
  *  집(화면 오른쪽 위, 사이드 패널 쪽)에서 걸어 나와 칸 옆까지 걷거나(가까우면) 뛰어가서(멀면) 팔로 가리킨다.
  *  닫으면 집으로 돌아간 뒤 사라진다. 크기·속도·색은 design-system 토큰(--character-*). */
-export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArrive, keepOthers }: Props) {
+export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArrive, keepOthers, fromNest }: Props) {
   const [rect, setRect] = useState<DOMRect | null>(null);
   const rectFor = useRef<HTMLElement | null>(null);   // rect가 어느 칸의 상자인지
   const host = useRef<HTMLDivElement>(null);
   const size = num(host.current, "--character-size", 120);
   const vp = () => ({ width: window.innerWidth, height: window.innerHeight });
-  const [pos, setPos] = useState<Point>(() => home(vp(), size));
+  const [pos, setPos] = useState<Point>(() => home(vp()));
   const [mode, setMode] = useState<Mode>("idle");
   const [move, setMove] = useState<{ heading: number; speed: number; full: number } | undefined>();
   const [point, setPoint] = useState<{ side: Side; angle: number } | undefined>();
   const [leaving, setLeaving] = useState(false);
   const posRef = useRef(pos);
   posRef.current = pos;
+  const first = useRef(Boolean(fromNest));   // 둥지에서 막 나왔으면 패널에서 걸어 나오는 동안(NEST_EXIT_MS) 기다렸다가 들어온다
 
   useEffect(() => {
     if (!view.target) return setRect(null);
@@ -76,7 +79,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
   }, [view.target, view.index]);
 
   // 갈 곳: 나갈 땐 집, 칸이 있으면 칸 옆, 못 찾았으면 화면 오른쪽 아래 (말풍선의 대신 그림 옆)
-  const spot = leaving ? { ...home(vp(), size), side: "right" as Side }
+  const spot = leaving ? { ...home(vp()), side: "right" as Side }
     : rect ? standSpot(rect, vp(), size)
     : { x: window.innerWidth - size - 400, y: window.innerHeight - size - 220, side: "right" as Side };
   const key = `${Math.round(spot.x)},${Math.round(spot.y)},${leaving}`;
@@ -114,9 +117,10 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
     const heading = headingYaw(dx, dy);
     const ramp = gait === "run" ? RAMP_RUN : RAMP_WALK;
     setMove({ heading, speed: 0, full: speed });
-    const start = performance.now();
+    let start = -1;
     let raf = 0;
     const step = (now: number) => {
+      if (start < 0) start = now;
       const { d, v, done } = travelAt((now - start) / 1000, dist, speed, ramp);
       const k = d / dist;
       setPos({ x: from.x + dx * k, y: from.y + dy * k });
@@ -124,8 +128,10 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
       if (!done) raf = requestAnimationFrame(step);
       else arrive();
     };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
+    const wait = first.current ? window.setTimeout(() => { raf = requestAnimationFrame(step); }, NEST_EXIT_MS) : 0;
+    if (!first.current) raf = requestAnimationFrame(step);
+    first.current = false;
+    return () => { window.clearTimeout(wait); cancelAnimationFrame(raf); };
   }, [key]);
 
   // 사장님 차례로 기다리는 중이면 가리키기 대신 손을 흔들며 기다린다 (테두리가 칸을 보여 준다). 뭉치가 다시 할 차례면 가리키기

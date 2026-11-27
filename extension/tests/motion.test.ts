@@ -1,6 +1,6 @@
 // 3D 캐릭터 동작 계산 (WebGL 없이 확인할 수 있는 부분)
 import { describe, expect, it } from "vitest";
-import { gaitFor, home, pointAngle, pose, standSpot, travelMs } from "../lib/character3d/motion";
+import { gaitFor, home, NEST_EXIT_MS, NEST_TRIP, nestTrip, pointAngle, pose, standSpot, travelMs } from "../lib/character3d/motion";
 
 const speeds = { walk: 260, run: 620, runDistance: 420 };
 const vp = { width: 1200, height: 800 };
@@ -18,7 +18,7 @@ describe("걷기·뛰기", () => {
 
 describe("집과 서는 자리", () => {
   it("home is at the top right edge, next to the side panel", () => {
-    const h = home(vp, 120);
+    const h = home(vp);
     expect(h.x).toBeGreaterThan(vp.width - 120);
     expect(h.y).toBeLessThan(120);
   });
@@ -157,5 +157,29 @@ describe("동작 이어 붙이기", () => {
     expect(half.lean).toBeCloseTo(run.lean / 2, 5);
     expect(blendPose(REST, run, 0)).toEqual(REST);
     expect(blendPose(REST, run, 1).legLeft).toBeCloseTo(run.legLeft, 5);
+  });
+});
+
+describe("둥지 드나들기", () => {
+  it("leaving: hops out of the nest toward the viewer, then walks left past the panel edge", () => {
+    expect(nestTrip(0, -4, true)).toMatchObject({ x: 0, z: NEST_TRIP.inZ, heading: 0, done: false });
+    const mid = nestTrip(NEST_TRIP.hopMs / 2, -4, true);
+    expect(mid.y).toBeGreaterThan(0.5);                       // 입구 턱을 넘는다
+    const walking = nestTrip(NEST_TRIP.hopMs + 300, -4, true);
+    expect(walking.x).toBeLessThan(0);
+    expect(walking.heading).toBeCloseTo(-Math.PI / 2);         // 왼쪽(광고 관리자 쪽)을 보고 걷는다
+    expect(nestTrip(10_000, -4, true)).toMatchObject({ x: -4, done: true });
+  });
+  it("coming home: walks in from the panel edge, then hops back in facing the nest", () => {
+    expect(nestTrip(0, -4, false)).toMatchObject({ x: -4, z: NEST_TRIP.outZ });
+    const walkMs = (4 / NEST_TRIP.walk) * 1000;
+    expect(nestTrip(walkMs + NEST_TRIP.hopMs / 2, -4, false).heading).toBeCloseTo(Math.PI);
+    const home = nestTrip(10_000, -4, false);
+    expect(home).toMatchObject({ x: 0, done: true });
+    expect(home.z).toBeCloseTo(NEST_TRIP.inZ);
+  });
+  it("the page character waits about as long as the walk out of the nest takes", () => {
+    const outMs = NEST_TRIP.hopMs + (5.1 / NEST_TRIP.walk) * 1000;   // 패널 왼쪽 여백 16px일 때 exitX ≈ -5.1
+    expect(Math.abs(NEST_EXIT_MS - outMs)).toBeLessThan(400);
   });
 });

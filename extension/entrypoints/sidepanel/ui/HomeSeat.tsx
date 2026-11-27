@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { Character3D } from "../../../lib/character3d/Character3D";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Character3D, hasWebGL } from "../../../lib/character3d/Character3D";
+import { NEST_EXIT_MS } from "../../../lib/character3d/motion";
 
 function homeSize(): number {
   const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--character-home-size"));
@@ -39,27 +40,10 @@ function Twigs({ list }: { list: ReturnType<typeof twigs> }) {
   );
 }
 
-/** 패널 제목 왼쪽 = 뭉치 집(나뭇가지 둥지). 평소엔 둥지 속 크림색 깔개에 앉아 숨 쉬고(가리키면 손 흔듦),
- *  광고 관리자에서 안내하는 동안엔 뭉치 깃털 하나만 남은 빈 둥지. */
-export function HomeSeat({ away }: { away: boolean }) {
-  const [hi, setHi] = useState(false);
-  // 안내를 마치고 집에 돌아오면 잠깐 손을 흔든다
-  const wasAway = useRef(away);
-  useEffect(() => {
-    if (wasAway.current && !away) {
-      setHi(true);
-      const t = setTimeout(() => setHi(false), 2400);
-      wasAway.current = away;
-      return () => clearTimeout(t);
-    }
-    wasAway.current = away;
-  }, [away]);
-  const size = homeSize();
-  const box = size * 1.2; // 둥지는 뭉치보다 조금 넓게
+/** WebGL이 없을 때(테스트·오래된 브라우저)의 집: 2D 나뭇가지 둥지 그림 */
+function FlatNest({ away, hi, size }: { away: boolean; hi: boolean; size: number }) {
   return (
-    <span className="relative inline-block shrink-0" style={{ width: box, height: box }}
-      title={away ? AWAY : undefined}
-      onMouseEnter={away ? undefined : () => setHi(true)} onMouseLeave={away ? undefined : () => setHi(false)}>
+    <>
       {/* 둥지 뒤쪽: 엮은 가지 벽 + 안쪽 깔개(뭉치가 보라 배경과 겹치지 않게 뒤를 다 받쳐 준다) */}
       <svg viewBox="0 0 48 48" aria-hidden="true" className="pointer-events-none absolute inset-0 size-full">
         <ellipse cx="24" cy="24" rx="22.5" ry="19.5" className="fill-belly-strong stroke-belly-ink" strokeWidth="0.8" />
@@ -83,6 +67,42 @@ export function HomeSeat({ away }: { away: boolean }) {
         <path d="M1.5 24 C1.5 50 46.5 50 46.5 24 C40 38 8 38 1.5 24 Z" className="fill-belly-strong stroke-belly-ink" strokeWidth="0.8" />
         <Twigs list={FRONT_TWIGS} />
       </svg>
+    </>
+  );
+}
+
+/** 패널 제목 왼쪽 = 뭉치 집(나뭇가지로 엮은 지붕 있는 둥근 둥지, three.js). 평소엔 둥지 입구 안에 앉아 숨 쉬고(가리키면 손 흔듦),
+ *  광고 관리자로 안내하러 갈 땐 둥지에서 폴짝 나와 패널 왼쪽 끝(광고 관리자 쪽)으로 걸어 나가고, 돌아오면 걸어 들어와 손을 흔든다. */
+export function HomeSeat({ away }: { away: boolean }) {
+  const [hi, setHi] = useState(false);
+  // 안내를 마치고 집에 돌아오면 (걸어 들어와 앉은 뒤) 잠깐 손을 흔든다
+  const wasAway = useRef(away);
+  useEffect(() => {
+    if (wasAway.current && !away) {
+      setHi(true);
+      const t = setTimeout(() => setHi(false), 2400 + (hasWebGL() ? NEST_EXIT_MS : 0));
+      wasAway.current = away;
+      return () => clearTimeout(t);
+    }
+    wasAway.current = away;
+  }, [away]);
+  // 걸어 나가는 길 = 둥지 칸 왼쪽부터 패널 끝까지
+  const seat = useRef<HTMLSpanElement>(null);
+  const [left, setLeft] = useState(0);
+  useLayoutEffect(() => setLeft(Math.round(seat.current?.getBoundingClientRect().left ?? 0)), []);
+  const size = homeSize();
+  const box = size * 1.2; // 둥지는 뭉치보다 조금 넓게
+  return (
+    <span ref={seat} className="relative inline-block shrink-0" style={{ width: box, height: box }}
+      title={away ? AWAY : undefined}
+      onMouseEnter={away ? undefined : () => setHi(true)} onMouseLeave={away ? undefined : () => setHi(false)}>
+      {hasWebGL() ? (
+        <span className="pointer-events-none absolute top-0" style={{ left: -left }}>
+          <Character3D mode={hi ? "wave" : "idle"} size={box} nest={{ away, left }} label={away ? undefined : "뭉치 (집에 있어요)"} />
+        </span>
+      ) : (
+        <FlatNest away={away} hi={hi} size={size} />
+      )}
       {away && <span className="sr-only">{AWAY}</span>}
     </span>
   );

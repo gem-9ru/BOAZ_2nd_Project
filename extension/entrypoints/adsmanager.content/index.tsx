@@ -13,6 +13,7 @@ export default defineContentScript({
     let root: ReactDOM.Root | null = null;
     let timer: number | null = null;
     let focus = false;   // EX-03 다음 테스트: 바꿀 칸(첫 칸)만 밝게, 나머지는 흐리게
+    let fromNest = false;   // 패널 둥지에서 막 나왔으면 그 걸음만큼 기다렸다가 들어온다
 
     function stopGuide() {
       guide?.kill();
@@ -40,6 +41,7 @@ export default defineContentScript({
         <Character
           view={guide.view()}
           keepOthers={focus && guide.view().index === 0}
+          fromNest={fromNest}
           onDone={() => { guide?.apply(); render(); }}
           onBack={() => { guide?.back(); render(); }}
           onToggleAuto={() => { guide?.setAuto(!guide.view().auto); render(); }}
@@ -75,6 +77,7 @@ export default defineContentScript({
       console.debug("[ad-coach] start", msg.startIndex ?? 0, guide ? `(restart, auto ${wasAuto})` : "");
       stopGuide();
       focus = Boolean(msg.focus);
+      fromNest = Boolean(msg.fromNest);
       ui.mount();
       const total = msg.steps.length;
       guide = new Guide(document, msg.steps, msg.startIndex ?? 0, (index) => {
