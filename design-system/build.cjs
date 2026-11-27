@@ -80,6 +80,7 @@ const EXTENSION_COLORS = [
   ["warn-bg", "semantic.tone.warn-bg"],
   ["info-bg", "semantic.tone.info-bg"],
   ["ok-bg", "semantic.tone.ok-bg"],
+  ["block-line", "semantic.tone.block-line"],
   ["warn-line", "semantic.tone.warn-line"],
   ["ok-ink", "semantic.tone.ok-ink"],
   ["ok-line", "semantic.tone.ok-line"],

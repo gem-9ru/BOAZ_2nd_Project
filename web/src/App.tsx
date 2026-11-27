@@ -210,8 +210,8 @@ function AlertBar({ r, step }: { r: Result; step: string }) {
   // 가장 심각한 1개: 차단 → 주의 → 참고 (같은 등급이면 앞 단계 것). 짧은 글(later)이 있으면 그것.
   const top = list.find((a) => a.level === "block") ?? list.find((a) => a.level === "warn") ?? list[0]!;
   const text = top.later ?? top.text;
-  // 상자 = 연한 바탕 + 같은 계열 1.5px 테두리 + 진한 글자 (디자인 시스템 '알림 상자', 꾸미기안_뭉치 .alert). 차단 테두리는 아직 미정이라 바탕만
-  const box = top.level === "block" ? "bg-block-bg border-transparent text-block-ink" : top.level === "warn" ? "bg-warn-bg border-warn-line text-warn" : "bg-info-bg border-info-line text-info-ink";
+  // 상자 = 연한 바탕 + 같은 계열 1.5px 테두리 + 진한 글자 (디자인 시스템 '알림 상자', 꾸미기안_뭉치 .alert)
+  const box = top.level === "block" ? "bg-block-bg border-block-line text-block-ink" : top.level === "warn" ? "bg-warn-bg border-warn-line text-warn" : "bg-info-bg border-info-line text-info-ink";
   return (
     <section aria-label="알림" className={`rounded-soft border-[1.5px] px-4 py-2.5 ${box}`}>
       <div className="flex flex-wrap items-center gap-3 text-label">

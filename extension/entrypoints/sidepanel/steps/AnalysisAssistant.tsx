@@ -6,7 +6,7 @@ import { AskForm, bubbleClass, useAsk, type Bubble } from "../ui/Chat";
 import { Coach } from "../ui/Coach";
 
 const SHAPE: Record<AssistantAlert["level"], { mark: string; name: string; box: string }> = {
-  block: { mark: "■", name: "차단", box: "bg-block-bg text-block-ink" },
+  block: { mark: "■", name: "차단", box: "border-[1.5px] border-block-line bg-block-bg text-block-ink" },
   warn: { mark: "▲", name: "주의", box: "border-[1.5px] border-warn-line bg-warn-bg text-warn" },
   info: { mark: "●", name: "참고", box: "border-[1.5px] border-info-line bg-info-bg text-info-ink" },
 };

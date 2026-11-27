@@ -35,9 +35,10 @@ function byLabel(doc: Root, label: string): HTMLElement | null {
     let box: HTMLElement | null = l.parentElement;
     for (let up = 0; box && box !== top && up < FAR_CLIMB; up += 1, box = box.parentElement) {
       const fields = box.querySelectorAll<HTMLElement>(FIELD);
-      // 가까우면 첫 입력칸. 더 멀면 그 구역에 입력칸이 하나뿐일 때만 (실제 화면 2026-11-27: '* Facebook 페이지' 이름표에서
+      // 가까우면 첫 입력칸. 더 멀면 그 구역에 입력칸이 하나뿐이고 이름표 뒤에 있을 때만 (실제 화면 2026-11-27: '* Facebook 페이지' 이름표에서
       // 7단계 위에야 '페이지 선택' 목록이 있고, 목록은 이름표가 아니라 고른 값으로만 이름이 붙어 있다)
-      if (fields.length && (up < MAX_CLIMB || fields.length === 1)) return fields[0]!;
+      if (fields.length && up < MAX_CLIMB) return fields[0]!;
+      if (fields.length === 1 && l.compareDocumentPosition(fields[0]!) & Node.DOCUMENT_POSITION_FOLLOWING) return fields[0]!;   // 이름표 뒤에 오는 칸만
     }
   }
   return null;
