@@ -18,6 +18,15 @@
   --color-belly: var(--tone-belly);
   --color-belly-strong: var(--tone-belly-strong);
   --color-belly-ink: var(--tone-belly-ink);
+  --color-warn-line: var(--tone-warn-line);
+  --color-ok-ink: var(--tone-ok-ink);
+  --color-ok-line: var(--tone-ok-line);
+  --color-info-ink: var(--tone-info-ink);
+  --color-info-line: var(--tone-info-line);
+  --color-disabled-bg: var(--tone-disabled-bg);
+  --color-disabled-fg: var(--tone-disabled-fg);
+  --color-disabled-line: var(--tone-disabled-line);
+  --color-series-soft: var(--tone-series-soft);
   --color-action: var(--tone-action);
   --color-action-hover: var(--tone-action-hover);
   --color-on-action: var(--tone-on-action);
@@ -79,6 +88,10 @@
   --shadow-card: var(--elevation-card);
   --shadow-press: var(--elevation-press);
   --shadow-hero: var(--elevation-hero);
+  --shadow-selected: var(--elevation-selected);
+  --shadow-press-sm: var(--elevation-press-sm);
+  --shadow-cta: var(--elevation-cta);
+  --radius-soft: var(--primitive-radius-soft);
 }
 
 /* 한국어는 단어 중간에서 끊지 않는다 (휴대폰에서 '돌/려'처럼 끊기던 문제) */
@@ -90,4 +103,4 @@ body { background: radial-gradient(circle at 100% 18%, var(--tone-accent-soft), 
 /* 제목 강조: 보라 글자 + 아래쪽 배 색 밑줄 (꾸미기안_뭉치 .h1 em) */
 .mark-belly { font-style: normal; color: var(--tone-accent); background: linear-gradient(transparent 64%, var(--tone-belly) 64%); }
 /* 뭉치 그림 아래 그림자 (메인 진하게를 투명하게) */
-.mungchi-shadow { filter: drop-shadow(0 8px 8px color-mix(in srgb, var(--tone-accent-ink) 20%, transparent)); }
+.mungchi-shadow { filter: var(--elevation-mascot); }

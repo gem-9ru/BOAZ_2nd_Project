@@ -59,7 +59,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         <h2 id="budget-title" className="text-body font-extrabold"><span aria-hidden="true">💰 </span>예산 · 세트당 총액 ({days}일)</h2>
         <div role="radiogroup" aria-label="세트당 총액" className="flex flex-wrap gap-2">
           {options.map((b) => (
-            <label key={b} className={`cursor-pointer rounded-badge border-2 px-4.5 py-2 text-label font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${budget === b ? "border-accent bg-accent text-on-accent shadow-press" : "border-line bg-surface text-soft"}`}>
+            <label key={b} className={`cursor-pointer rounded-badge border-2 px-4.5 py-2 text-label font-bold has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-accent ${budget === b ? "border-accent bg-accent text-on-accent shadow-press-sm" : "border-line bg-surface text-soft"}`}>
               <input type="radio" name="budget" className="sr-only" checked={budget === b} onChange={() => setBudget(b)} />
               {sims[b]?.below_daily_min && <span aria-hidden="true" className="mr-1">▲</span>}{plain(b)}
               {sims[b]?.below_daily_min && <span className="sr-only"> (하루 최소보다 적어요)</span>}
@@ -69,7 +69,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         {/* 기본값의 근거 (UX 원칙 §7: 기본값과 권장안에 근거가 같이 보이는가) */}
         {floor && <p className="text-caption text-soft">기본 {plain(start)} = 하루 약 {won(Math.round(start / days / 10) * 10)} × {days}일 · 메타 하루 최소(약 {won(floor)})를 넘는 가장 작은 금액이에요</p>}
         {low && (
-          <p role="status" className="flex items-start gap-2 rounded-button border-2 border-warn-mark/40 bg-warn-bg px-4 py-2.5 text-label text-warn">
+          <p role="status" className="flex items-start gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-4 py-2.5 text-label text-warn">
             <AlertMark level="warn" />
             <span>하루 {won(Math.round(budget / days / 10) * 10)}은 메타 하루 최소(약 {won(low.daily_min)})보다 적어요 → 광고가 안 나갈 수 있어요. {plain(start)} 이상을 골라 주세요.</span>
           </p>
@@ -88,7 +88,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
           <Fold label="전체 예산으로 정하기" preview="Test & Roll: 전체의 약 8~20%"><Simulator r={r} onReload={onReload} part="roll" /></Fold>
           {btLine && <Fold label="예측이 맞았나?" preview={btLine}><AN05 r={r} /></Fold>}
         </Folds>
-        <p className="mt-2 flex items-start gap-2 rounded-button border-2 border-info/30 bg-info-bg px-4 py-2.5 text-label">
+        <p className="mt-2 flex items-start gap-2 rounded-soft border-[1.5px] border-info-line bg-info-bg px-4 py-2.5 text-label text-info-ink">
           <span aria-hidden="true" className="font-bold text-info">i</span>
           <span>여기서는 금액을 <b>제안만</b> 해요. 예산은 광고 관리자에서 사장님이 직접 넣고, 이 페이지는 결제·게시를 하지 않아요.</span>
         </p>
@@ -109,7 +109,7 @@ export function Prep({ r, onCopied, onSend, onReload }: { r: Result; onCopied: (
         <Mungchi pose="run" className="ml-auto w-20 max-sm:hidden" />
       </div>
       {sent && (
-        <p role="status" className="-mt-2 flex flex-wrap items-center gap-2 rounded-button border-2 border-ok/30 bg-ok-bg px-4 py-2.5 text-label">
+        <p role="status" className="-mt-2 flex flex-wrap items-center gap-2 rounded-soft border-[1.5px] border-ok-line bg-ok-bg px-4 py-2.5 text-label text-ok-ink">
           <AlertMark level="ok" />
           <span>보냈어요 · 세트당 {plain(sent.budget)} · 코드 <b className="tracking-widest tabular-nums">{r.code}</b>{sent.copied ? " (복사됨)" : ""}</span>
           <span className="text-soft">패널이 안 열려 있으면 확장 프로그램 ③ 분석에 이 코드를 넣어 주세요</span>

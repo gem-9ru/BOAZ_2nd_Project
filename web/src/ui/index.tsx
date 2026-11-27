@@ -30,7 +30,7 @@ export function Button({ children, onClick, kind = "primary", busy, disabled, ty
     : "border-2 border-accent bg-surface text-accent-ink hover:bg-accent-soft";
   return (
     <button type={type} onClick={onClick} disabled={disabled || busy} aria-busy={busy || undefined} title={title}
-      className={`h-button px-6 rounded-button text-body font-bold disabled:opacity-(--state-disabled-opacity) disabled:shadow-none ${look}`}>
+      className={`h-button px-6 rounded-button text-body font-bold disabled:cursor-default disabled:border-[1.5px] disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none ${look}`}>
       {busy ? "계산하는 중…" : children}
     </button>
   );
@@ -42,7 +42,7 @@ export type Word = "확실해요" | "A 쪽이에요" | "B 쪽이에요" | "아�
  *  확실해요 = 진한 바이올렛 · ○ 쪽이에요 = 연한 바이올렛 · 아직 몰라요 = 회색. 색만으로 말하지 않게 모양(●◐○)도. */
 export function VerdictBadge({ word, small }: { word: Word | string; small?: boolean }) {
   const look = word === "확실해요" ? { cls: "bg-adopt text-on-accent", mark: "●" }
-    : word === "아직 몰라요" ? { cls: "bg-hold-bg text-hold", mark: "○" } : { cls: "bg-adopt-bg text-adopt ring-1 ring-inset ring-likely", mark: "◐" };
+    : word === "아직 몰라요" ? { cls: "bg-hold-bg text-hold", mark: "○" } : { cls: "bg-likely-bg text-adopt ring-[1.5px] ring-inset ring-likely", mark: "◐" };
   return (
     <span className={`inline-flex items-center gap-1.5 rounded-badge px-3 py-1 font-bold whitespace-nowrap ${small ? "text-caption px-2.5 py-0.5" : "text-body"} ${look.cls}`}>
       <span aria-hidden="true">{look.mark}</span>{word}
@@ -219,7 +219,7 @@ export function Ghost({ children, onClick, disabled }: { children: ReactNode; on
 export function BigButton({ children, onClick }: { children: ReactNode; onClick?: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className="inline-flex h-13 items-center gap-2 rounded-button bg-button px-6 text-lead font-bold text-button-fg shadow-press hover:bg-button-hover active:translate-y-0.5 active:shadow-none">{children}</button>
+      className="inline-flex h-13 items-center gap-2 rounded-button bg-button px-6 text-lead font-bold text-button-fg shadow-cta hover:bg-button-hover active:translate-y-0.5 active:shadow-none">{children}</button>
   );
 }
 

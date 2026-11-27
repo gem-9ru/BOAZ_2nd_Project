@@ -171,7 +171,7 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
               return (
                 <li key={x.id}>
                   <button type="button" disabled={!can} onClick={() => onGo?.(i)} aria-current={i === step ? "step" : undefined} aria-label={`${"①②③"[i]} ${x.short}`}
-                    className={`inline-flex min-h-9 items-center whitespace-nowrap rounded-badge px-4 text-label font-semibold ${i === step ? "bg-accent text-on-accent shadow-press" : past ? "text-accent" : "text-soft"} disabled:cursor-default`}>
+                    className={`inline-flex min-h-9 items-center whitespace-nowrap rounded-badge px-4 text-label font-semibold ${i === step ? "bg-accent text-on-accent shadow-press-sm" : past ? "text-accent" : "text-soft"} disabled:cursor-default`}>
                     {past ? `✓ ${x.short}` : `${"①②③"[i]} ${x.short}`}
                   </button>
                 </li>
@@ -201,7 +201,7 @@ function AlertBar({ r, step }: { r: Result; step: string }) {
   const counts = (["block", "warn", "info"] as const).filter((l) => count(l) > 0).map((l) => `${NAME[l]} ${count(l)}`).join(" · ");
   if (step === "AN-06" && !count("block")) {
     return (
-      <section aria-label="알림" className="flex flex-wrap items-center gap-3 rounded-button border-2 border-ok/30 bg-ok-bg px-4 py-2.5 text-label">
+      <section aria-label="알림" className="flex flex-wrap items-center gap-3 rounded-soft border-[1.5px] border-ok-line bg-ok-bg px-4 py-2.5 text-label text-ok-ink">
         <AlertMark level="ok" />
         <b className="flex-1 min-w-48">차단 알림 없음{count("warn") ? ` · 주의 ${count("warn")}건은 아래 체크리스트에 넣었어요` : ""}</b>
       </section>
@@ -210,9 +210,10 @@ function AlertBar({ r, step }: { r: Result; step: string }) {
   // 가장 심각한 1개: 차단 → 주의 → 참고 (같은 등급이면 앞 단계 것). 짧은 글(later)이 있으면 그것.
   const top = list.find((a) => a.level === "block") ?? list.find((a) => a.level === "warn") ?? list[0]!;
   const text = top.later ?? top.text;
-  const box = top.level === "block" ? "bg-block-bg border-block/30" : top.level === "warn" ? "bg-warn-bg border-warn-mark/40" : "bg-info-bg border-info/30";
+  // 상자 = 연한 바탕 + 같은 계열 1.5px 테두리 + 진한 글자 (디자인 시스템 '알림 상자', 꾸미기안_뭉치 .alert). 차단 테두리는 아직 미정이라 바탕만
+  const box = top.level === "block" ? "bg-block-bg border-transparent text-block-ink" : top.level === "warn" ? "bg-warn-bg border-warn-line text-warn" : "bg-info-bg border-info-line text-info-ink";
   return (
-    <section aria-label="알림" className={`rounded-button border-2 px-4 py-2.5 ${box}`}>
+    <section aria-label="알림" className={`rounded-soft border-[1.5px] px-4 py-2.5 ${box}`}>
       <div className="flex flex-wrap items-center gap-3 text-label">
         <AlertMark level={top.level} />
         <b className="flex-1 min-w-48"><span className="font-normal">{NAME[top.level]} · </span>{text}</b>

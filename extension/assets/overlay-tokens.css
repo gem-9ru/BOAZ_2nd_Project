@@ -5,7 +5,7 @@
   --coach-scrim: #2A1F5C;
   --coach-bubble-bg: #FFFFFF;
   --coach-bubble-fg: #2A1F5C;
-  --coach-bubble-border: #B3A5F0;
+  --coach-bubble-border: #FFFFFF;
   --coach-shadow: 0 10px 28px rgb(0 0 0 / 0.28);
   --coach-count-fg: #4528B0;
   --coach-note-fg: #6B6590;
@@ -54,7 +54,7 @@
   --coach-emphasis-fg: #5B3FD9;
   --coach-mark-bg: #F6E4CB;
   --character-body: #5B3FD9;
-  --character-belly: #F7B77A;
+  --character-belly: #D2AD81;
   --character-eye: #FFFFFF;
   --character-beak: #A8481A;
   --character-pupil: #2A1F5C;
@@ -67,4 +67,5 @@
   --character-light-sky: #FFFFFF;
   --character-light-ground: #EFEBFF;
   --character-light-key: #FFFFFF;
+  --character-shadow: drop-shadow(0 8px 8px rgb(46 31 122 / 0.18));
 }
