@@ -250,7 +250,7 @@ export default function GuideStep({ state, dispatch }: Props) {
           )}
           {mode === "create" && !next && (
             // 기간·금액·지역·클릭 주소를 바꾸려면 ② 질문으로 (① 찾기·문구·준비물 답은 그대로, 날짜는 오늘 기준으로 다시, 화면 검토 9)
-            <MoreRow id="more-edit" icon="✎" title="② 답 바꾸기" desc="기간·금액·지역·클릭 주소 (뭉치는 1번 칸부터)"
+            <MoreRow id="more-edit" icon="✎" title="② 답 바꾸기" desc="기간·금액·지역·클릭 주소 (안내는 1번 칸부터)"
               onClick={() => dispatch({ type: "editAnswers" })} />
           )}
         </ul>
