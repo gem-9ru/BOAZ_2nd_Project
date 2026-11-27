@@ -328,3 +328,52 @@ describe("한 화면에 말풍선 뭉치는 한 번만 (2026-11-27)", () => {
     expect(screen.getByText(/가지만 물어볼게요/)).toBeTruthy();
   });
 });
+
+describe("QA 2026-11-27: 머리 단계 표시 (H-04·H-05)", () => {
+  const app = async (state: Partial<FlowState>, tabUrl = "https://example.com/") => {
+    const { default: App } = await import("../entrypoints/sidepanel/App");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response(JSON.stringify({ message: "m", suggestions: [], fields: [], defaults: [] })))));
+    vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 9, active: true, url: tabUrl }] as never);
+    await fakeBrowser.storage.local.set({ "coach.v3.state": { ...initialState(), ...state } });
+    render(<App />);
+  };
+
+  it("H-04. 종료일이 지난 기다리기 화면은 ③ 강조 + '결과를 볼 때예요'", async () => {
+    await app({ step: "wait", endDate: "2020-01-01", settings });
+    await vi.waitFor(() => expect(screen.getByText(/③ 분석/).closest("li")!.getAttribute("aria-current")).toBe("step"));
+    expect(screen.getByText("결과를 볼 때예요", { exact: false })).toBeTruthy();
+    vi.restoreAllMocks(); vi.unstubAllGlobals();
+  });
+
+  it("H-05. 분석 탭을 보고 있어도 광고 켜기 전(문구)이면 ② 세팅 그대로", async () => {
+    await app({ step: "copy" }, "http://localhost:8000/analysis#code=AB12&step=AN-01");
+    await vi.waitFor(() => expect(screen.getByText(/② 세팅/).closest("li")!.getAttribute("aria-current")).toBe("step"));
+    vi.restoreAllMocks(); vi.unstubAllGlobals();
+  });
+});
+
+describe("QA 2026-11-27: 사이드 패널 QA에서 나온 것", () => {
+  it("G-03. 준비물을 다시 답하면 안내 목록의 준비물 칸 값도 바뀐다", () => {
+    const s0: FlowState = { ...initialState(), step: "prep", settings: settings.map((x) => (x.fieldId === "meta.pre.fb_page" ? { ...x, value: "없어요" } : x)),
+      answers: { "meta.pre.fb_page": "있어요" }, guide: { mode: "create", index: 3 } };
+    const s = reduce(s0, { type: "prepDone", missing: [] });
+    expect(s.step).toBe("guide");
+    expect(s.settings.find((x) => x.fieldId === "meta.pre.fb_page")?.value).toBe("있어요");
+  });
+
+  it("뒤로 가는 길: ② 첫 질문 → 문구, 코드 넣기 → 기다리기", () => {
+    expect(reduce({ ...initialState(), step: "questions" }, { type: "editCopy" }).step).toBe("copy");
+    expect(reduce({ ...initialState(), step: "upload" }, { type: "backToWait" }).step).toBe("wait");
+    expect(reduce({ ...initialState(), step: "plan" }, { type: "backToWait" }).step).toBe("plan");
+  });
+
+  it("P-05. 준비물 주소 칸은 주소 없이 넘어갈 수 있다", () => {
+    const field = { ...fieldsJson.find((f) => f.id === "meta.pre.store_product")!, stage: "사전 점검" };
+    const onAnswer = vi.fn();
+    render(<Question field={field} answers={{}} keywords={[]} checked={[]} onCheck={() => {}} onAnswer={onAnswer} />);
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(`^${field.options![0]}`) }));
+    expect(screen.queryByText(new RegExp(`^${field.options![0]}로 보낼게요`))).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /주소 없이 넘어가기/ }));
+    expect(onAnswer).toHaveBeenCalledWith(field.options![0]);
+  });
+});

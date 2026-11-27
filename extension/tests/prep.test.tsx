@@ -47,7 +47,7 @@ describe("시작 전 준비물: 흐름", () => {
 
     const answers = { "meta.pre.fb_login": "로그인할 수 있어요", "meta.pre.fb_page": "있어요", "meta.pre.payment": "아직이에요", "meta.pre.media": "있어요" };
     rerender(<PrepStep state={{ ...initialState(), answers }} dispatch={dispatch} fields={PREP} />);
-    expect(screen.getByText(/결제 수단은\(는\) 광고 관리자에 들어가기 전에 꼭/)).toBeTruthy();
+    expect(screen.getByText(/결제 수단은 광고 관리자에 들어가기 전에 꼭/)).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "시작할게요" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "prepDone", missing: ["결제 수단"] });
   });
@@ -60,7 +60,7 @@ describe("시작 전 준비물: 광고 관리자 열기", () => {
     const dispatch = vi.fn();
     render(<GuideStep state={{ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0 }, prepMissing: ["결제 수단"] }} dispatch={dispatch} />);
     expect((screen.getByRole("button", { name: "광고 관리자 열기" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/결제 수단/)).toBeTruthy();
+    expect(screen.getAllByText(/결제 수단/).length).toBeGreaterThan(0);   // 목록 끝 ▲와 버튼 바로 위 이유 줄
     fireEvent.click(screen.getByRole("button", { name: "준비물 다시 보기" }));
     expect(dispatch).toHaveBeenCalledWith({ type: "openPrep" });
   });

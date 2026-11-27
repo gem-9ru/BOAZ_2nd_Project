@@ -74,6 +74,10 @@ export type FlowEvent =
   | { type: "confirmTarget"; target: Target; keywords: string[]; segment?: Segment }
   | { type: "pickCopy"; copy: Copy; strengths?: string[] }
   | { type: "editFind" }
+  /** ② 세팅 첫 질문에서 ② 문구로 돌아가기 */
+  | { type: "editCopy" }
+  /** 코드 넣기에서 기다리기로 돌아가기 (광고가 아직 안 끝났을 때) */
+  | { type: "backToWait" }
   | { type: "answer"; id: string; value: string }
   | { type: "unanswer"; id: string }
   /** 안내 목록에서 ② 답(기간·금액·지역·클릭 주소 등)을 다시 정하기. 준비물 답은 그대로 (화면 검토 9) */
@@ -123,6 +127,10 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       return { ...s, copy: ev.copy, strengths: ev.strengths ?? s.strengths, step: "questions" };
     case "editFind":
       return { ...s, step: "find" };
+    case "editCopy":
+      return { ...s, step: "copy" };
+    case "backToWait":
+      return s.step === "upload" ? { ...s, step: "wait", guide: null } : s;
     case "answer":
       return { ...s, answers: { ...s.answers, [ev.id]: ev.value } };
     case "unanswer": {
@@ -184,7 +192,11 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       // 다음 테스트 중이거나 갈 주소가 그대로면 안내 목록으로 (바꿀 칸·새 금액·날짜를 지우지 않게, 재검토 A1)
       const route = routeFromPrep(s.answers)[CLICK_URL];
       const now = s.settings.find((x) => x.fieldId === CLICK_URL)?.value;
-      if (s.guide?.next || !route || route === now) return { ...s, prepMissing: ev.missing, step: "guide", guide: s.guide ? { ...s.guide, away: false } : { mode: "create", index: 0 } };
+      if (s.guide?.next || !route || route === now) {
+        // 준비물 답(페이지·인스타 아이디 등)으로 정해지는 칸은 목록에도 바로 반영 (안 그러면 뭉치가 옛 값을 짚음, QA G-03)
+        const settings = s.settings.map((x) => (x.fieldId.startsWith("meta.pre.") && s.answers[x.fieldId] !== undefined ? { ...x, value: s.answers[x.fieldId]! } : x));
+        return { ...s, settings, prepMissing: ev.missing, step: "guide", guide: s.guide ? { ...s.guide, away: false } : { mode: "create", index: 0 } };
+      }
       const { [CLICK_TO]: _c, [CLICK_URL]: _u, ...answers } = s.answers;
       return { ...s, prepMissing: ev.missing, answers, step: "questions", guide: null };
     }

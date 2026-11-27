@@ -1,3 +1,4 @@
+import { josa } from "../../../lib/josa";
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { groupOf, guideSignature, nextTestSteps, stepsFor, type GuideMsg, type GuideStepItem, shownDates } from "../../../lib/guide";
@@ -151,7 +152,7 @@ export default function GuideStep({ state, dispatch }: Props) {
       {total > 0 && (
         <div className="flex flex-col gap-2">
           <div className="flex items-baseline justify-between text-caption font-bold">
-            <span>지금 채우는 칸</span>
+            <span>{mode === "export" ? "지금 짚는 곳" : "지금 채우는 칸"}</span>
             <span className="tabular-nums font-semibold text-soft">{Math.min(index + 1, total)} / {total}</span>
           </div>
           {/* 진행 막대: 보라로 채우고 지금 자리에 뭉치 배 색 점 (꾸미기안_뭉치 .prog) */}
@@ -205,7 +206,7 @@ export default function GuideStep({ state, dispatch }: Props) {
       {mode === "create" && (state.prepMissing?.length ?? 0) > 0 && (
         <div role="status" className="flex flex-col gap-2 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-3 py-2 text-caption text-warn">
           <span><span aria-hidden="true" className="font-bold">▲ </span><span className="sr-only">주의 </span>
-            {state.prepMissing!.join(" · ")}이(가) 아직 없어요 → 없으면 광고를 낼 수 없어요. 준비한 뒤 광고 관리자를 열어 주세요.</span>
+            {state.prepMissing!.join(" · ")}{josa(state.prepMissing![state.prepMissing!.length - 1]!, "이", "가")} 아직 없어요 → 없으면 광고를 낼 수 없어요. 준비한 뒤 광고 관리자를 열어 주세요.</span>
           <button type="button" onClick={() => dispatch({ type: "openPrep" })} className="self-start font-semibold underline">준비물 다시 보기</button>
         </div>
       )}
@@ -214,6 +215,10 @@ export default function GuideStep({ state, dispatch }: Props) {
           긴 칸 목록 아래로 밀려 안 보이지 않게 패널 아래에 붙여 둔다 */}
       <div className="sticky bottom-0 z-10 flex flex-col gap-2 bg-cream py-2">
         {!away ? <>
+          {/* 버튼이 꺼진 이유를 버튼 바로 위에 (목록 끝 ▲는 스크롤해야 보임, QA 목록 밖) */}
+          {mode === "create" && (state.prepMissing?.length ?? 0) > 0 && (
+            <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {state.prepMissing!.join(" · ")}{josa(state.prepMissing![state.prepMissing!.length - 1]!, "이", "가")} 없어서 열 수 없어요 → 위 [준비물 다시 보기]</p>
+          )}
           {/* 로그인을 기다리는 동안은 다시 누르지 못하게: 기다림이 두 번 돌면 뭉치를 두 번 부르거나 늦게 오류가 뜬다 (화면 검토 10) */}
           <PrimaryButton onClick={open} busy={busy} disabled={login || (mode === "create" && (state.prepMissing?.length ?? 0) > 0)}>
             {login ? "로그인을 기다리는 중…" : <>광고 관리자 열기 <span aria-hidden="true" className="opacity-80">↗</span></>}
@@ -296,7 +301,7 @@ function InlineNotice({ id, publish, state }: { id: string; publish: boolean; st
     const least = minBudget(days);
     const each = state.guide?.next ? "세트마다 " : "총예산을 ";   // 다음 테스트는 세트 2개라 세트당 금액, 처음엔 세트 1개라 총액
     if (budget !== null) {
-      if (budget >= least) return null;
+      if (budget >= least || id !== BUDGET) return null;   // ▲는 총예산 칸에만 (종료 날짜 칸에 같은 문장이 또 나오지 않게, QA G-02)
       return (
         <span role="status" className="flex gap-1.5 rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-2 py-1 text-warn">
           <span aria-hidden="true" className="font-bold">▲</span><span className="sr-only">주의</span>

@@ -1,3 +1,4 @@
+import { josa } from "../../../lib/josa";
 import { useEffect, useRef, useState } from "react";
 import { research as fetchResearch, type Research, type Segment } from "../../../lib/api";
 import type { FlowEvent, FlowState, Target } from "../../../lib/flow";
@@ -350,6 +351,16 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
     : !selected ? "광고를 보여 줄 손님을 하나 골라 주세요."
     : manualMissing ? "보여 줄 나이와 성별을 골라 주세요." : null;
 
+  // [뺀 말을 빼고 손님 다시 보기]: 손님 카드 위 + 칩을 끈 자리 바로 아래 (칩은 화면 아래쪽이라 위에만 두면 안 보임, QA F-05)
+  const reSee = dropped.some((k) => !(state.droppedApplied ?? []).includes(k)) && !segments.some((g) => dropped.includes(g.lead)) && (
+    <div className="flex flex-wrap items-center justify-between gap-2 rounded-button bg-sunk px-3 py-2">
+      <span className="text-caption">검색어 {dropped.length}개를 뺐어요. 남긴 말로 손님을 다시 볼 수 있어요.</span>
+      <button type="button" onClick={onResearch}
+        className="shrink-0 rounded-button border border-accent bg-paper min-h-11 px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+        뺀 말을 빼고 손님 다시 보기
+      </button>
+    </div>
+  );
   // 검색어 칩: 손님 무리 아래에 접어 둔다 (무리가 없을 때·뺀 말이 있을 때는 펼침)
   const words = (
     <details open={dropped.length > 0 || !r.category || segments.length === 0}
@@ -367,6 +378,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         <p className="text-small text-soft">이 말들은 ② 문구를 쓸 때 넣어요. 메타 광고는 검색어로 손님을 고르지 않아서, 손님은 위에서 고른 나이·성별로 정해요.</p>
         <KeywordChips research={r} dropped={dropped} kept={kept} dispatch={dispatch} product={state.product ?? ""}
           title="손님은 이렇게도 불러요" hint="사장님 상품에 맞지 않는 말은 눌러서 빼 주세요." />
+        {reSee}
         <Negatives words={r.negatives} />
       </div>
     </details>
@@ -424,15 +436,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
         </>
       ) : (
         <>
-          {dropped.some((k) => !(state.droppedApplied ?? []).includes(k)) && !segments.some((g) => dropped.includes(g.lead)) && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-button bg-sunk px-3 py-2">
-              <span className="text-caption">검색어 {dropped.length}개를 뺐어요. 남긴 말로 손님을 다시 볼 수 있어요.</span>
-              <button type="button" onClick={onResearch}
-                className="shrink-0 rounded-button border border-accent bg-paper min-h-11 px-3 py-1 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                뺀 말을 빼고 손님 다시 보기
-              </button>
-            </div>
-          )}
+          {reSee}
           <SegmentCards segments={segments} selected={selected} dropped={dropped} product={product}
             onPick={(segment) => dispatch({ type: "pickSegment", segment })} onResearch={onResearch}
             selectedDetail={detail} />
@@ -506,7 +510,7 @@ function NoData({ notice, product, keywords = [], dispatch, suggestions = [], on
           <Choice legend="성별" name="manual-gender"
             options={MANUAL_GENDERS} value={gender} onChange={(v) => setGender(v as typeof gender)} />
           {keywords.length === 0 && (
-            <p className="text-caption text-soft">검색어 자료가 없어서 광고 문구에는 '{product}'를 넣을게요.</p>
+            <p className="text-caption text-soft">검색어 자료가 없어서 광고 문구에는 '{product}'{josa(product, "을", "를")} 넣을게요.</p>
           )}
           <PrimaryButton onClick={() => dispatch({ type: "confirmTarget", target: { ...ageGroupToRange(age), gender },
             keywords: keywords.length ? keywords : [product] })}>

@@ -82,8 +82,9 @@ describe("questions", () => {
     const state: FlowState = { ...initialState(), step: "questions", target, copy, answers };
     render(<QuestionStep state={state} dispatch={dispatch} fields={FIELDS} defaults={[]} />);
     fireEvent.click(screen.getByRole("button", { name: /^1장/ }));
-    const done = dispatch.mock.calls.map((c) => c[0]).find((e) => e.type === "questionsDone");
-    expect(done.settings).toHaveLength(17);
+    const dones = dispatch.mock.calls.map((c) => c[0]).filter((e) => e.type === "questionsDone");
+    expect(dones).toHaveLength(1);   // 한 번만 넘어간다 (QA Q-08)
+    expect(dones[0].settings).toHaveLength(17);
   });
 
   it("photos are not asked again in ② (준비물 already did); the settings keep the media default", () => {

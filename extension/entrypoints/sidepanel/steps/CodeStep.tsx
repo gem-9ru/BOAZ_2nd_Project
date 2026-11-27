@@ -61,6 +61,10 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   return (
     <section className="flex flex-col gap-4">
       <Coach>{ended ? `광고가 끝났어요${period}. ` : ""}결과 파일을 받아서 다음에 바꿀 칸 1개를 찾아볼까요?</Coach>
+      {!ended && state.endDate && (
+        // 광고가 아직 안 끝났으면 기다리기로 돌아갈 길 (QA 목록 밖)
+        <button type="button" onClick={() => dispatch({ type: "backToWait" })} className="inline-flex min-h-11 items-center self-start text-label text-accent-ink underline">← 기다리기 화면으로</button>
+      )}
       <ol className="flex flex-col gap-3 text-body">
         <li className="flex gap-2"><Num i={0} />
           <span>광고 관리자에서 결과 파일 받기

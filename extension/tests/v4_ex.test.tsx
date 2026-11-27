@@ -357,6 +357,8 @@ describe("처음 쓰는 사장님: 로그인 화면", () => {
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     expect(await screen.findByText(/페이스북에 로그인해 주세요/)).toBeTruthy();
     expect(send).not.toHaveBeenCalled();
+    // 기다리는 동안은 다시 누르지 못한다 (기다림이 두 번 돌면 뭉치를 두 번 부름, QA G-06)
+    expect((screen.getByRole("button", { name: /로그인을 기다리는 중/ }) as HTMLButtonElement).disabled).toBe(true);
     await fakeBrowser.tabs.update(tab.id!, { url: "https://adsmanager.facebook.com/adsmanager/manage/campaigns" });
     await waitFor(() => expect(send).toHaveBeenCalled(), { timeout: 4000 });
     expect(send.mock.calls[0]![0]).toBe(tab.id);

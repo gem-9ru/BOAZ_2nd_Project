@@ -1,3 +1,4 @@
+import { josa } from "../../../lib/josa";
 import type { Field } from "../../../lib/api";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { prepFields, prepMissing } from "../../../lib/settings";
@@ -13,6 +14,7 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
   const next = items.find((f) => !(f.id in state.answers));
   const index = next ? items.indexOf(next) : items.length;
   const missing = prepMissing(fields, state.answers);
+  const back = state.settings.length > 0;   // 세팅 목록에서 다시 보러 옴
   const [helpFirst, setHelpFirst] = useState<{ id: string; answer: string } | null>(null);   // [만드는 법 보기]로 돌아간 칸
 
   return (
@@ -37,7 +39,10 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
         </>
       ) : (
         <>
-          <Coach>{missing.length === 0 ? "준비물이 다 있어요. 이제 무엇을 파는지부터 같이 볼게요." : `${missing.join(" · ")}은(는) 광고 관리자에 들어가기 전에 꼭 있어야 해요. 상품 찾기와 문구는 먼저 해 두실 수 있어요.`}</Coach>
+          {/* 세팅 목록에서 [준비물 다시 보기]로 왔으면 그 목록으로 돌아간다는 말 (QA 목록 밖) */}
+          <Coach>{missing.length === 0
+            ? (back ? "준비물이 다 있어요. 세팅 목록으로 돌아갈게요." : "준비물이 다 있어요. 이제 무엇을 파는지부터 같이 볼게요.")
+            : `${missing.join(" · ")}${josa(missing[missing.length - 1]!, "은", "는")} 광고 관리자에 들어가기 전에 꼭 있어야 해요. ${back ? "준비한 뒤 세팅 목록에서 광고 관리자를 열어 주세요." : "상품 찾기와 문구는 먼저 해 두실 수 있어요."}`}</Coach>
           <ul className="flex flex-col gap-2">
             {items.map((f) => {
               const ok = state.answers[f.id] === f.options?.[0] || (f.options == null && Boolean(state.answers[f.id]));
@@ -59,7 +64,7 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
               );
             })}
           </ul>
-          <PrimaryButton onClick={() => dispatch({ type: "prepDone", missing })}>시작할게요</PrimaryButton>
+          <PrimaryButton onClick={() => dispatch({ type: "prepDone", missing })}>{back ? "세팅 목록으로" : "시작할게요"}</PrimaryButton>
         </>
       )}
     </section>

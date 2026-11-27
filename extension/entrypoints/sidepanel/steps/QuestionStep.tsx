@@ -4,6 +4,7 @@ import type { FlowEvent, FlowState } from "../../../lib/flow";
 import { SETTING_ORDER, askedFields, buildSettings, isoDate, minBudget, parseWon, scheduleDays, scheduleFrom } from "../../../lib/settings";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
+const PREP = "사전 점검";   // 준비물 화면에서 묻는 칸 (settings.ts PREP_STAGE)
 const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
 /** 글자 버튼(이전·다시 고르기·나중에)도 손가락으로 누를 수 있게 높이 44px */
 export const TEXT_BUTTON = "inline-flex min-h-11 items-center self-start text-caption text-soft underline";
@@ -48,6 +49,10 @@ export default function QuestionStep({ state, dispatch, fields, defaults: all }:
         <Coach avatar={!next}>광고 관리자에 넣을 것 {asked.length}가지만 물어볼게요. 사장님이 마지막에 '게시'를 누르기 전에는 돈이 나가지 않아요.</Coach>
       )}
       <p className="text-caption text-soft">질문 {Math.min(index + 1, asked.length)} / {asked.length}</p>
+      {index === 0 && next && (
+        // 첫 질문에서도 뒤로: ② 문구로 (QA 목록 밖)
+        <button type="button" onClick={() => dispatch({ type: "editCopy" })} className={TEXT_BUTTON}>← 문구로 돌아가기</button>
+      )}
       {index > 0 && next && (
         <button type="button" onClick={() => dispatch({ type: "unanswer", id: asked[index - 1]!.id })}
           className={TEXT_BUTTON}>
@@ -195,7 +200,7 @@ export function Question({ field, answers, prev = {}, keywords, checked, onCheck
         <DateRange initial={custom ? was : undefined} onBack={() => setDates(false)} onDone={(v) => onAnswer(v)} />
       ) : then && picked ? (
         <div className="flex flex-col gap-2">
-          <p className="text-caption"><span className="font-semibold">{picked}</span>로 보낼게요.</p>
+          {field.stage !== PREP && <p className="text-caption"><span className="font-semibold">{picked}</span>로 보낼게요.</p>}
           <label htmlFor="then-url" className="text-caption text-soft">{then.say[picked] ?? "주소를 알려 주세요."}</label>
           <input id="then-url" value={url} onChange={(e) => setUrl(e.target.value)} inputMode="url" autoComplete="off"
             placeholder={picked.includes("인스타") || thenField(picked)?.includes("insta") ? "https://www.instagram.com/가게아이디" : "https://smartstore.naver.com/가게이름/products/…"}
@@ -206,6 +211,12 @@ export function Question({ field, answers, prev = {}, keywords, checked, onCheck
           {then.none?.[picked] && (
             <button type="button" onClick={() => finish(then.none![picked]!)} className="inline-flex min-h-11 items-center self-start text-caption text-accent-ink underline">
               상품 페이지 주소가 없어요 → 인스타그램 프로필로 보낼게요
+            </button>
+          )}
+          {field.stage === PREP && (
+            // 준비물에선 주소가 없어도 막지 않는다 (클릭 주소는 ② 세팅에서 다시 묻는다, QA P-05)
+            <button type="button" onClick={() => onAnswer(picked)} className="inline-flex min-h-11 items-center self-start text-caption text-accent-ink underline">
+              주소 없이 넘어가기 (② 세팅에서 다시 물어봐요)
             </button>
           )}
           <button type="button" onClick={() => setPicked(null)} className={TEXT_BUTTON}>← 다시 고르기</button>
@@ -264,6 +275,7 @@ export function Question({ field, answers, prev = {}, keywords, checked, onCheck
             id={field.id}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); submit(); } }}
             placeholder={INPUT[field.id]?.placeholder}
             aria-invalid={bad || undefined} aria-describedby={bad ? `${field.id}-error` : undefined}
             className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"

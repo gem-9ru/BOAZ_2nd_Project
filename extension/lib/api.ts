@@ -148,7 +148,7 @@ export const BASE = apiBase(import.meta.env.WXT_API_BASE as string | undefined);
 /** 서버가 꺼져 있거나 닿지 않음. */
 export class ServerDown extends Error {
   constructor() {
-    super("도우미 서버에 연결할 수 없어요. 서버를 켠 뒤 다시 시도해 주세요.");
+    super("도우미 서버에 연결할 수 없어요. 인터넷 연결을 확인하고 잠시 뒤 다시 시도해 주세요.");   // 사장님은 서버를 켤 수 없다 (QA F-02)
   }
 }
 

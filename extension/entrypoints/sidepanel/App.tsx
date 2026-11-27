@@ -81,7 +81,7 @@ export default function App() {
         <div className="flex items-center gap-2.5">
           <HomeSeat away={Boolean(state.guide?.away)} />
           <div className="min-w-0">
-            <h1 className="text-title font-extrabold tracking-tight">광고 어시스턴트</h1>
+            <h1 className="text-title font-extrabold tracking-tight">Ad Assistant</h1>
             <p className="text-small">메타 광고, 한 칸씩 같이 채워요</p>
           </div>
           {state.step !== "find" && state.step !== "prep" && (

@@ -24,7 +24,7 @@ describe("WaitStep", () => {
     expect(screen.getByText(/12월 7일에 결과를 보러 오세요/)).toBeTruthy();   // 날짜는 '12월 7일' 모양으로 (2026-12-07 아님)
     expect(screen.queryByText(/2026-12-07/)).toBeNull();
     expect(screen.getByText(/이 패널을 다시 열면/)).toBeTruthy();   // 알림이 따로 안 가니 어디로 오는지 말한다
-    expect(screen.getByRole("button", { name: "결과 분석하기" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /결과 분석하기/ })).toBeTruthy();   // 끝나기 전엔 '그래도 지금 결과 분석하기' 작은 버튼
     expect(screen.queryByText(/에 시작해요/)).toBeNull();
   });
 

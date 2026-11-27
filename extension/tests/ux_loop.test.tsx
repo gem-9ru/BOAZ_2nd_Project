@@ -79,7 +79,7 @@ describe("4. 누르는 곳은 44px 이상", () => {
 describe("5. 광고가 끝나기 전에는 [결과 분석하기]를 작게", () => {
   it("before the end it is a plain button with 'from' date; after the end it is the big button", () => {
     const { unmount } = render(<WaitStep state={{ ...initialState(), step: "wait", endDate: "2099-12-06" }} dispatch={() => {}} />);
-    expect(screen.getByRole("button", { name: "결과 분석하기" }).className).not.toContain("bg-accent");
+    expect(screen.getByRole("button", { name: "그래도 지금 결과 분석하기" }).className).not.toContain("bg-accent");
     expect(screen.getByText(/12월 7일부터 눌러 주세요/)).toBeTruthy();
     unmount();
     render(<WaitStep state={{ ...initialState(), step: "wait", endDate: "2020-01-01" }} dispatch={() => {}} />);

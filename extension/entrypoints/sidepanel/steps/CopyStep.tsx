@@ -94,6 +94,14 @@ export default function CopyStep({ state, dispatch }: Props) {
   }
   // 칩이 있으면 하나는 고르거나 적어야 한다. 칩이 없는 예전 저장본·자료 없음은 비워도 쓸 수 있게 일부러 둔다 (tests/copy.test.tsx 'old state…')
   const blocked = hasMods && all.length === 0;
+  // 효능 말 주의: 문구를 쓰기 전에도, 쓴 뒤 [고른 말 바꾸기]로 넣었을 때도 (QA W-08)
+  const healthNote = all.some(isHealth) && (
+<div role="note" className="text-caption text-warn">
+              <p><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {all.filter(isHealth).map((w) => `'${w}'`).join(", ")}: 문구에는 '○○이 고민인 분께'처럼만 쓸게요 ('낫는다·좋아진다'는 법에 걸릴 수 있어요).</p>
+              <details><summary className="cursor-pointer">왜 그래요?</summary>
+                <p>식품은 식품표시광고법 제8조, 화장품은 화장품법 제13조. 기능성화장품 심사를 받았다면 심사받은 내용 안에서는 쓸 수 있어요.</p></details>
+            </div>
+  );
   const toggle = (w: string) => setPicked((p) => (p.includes(w) ? p.filter((x) => x !== w) : [...p, w]));
 
   const chips = (items: typeof mods) => (
@@ -264,13 +272,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             </div>
           </fieldset>
           )}
-          {all.some(isHealth) && (
-            <div role="note" className="text-caption text-warn">
-              <p><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {all.filter(isHealth).map((w) => `'${w}'`).join(", ")}: 문구에는 '○○이 고민인 분께'처럼만 쓸게요 ('낫는다·좋아진다'는 법에 걸릴 수 있어요).</p>
-              <details><summary className="cursor-pointer">왜 그래요?</summary>
-                <p>식품은 식품표시광고법 제8조, 화장품은 화장품법 제13조. 기능성화장품 심사를 받았다면 심사받은 내용 안에서는 쓸 수 있어요.</p></details>
-            </div>
-          )}
+          {healthNote}
           {all.length > 0 && (
             <p className="text-caption text-soft">
               <span className="text-ink">{all.join(" · ")}</span>{euro(all[all.length - 1]!)}, {tone} 써요 (좋은 점 {all.length}개){all.length > PICK_GOOD ? " · 많이 고르면 문구가 길고 흐려질 수 있어요" : ""}
@@ -340,6 +342,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           <button type="button" onClick={() => setChoice(null)} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">← 문구를 써 달라고 할게요</button>
         </div>
       )}
+      {list && healthNote}
       {list && (
         <button type="button" onClick={write} disabled={busy || blocked} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:opacity-(--state-disabled-opacity)">
           {busy ? "다시 쓰는 중…" : "다른 문구로 다시 써 주세요"}

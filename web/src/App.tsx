@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { analyzeFile, example, receivedSettings, type ExampleName, type Result } from "./api";
+import { analyzeFile, example, receivedSettings, resultByCode, type ExampleName, type Result } from "./api";
 import type { Settings } from "./blocks/MySettings";
 import { Start } from "./blocks/Start";
 import { Conclusion } from "./steps/Conclusion";
@@ -16,6 +16,12 @@ import { Mungchi } from "./ui/Mungchi";
  *  경고 먼저(알림 바 맨 위) → 결론(AN-01) → 이유는 다음 화면에서 하나씩. 건너뛰기는 [이 테스트 바로 준비]와 단계 ⑥만. */
 export default function App() {
   const [result, setResult] = useState<Result | null>(null);
+  // 새로고침: 주소 #에 결과 코드가 있으면 서버에서 다시 받아 같은 단계로 (받는 동안은 # 를 지우지 않는다, QA N-06)
+  const [restoring, setRestoring] = useState(() => {
+    const q = new URLSearchParams(window.location.hash.slice(1));
+    const code = q.get("code");
+    return code && /^[A-Z0-9]{4}$/.test(code) ? { code, step: q.get("step") } : null;
+  });
   const [step, setStep] = useState(0);
   const [reached, setReached] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -93,13 +99,22 @@ export default function App() {
     return () => window.removeEventListener("beforeunload", ask);
   }, [result]);
   function showToast(t: string) { setToast(t); setTimeout(() => setToast(null), 3500); }
+  useEffect(() => {
+    if (!restoring) return;
+    resultByCode(restoring.code).then((r) => {
+      const i = STEPS.findIndex((x) => x.id === restoring.step);
+      const at = i >= 0 && !(r.blocked && i > 0) ? i : 0;
+      setResult(r); setStep(at); setReached(at);
+    }, () => {}).finally(() => setRestoring(null));   // 서버에서 지워졌으면 업로드 화면 그대로
+  }, []);   // eslint-disable-line react-hooks/exhaustive-deps
   // 옆의 광고 어시스턴트(확장 프로그램)가 읽는 자리: 주소 # 뒤 (서버로 가지 않음)
   useEffect(() => {
+    if (restoring) return;
     const q = new URLSearchParams(settingsKey ? { s: settingsKey } : {});
     if (result) { q.set("code", result.code); q.set("step", (STEPS[step] ?? STEPS[0]).id); }
     const next = `#${q.toString()}`;
     if (window.location.hash !== next) window.history.replaceState(null, "", next === "#" ? window.location.pathname : next);
-  }, [result, step, settingsKey]);
+  }, [result, step, settingsKey, restoring]);
   /** ③ [확장 프로그램으로 보내기]: 옆 패널이 주소의 send를 보고 테스트안을 받는다. 고른 세트당 예산도 같이 (budget). */
   function sendToExtension(budget?: number, days?: number) {
     const q = new URLSearchParams(window.location.hash.slice(1));
@@ -173,7 +188,7 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
       <div className="mx-auto flex max-w-page-wide flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3">
         <p className="flex items-center gap-2 text-lead font-extrabold">
           <span aria-hidden="true" className="grid size-9 shrink-0 place-items-start justify-center overflow-hidden rounded-badge bg-belly"><Mungchi pose="idle" className="mt-1 w-8" /></span>
-          광고 어시스턴트
+          Ad Assistant
         </p>
         <span className="min-w-0 truncate rounded-badge bg-sunk px-3 py-1.5 text-caption text-soft">{file ?? "새 분석"}</span>
         {/* 결과를 지우는 일이라 한 번 묻는다. 최종안: 오른쪽 위 작은 글자 링크 '다른 파일' */}

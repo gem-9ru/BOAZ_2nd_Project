@@ -567,7 +567,7 @@ describe("이름 그대로 자료 없음 · 뺀 말로 다시 · 무리 설명 �
     const f = vi.fn().mockResolvedValue(new Response(JSON.stringify(withSegs), { status: 200 }));
     vi.stubGlobal("fetch", f);
     render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", dropped: ["르뱅쿠키"] }} dispatch={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: "뺀 말을 빼고 손님 다시 보기" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "뺀 말을 빼고 손님 다시 보기" })[0]!);   // 카드 위와 칩 아래 두 곳 (QA F-05)
     expect(f).toHaveBeenCalled();
     expect(JSON.parse((f.mock.calls[0]![1] as RequestInit).body as string).keywords).not.toContain("르뱅쿠키");
   });

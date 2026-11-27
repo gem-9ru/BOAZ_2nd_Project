@@ -5,6 +5,6 @@ import App from "../entrypoints/sidepanel/App";
 describe("side panel", () => {
   it("shows the 광고 어시스턴트 title", () => {
     render(<App />);
-    expect(screen.getByRole("heading", { name: "광고 어시스턴트" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "Ad Assistant" })).toBeTruthy();
   });
 });

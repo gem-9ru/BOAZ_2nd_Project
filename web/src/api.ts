@@ -85,6 +85,8 @@ export const example = (settingsKey?: string | null, name: ExampleName = "ovenlo
 };
 export const simulate = (code: string, arm: string, budget: number, total = 100000, days?: number) =>
   call<Simulation>("/simulate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, budget, total, days }) });
+/** 새로고침했을 때: 주소의 코드로 서버에 남은 결과를 다시 받는다 */
+export const resultByCode = (code: string) => call<Result>(`/analysis/result/${encodeURIComponent(code)}`);
 export const receivedSettings = (key: string) => call<{ count: number }>(`/settings/${encodeURIComponent(key)}`);
 export interface BaselineRow { key: string; label: string; value: number; range: [number, number] | null; standard: string;
   signal: "ok" | "low" | "unknown"; text: string; why: string | null }

@@ -55,15 +55,17 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
   const max = Math.max(...shown.map((s) => s.visits.hi), 1);
   const nt = first?.next_test;
   const who = armName(arm.name, bi);
+  // 아래·위가 같으면 한 값으로 ('1만 원~1만 원' 대신 '1만 원', QA N-04)
+  const perSet = nt ? (nt.per_set_lo === nt.per_set_hi ? won(nt.per_set_lo) : `${won(nt.per_set_lo)}~${won(nt.per_set_hi)}`) : "";
   const roll = nt && (
         <Card title="다음 테스트에 쓸 돈 (Test & Roll)"
           summary={budget >= nt.per_set_lo && budget <= nt.per_set_hi ? `세트당 총 ${won(budget)}이면 최소한은 돼요 · 확실히 알려면 조금 더 필요할 수 있어요`
-            : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${won(nt.per_set_lo)}~${won(nt.per_set_hi)}이 적당해요`}>
+            : `전체 예산이 ${won(nt.total)}이면 세트당 총 ${perSet}이 적당해요`}>
           <label className="flex flex-wrap items-center gap-2 text-body">이번 달 전체 광고 예산
             <input type="number" min={10000} step={10000} value={total} onChange={(e) => setTotal(Number(e.target.value) || 0)}
               className="w-32 rounded-button border border-field-line bg-surface px-2 py-1 tabular-nums" />원
           </label>
-          <p className="text-body">전체 예산의 약 {Math.round(nt.share_lo * 100)}~{Math.round(nt.share_hi * 100)}% · {won(nt.total)}이면 세트당 {won(nt.per_set_lo)}~{won(nt.per_set_hi)}. 나머지는 이긴 쪽에 써요.</p>
+          <p className="text-body">전체 예산의 약 {Math.round(nt.share_lo * 100)}~{Math.round(nt.share_hi * 100)}% · {won(nt.total)}이면 세트당 {perSet}. 나머지는 이긴 쪽에 써요.</p>
         </Card>
   );
   if (part === "roll") return roll || <p className="text-body text-soft">계산하는 중…</p>;

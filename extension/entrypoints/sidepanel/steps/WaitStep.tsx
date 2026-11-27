@@ -39,9 +39,10 @@ export default function WaitStep({ state, dispatch }: { state: FlowState; dispat
       )}
       {running ? (
         <>
+          {/* 끝나기 전엔 작은 글자 버튼: 큰 버튼과 같은 무게면 미리 누르기 쉽다 (QA R-01) */}
           <button type="button" onClick={() => dispatch({ type: "startUpload" })}
-            className="min-h-12 rounded-button border border-accent bg-paper text-body font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-            결과 분석하기
+            className="inline-flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+            그래도 지금 결과 분석하기
           </button>
           <p className="-mt-3 text-caption text-soft">광고가 끝난 뒤 받아야 합계가 맞아요 → {day}부터 눌러 주세요.</p>
         </>

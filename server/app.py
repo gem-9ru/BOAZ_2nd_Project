@@ -72,7 +72,7 @@ async def _guard(request, call_next):
     if request.method == "POST" and size > limit:
         return JSONResponse(status_code=413, content={"error": "보낸 내용이 너무 커요."})
     ip = request.headers.get("cf-connecting-ip")   # Cloudflare 터널로 온 요청만 (내 컴퓨터에서 바로 부르면 없음)
-    counted = (request.method == "POST" and request.url.path in RATE_PATHS) or request.url.path.startswith("/plan/")   # 코드 맞히기도 센다
+    counted = (request.method == "POST" and request.url.path in RATE_PATHS) or request.url.path.startswith(("/plan/", "/analysis/result/"))   # 코드 맞히기도 센다
     if ip and counted:
         now = time.time()
         hits = [t for t in _HITS.get(ip, []) if now - t < 60]
@@ -427,6 +427,15 @@ def simulate_grid(body: GridIn):
     if arm is None:
         raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
     return loop_simulate.grid(arm, body.days)
+
+
+@app.get("/analysis/result/{code}")
+def analysis_result(code: str):
+    """분석 페이지를 새로고침해도 같은 결과·단계로: 주소 #의 코드로 서버에 남은 결과를 다시 받는다 (QA N-06)."""
+    p = _plan(code)
+    if p is None:
+        raise HTTPException(status_code=404, detail="이 결과는 서버에서 지워졌어요. 파일을 다시 올려 주세요.")
+    return {**p, "code": code.upper()}
 
 
 @app.get("/plan/{code}")

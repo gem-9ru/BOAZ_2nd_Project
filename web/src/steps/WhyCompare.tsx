@@ -9,7 +9,7 @@ export function Method({ r }: { r: Result }) {
   const v = r.verdict;
   return (
     <div className="flex flex-col gap-2 text-soft">
-      <p><b className="text-ink">쉽게 말하면:</b> 두 세트의 가능한 범위가 안 겹치면 '확실해요', 겹치면 확률로만 말해요. 판정: 90% 이상 확실해요 · 70~90% A 쪽이에요 또는 B 쪽이에요 · 70% 미만 아직 몰라요.</p>
+      <p><b className="text-ink">쉽게 말하면:</b> B가 나을 확률이 90% 이상이거나 두 세트의 가능한 범위가 안 겹치면 '확실해요'. 70~90% A 쪽이에요 또는 B 쪽이에요 · 70% 미만 아직 몰라요. 큰 판정은 아래 '판정을 낮춘 이유'가 있으면 한 단계 낮춰요.</p>
       {v && <ul className="flex flex-col gap-4">{v.metrics.filter((m) => m.key === "cpc" || m.key === "ctr").map((m) => <MetricRow key={m.key} m={m} />)}</ul>}
       {v?.badge.capped && <p>판정을 낮춘 이유: {v.badge.capped.join(" · ")}</p>}
       <p>계산 방법: 비율은 베타-이항, 돈 대비 횟수는 감마-포아송 분포에서 반복 시뮬레이션으로 뽑아 비교해요 (베이지안). 근거: Lewis & Rao (2015), Scott (2010)</p>
