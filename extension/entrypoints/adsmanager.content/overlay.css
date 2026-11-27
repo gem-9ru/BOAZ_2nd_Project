@@ -38,7 +38,7 @@
 /* 꾸미기안_뭉치 ② 안내 말풍선: 칩 + ✕ · 값 밑줄 · 진행 점 · ◀ / 다 했어요 / 잠깐 멈추기 */
 .coach-hd { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .coach-hd .coach-count { margin: 0; background: var(--coach-chip-bg); color: var(--coach-chip-fg); border-radius: var(--coach-button-radius); padding: 3px 8px; }
-.coach-close { margin-left: auto; width: 28px; height: 28px; border-radius: var(--coach-button-radius); border: 0; display: grid; place-items: center; cursor: pointer;
+.coach-close { margin-left: auto; width: var(--coach-button-min-height); height: var(--coach-button-min-height); border-radius: var(--coach-button-radius); border: 0; display: grid; place-items: center; cursor: pointer;
   font: inherit; font-size: var(--coach-small-font-size); background: var(--coach-ghost-bg); color: var(--coach-ghost-fg); }
 .coach-close:focus-visible { outline: var(--coach-focus-width) solid var(--coach-focus); outline-offset: var(--coach-focus-offset); }
 .coach-text { font-weight: 600; }
