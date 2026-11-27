@@ -70,6 +70,21 @@ describe("CopyStep", () => {
     expect(body.segment.peak_month).toBe(12);
   });
 
+  it("folds picked words into one line after copies come, and puts the confirm button in the chosen card", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: three, source: "claude" }), { status: 200 })));
+    render(<CopyStep state={withMods()} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: /개별포장/ }));
+    fireEvent.click(screen.getByRole("button", { name: "문구 써 주세요" }));
+    await waitFor(() => expect(screen.getAllByRole("radio", { name: /안:/ })).toHaveLength(3));
+    expect(screen.queryByRole("button", { name: /개별포장/ })).toBeNull();   // 칩 묶음은 접힘
+    expect(screen.getByText("개별포장")).toBeTruthy();
+    fireEvent.click(screen.getByRole("radio", { name: "1안: 제목 1" }));
+    const card = screen.getByRole("radio", { name: "1안: 제목 1" }).closest("div.rounded-card")!;
+    expect(card.textContent).toContain("이 문구로 할게요");
+    fireEvent.click(screen.getByRole("button", { name: "고른 말 바꾸기" }));
+    expect(screen.getByRole("button", { name: /개별포장/ }).getAttribute("aria-pressed")).toBe("true");
+  });
+
   it("shows basis under each copy", async () => {
     const withBasis = three.map((c) => ({ ...c, basis: ["개별포장", "선물로 찾는 손님"] }));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({ copies: withBasis, source: "claude" }), { status: 200 })));

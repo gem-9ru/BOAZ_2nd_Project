@@ -43,6 +43,8 @@ export default function CopyStep({ state, dispatch }: Props) {
   const [view, setView] = useState<PreviewKind>(saved?.view ?? "ig");
   const list: Copy[] | null = rounds.length ? rounds.flat() : null;   // 번호(1안·2안…)는 쓴 순서대로
   const [busy, setBusy] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);   // 문구가 나온 뒤엔 고른 말을 한 줄로 접는다 (UX 원칙 6: 필요할 때 나타남)
+  const showPick = !list || pickOpen;
   const [error, setError] = useState<string | null>(null);
   const [choice, setChoice] = useState<Choice>(saved?.choice ?? null);
   const [draft, setDraft] = useState(saved?.draft ?? { headline: "", text: "" });
@@ -128,6 +130,16 @@ export default function CopyStep({ state, dispatch }: Props) {
     }
   }
 
+  // 정하기 버튼은 고른 문구 카드 안에, 고쳐 쓰는 칸 바로 아래 (맨 아래까지 찾아 내려가지 않게)
+  const confirmBlock = choice !== null && (
+    <div className="flex flex-col gap-2">
+      {/* 왜 안 눌리는지를 버튼보다 먼저 (재검토 C) */}
+      {(!headOk || !textOk) && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요 (이 도구가 정한 범위예요)</p>}
+      <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
+      <p className="text-small text-soft">다음: 광고 설정 질문 몇 개에 답하면, 광고 관리자에 넣을 값을 만들어 드려요.</p>
+    </div>
+  );
+
   /** 문구 한 장: 라디오 + 피드 미리 보기 + 근거, 고르면 고쳐 쓰기 칸. */
   function card(c: Copy, i: number) {
     const on = choice === i;
@@ -145,6 +157,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           : <p className="line-clamp-2 text-caption text-soft">{c.primary_text}</p>}
         {c.basis && c.basis.length > 0 && <p className="text-caption text-soft">이 문구에 쓴 말: {c.basis.join(" · ")}</p>}
         {on && <Editor draft={draft} setDraft={setDraft} banned={banned} product={state.product ?? ""} original={{ headline: c.headline, text: c.primary_text }} />}
+        {on && confirmBlock}
       </div>
     );
   }
@@ -167,8 +180,15 @@ export default function CopyStep({ state, dispatch }: Props) {
             className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
         </div>
       )}
-      {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요 (이 도구가 권하는 개수예요). 말 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
-      {hasMods && groups.map((g) => {
+      {!showPick && (
+        <p className="flex items-center gap-2 text-caption">
+          <span><span className="text-soft">고른 말</span> <span className="font-semibold">{all.length ? all.join(" · ") : "없음"}</span></span>
+          <button type="button" onClick={() => setPickOpen(true)}
+            className="min-h-11 shrink-0 rounded-button border border-line bg-paper px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">고른 말 바꾸기</button>
+        </p>
+      )}
+      {showPick && hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요 (이 도구가 권하는 개수예요). 말 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
+      {showPick && hasMods && groups.map((g) => {
         const items = mods.filter((m) => m.group === g);
         if (items.length === 0) return null;
         return (
@@ -178,14 +198,14 @@ export default function CopyStep({ state, dispatch }: Props) {
           </div>
         );
       })}
-      {hasMods && others.length > 0 && (
+      {showPick && hasMods && others.length > 0 && (
         <div className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-soft">{OTHER}</span>
           {chips(others)}
           <p className="text-small text-soft">다른 가게·브랜드 이름이 보이면 고르지 마세요. 문구에 그대로 들어가요.</p>
         </div>
       )}
-      <div className="flex flex-col gap-2">
+      {showPick && <div className="flex flex-col gap-2">
         <label htmlFor="strengths" className="text-caption text-soft">{hasMods ? "직접 적기" : "상품의 좋은 점"}</label>
         <input
           id="strengths"
@@ -193,7 +213,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           onChange={(e) => setStrengths(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addTyped(); } }}
           aria-describedby="strengths-help"
-          placeholder={hasMods ? "예: 버터 듬뿍 (적고 엔터)" : "예: 버터 듬뿍 (적고 엔터)"}
+          placeholder="예: 버터 듬뿍 (적고 엔터)"
           className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
         />
         <p id="strengths-help" className="text-caption text-soft">적고 엔터를 누르면 고른 말로 붙어요. 쉼표로 여러 개 적어도 돼요.</p>
@@ -210,7 +230,7 @@ export default function CopyStep({ state, dispatch }: Props) {
           </ul>
         )}
         {error && !list && <ErrorLine message={error} onRetry={write} />}
-      </div>
+      </div>}
       {!list && choice === null && last && (
         <div className="flex flex-col gap-2 rounded-card border border-dashed border-line px-4 py-3">
           <span className="text-caption font-semibold text-soft">지난번 고른 문구 ({last.day})</span>
@@ -305,6 +325,7 @@ export default function CopyStep({ state, dispatch }: Props) {
               <>
                 <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
                 <Editor draft={draft} setDraft={setDraft} banned={banned} product={state.product ?? ""} />
+                {confirmBlock}
               </>
             )}
           </div>
@@ -315,15 +336,8 @@ export default function CopyStep({ state, dispatch }: Props) {
           <strong className="text-body">직접 쓰기</strong>
           <Preview name={shop} draft={draft} photo={photo} setPhoto={setPhoto} view={view} setView={setView} />
           <Editor draft={draft} setDraft={setDraft} banned={banned} product={state.product ?? ""} />
+          {confirmBlock}
           <button type="button" onClick={() => setChoice(null)} className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">← 문구를 써 달라고 할게요</button>
-        </div>
-      )}
-      {choice !== null && (
-        <div className="flex flex-col gap-2">
-          {/* 왜 안 눌리는지를 버튼보다 먼저 (재검토 C) */}
-          {(!headOk || !textOk) && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요 (이 도구가 정한 범위예요)</p>}
-          <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
-          <p className="text-small text-soft">다음: 광고 설정 질문 몇 개에 답하면, 광고 관리자에 넣을 값을 만들어 드려요.</p>
         </div>
       )}
       {list && (

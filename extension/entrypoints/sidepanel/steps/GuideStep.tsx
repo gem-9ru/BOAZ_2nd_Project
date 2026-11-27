@@ -180,7 +180,7 @@ export default function GuideStep({ state, dispatch }: Props) {
                   <span className="flex items-center gap-1.5">
                     {away && i >= 0 && i < index
                       ? <button type="button" onClick={() => void goTo(i)} className="min-h-11 text-left text-soft underline decoration-dotted" aria-label={`${label}: 뭉치를 이 칸으로 보내기`}>{label}<span className="sr-only"> (끝남)</span></button>
-                      : <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>}
+                      : <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : done ? "text-soft line-through" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>}
                     {now && !publish && <span className="rounded-badge bg-accent px-1.5 text-small font-bold text-on-accent">지금</span>}
                     {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
                     {s.value && <span className={`ml-auto max-w-48 truncate text-right font-semibold ${now ? "text-accent" : "text-ink"}`}>{shownDates(s.value)}</span>}
@@ -206,13 +206,23 @@ export default function GuideStep({ state, dispatch }: Props) {
           <button type="button" onClick={() => dispatch({ type: "openPrep" })} className="self-start font-semibold underline">준비물 다시 보기</button>
         </div>
       )}
-      {!away && <div className="flex flex-col gap-2">
-        {/* 로그인을 기다리는 동안은 다시 누르지 못하게: 기다림이 두 번 돌면 뭉치를 두 번 부르거나 늦게 오류가 뜬다 (화면 검토 10) */}
-        <PrimaryButton onClick={open} busy={busy} disabled={login || (mode === "create" && (state.prepMissing?.length ?? 0) > 0)}>
-          {login ? "로그인을 기다리는 중…" : <>광고 관리자 열기 <span aria-hidden="true" className="opacity-80">↗</span></>}
-        </PrimaryButton>
-        <p className="text-center text-small text-soft">어시스턴트는 결제·게시를 대신 누르지 않아요</p>
-      </div>}
+      {away && <p className="text-small text-soft">지난 칸 이름을 누르면 뭉치가 그 칸으로 가요.</p>}
+      {/* 설계서 EX-01 ⑥: 뭉치가 광고 관리자에 나가 있으면 [이전 칸][다음 칸], 아니면 [광고 관리자 열기] 하나만.
+          긴 칸 목록 아래로 밀려 안 보이지 않게 패널 아래에 붙여 둔다 */}
+      <div className="sticky bottom-0 z-10 flex flex-col gap-2 bg-cream py-2">
+        {!away ? <>
+          {/* 로그인을 기다리는 동안은 다시 누르지 못하게: 기다림이 두 번 돌면 뭉치를 두 번 부르거나 늦게 오류가 뜬다 (화면 검토 10) */}
+          <PrimaryButton onClick={open} busy={busy} disabled={login || (mode === "create" && (state.prepMissing?.length ?? 0) > 0)}>
+            {login ? "로그인을 기다리는 중…" : <>광고 관리자 열기 <span aria-hidden="true" className="opacity-80">↗</span></>}
+          </PrimaryButton>
+          <p className="text-center text-small text-soft">어시스턴트는 결제·게시를 대신 누르지 않아요</p>
+        </> : <div className="flex gap-2">
+          <button type="button" onClick={() => void move(-1)} disabled={index === 0}
+            className="min-h-11 flex-1 rounded-button border border-line bg-paper py-2 text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">이전 칸</button>
+          <button type="button" onClick={() => void move(1)} disabled={index >= total}
+            className="min-h-11 flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">다음 칸</button>
+        </div>}
+      </div>
       {mode === "export" && (
         // 뭉치 없이 파일을 받았거나 뭉치를 닫았어도 다음 화면(분석 페이지 열기·코드 넣기)으로 갈 수 있게 (화면 검토 22)
         <button type="button" onClick={() => dispatch({ type: "closeExport" })} className="min-h-11 self-start text-label text-accent-ink underline">← 파일을 받았어요 · 돌아가기</button>
@@ -221,14 +231,6 @@ export default function GuideStep({ state, dispatch }: Props) {
         // 다음 테스트를 누른 뒤 마음이 바뀌면: 지난 세팅·날짜·금액으로 되돌리고 결과 화면으로
         <button type="button" onClick={() => dispatch({ type: "backToPlan" })} className="min-h-11 self-start text-label text-accent-ink underline">← 결과 화면으로 돌아가기</button>
       )}
-      {/* 설계서 EX-01 ⑥: 뭉치가 광고 관리자에 나가 있으면 [이전 칸][다음 칸], 아니면 [광고 관리자 열기] 하나만 */}
-      {away && <p className="text-small text-soft">지난 칸 이름을 누르면 뭉치가 그 칸으로 가요.</p>}
-      {away && <div className="flex gap-2">
-        <button type="button" onClick={() => void move(-1)} disabled={index === 0}
-          className="min-h-11 flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">이전 칸</button>
-        <button type="button" onClick={() => void move(1)} disabled={index >= total}
-          className="min-h-11 flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">다음 칸</button>
-      </div>}
       {away && (
         // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
         <button type="button" onClick={open} disabled={busy || login} className="min-h-11 self-start text-label text-accent-ink underline disabled:text-disabled-fg disabled:no-underline">{login ? "로그인을 기다리는 중…" : "뭉치 다시 부르기"}</button>

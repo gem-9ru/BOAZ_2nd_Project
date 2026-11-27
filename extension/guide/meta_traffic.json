@@ -52,7 +52,7 @@
     "labelledBy": "카테고리"
    }
   ],
-  "say": "특별 광고 카테고리예요. 해당 없으면 비워 두고 넘어가요 ({value})",
+  "say": "특별 광고 카테고리예요. ② 세팅에서 '{value}'라고 하셨어요 → 비워 두고 넘어가요.",
   "done": "manual",
   "fallback": {
    "image": "guide/meta.campaign.special_category.png",

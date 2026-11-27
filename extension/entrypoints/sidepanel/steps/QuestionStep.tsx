@@ -8,6 +8,8 @@ const REQUIRED_TEXT = new Set(["meta.ad.website_url"]);
 /** 글자 버튼(이전·다시 고르기·나중에)도 손가락으로 누를 수 있게 높이 44px */
 export const TEXT_BUTTON = "inline-flex min-h-11 items-center self-start text-caption text-soft underline";
 /** 돈과 바로 이어지는 질문: 설명을 본문 크기·진한 글자로 (작은 회색 글씨에 숨기지 않음) */
+/** 보기 버튼 (키보드로 옮길 때 초점이 보이게) */
+const OPTION = "rounded-button border border-line px-4 py-3 text-left text-body focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 const MONEY = new Set(["meta.adset.lifetime_budget", "meta.pre.payment"]);
 /** 글자 칸 이름·예시 (메타 화면 이름 대신 사장님 말로) */
 const INPUT: Record<string, { label: string; placeholder: string }> = {
@@ -219,26 +221,28 @@ export function Question({ field, answers, prev = {}, keywords, checked, onCheck
         <div className="flex flex-col gap-2">
           {field.options.map((o) => {
             const short = least > 0 && (parseWon(o) ?? Infinity) < least;   // 이 기간엔 광고가 안 나갈 수 있는 금액
+            const before = was !== undefined && (was === o || field.answer_as?.[o] === was);   // [② 답 바꾸기]로 돌아왔을 때 지난번 답
             return (
               <button
                 key={o}
                 type="button"
                 onClick={() => pick(o)}
-                className="rounded-button border border-line px-4 py-3 text-left text-body"
+                className={OPTION}
               >
                 {o}
+                {before && <span className="block text-caption text-ink">✓ 지난번 답</span>}
                 {o === recommended && !short && <span className="block text-caption text-accent-ink">권장</span>}
                 {short && <span className="block text-caption font-normal text-warn"><span aria-hidden="true">▲ </span><span className="sr-only">주의 </span>{days}일 동안 쓰기엔 적어요</span>}
               </button>
             );
           })}
           {field.custom === "won" && (
-            <button type="button" onClick={() => setMoney(true)} className="rounded-button border border-line px-4 py-3 text-left text-body">
+            <button type="button" onClick={() => setMoney(true)} className={OPTION}>
               금액 직접 넣기
             </button>
           )}
           {field.custom === "dates" && (
-            <button type="button" onClick={() => setDates(true)} className="rounded-button border border-line px-4 py-3 text-left text-body">
+            <button type="button" onClick={() => setDates(true)} className={OPTION}>
               날짜 직접 정하기
             </button>
           )}

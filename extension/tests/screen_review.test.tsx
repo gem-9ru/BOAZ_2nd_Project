@@ -160,6 +160,14 @@ describe("A. 답을 다시 정하는 길", () => {
     expect((screen.getByLabelText(/총예산/) as HTMLInputElement).value).toBe("25000");
   });
 
+  it("[② 답 바꾸기]로 돌아오면 보기에서 고른 지난번 답에 표시", () => {
+    const s = reduce({ ...initialState(), answers: { "meta.adset.end_date": "7일" } }, { type: "unanswer", id: "meta.adset.end_date" });
+    const field = (fieldsJson as never as { id: string }[]).find((f) => f.id === "meta.adset.end_date") as never;
+    render(<Question field={field} answers={s.answers} prev={s.prevAnswers} keywords={[]} checked={[]} onCheck={() => {}} onAnswer={() => {}} />);
+    expect(screen.getByRole("button", { name: /7일/ }).textContent).toContain("지난번 답");
+    expect(screen.getByRole("button", { name: /14일/ }).textContent).not.toContain("지난번 답");
+  });
+
   it("18. 다음 테스트가 '일일 예산'을 바꾸라 해도 총예산 칸을 새 금액으로", () => {
     const base = { ...initialState(), settings: [...settings, { fieldId: "meta.adset.lifetime_budget", label: "총예산", value: "3만 원" }] };
     const s = reduce(base, { type: "startNextTest", fieldId: "meta.adset.daily_budget", label: "예산", value: "총예산을 넉넉하게", budget: "5만 원" });
