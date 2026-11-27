@@ -4,7 +4,7 @@ import { NEST_EXIT_MS } from "../../../lib/character3d/motion";
 
 function homeSize(): number {
   const v = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--character-home-size"));
-  return Number.isFinite(v) ? v : 40;
+  return Number.isFinite(v) ? v : 48;
 }
 
 const AWAY = "뭉치가 광고 관리자에서 안내하고 있어요";

@@ -74,7 +74,10 @@ export default function App() {
   return (
     <main className="min-h-screen flex flex-col gap-6 pb-4">
       {/* 꾸미기안_뭉치: 보라 머리(아래만 둥글게) · 뭉치 얼굴(집) · 이름과 한 줄 소개 · 알약 모양 단계 */}
-      <header className="rounded-b-card bg-linear-135 from-accent to-accent-ink px-4 pt-4 pb-3.5 text-on-accent">
+      <header className="relative isolate overflow-hidden rounded-b-sheet bg-linear-135 from-accent to-accent-ink px-4 pt-4 pb-3.5 text-on-accent">
+        {/* 꾸미기안 .top: 오른쪽 위·아래 옅은 흰 동그라미 무늬 (장식) */}
+        <span aria-hidden="true" className="absolute top-[-10%] left-[88%] -z-10 size-30 -translate-x-1/2 -translate-y-1/2 rounded-badge bg-on-accent/20" />
+        <span aria-hidden="true" className="absolute top-[120%] left-[70%] -z-10 size-35 -translate-x-1/2 -translate-y-1/2 rounded-badge bg-on-accent/10" />
         <div className="flex items-center gap-2.5">
           <HomeSeat away={Boolean(state.guide?.away)} />
           <div className="min-w-0">

@@ -1,9 +1,15 @@
 import type { ReactNode } from "react";
+import wave from "../../../assets/mungchi/wave.png";
 
-/** 광고 어시스턴트가 하는 말 한 덩어리: 흰 말풍선 (꾸미기안_뭉치 .say).
- *  뭉치 그림은 붙이지 않는다 — 헤더 '뭉치 집'에 늘 있어서 붙이면 한 화면에 두 마리가 된다. */
+/** 광고 어시스턴트가 하는 말 한 덩어리: 손 흔드는 뭉치 + 흰 말풍선 (꾸미기안_뭉치 .say · .bub: 왼쪽 아래만 각진 16px, 굵은 말은 보라).
+ *  그림은 장식이라 읽지 않는다. 글자는 꾸미기안 13.5px 대신 본문 토큰(가독성). */
 export function Coach({ children }: { children: ReactNode }) {
-  return <div className="rounded-card border-2 border-line bg-paper px-3.5 py-3 text-body leading-relaxed">{children}</div>;
+  return (
+    <div className="flex items-end gap-2.5">
+      <img src={wave} alt="" aria-hidden="true" draggable={false} className="w-14 shrink-0 select-none" />
+      <div className="rounded-button rounded-bl-mark border-[1.5px] border-line bg-paper px-3.5 py-3 text-body leading-relaxed [&_b]:text-accent">{children}</div>
+    </div>
+  );
 }
 
 /** 화면 맨 아래 큰 버튼 하나. */
