@@ -26,7 +26,7 @@ export function Conclusion({ r, onPrep }: { r: Result; onPrep: () => void }) {
         <span aria-hidden="true" className="absolute top-4 right-36 rounded-button rounded-br-mark bg-accent-soft px-3 py-1.5 text-caption font-bold text-accent max-sm:hidden">여기예요!</span>
         <Mungchi pose="point" className="absolute right-5 bottom-3 w-40 max-sm:hidden" />
         <p className="rounded-badge bg-accent-faint px-2.5 py-1 text-caption font-bold text-accent">{c.path ?? c.label}</p>
-        <p className="flex flex-wrap items-center gap-2 text-title font-extrabold leading-snug">{headline(c)} <TestTag text={c.tag ?? "테스트 제안"} /></p>
+        <p className="flex flex-wrap items-center gap-2 text-headline font-extrabold leading-snug">{headline(c)} <TestTag text={c.tag ?? "테스트 제안"} /></p>
         <p className="text-body leading-relaxed">{boldPct(c.reason ?? c.note)}</p>
         {c.unknown && <p className="text-label text-soft">{c.unknown}</p>}
         <div className="pt-3"><BigButton onClick={onPrep}>이 테스트 준비하기 →</BigButton></div>

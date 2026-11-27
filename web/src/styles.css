@@ -59,6 +59,7 @@
   --text-body: var(--primitive-font-size-body);
   --text-lead: var(--primitive-font-size-lead);
   --text-title: var(--primitive-font-size-title);
+  --text-headline: var(--primitive-font-size-headline);
   --text-number: var(--primitive-font-size-number);
   --text-hero: var(--primitive-font-size-hero);
   --text-hero-sm: var(--primitive-font-size-hero-sm);
@@ -93,6 +94,7 @@
   --shadow-press-sm: var(--elevation-press-sm);
   --shadow-cta: var(--elevation-cta);
   --radius-soft: var(--primitive-radius-soft);
+  --radius-sheet: var(--drop-radius);
 }
 
 /* 한국어는 단어 중간에서 끊지 않는다 (휴대폰에서 '돌/려'처럼 끊기던 문제) */

@@ -35,7 +35,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
           onDragOver={(e) => { e.preventDefault(); setOver(true); }}
           onDragLeave={() => setOver(false)}
           onDrop={(e) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files?.[0]; if (f && !busy) onFile(f); }}
-          className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-card border-2 border-dashed px-6 pt-8 pb-7 text-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus ${over ? "border-accent bg-accent-soft" : "border-accent-line bg-surface"}`}>
+          className={`flex cursor-pointer flex-col items-center justify-center gap-1 rounded-sheet border-2 border-dashed px-6 pt-8 pb-7 text-center focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-focus ${over ? "border-accent bg-accent-soft" : "border-accent-line bg-surface"}`}>
           <Mungchi pose="wave" className="w-28" />
           <span className="mt-1 text-title font-extrabold">광고 결과 파일(CSV)을 여기로 끌어다 놓기</span>
           <span className="text-label text-soft">광고 관리자 › 보고서에서 받은 파일 그대로요</span>

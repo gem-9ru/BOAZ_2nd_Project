@@ -36,8 +36,8 @@ export function ProbBar({ p }: { p: number }) {
     <div aria-hidden="true" className="flex flex-col gap-1">
       <div className="relative h-3 rounded-badge bg-sunk">
         <div className="absolute inset-y-0 left-0 rounded-badge bg-series-b" style={{ width: `${p * 100}%` }} />
-        <div className="absolute -inset-y-1 border-l border-dashed border-ink" style={{ left: "70%" }} />
-        <div className="absolute -inset-y-1 border-l border-dashed border-ink" style={{ left: "90%" }} />
+        <div className="absolute -inset-y-1 border-l-2 border-dashed border-belly-strong" style={{ left: "70%" }} />
+        <div className="absolute -inset-y-1 border-l-2 border-dashed border-belly-strong" style={{ left: "90%" }} />
       </div>
       {/* 점선 바로 아래에 기준 숫자 (설명 문장까지 내려가지 않아도 읽히게) */}
       <div className="relative h-4 text-small text-soft tabular-nums">
