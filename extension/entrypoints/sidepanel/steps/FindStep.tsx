@@ -345,6 +345,10 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
   const manual = !!selected && !selected.audience;
   const manualMissing = manual && (!age || !gender);
   const ready = !!selected && kept.length > 0 && !manualMissing;
+  // 버튼이 꺼진 이유는 지금 할 것 한 줄만 (검색어 → 손님 → 나이·성별 순)
+  const todo = kept.length === 0 ? "검색어를 하나 이상 남겨 주세요."
+    : !selected ? "광고를 보여 줄 손님을 하나 골라 주세요."
+    : manualMissing ? "보여 줄 나이와 성별을 골라 주세요." : null;
 
   // 검색어 칩: 손님 무리 아래에 접어 둔다 (무리가 없을 때·뺀 말이 있을 때는 펼침)
   const words = (
@@ -441,9 +445,7 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
           )}
           {words}
           <div className="flex flex-col gap-2">
-            {kept.length === 0 && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 검색어를 하나 이상 남겨 주세요.</p>}
-            {!selected && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 광고를 보여 줄 손님을 하나 골라 주세요.</p>}
-            {manualMissing && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 보여 줄 나이와 성별을 골라 주세요.</p>}
+            {todo && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {todo}</p>}
             {ready && target && (
               <p className="rounded-button bg-sunk px-3 py-2 text-caption">
                 광고 관리자에는 <span className="font-semibold">{targetLine(target)}</span>{euro(targetLine(target))} 넣고, 검색어 {kept.length}개는 ② 문구에 써요.
@@ -475,7 +477,11 @@ function NoData({ notice, product, keywords = [], dispatch, suggestions = [], on
 
   return (
     <div className="flex flex-col gap-4">
-      <Coach>{notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.</Coach>
+      {/* 말풍선(뭉치)은 화면 첫 말에만: 여기는 참고 상자 (꾸미기안 .say 한 번) */}
+      <p role="status" className="rounded-soft border-[1.5px] border-info-line bg-info-bg px-3 py-2 text-caption text-info-ink">
+        <span aria-hidden="true" className="font-bold text-info">● </span><span className="sr-only">참고 </span>
+        {notice} 아니면 누구에게 보여 줄지 직접 정하고 넘어가도 돼요.
+      </p>
       {onTry && suggestions.length > 0 && (
         <div className="flex flex-col gap-2">
           <span className="text-caption font-semibold text-soft">이 말로 다시 찾아볼까요?</span>

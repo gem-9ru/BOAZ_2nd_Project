@@ -131,6 +131,14 @@ describe("FindStep", () => {
     expect(screen.getByText(/검색어를 하나 이상 남겨 주세요/)).toBeTruthy();
   });
 
+  it("shows only one ▲ reason at a time (keywords first, then the segment)", () => {
+    const { rerender } = render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", dropped: withSegs.keywords.map((k) => k.keyword) }} dispatch={() => {}} />);
+    expect(screen.getByText(/검색어를 하나 이상 남겨 주세요/)).toBeTruthy();
+    expect(screen.queryByText(/손님을 하나 골라 주세요/)).toBeNull();
+    rerender(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={() => {}} />);
+    expect(screen.getByText(/손님을 하나 골라 주세요/)).toBeTruthy();
+  });
+
   it("labels each age bar with its share", () => {
     render(<FindStep state={{ ...initialState(), research }} dispatch={() => {}} />);
     expect(screen.getByText("34%")).toBeTruthy();
