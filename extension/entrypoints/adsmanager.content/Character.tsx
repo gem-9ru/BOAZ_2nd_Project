@@ -201,7 +201,7 @@ export function Character({ view, onDone, onBack, onClose, onToggleAuto, onArriv
               )}
             </div>
             {firstAsk && <p className="coach-note">[자동 진행]을 누르면 뭉치가 칸을 차례로 채워요. 게시는 하지 않아요.</p>}
-            {view.publish && <p className="coach-note">캐릭터는 게시 버튼을 누르지 않아요.</p>}
+            {view.publish && <p className="coach-note">뭉치는 게시 버튼을 누르지 않아요.</p>}
             {keepOthers && <p className="coach-note">흐리게 보이는 나머지 칸은 지난번 그대로 두세요. 두 세트가 이 칸 하나만 달라야 비교할 수 있어요.</p>}
           </div>
         </div>

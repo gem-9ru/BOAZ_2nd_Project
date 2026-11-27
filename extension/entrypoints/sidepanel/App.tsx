@@ -47,6 +47,8 @@ export default function App() {
   useEffect(() => {
     const onChanged = (changes: Record<string, { newValue?: unknown }>) => {
       const next = changes[STATE_KEY]?.newValue as FlowState | undefined;
+      // 더 옛 차례(rev)의 쓰기가 늦게 도착하면 무시: [처음부터] 직후 배경의 옛 진행이 지운 상태를 되살리지 않게 (재검토 B12)
+      if (next && (next.rev ?? 0) < (latest.current.rev ?? 0)) return;
       if (next && JSON.stringify(next) !== JSON.stringify(latest.current)) dispatch({ type: "__load", state: next });
     };
     browser.storage.onChanged.addListener(onChanged);
@@ -65,23 +67,24 @@ export default function App() {
   // 광고가 끝났으면(종료일 다음 날부터) 기다리기 화면도 ③ 분석 차례로 + ③에 점 (설계서 EX-02 ①, 화면 검토 24)
   const end = state.endDate?.slice(0, 10);
   const ended = state.step === "wait" && Boolean(end) && new Date(`${end}T23:59:59`) < new Date();
-  const current = analysis || ended ? 2 : STAGES.findIndex((st) => st.steps.includes(state.step));
+  // 분석 탭을 보고 있어도 아직 광고를 안 켰으면(찾기·세팅) 그 단계 그대로 (재검토 B11)
+  const late = ["wait", "upload", "plan"].includes(state.step);
+  const current = (analysis && late) || ended ? 2 : STAGES.findIndex((st) => st.steps.includes(state.step));
 
   return (
     <main className="min-h-screen flex flex-col gap-6 pb-4">
       {/* 꾸미기안_뭉치: 보라 머리(아래만 둥글게) · 뭉치 얼굴(집) · 이름과 한 줄 소개 · 알약 모양 단계 */}
       <header className="rounded-b-card bg-linear-135 from-accent to-accent-ink px-4 pt-4 pb-3.5 text-on-accent">
         <div className="flex items-center gap-2.5">
-          <span className="grid size-12 shrink-0 place-items-center rounded-badge bg-belly ring-3 ring-on-accent/35">
-            <HomeSeat away={Boolean(state.guide?.away)} />
-          </span>
+          <HomeSeat away={Boolean(state.guide?.away)} />
           <div className="min-w-0">
             <h1 className="text-title font-extrabold tracking-tight">광고 어시스턴트</h1>
-            <p className="text-small opacity-80">메타 광고, 한 칸씩 같이 채워요</p>
+            <p className="text-small">메타 광고, 한 칸씩 같이 채워요</p>
           </div>
           {state.step !== "find" && state.step !== "prep" && (
             <button type="button" onClick={() => { if (window.confirm("처음부터 다시 할까요? 지금까지 답한 내용이 지워져요.")) { forgetCopyWork(); dispatch({ type: "reset" }); } }}
-              className="ml-auto min-h-8 shrink-0 rounded-badge bg-on-accent/15 px-2.5 text-small font-semibold">
+              title="지금까지 답한 내용이 모두 지워져요"
+              className="ml-auto min-h-11 shrink-0 rounded-badge bg-on-accent/15 px-3 text-small font-semibold">
               ↺ 처음부터
             </button>
           )}
@@ -91,7 +94,7 @@ export default function App() {
             <li
               key={st.label}
               aria-current={i === current ? "step" : undefined}
-              className={`flex-1 rounded-badge py-1.5 text-center font-semibold ${i === current ? "bg-paper text-accent" : i < current ? "opacity-95" : "opacity-75"}`}
+              className={`flex-1 rounded-badge py-1.5 text-center font-semibold ${i === current ? "bg-paper text-accent" : i < current ? "" : "font-medium"}`}
             >
               {i < current ? `✓ ${st.label}` : `${"①②③"[i]} ${st.label}`}
               {i === 2 && ended && <><span aria-hidden="true" className="ml-1 text-warn-mark">●</span><span className="sr-only"> 결과를 볼 때예요</span></>}

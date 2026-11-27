@@ -12,7 +12,11 @@ export async function loadState(): Promise<FlowState> {
   const { result: _old, ...rest } = saved;
   // 없어진 수정 모드('fix')로 저장돼 있으면 결과 화면으로
   const step = saved.step === "result" ? "upload" : saved.step === "fix" ? "plan" : saved.step;
-  return { ...initialState(), ...rest, step } as FlowState;
+  // 'fix'는 수정 안내(guide edit)가 같이 저장돼 있었다 → 닫아야 결과 화면 하나만 나온다 (재검토 A2)
+  const guide = saved.step === "fix" ? null : rest.guide;
+  // 결제 카드는 2026-11-27부터 필수가 아니다 → 그 전에 저장된 '빠진 것' 목록에서 뺀다 (안 그러면 [광고 관리자 열기]가 계속 막힘, 재검토 A1)
+  const prepMissing = rest.prepMissing?.filter((name) => name !== "광고 계정 결제 수단");
+  return { ...initialState(), ...rest, step, guide, prepMissing } as FlowState;
 }
 
 /** 저장. 저장소에 더 새 차례(rev)가 있으면 그건 배경 스크립트가 쓴 뭉치 진행이다 → 진행(guide·step)은 저장소 것을 지키고 나머지는 이 상태로 */

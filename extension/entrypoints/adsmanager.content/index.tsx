@@ -78,7 +78,7 @@ export default defineContentScript({
       ui.mount();
       const total = msg.steps.length;
       guide = new Guide(document, msg.steps, msg.startIndex ?? 0, (index) => {
-        void browser.runtime.sendMessage({ type: "guide:progress", index, total } satisfies GuideMsg).catch(() => {});
+        void browser.runtime.sendMessage({ type: "guide:progress", index, total, sig: msg.sig } satisfies GuideMsg).catch(() => {});
         render();
       });
       guide.followBuddy();   // 뭉치가 칸에 도착한 뒤에 누르고 넣는다

@@ -11,17 +11,20 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("분석 페이지 주소 읽기", () => {
   it("reads code and step after # only on the analysis page", () => {
-    expect(parseAnalysisUrl("http://localhost:8000/analysis#s=K&code=AB12&step=AN-02")).toEqual({ code: "AB12", step: "AN-02", send: null, budget: null });
-    expect(parseAnalysisUrl("http://localhost:8000/analysis")).toEqual({ code: null, step: null, send: null, budget: null });
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#s=K&code=AB12&step=AN-02")).toEqual({ code: "AB12", step: "AN-02", send: null, budget: null, days: null });
+    expect(parseAnalysisUrl("http://localhost:8000/analysis")).toEqual({ code: null, step: null, send: null, budget: null, days: null });
     // 공개 주소 ad-report.gem-9ru.com (분석 페이지 전용 주소, 2026-11-26)
-    expect(parseAnalysisUrl("https://ad-report.gem-9ru.com/analysis#code=AB12&step=AN-01")).toEqual({ code: "AB12", step: "AN-01", send: null, budget: null });
+    expect(parseAnalysisUrl("https://ad-report.gem-9ru.com/analysis#code=AB12&step=AN-01")).toEqual({ code: "AB12", step: "AN-01", send: null, budget: null, days: null });
     expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&step=AN-06&send=17")!.send).toBe("17");
     expect(parseAnalysisUrl("https://adsmanager.facebook.com/adsmanager#code=AB12")).toBeNull();
     // ③에서 고른 세트당 예산: 숫자·범위(1천 원~1천만 원)만 받는다
     expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&step=AN-06&send=17&budget=10000")!.budget).toBe(10000);
     expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&budget=12.5")!.budget).toBeNull();
     expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&budget=99999999999")!.budget).toBeNull();
-    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=<x>&step=AN-09")).toEqual({ code: null, step: null, send: null, budget: null });
+    // ③에서 고른 기간: 1~30일 정수만
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=AB12&step=AN-06&send=17&days=7")!.days).toBe(7);
+    for (const bad of ["0", "31", "1.5", "99", "x"]) expect(parseAnalysisUrl(`http://localhost:8000/analysis#code=AB12&days=${bad}`)!.days).toBeNull();
+    expect(parseAnalysisUrl("http://localhost:8000/analysis#code=<x>&step=AN-09")).toEqual({ code: null, step: null, send: null, budget: null, days: null });
   });
 });
 
@@ -29,7 +32,7 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
   it("before upload (AN-00) it greets and explains the export without calling the server", () => {
     const f = vi.fn(); vi.stubGlobal("fetch", f);
     const { rerender } = render(<AnalysisAssistant tab={{ tabId: 1, code: null, step: null, send: null }} dispatch={() => {}} flowStep="wait" />);
-    expect(screen.getByText(/왼쪽 분석 페이지에 결과 파일\(CSV\)을 올려 주세요/)).toBeTruthy();   // 할 일 한 줄
+    expect(screen.getByText(/결과 파일\(CSV\)을 올리고 \[분석 시작 ▶\]을 눌러요/)).toBeTruthy();   // 할 일 한 줄
     expect(screen.getByRole("button", { name: /광고 관리자에서 내보내기 짚어 주기/ })).toBeTruthy();
     // 광고를 만들기 전(① 찾기)에는 내보내기 안내를 띄우지 않는다 (찾기 화면과 겹치지 않게)
     rerender(<AnalysisAssistant tab={{ tabId: 1, code: null, step: null, send: null }} dispatch={() => {}} flowStep="find" />);
@@ -103,16 +106,47 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "124", budget: 10000 }} dispatch={dispatch} />);
     await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: { ...plan, change: { ...plan.change, per_set: 10000 } }, sent: "124" }));
   });
+
+  it("the period picked on ③ (days in the address) replaces the plan's days, and the card shows amount · days", async () => {
+    const plan = { code: "AB12", action: "한 번 더", change: { field_id: "meta.ad.media", label: "형식·미디어", new: "세로", note: "n", path: "광고 › 형식·미디어", per_set: 6000, days: 4 }, summary: [], badge: null };
+    vi.stubGlobal("fetch", vi.fn((u: string) => ok(String(u).includes("/plan/") ? plan : { message: "m", suggestions: [] })));
+    const dispatch = vi.fn();
+    const tab = { tabId: 1, code: "AB12", step: "AN-06", send: "125", budget: 10000, days: 7 };
+    const { rerender } = render(<AnalysisAssistant tab={tab} dispatch={dispatch} />);
+    const got = { ...plan, change: { ...plan.change, per_set: 10000, days: 7 } };
+    await waitFor(() => expect(dispatch).toHaveBeenCalledWith({ type: "planLoaded", plan: got, sent: "125" }));
+    rerender(<AnalysisAssistant tab={tab} dispatch={dispatch} handled="125" plan={got as never} />);
+    expect(screen.getByRole("region", { name: "받은 바꿀 칸" }).textContent).toContain("세트당 10,000원 · 7일");
+  });
 });
 
 describe("사이드 패널이 지금 탭을 따라간다", () => {
+  it("App passes the flow step: the export button shows while waiting, not on the result screen", async () => {
+    const { default: App } = await import("../entrypoints/sidepanel/App");
+    const { STATE_KEY } = await import("../lib/storage");
+    const { initialState } = await import("../lib/flow");
+    vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 9, active: true, url: "http://localhost:8000/analysis" }] as never);
+    await fakeBrowser.storage.local.set({ [STATE_KEY]: { ...initialState(), step: "wait", endDate: "2020-01-01" } });
+    const { unmount } = render(<App />);
+    expect(await screen.findByRole("button", { name: /광고 관리자에서 내보내기 짚어 주기/ })).toBeTruthy();
+    unmount();
+    await fakeBrowser.storage.local.set({ [STATE_KEY]: { ...initialState(), step: "plan" } });
+    render(<App />);
+    expect(await screen.findByText(/\[분석 시작 ▶\]을 눌러요/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /내보내기 짚어 주기/ })).toBeNull();
+  });
+
   it("when the active tab is the analysis page, the panel becomes its assistant (③ 분석)", async () => {
     const { default: App } = await import("../entrypoints/sidepanel/App");
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "AN-03 요약", suggestions: [] })));
     vi.spyOn(fakeBrowser.tabs, "query").mockResolvedValue([{ id: 9, active: true, url: "http://localhost:8000/analysis#code=AB12&step=AN-03" }] as never);
+    // 광고를 켠 뒤(wait)라야 머리 단계가 ③ (광고 전에는 분석 탭이어도 그 단계 그대로, 재검토 B11)
+    const { STATE_KEY } = await import("../lib/storage");
+    const { initialState } = await import("../lib/flow");
+    await fakeBrowser.storage.local.set({ [STATE_KEY]: { ...initialState(), step: "wait" } });
     render(<App />);
     expect(await screen.findByRole("region", { name: "분석 페이지 어시스턴트" })).toBeTruthy();
     expect(await screen.findByText("AN-03 요약")).toBeTruthy();
-    expect(screen.getByText(/③ 분석/).getAttribute("aria-current")).toBe("step");
+    await waitFor(() => expect(screen.getByText(/③ 분석/).getAttribute("aria-current")).toBe("step"));
   });
 });

@@ -81,7 +81,7 @@ export class Guide {
   private behindDialog = false;
   /** 돈 확인을 통과한 광고 세트 id → 통과한 돈 확인 칸 번호 (다음 테스트의 두 세트가 같은 세트를 두 번 읽지 않게).
    *  같은 칸으로 [이전 칸] 뒤 돌아와 다시 확인하는 것은 막지 않는다 (화면 검토 14) */
-  private checkedSets = new Map<string, number>();
+  private checkedSets = new Map<number, string>();   // 돈 확인 칸 번호 → 그 칸에서 통과한 세트 (재검토 A4: 칸마다 마지막 세트만)
   /** 이 칸 돈 확인이 '칸을 못 찾음'만으로 멈췄음 → 다음 [다 했어요]는 사장님 확인으로 보고 넘긴다 */
   private unseenAt = -1;
   /** kill() 뒤: 어떤 동작도 하지 않는다 */
@@ -399,7 +399,8 @@ export class Guide {
       const st = item.entry.stages[this.stage];
       if (ownerDone || !el || !st || st.by === "owner") {   // 사장님 차례(사진)에서 누르면 = 다 했어요
         const key = `${this.index}:${this.stage}`;
-        if (el && st && this.stage < item.entry.stages.length - 1 && this.earlyPress !== key) {
+        // 사진을 바꾸러 돌아왔거나(cameBack) 창이 닫혀 앞 단계로 돌아간(stageBack) 경우는 이미 한 번 마친 칸 → 한 번에 넘긴다 (재검토 A6)
+        if (el && st && this.stage < item.entry.stages.length - 1 && this.earlyPress !== key && !this.cameBack && !this.stageBack) {
           this.earlyPress = key;   // 마지막 단계 전: 넘기지 않고 남은 단계를 다시 찾는다 (사진을 고르지 않은 채 다음 칸으로 가지 않게)
           this.recheck();
           if (this.earlyPress === `${this.index}:${this.stage}`) this.waiting = "owner";   // 그대로면 단추는 [다 했어요] (한 번 더 = 넘김)
@@ -499,7 +500,7 @@ export class Guide {
     this.busy = true;
     this.waiting = undefined;
     const set = kind === "moneyCheck" ? currentAdsetId(this.doc) : null;
-    const other = set !== null && this.checkedSets.has(set) && this.checkedSets.get(set) !== at;
+    const other = set !== null && [...this.checkedSets].some(([i, x]) => x === set && i !== at);
     const run: Promise<string[]> = other
       ? Promise.resolve(["아까 확인한 세트예요 → 복제한 다른 세트('그대로' 세트)를 열고 '다 했어요'를 눌러 주세요"])
       : kind === "moneyCheck" ? moneyProblems(this.doc, value)
@@ -509,7 +510,7 @@ export class Guide {
       this.busy = false;
       if (this.index !== at) return;
       const onlyUnseen = problems.length > 0 && problems.every((p) => p.endsWith(UNSEEN));
-      if (!problems.length || (onlyUnseen && pressedAgain)) { if (set) this.checkedSets.set(set, at); this.money = null; return this.advance(); }
+      if (!problems.length || (onlyUnseen && pressedAgain)) { if (set) this.checkedSets.set(at, set); this.money = null; return this.advance(); }
       this.unseenAt = onlyUnseen ? at : -1;
       this.money = problems.join(" · ");
       this.waiting = "owner";
@@ -559,7 +560,7 @@ export class Guide {
   goTo(index: number): void {
     if (this.dead || index < 0 || index >= this.index) return;
     this.moveTo(index);
-    this.cameBack = true;
+    this.cameBack = Boolean(this.steps[this.index]?.entry.stages);   // 사진처럼 하위 단계가 있는 칸만 (목표 칸 준비 버튼을 다시 누르지 않게, 재검토 A5)
     if (!this.ensureLevel()) this.seek();
   }
 
@@ -567,7 +568,7 @@ export class Guide {
   back(): void {
     if (this.index === 0) return;
     this.moveTo(this.index - 1);
-    this.cameBack = true;
+    this.cameBack = Boolean(this.steps[this.index]?.entry.stages);   // 사진처럼 하위 단계가 있는 칸만 (목표 칸 준비 버튼을 다시 누르지 않게, 재검토 A5)
     if (!this.ensureLevel()) this.seek();
   }
 

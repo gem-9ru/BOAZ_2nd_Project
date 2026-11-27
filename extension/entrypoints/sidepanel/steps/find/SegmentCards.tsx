@@ -62,8 +62,9 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                 <span id={lineId} className="text-caption leading-relaxed">
                   {seg.line || (seg.audience ? "" : "누가 클릭하는지 자료가 아직 없어요")}
                 </span>
-                {seg.trend && <MonthBars monthly={seg.trend.monthly} />}
-                {seg.trend?.peak_month && (
+                {/* 고르기 전엔 누구·몇 %만, 달 막대·검색어 같은 근거는 고른 카드에만 (카드 한 장 최대 9줄 → 비교가 느림, 재검토 C) */}
+                {on && seg.trend && <MonthBars monthly={seg.trend.monthly} />}
+                {on && seg.trend?.peak_month && (
                   <span className="text-small text-soft">
                     {seg.trend.seasonal ? `${seg.trend.peak_month}월에 가장 많이 찾아요` : "달마다 비슷하게 찾아요"}
                     {seg.trend_source ? ` (이 무리 검색어 ${Math.min(5, seg.keywords.length)}개 묶음, ${TREND_SOURCE[seg.trend_source]} 기준)` : ""}
@@ -77,19 +78,19 @@ export default function SegmentCards({ segments, selected, dropped, onPick, onRe
                     <span className="shrink-0 text-caption text-soft">전체 검색의 {shareOf(seg, segments)}%</span>
                   </span>
                 )}
-                <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}번</span>
+                {on && <span className="text-small text-soft">주로 찾는 말: {seg.lead} · 이 무리 전체 한 달 {compact(seg.total_qc)}번</span>}
                 {seg.audience && product && !seg.lead.replace(/\s/g, "").includes(product.replace(/\s/g, "")) && (
                   <span className="text-caption text-warn">
-                    ▲ 이 무리의 나이·성별은 '{seg.lead}'{euro(seg.lead)} 클릭한 사람 자료예요. '{product}'를 찾는 손님과 다를 수 있어요.
+                    <span aria-hidden="true">▲</span><span className="sr-only">주의</span> 이 무리의 나이·성별은 '{seg.lead}'{euro(seg.lead)} 클릭한 사람 자료예요. '{product}'를 찾는 손님과 다를 수 있어요.
                   </span>
                 )}
-                {words.length > 1 && <span className="text-small text-soft">이렇게도 찾아요: {words.filter((w) => w !== seg.lead).join(" · ")}</span>}
+                {on && words.length > 1 && <span className="text-small text-soft">이렇게도 찾아요: {words.filter((w) => w !== seg.lead).join(" · ")}</span>}
               </label>
               {leadOff && (
                 <div className="flex flex-col gap-1.5">
                   <p className="text-small text-soft">주로 찾는 말 '{seg.lead}'를 뺐어요. 남긴 말로 손님을 다시 찾을 수 있어요.</p>
                   <button type="button" onClick={onResearch}
-                    className="self-start rounded-button border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                    className="min-h-11 self-start rounded-button border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                     이 말로 손님 다시 찾기
                   </button>
                 </div>

@@ -107,6 +107,10 @@
   --character-light-sky: #FFFFFF;
   --character-light-ground: #EFEBFF;
   --character-light-key: #FFFFFF;
+  --character-nest-wall: #D2AD81;
+  --character-nest-lining: #F6E4CB;
+  --character-nest-twig: #7A5320;
+  --character-nest-twig-light: #FBEBD6;
   --character-shadow: drop-shadow(0 8px 8px rgb(46 31 122 / 0.18));
   --panel-head-from: #6A4FE6;
   --panel-head-to: #4A2FC4;

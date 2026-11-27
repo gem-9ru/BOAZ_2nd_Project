@@ -28,7 +28,7 @@ async function goAds() {
 function todoFor(step: string | null, blocked: boolean): string {
   if (blocked) return "왼쪽 ■ 차단 알림부터 고쳐 주세요. 고치기 전에는 다음 화면으로 못 가요.";
   if (step === "AN-01") return "왼쪽 결론 카드의 [이 테스트 준비하기 →]를 눌러요.";
-  if (step === "AN-05" || step === "AN-06") return "왼쪽에서 세트당 예산을 고르고 [확장 프로그램으로 보내기 →]를 눌러요.";
+  if (step === "AN-05" || step === "AN-06") return "왼쪽에서 세트당 예산·기간을 고르고 [확장 프로그램으로 보내기 →]를 눌러요.";
   return "왼쪽 아래 [준비하기 ▶]를 눌러요.";
 }
 
@@ -40,7 +40,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
   handled?: string;
   /** 받아 둔 테스트안 (보내기를 받았으면 '받았어요' 카드에 쓴다) */
   plan?: Plan | null;
-  /** 확장 흐름의 지금 단계: 내보내기 안내는 광고를 만든 뒤(②·③)에만 */
+  /** 확장 흐름의 지금 단계: 내보내기 안내는 광고를 켠 뒤 결과를 받기 전(wait·upload)에만 */
   flowStep?: Step }) {
   const [bubbles, setBubbles] = useState<Bubble[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -74,11 +74,11 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
     setSendError(null);
     setReceiving(true);
     fetchPlan(code).finally(() => setReceiving(false)).then((got) => {
-      // 사장님이 ③에서 고른 예산이 있으면 그 금액으로 (서버 계획은 기본값 per_set)
-      const p = tab.budget ? { ...got, change: { ...got.change, per_set: tab.budget } } : got;
+      // 사장님이 ③에서 고른 예산·기간이 있으면 그 값으로 (서버 계획은 기본값 per_set·days)
+      const p = { ...got, change: { ...got.change, ...(tab.budget ? { per_set: tab.budget } : {}), ...(tab.days ? { days: tab.days } : {}) } };
       dispatch({ type: "planLoaded", plan: p, sent: tab.send! });
     }, (e: Error) => { sent.current = null; setSendError(e.message); });
-  }, [code, tab.send, tab.budget, dispatch, handled, retry]);
+  }, [code, tab.send, tab.budget, tab.days, dispatch, handled, retry]);
 
   useEffect(() => { end.current?.scrollIntoView?.({ block: "end" }); }, [bubbles]);
 
@@ -87,9 +87,9 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
     return (
       <section aria-label="분석 페이지 어시스턴트" className="flex flex-col gap-3">
         <p className="text-caption font-semibold text-accent-ink">분석 페이지 · 업로드</p>
-        <Todo>왼쪽 분석 페이지에 결과 파일(CSV)을 올려 주세요.</Todo>
+        <Todo>왼쪽 분석 페이지에 결과 파일(CSV)을 올리고 [분석 시작 ▶]을 눌러요.</Todo>
         <Coach>올려 주시면 다음에 바꿔 볼 칸 1개를 같이 찾아볼게요. 내보내기 할 때 분석 기준에서 <b>일</b>과 <b>노출 위치</b>를 꼭 골라 주세요.</Coach>
-        {flowStep && ["wait", "upload", "plan"].includes(flowStep) && (
+        {(flowStep === "wait" || flowStep === "upload") && (   // 결과 화면(plan)에서는 안 띄움: 내보내기 안내와 PlanStep이 겹친다 (새 결과는 [다른 코드 넣기]로)
           <button type="button" onClick={() => { dispatch({ type: "startExport" }); void goAds(); }}
             className="flex min-h-11 items-center self-start text-label font-semibold text-accent-ink underline">파일이 아직 없으면: 광고 관리자에서 내보내기 짚어 주기</button>
         )}
@@ -115,6 +115,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
           <p className="text-label font-semibold text-accent-ink">✓ 바꿀 칸을 받았어요</p>
           <p className="text-caption text-soft">{got.change.path ?? got.change.label}</p>
           <p className="text-body font-bold">{got.change.now ? `${got.change.now} → ` : ""}{(got.change as { new_short?: string }).new_short ?? got.change.new}</p>
+          {money(got) && <p className="text-label font-semibold">{money(got)}</p>}
           <p className="text-label">분석은 끝났어요. 이제 광고 관리자에서 다음 테스트를 준비해요. 게시는 사장님이 직접 해요.</p>
           <PrimaryButton onClick={() => void goAds()}>광고 관리자에서 다음 테스트 준비 ▶</PrimaryButton>
         </section>
@@ -140,6 +141,12 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
       <AskForm id="an-ask" label="광고 어시스턴트에게 묻기" suggestions={suggestions} busy={busy} onAsk={(q) => void ask(q)} />
     </section>
   );
+}
+
+/** 받은 금액·기간 한 줄: 분석 페이지 '보냈어요 · 세트당 ○원'과 같은지 맞춰 보게 */
+function money(p: Plan): string {
+  const { per_set, days } = p.change as { per_set?: number; days?: number };
+  return [per_set ? `세트당 ${per_set.toLocaleString()}원` : "", days ? `${days}일` : ""].filter(Boolean).join(" · ");
 }
 
 /** 지금 할 일 한 줄 (패널 맨 위 고정) */

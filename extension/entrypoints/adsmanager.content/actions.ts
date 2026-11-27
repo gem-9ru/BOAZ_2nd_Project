@@ -330,7 +330,8 @@ export async function moneyProblems(doc: Document, value: string, pace: Pace = r
     out.push("광고 세트에 예산 칸이 없어요 → 캠페인 '예산 전략'을 '광고 세트 예산'으로 바꿔 주세요");
   } else {
     if (b.mode !== "lifetime") out.push(`예산 종류가 '${b.mode === "daily" ? "일일 예산" : textOf(b.combo) || "알 수 없음"}'이에요 → '총예산'으로 바꿔 주세요`);
-    if (want && b.amount === null) out.push(`금액을 읽지 못했어요 (비었거나 아직 화면에 안 그려짐) → '예산 및 일정'을 화면에 띄우고 ${won(want)}인지 확인해 주세요${UNSEEN}`);
+    if (want && b.amount === null && b.input && !b.input.value.trim()) out.push(`금액 칸이 비어 있어요 → '총예산' 칸에 ${won(want)}을 넣어 주세요`);   // 정말 빔 = 못 넘어감 (재검토 A8)
+    else if (want && b.amount === null) out.push(`금액을 읽지 못했어요 (비었거나 아직 화면에 안 그려짐) → '예산 및 일정'을 화면에 띄우고 ${won(want)}인지 확인해 주세요${UNSEEN}`);
     else if (want && b.amount !== want) out.push(`금액이 ${won(b.amount!)}이에요 → ${won(want)}으로 넣어 주세요`);
   }
   const end = endAnchor(doc);

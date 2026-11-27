@@ -244,7 +244,7 @@ describe("FindStep — 분야·손님 무리", () => {
     const { rerender } = render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={dispatch} />);
     const group = screen.getByRole("radiogroup", { name: "광고를 보여 줄 손님" });
     expect(within(group).getAllByRole("radio")).toHaveLength(3);
-    expect(screen.getByText("▲ 광고를 보여 줄 손님을 하나 골라 주세요.")).toBeTruthy();
+    expect(screen.getByText(/광고를 보여 줄 손님을 하나 골라 주세요\./)).toBeTruthy();
     expect((screen.getByRole("button", { name: "이 손님들로 할게요" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(group).getAllByRole("radio")[1]!);
     expect(dispatch).toHaveBeenCalledWith({ type: "pickSegment", segment: segs[1] });
@@ -292,7 +292,9 @@ describe("FindStep — 분야·손님 무리", () => {
   });
 
   it("month bars label peak month", () => {
-    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키" }} dispatch={() => {}} />);
+    // 달 막대는 고른 무리 카드에만 (재검토 C) → 12월이 가장 많은 무리를 골라 둔다
+    const peak = withSegs.segments!.find((g) => g.trend?.peak_month === 12) ?? withSegs.segments![0]!;
+    render(<FindStep state={{ ...initialState(), research: withSegs, product: "수제 쿠키", segment: peak }} dispatch={() => {}} />);
     const imgs = screen.getAllByRole("img", { name: /달별 검색 비중/ });
     expect(imgs.some((i) => (i.getAttribute("aria-label") ?? "").includes("12월 100%"))).toBe(true);
     expect(imgs[0]!.getAttribute("aria-label")).toMatch(/^달별 검색 비중: 1월 \d+%/);
@@ -530,7 +532,7 @@ describe("지금 시기 · 무리 크기 · 휴대폰 · 단계 안내 · 분야
     const stats = { keyword: "텀블러", total_qc: 128900, mobile: 0.7,
       audience: { female: 0.66, ages: { "30": 0.2, "40": 0.4, "50": 0.25 }, top_age: "40", index: { female: 1.36, "40": 1.25 } } };
     render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "텀블러" }} dispatch={() => {}} />);
-    expect(screen.getByText("메타 피드 사진은 4:5 세로가 권장돼요 (메타 광고 가이드).")).toBeTruthy();
+    expect(screen.queryByText(/4:5 세로가 권장돼요/)).toBeNull();   // 사진 안내는 ② 미리 보기에만 (재검토 C)
     expect(screen.getByText("네이버 쇼핑 클릭으로 보면 같은 분야 평균보다 40대가 1.3배, 여성이 1.4배 많아요 (1.2배 이상만 보여 줘요 · 이 도구 기준).")).toBeTruthy();
   });
 
@@ -656,7 +658,7 @@ describe("달별 기준 표시", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("{}", { status: 200 })));
     const stats = { keyword: "닭가슴살", total_qc: 1000, mobile: 0.5, audience: null,
       trend: { monthly: { "2026-08": 100 }, peak_month: 8, seasonal: true }, trend_source: "search" as const };
-    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "닭가슴살" }} dispatch={() => {}} />);
+    render(<FindStep state={{ ...initialState(), research: { ...withSegs, product_stats: stats }, product: "닭가슴살", segment: withSegs.segments![0] }} dispatch={() => {}} />);
     expect(screen.getByText(/'닭가슴살'은 8월에 가장 많이/)).toBeTruthy();
     expect(screen.getByText(/'닭가슴살' 한 단어 · 지난 12달 네이버 검색 기준/)).toBeTruthy();
     expect(screen.getAllByText(/이 무리 검색어 \d개 묶음/).length).toBeGreaterThan(0);

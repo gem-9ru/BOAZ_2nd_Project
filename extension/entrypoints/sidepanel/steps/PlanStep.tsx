@@ -5,12 +5,12 @@ import { Chat } from "../ui/Chat";
 import { Coach, PrimaryButton } from "../ui/Coach";
 
 /** v4.2 테스트안: 서버가 보내는 필드 (lib/api Change에 더해 오는 것) */
-type TestPlan = Change & { tag?: string; new_short?: string; reason?: string; tested?: boolean; what?: string; per_set?: number };
+type TestPlan = Change & { tag?: string; new_short?: string; reason?: string; tested?: boolean; what?: string; per_set?: number; days?: number };
 
 const won = (n: number) => `${n.toLocaleString()}원`;
 const day = (iso: string) => { const [, m, d] = iso.split("-").map(Number); return `${m}월 ${d}일`; };
 
-/** 다음 테스트의 돈·기간: 내일 시작(하루 여유), 지난번과 같은 길이, 세트당 금액은 분석 페이지 권장(예산 칸을 바꾸는 테스트면 '더 모아야 할 금액').
+/** 다음 테스트의 돈·기간: 내일 시작(하루 여유), 기간은 분석 페이지에서 고른 일수(없으면 지난번과 같은 길이), 세트당 금액은 분석 페이지 권장(예산 칸을 바꾸는 테스트면 '더 모아야 할 금액').
  *  메타 최소(하루 약 1,336원 × 일수)보다 적으면 올린다 — 안 그러면 광고가 안 나간다. 권장 금액이 없으면 지난 금액 그대로. */
 export function nextMoney(p: Plan, settings: FlowState["settings"], today = new Date()) {
   const c = p.change as TestPlan;
@@ -18,7 +18,7 @@ export function nextMoney(p: Plan, settings: FlowState["settings"], today = new 
   const lastStart = val("meta.adset.start_date")?.slice(0, 10);
   const lastEnd = val("meta.adset.end_date")?.slice(0, 10);
   const last = lastStart && lastEnd ? scheduleDays({ start: lastStart, end: lastEnd }) : NaN;
-  const days = last > 0 ? last : 7;
+  const days = c.days && c.days > 0 ? c.days : last > 0 ? last : 7;
   const at = (n: number) => isoDate(new Date(today.getFullYear(), today.getMonth(), today.getDate() + n));
   const want = /budget/.test(c.field_id) ? p.watch?.find((w) => w.field_id === c.field_id)?.need_per_set : c.per_set;
   const amount = want ? Math.max(want, minBudget(days)) : null;
@@ -76,7 +76,7 @@ export default function PlanStep({ state, dispatch }: { state: FlowState; dispat
         {m.want && m.amount! > m.want && (
           <p className="text-soft">분석 페이지 권장은 세트당 {won(m.want)}인데, {m.days}일이면 메타 최소(하루 약 {won(META_DAILY_MIN)} × {m.days}일)보다 적어서 올렸어요.</p>
         )}
-        <p>{day(m.startDate)} ~ {day(m.endDate)} ({m.days}일) · 내일 시작, 지난번과 같은 길이</p>
+        <p>{day(m.startDate)} ~ {day(m.endDate)} ({m.days}일) · 내일 시작, {c.days ? "분석 페이지에서 고른 기간" : "지난번과 같은 길이"}</p>
         <p>두 세트(지난번 그대로 · 이 칸만 바꾼 것) 모두 이 금액·날짜로 맞춰야 정한 돈만 나가요.</p>
       </section>
       {(c.checklist?.length ?? 0) > 0 && (

@@ -57,13 +57,13 @@ export default function TargetPick({ from, to, gender, rec, female, recShare, on
             <div className="flex items-center gap-2 text-body">
               <select aria-label="나이 부터" value={from}
                 onChange={(e) => { const f = e.target.value; onChange({ from: f, to: Number(to) < Number(f) ? f : to, gender }); }}
-                className="rounded-button border border-field-line bg-paper px-2 py-1.5 text-body">
+                className="min-h-11 rounded-button border border-field-line bg-paper px-2 py-1.5 text-body">
                 {GROUPS.map((g) => <option key={g} value={g}>{g}대</option>)}
               </select>
               <span>부터</span>
               <select aria-label="나이 까지" value={to}
                 onChange={(e) => { const t = e.target.value; onChange({ from: Number(from) > Number(t) ? t : from, to: t, gender }); }}
-                className="rounded-button border border-field-line bg-paper px-2 py-1.5 text-body">
+                className="min-h-11 rounded-button border border-field-line bg-paper px-2 py-1.5 text-body">
                 {GROUPS.map((g) => <option key={g} value={g}>{g}대</option>)}
               </select>
               <span>까지</span>
@@ -75,7 +75,7 @@ export default function TargetPick({ from, to, gender, rec, female, recShare, on
             <div className="flex flex-wrap gap-2">
               {(["female", "male", "all"] as const).map((g) => (
                 <label key={g}
-                  className={`cursor-pointer rounded-badge border px-3 py-1.5 text-label has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+                  className={`inline-flex min-h-11 items-center cursor-pointer rounded-badge border px-3 py-1.5 text-label has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
                     gender === g ? "border-accent bg-accent font-semibold text-on-accent" : "border-line"}`}>
                   <input type="radio" name="target-gender" value={g} checked={gender === g}
                     onChange={() => onChange({ from, to, gender: g })} className="sr-only" />

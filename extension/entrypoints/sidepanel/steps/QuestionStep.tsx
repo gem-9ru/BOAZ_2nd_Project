@@ -267,7 +267,7 @@ export function Question({ field, answers, prev = {}, keywords, checked, onCheck
 function NewTabLink({ url, children }: { url: string; children: React.ReactNode }) {
   return (
     <a href={url} target="_blank" rel="noopener noreferrer"
-      className="self-start rounded-button border border-accent bg-paper px-4 py-2 text-label font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+      className="min-h-11 self-start rounded-button border border-accent bg-paper px-4 py-2 text-label font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
       {children} <span aria-hidden>↗</span><span className="sr-only"> (새 탭)</span>
     </a>
   );
@@ -414,7 +414,7 @@ function ShopArea({ way, initial, onBack, onDone }: { way: string; initial?: str
         <div role="group" aria-labelledby="shop-radius" className="flex gap-2">
           {RADII.map((r) => (
             <button key={r} type="button" aria-pressed={r === radius} onClick={() => setRadius(r)}
-              className={`rounded-button border px-4 py-2 text-body ${r === radius ? "border-ink bg-paper font-semibold" : "border-line"}`}>
+              className={`min-h-11 rounded-button border px-4 py-2 text-body ${r === radius ? "border-ink bg-paper font-semibold" : "border-line"}`}>
               {r}
             </button>
           ))}

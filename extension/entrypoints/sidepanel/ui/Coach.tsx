@@ -6,7 +6,7 @@ export function Coach({ children }: { children: ReactNode }) {
   return (
     <div className="flex items-end gap-2.5">
       <img src={wave} alt="" aria-hidden="true" draggable={false} className="w-14 shrink-0 select-none" />
-      <div className="rounded-card rounded-bl-mark border-2 border-line bg-paper px-3.5 py-3 text-label leading-relaxed">{children}</div>
+      <div className="rounded-card rounded-bl-mark border-2 border-line bg-paper px-3.5 py-3 text-body leading-relaxed">{children}</div>
     </div>
   );
 }

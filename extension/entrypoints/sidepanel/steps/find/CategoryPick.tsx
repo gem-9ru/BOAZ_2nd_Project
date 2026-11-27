@@ -20,7 +20,7 @@ export function CategoryRadios({ categories, value, onPick }: {
     <div role="radiogroup" aria-label="분야" className="flex flex-wrap gap-2">
       {list.map((c) => (
         <label key={c.code}
-          className={`cursor-pointer rounded-badge border px-3 py-1.5 text-caption has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+          className={`inline-flex min-h-11 items-center cursor-pointer rounded-badge border px-3 py-1.5 text-caption has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
             value === c.code ? "border-accent bg-accent font-semibold text-on-accent" : "border-line bg-paper"}`}>
           <input type="radio" name="category" value={c.code} checked={value === c.code}
             onChange={() => onPick(c.code)} className="sr-only" />

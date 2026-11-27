@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Guide } from "../entrypoints/adsmanager.content/guideRunner";
 import CodeStep from "../entrypoints/sidepanel/steps/CodeStep";
 import GuideStep, { isLoginPage } from "../entrypoints/sidepanel/steps/GuideStep";
-import PlanStep from "../entrypoints/sidepanel/steps/PlanStep";
+import PlanStep, { nextMoney } from "../entrypoints/sidepanel/steps/PlanStep";
 import { initialState, reduce, type FlowState, type Plan } from "../lib/flow";
 import { nextTestSteps, type GuideStepItem } from "../lib/guide";
 import { GUIDE } from "../lib/guideList";
@@ -68,7 +68,7 @@ describe("EX-01 ② 세팅", () => {
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     const w = await screen.findByRole("status");
     expect(w.textContent).toContain("▲");
-    expect(w.textContent).toContain("캐릭터를 부르지 못했어요");
+    expect(w.textContent).toContain("뭉치를 부르지 못했어요");
   });
 });
 
@@ -95,7 +95,7 @@ describe("뭉치 부르기: 어느 탭으로, 못 받으면", () => {
     fireEvent.click(screen.getByRole("button", { name: "광고 관리자 열기" }));
     await waitFor(() => expect(reload).toHaveBeenCalledWith(tab.id));
     await waitFor(() => expect(send.mock.calls.length).toBeGreaterThan(1));
-    expect(screen.queryByText(/캐릭터를 부르지 못했어요/)).toBeNull();
+    expect(screen.queryByText(/뭉치를 부르지 못했어요/)).toBeNull();
   });
 });
 
@@ -223,6 +223,14 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(box.textContent).toMatch(/메타 최소/);
   });
 
+  it("uses the period picked on the analysis page (change.days) over last time's length", () => {
+    const p7 = { ...plan, change: { ...plan.change, days: 7 } as Plan["change"] };
+    expect(nextMoney(p7, last, new Date(2026, 10, 26))).toMatchObject({ startDate: "2026-11-27", endDate: "2026-12-03", days: 7 });
+    vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
+    render(<PlanStep state={{ ...initialState(), step: "plan", plan: p7, settings: last }} dispatch={() => {}} />);
+    expect(screen.getByRole("region", { name: "다음 테스트 돈·기간" }).textContent).toContain("(7일) · 내일 시작, 분석 페이지에서 고른 기간");
+  });
+
   it("the button sends the owner back to ② 세팅 with the changed field + new dates and amount, the rest as last time", () => {
     vi.stubGlobal("fetch", vi.fn(() => ok({ message: "m", suggestions: [] })));
     const dispatch = vi.fn();
@@ -261,8 +269,9 @@ describe("EX-03 [다음 테스트 세팅] ↺ (v4.2)", () => {
     expect(now).toHaveLength(1);
     expect(now[0]!.textContent).toContain("'복제'");   // 첫 칸은 지난 세트 복제 (사장님이 직접), 그다음 바꿀 칸
     expect(now[0]!.textContent).toContain("지금");
-    expect(items.find((li) => li.textContent!.includes("세로 소재"))!.className).not.toContain("opacity-55");
-    expect(items.filter((li) => li.className.includes("opacity-55"))).toHaveLength(11);   // 나머지 11칸은 끝난 칸, 예산 공유 끄기·금액·날짜·돈 확인·게시 확인이 남음
+    // 끝난 칸은 흐리게 하지 않고 ✓와 화면 읽기 '(끝남)'으로 (대비 2.25:1 → 재검토 C)
+    expect(items.find((li) => li.textContent!.includes("세로 소재"))!.textContent).not.toContain("(끝남)");
+    expect(items.filter((li) => li.textContent!.includes("(끝남)"))).toHaveLength(11);   // 나머지 11칸은 끝난 칸, 예산 공유 끄기·금액·날짜·돈 확인·게시 확인이 남음
     const intro = screen.getByText(/다음 테스트 세팅이에요/).textContent!;
     expect(intro).toMatch(/지난 광고 세트를 복제해 새 세트 2개/);
     expect(intro).toContain("바꿀 세트에서 '칸 meta.ad.media' 칸만 바꿔요");

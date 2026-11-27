@@ -53,7 +53,7 @@ describe("CopyStep", () => {
     expect(screen.queryByText("배송")).toBeNull();
     expect(screen.getByRole("button", { name: /개별포장/ }).getAttribute("aria-pressed")).toBe("false");
     expect(screen.getByRole("button", { name: "문구 써 주세요" }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByText("▲ 하나 이상 고르거나 적어 주세요")).toBeTruthy();
+    expect(screen.getByText(/위에서 하나 이상 고르거나 여기에 적어 주세요/)).toBeTruthy();   // 칸 바로 아래 (재검토 C)
   });
 
   it("sends picked chips, typed words and segment", async () => {
@@ -203,7 +203,7 @@ describe("CopyStep", () => {
 
   it("explains the number next to each chip", () => {
     render(<CopyStep state={withMods()} dispatch={() => {}} />);
-    expect(screen.getByText(/칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요/)).toBeTruthy();
+    expect(screen.getByText(/말 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요/)).toBeTruthy();
   });
 });
 
@@ -401,10 +401,12 @@ describe("② 문구 효능 표현 주의", () => {
     const mods = [{ word: "탈모", group: "피부고민", total_qc: 900, examples: [] }, { word: "천연", group: "성분", total_qc: 800, examples: [] }];
     const research = { headline: "", keywords: [], audience: null, fetched: "", source: "live" as const, notice: null, negatives: [], modifiers: mods };
     render(<CopyStep state={{ ...initialState(), step: "copy", product: "수제 비누", research }} dispatch={() => {}} />);
-    expect(screen.getByLabelText("효능 표현 주의")).toBeTruthy();
+    expect(screen.getByText("효능 표현 주의")).toBeTruthy();   // ▲는 읽지 않고 sr-only 글로
     expect(screen.queryByRole("note")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /탈모/ }));
-    expect(screen.getByRole("note").textContent).toContain("'탈모' 같은 효능 말은");
+    const note = screen.getByRole("note").textContent!;
+    expect(note).toMatch(/^▲주의 '탈모': 문구에는 '○○이 고민인 분께'처럼만/);   // 할 일 먼저, 법 조항은 [왜 그래요?] 안 (재검토 C)
+    expect(note).toContain("식품표시광고법 제8조");
   });
 });
 

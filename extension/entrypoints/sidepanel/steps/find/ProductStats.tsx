@@ -58,7 +58,6 @@ export default function ProductStats({ stats, hasCategory, category }: { stats: 
           </span>
         )}
       </div>
-      <p className="text-caption">메타 피드 사진은 4:5 세로가 권장돼요 (메타 광고 가이드).</p>
       {vs && <p className="text-caption">{vs}</p>}
       {stats.audience
         ? <AgeFigure audience={stats.audience} caption="네이버 쇼핑에서 이 말로 클릭한 사람"

@@ -8,6 +8,8 @@ export type ProgressMessage = Extract<GuideMsg, { type: "guide:progress" }>;
 export async function handleProgress(msg: ProgressMessage): Promise<void> {
   const s = await loadState();
   if (!s.guide) return;
+  // 패널이 안내를 바꿨는데(답 바꾸기·결과 받기·처음부터 뒤 새 안내) 광고 관리자에 남은 예전 뭉치가 보낸 진행이면 버린다 (재검토 B9)
+  if (msg.sig && msg.sig !== s.guide.sig) return;
   const next =
     msg.index >= msg.total
       ? reduce(s, s.guide.mode === "export" ? { type: "startUpload" } : { type: "guideDone" })

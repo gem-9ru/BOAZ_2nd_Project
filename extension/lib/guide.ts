@@ -77,10 +77,12 @@ export interface GuideStepItem {
 export type GuideMsg =
   | { type: "guide:start"; steps: GuideStepItem[]; startIndex: number;   // 패널 → 캐릭터: 안내 시작
       /** EX-03 다음 테스트: 첫 칸(바꿀 칸 1개)만 밝게, 나머지 화면은 흐리게 + '나머지는 그대로(유지)' */
-      focus?: boolean }
+      focus?: boolean;
+      /** 이번 안내 표시: 진행 메시지에 그대로 실어 보낸다 (예전 뭉치 진행 거르기) */
+      sig?: string }
   | { type: "guide:move"; delta: number }                                  // 패널 → 캐릭터: [이전 칸]·[다음 칸]
   | { type: "guide:goto"; index: number }                                  // 패널 → 캐릭터: 목록에서 지난 칸을 눌러 그 칸으로 (설계서 EX-01 ②)
-  | { type: "guide:progress"; index: number; total: number }               // 캐릭터 → 배경: 몇 번째 칸까지 왔나
+  | { type: "guide:progress"; index: number; total: number; sig?: string } // 캐릭터 → 배경: 몇 번째 칸까지 왔나 (sig = 받은 안내 묶음 표시)
   | { type: "guide:closed" };                                              // 캐릭터 → 배경: 집에 돌아감
 
 export function validateGuide(entries: GuideEntry[], settingIds: string[]): string[] {

@@ -251,3 +251,49 @@ describe("남은 기획 항목 (2026-11-27)", () => {
     expect(screen.getByRole("button", { name: /광고 관리자 열기/ }).hasAttribute("disabled")).toBe(false);
   });
 });
+
+describe("재검토 고치기 (2026-11-27 오후)", () => {
+  const withNext: FlowState = { ...initialState(), step: "guide", settings: settings.map((x) => (x.fieldId === "meta.ad.website_url" ? { ...x, value: "https://a.kr" } : x)),
+    answers: { "meta.pre.store_product": "올렸어요", "meta.pre.store_url": "https://new.kr" }, guide: { mode: "create", index: 2, next: "meta.ad.media" } };
+
+  it("A1. 다음 테스트 중 준비물을 마쳐도 다음 테스트가 그대로 (안내 목록으로)", () => {
+    const s = reduce(withNext, { type: "prepDone", missing: [] });
+    expect(s).toMatchObject({ step: "guide", guide: { next: "meta.ad.media" } });
+    // 주소가 그대로면 질문으로 보내지 않는다
+    const same = reduce({ ...withNext, guide: { mode: "create", index: 0 }, answers: { ...withNext.answers, "meta.pre.store_url": "https://a.kr" } }, { type: "prepDone", missing: [] });
+    expect(same.step).toBe("guide");
+  });
+
+  it("A1·A2. 옛 저장본: 결제 카드 누락은 빼고, 'fix'는 안내를 닫고 결과 화면", async () => {
+    await fakeBrowser.storage.local.set({ "coach.v3.state": { ...initialState(), step: "fix", guide: { mode: "edit", index: 0 }, prepMissing: ["광고 계정 결제 수단", "페이스북 페이지"] } });
+    const s = await loadState();
+    expect(s).toMatchObject({ step: "plan", guide: null, prepMissing: ["페이스북 페이지"] });
+  });
+
+  it("A4. 두 세트 돈 확인: [이전 칸]으로 오가도 영영 막히지 않는다", { timeout: 15000 }, async () => {
+    lifetime();
+    const m = money("meta.money_check", "moneyCheck", "3만 원");
+    const g = new Guide(document, [m, { ...m }, money("meta.publish", "stop")], 0, () => {}, 0);
+    history.pushState({}, "", "/x?selected_adset_ids=A"); g.apply(); await wait();   // k0 ← A
+    history.pushState({}, "", "/x?selected_adset_ids=B"); g.back(); g.apply(); await wait();   // k0 ← B (A 기록은 지워짐)
+    history.pushState({}, "", "/x?selected_adset_ids=A"); g.apply(); await wait();   // k1 ← A
+    expect(g.view().index).toBe(2);
+  });
+
+  it("A8. 금액 칸이 정말 비어 있으면 두 번 눌러도 넘어가지 않는다", { timeout: 8000 }, async () => {
+    lifetime();
+    (document.querySelector("input[placeholder='금액을 입력하세요']") as HTMLInputElement).value = "";
+    const g = new Guide(document, [money("meta.money_check", "moneyCheck", "3만 원"), money("meta.publish", "stop")], 0, () => {}, 0);
+    g.apply(); await wait(); g.apply(); await wait();
+    expect(g.view().index).toBe(0);
+    expect(g.view().text).toContain("금액 칸이 비어 있어요");
+  });
+
+  it("B9. 예전 뭉치가 보낸 진행(다른 안내 표시)은 버린다", async () => {
+    await saveState({ ...initialState(), step: "guide", settings, guide: { mode: "create", index: 0, sig: "new" } });
+    await handleProgress({ type: "guide:progress", index: 9, total: 18, sig: "old" });
+    expect((await loadState()).guide?.index).toBe(0);
+    await handleProgress({ type: "guide:progress", index: 3, total: 18, sig: "new" });
+    expect((await loadState()).guide?.index).toBe(3);
+  });
+});

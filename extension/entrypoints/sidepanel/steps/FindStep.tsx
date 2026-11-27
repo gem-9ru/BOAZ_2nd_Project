@@ -111,7 +111,7 @@ export default function FindStep({ state, dispatch }: Props) {
           <button
             type="submit"
             disabled={!product.trim() || busy}
-            className="shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+            className="min-h-11 shrink-0 rounded-button bg-accent px-4 py-2 text-label font-semibold text-on-accent transition-colors hover:bg-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
           >
             {busy ? "찾는 중…" : "찾아보기"}
           </button>
@@ -121,7 +121,7 @@ export default function FindStep({ state, dispatch }: Props) {
           <button
             type="button"
             onClick={() => { setProduct(EXAMPLE); search(EXAMPLE); }}
-            className="self-start rounded-badge bg-accent-soft px-3 py-1.5 text-caption font-semibold text-accent-ink hover:ring-1 hover:ring-accent focus-visible:outline-2 focus-visible:outline-accent"
+            className="min-h-11 self-start rounded-badge bg-accent-soft px-3 py-1.5 text-caption font-semibold text-accent-ink hover:ring-1 hover:ring-accent focus-visible:outline-2 focus-visible:outline-accent"
           >
             {EXAMPLE}로 먼저 보기
           </button>
@@ -221,7 +221,7 @@ function KeywordChips({ research: r, dropped, kept, title, hint, dispatch, produ
               type="button"
               aria-pressed={!off}
               onClick={() => dispatch({ type: "toggleKeyword", keyword: k.keyword })}
-              className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+              className={`min-h-11 inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
                 off ? "border-dashed border-line text-soft" : "border-accent bg-accent-soft text-ink"}`}
             >
               <span aria-hidden className={`grid size-4 place-items-center rounded-badge text-mark ${off ? "border border-line" : "bg-accent text-on-accent"}`}>
@@ -294,7 +294,7 @@ function Result({ research: r, dropped, dispatch }: {
         title="이 사람들이 쓰는 말" hint="빼고 싶은 말은 누르세요. 다시 누르면 돌아와요." />
       <Negatives words={r.negatives} />
       <div className="flex flex-col gap-2">
-        {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
+        {kept.length === 0 && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 검색어를 하나 이상 남겨 주세요.</p>}
         <PrimaryButton onClick={confirm} disabled={kept.length === 0}>이 사람들로 할게요</PrimaryButton>
         <SourceLine research={r} />
       </div>
@@ -441,9 +441,9 @@ function SegmentResult({ research: r, segments, state, dispatch, onPickCategory,
           )}
           {words}
           <div className="flex flex-col gap-2">
-            {kept.length === 0 && <p className="text-caption text-warn">▲ 검색어를 하나 이상 남겨 주세요.</p>}
-            {!selected && <p className="text-caption text-warn">▲ 광고를 보여 줄 손님을 하나 골라 주세요.</p>}
-            {manualMissing && <p className="text-caption text-warn">▲ 보여 줄 나이와 성별을 골라 주세요.</p>}
+            {kept.length === 0 && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 검색어를 하나 이상 남겨 주세요.</p>}
+            {!selected && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 광고를 보여 줄 손님을 하나 골라 주세요.</p>}
+            {manualMissing && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 보여 줄 나이와 성별을 골라 주세요.</p>}
             {ready && target && (
               <p className="rounded-button bg-sunk px-3 py-2 text-caption">
                 광고 관리자에는 <span className="font-semibold">{targetLine(target)}</span>{euro(targetLine(target))} 넣고, 검색어 {kept.length}개는 ② 문구에 써요.
@@ -482,7 +482,7 @@ function NoData({ notice, product, keywords = [], dispatch, suggestions = [], on
           <div className="flex flex-wrap gap-2">
             {suggestions.map((w) => (
               <button key={w} type="button" onClick={() => onTry(w)}
-                className="rounded-badge border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                className="min-h-11 rounded-badge border border-accent bg-paper px-3 py-1.5 text-caption font-semibold text-accent-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                 {w}
               </button>
             ))}
@@ -490,7 +490,7 @@ function NoData({ notice, product, keywords = [], dispatch, suggestions = [], on
         </div>
       )}
       {!manual ? (
-        <button type="button" onClick={() => setManual(true)} className="self-start rounded-button border border-accent bg-paper text-accent-ink px-4 py-2 text-label font-semibold focus-visible:outline-2 focus-visible:outline-accent">
+        <button type="button" onClick={() => setManual(true)} className="min-h-11 self-start rounded-button border border-accent bg-paper text-accent-ink px-4 py-2 text-label font-semibold focus-visible:outline-2 focus-visible:outline-accent">
           직접 정하고 계속할게요
         </button>
       ) : (
@@ -521,7 +521,7 @@ function Choice({ legend, name, options, value, onChange }: {
       <div className="flex flex-wrap gap-2">
         {options.map((o) => (
           <label key={o.id}
-            className={`rounded-badge border px-3 py-1.5 text-label cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-accent bg-accent text-on-accent font-semibold" : "border-line"}`}>
+            className={`inline-flex min-h-11 items-center rounded-badge border px-3 py-1.5 text-label cursor-pointer has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${value === o.id ? "border-accent bg-accent text-on-accent font-semibold" : "border-line"}`}>
             <input type="radio" name={name} value={o.id} checked={value === o.id} onChange={() => onChange(o.id)} className="sr-only" />
             {o.label}
           </label>

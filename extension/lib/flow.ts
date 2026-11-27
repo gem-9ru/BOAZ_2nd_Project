@@ -1,5 +1,6 @@
 // 사이드 패널의 단계 상태 기계. 순수 함수만 둔다 (저장은 storage.ts).
 import type { Change, Copy, Research, Segment } from "./api";
+import { routeFromPrep } from "./settings";
 
 export type Step = "prep" | "find" | "copy" | "questions" | "guide" | "wait" | "upload" | "plan";
 
@@ -49,7 +50,7 @@ export interface FlowState {
   settings: Setting[];
   /** away: 뭉치가 광고 관리자에 나가 있음 (패널 제목 왼쪽 집이 빔). 닫으면 false → 집으로 돌아옴 */
   /** next: EX-03 [다음 테스트 세팅] — 이 칸만 '지금', 나머지는 이전 값으로 끝난 칸 (v4.2) */
-  guide: { mode: "create" | "edit" | "export"; index: number; away?: boolean; next?: string } | null;
+  guide: { mode: "create" | "edit" | "export"; index: number; away?: boolean; next?: string; sig?: string } | null;
   /** 광고 시작일 (YYYY-MM-DD). 오늘보다 뒤면 예약 광고 */
   startDate?: string;
   endDate?: string;
@@ -80,7 +81,8 @@ export type FlowEvent =
   | { type: "toggleCheck"; key: string; index: number }
   | { type: "questionsDone"; settings: Setting[]; startDate?: string; endDate?: string }
   | { type: "guideProgress"; index: number }
-  | { type: "guideOpened" }
+  /** sig: 뭉치에게 보낸 안내 묶음 표시. 예전 뭉치의 진행이 새 안내를 덮지 않게 진행 메시지와 맞춰 본다 (재검토 B9) */
+  | { type: "guideOpened"; sig?: string }
   | { type: "guideClosed" }
   | { type: "guideDone" }
   | { type: "startExport" }
@@ -144,7 +146,7 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
     case "guideProgress":
       return s.guide ? { ...s, guide: { ...s.guide, index: ev.index } } : s;
     case "guideOpened":
-      return s.guide ? { ...s, guide: { ...s.guide, away: true } } : s;
+      return s.guide ? { ...s, guide: { ...s.guide, away: true, ...(ev.sig ? { sig: ev.sig } : {}) } } : s;
     case "guideClosed":
       return s.guide ? { ...s, guide: { ...s.guide, away: false } } : s;
     case "guideDone":
@@ -179,6 +181,10 @@ export function reduce(s: FlowState, ev: FlowEvent): FlowState {
       // 처음이면 ① 찾기로. 세팅까지 갔다가 준비물을 다시 답했으면: 클릭 주소 질문만 새 준비물 답으로 다시 묻고 세팅 목록을 새로 만든다
       // (예전 주소가 그대로 광고에 들어가지 않게, 화면 검토 2)
       if (!s.settings.length) return { ...s, prepMissing: ev.missing, step: "find" };
+      // 다음 테스트 중이거나 갈 주소가 그대로면 안내 목록으로 (바꿀 칸·새 금액·날짜를 지우지 않게, 재검토 A1)
+      const route = routeFromPrep(s.answers)[CLICK_URL];
+      const now = s.settings.find((x) => x.fieldId === CLICK_URL)?.value;
+      if (s.guide?.next || !route || route === now) return { ...s, prepMissing: ev.missing, step: "guide", guide: s.guide ? { ...s.guide, away: false } : { mode: "create", index: 0 } };
       const { [CLICK_TO]: _c, [CLICK_URL]: _u, ...answers } = s.answers;
       return { ...s, prepMissing: ev.missing, answers, step: "questions", guide: null };
     }

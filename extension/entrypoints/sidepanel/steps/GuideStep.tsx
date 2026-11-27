@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FlowEvent, FlowState } from "../../../lib/flow";
-import { groupOf, nextTestSteps, stepsFor, type GuideMsg, type GuideStepItem, shownDates } from "../../../lib/guide";
+import { groupOf, guideSignature, nextTestSteps, stepsFor, type GuideMsg, type GuideStepItem, shownDates } from "../../../lib/guide";
 import { ADS_MANAGER_URL, GUIDE } from "../../../lib/guideList";
 import { sendWithRetry } from "../../../lib/progress";
 import { Coach, PrimaryButton, WarnLine } from "../ui/Coach";
@@ -80,21 +80,25 @@ export default function GuideStep({ state, dispatch }: Props) {
   const away = Boolean(state.guide?.away);   // 뭉치가 광고 관리자에 나가 있음
 
   async function open() {
+    if (busy || login) return;   // 기다리는 동안 다시 부르면 기다림이 두 번 돌고 뭉치를 두 번 부른다 (재검토 A3)
     setBusy(true);
     setError(null);
-    dispatch({ type: "guideOpened" });   // 뭉치가 집을 나선다
     const tab = await adsTab();
     // 처음 쓰는 사장님: 메타가 로그인 화면으로 보낸다 → 로그인은 사장님이 직접, 광고 관리자가 뜨면 이어서 부른다
     if (tab.id && !(await waitForAds(tab, () => { setLogin(true); setBusy(false); }))) {
       setLogin(false);
       setBusy(false);
       dispatch({ type: "guideClosed" });   // 뭉치가 못 나갔다 → 집으로 (화면 검토 10)
-      setError("광고 관리자 화면이 뜨지 않았어요 → 로그인한 뒤 '광고 관리자 열기'를 다시 눌러 주세요.");
+      setError(`광고 관리자 화면이 뜨지 않았어요 → 로그인한 뒤 '${away ? "뭉치 다시 부르기" : "광고 관리자 열기"}'를 다시 눌러 주세요.`);
       return;
     }
     setLogin(false);
     setBusy(true);
-    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index, ...(next ? { focus: true } : {}) } satisfies GuideMsg);
+    // 광고 관리자가 뜬 뒤에야 '나가 있음' (로그인 기다리는 동안엔 [광고 관리자 열기]가 '기다리는 중'으로 남게, 재검토 A3)
+    // sig: 이번에 보내는 안내 표시 — 예전 뭉치의 진행은 배경이 버린다 (재검토 B9)
+    const sig = `${guideSignature(steps)}@${Date.now()}`;
+    dispatch({ type: "guideOpened", sig });   // 뭉치가 집을 나선다
+    const send = () => browser.tabs.sendMessage(tab.id!, { type: "guide:start", steps, startIndex: index, sig, ...(next ? { focus: true } : {}) } satisfies GuideMsg);
     let ok = await sendWithRetry(send, 2, 800);
     if (!ok && tab.id) {
       // 확장을 다시 불러오기 전에 열린 탭은 뭉치 스크립트가 없다 → 새로고침해서 넣고 다시 부른다
@@ -103,14 +107,14 @@ export default function GuideStep({ state, dispatch }: Props) {
       if (reloaded) ok = await sendWithRetry(send);
     }
     setBusy(false);
-    if (!ok) setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
+    if (!ok) setError("뭉치를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요.");
   }
 
   // 목록에서 지난 칸을 누르면 뭉치를 그 칸으로 (설계서 EX-01 ②)
   async function goTo(i: number) {
     const tab = await findAdsTab();
-    if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
-    await browser.tabs.sendMessage(tab.id, { type: "guide:goto", index: i } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
+    if (!tab?.id) { setError("광고 관리자 탭이 닫혔어요 → '뭉치 다시 부르기'를 눌러 주세요."); return; }
+    await browser.tabs.sendMessage(tab.id, { type: "guide:goto", index: i } satisfies GuideMsg).catch(() => setError("뭉치를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
   // [이전 칸] [다음 칸]: 광고 관리자 탭의 캐릭터를 움직인다 (진행은 배경 스크립트가 저장소에 쓴다).
@@ -121,8 +125,8 @@ export default function GuideStep({ state, dispatch }: Props) {
       return;
     }
     const tab = await findAdsTab();
-    if (!tab?.id) { setError("광고 관리자 탭이 없어요 → '광고 관리자 열기'를 먼저 눌러 주세요."); return; }
-    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("캐릭터를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
+    if (!tab?.id) { setError("광고 관리자 탭이 닫혔어요 → '뭉치 다시 부르기'를 눌러 주세요."); return; }
+    await browser.tabs.sendMessage(tab.id, { type: "guide:move", delta } satisfies GuideMsg).catch(() => setError("뭉치를 부르지 못했어요 → 광고 관리자 화면이 다 뜬 뒤 다시 시도해 주세요."));
   }
 
   const target = next?.send.find((s) => s.entry.id === state.guide?.next);   // 바꿀 칸 (앞에 복제·예산 공유 끄기 칸이 올 수 있음)
@@ -132,9 +136,9 @@ export default function GuideStep({ state, dispatch }: Props) {
   const intro = {
     create: next
       ? `다음 테스트 세팅이에요. 지난 광고는 끝났으니 ① 지난 광고 세트를 복제해 새 세트 2개를 만들어요 (하나는 지난번 그대로, 하나는 바꿀 세트). ② 바꿀 세트에서 '${targetLabel}' 칸만 바꿔요. ③ 두 세트 모두 총예산 ${money} 로 맞춰요 (돈이 정한 만큼만 나가게). 그 밖의 칸은 지난번 값 그대로예요. 뭉치가 차례로 짚고, '그대로' 세트의 금액·날짜는 사장님이 직접 맞춰요. '동의하고 게시'는 마지막에 직접 눌러 주세요.`
-      : "광고 관리자를 열면 캐릭터가 칸마다 무엇을 넣을지 알려 드려요. '동의하고 게시' 버튼은 마지막에 직접 눌러 주세요.",
-    edit: "바꿀 칸만 캐릭터가 짚어 드려요. 광고 관리자에서 지난번 광고 세트나 광고를 열어 수정하세요.",
-    export: "광고 관리자에서 결과를 내보내는 곳을 캐릭터가 짚어 드려요.",
+      : "광고 관리자를 열면 뭉치가 칸마다 무엇을 넣을지 알려 드려요. '동의하고 게시' 버튼은 마지막에 직접 눌러 주세요.",
+    edit: "바꿀 칸만 뭉치가 짚어 드려요. 광고 관리자에서 지난번 광고 세트나 광고를 열어 수정하세요.",
+    export: "광고 관리자에서 결과를 내보내는 곳을 뭉치가 짚어 드려요.",
   }[mode];
 
   const total = steps.length;
@@ -166,7 +170,7 @@ export default function GuideStep({ state, dispatch }: Props) {
           const label = state.settings.find((x) => x.fieldId === s.entry.id)?.label ?? s.entry.fallback.text;
           const publish = Boolean(s.entry.publish);
           return (
-            <li key={`${s.entry.id}${s.entry.mode}${n}`} aria-current={now ? "step" : undefined} className={`flex flex-col ${done ? "opacity-55" : ""}`}>   {/* 다음 테스트는 돈 확인 칸이 두 번 들어간다 (화면 검토 26) */}
+            <li key={`${s.entry.id}${s.entry.mode}${n}`} aria-current={now ? "step" : undefined} className="flex flex-col">   {/* 다음 테스트는 돈 확인 칸이 두 번 들어간다 (화면 검토 26) */}
               {newGroup && <p aria-hidden="true" className="mt-2 mb-1 flex items-center gap-1.5 px-0.5 text-small font-bold text-soft after:h-px after:flex-1 after:bg-line">{group}</p>}
               <div className={`flex items-center gap-2.5 rounded-button text-caption ${now ? "border-2 border-accent bg-paper p-2.5 shadow-raised" : publish ? "mt-1 border-2 border-dashed border-warn-mark/60 bg-warn-bg px-2.5 py-1.5" : "px-2.5 py-1"}`}>
                 {publish && !done
@@ -175,7 +179,7 @@ export default function GuideStep({ state, dispatch }: Props) {
                 <span className="flex min-w-0 flex-1 flex-col gap-1">
                   <span className="flex items-center gap-1.5">
                     {away && i >= 0 && i < index
-                      ? <button type="button" onClick={() => void goTo(i)} className="min-h-8 text-left text-soft underline decoration-dotted" aria-label={`${label}: 뭉치를 이 칸으로 보내기`}>{label}<span className="sr-only"> (끝남)</span></button>
+                      ? <button type="button" onClick={() => void goTo(i)} className="min-h-11 text-left text-soft underline decoration-dotted" aria-label={`${label}: 뭉치를 이 칸으로 보내기`}>{label}<span className="sr-only"> (끝남)</span></button>
                       : <span className={publish ? "font-semibold text-warn" : now ? "font-bold text-ink" : "text-soft"}>{publish && !done ? `${n + 1} · ${label}` : label}{done && <span className="sr-only"> (끝남)</span>}</span>}
                     {now && !publish && <span className="rounded-badge bg-accent px-1.5 text-small font-bold text-on-accent">지금</span>}
                     {!done && isOwnerStep(steps.find((x) => x.entry.id === s.entry.id) ?? s) && <span className="rounded-badge border border-accent px-1.5 text-small text-accent-ink">직접</span>}
@@ -221,17 +225,18 @@ export default function GuideStep({ state, dispatch }: Props) {
       {away && <p className="text-small text-soft">지난 칸 이름을 누르면 뭉치가 그 칸으로 가요.</p>}
       {away && <div className="flex gap-2">
         <button type="button" onClick={() => void move(-1)} disabled={index === 0}
-          className="flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">이전 칸</button>
+          className="min-h-11 flex-1 rounded-button border border-line bg-paper py-2 text-body disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">이전 칸</button>
         <button type="button" onClick={() => void move(1)} disabled={index >= total}
-          className="flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">다음 칸</button>
+          className="min-h-11 flex-1 rounded-button border border-accent bg-paper py-2 text-body font-semibold text-accent-ink disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none">다음 칸</button>
       </div>}
       {away && (
         // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
-        <button type="button" onClick={open} className="min-h-11 self-start text-label text-accent-ink underline">뭉치 다시 부르기</button>
+        <button type="button" onClick={open} disabled={busy || login} className="min-h-11 self-start text-label text-accent-ink underline disabled:text-disabled-fg disabled:no-underline">{login ? "로그인을 기다리는 중…" : "뭉치 다시 부르기"}</button>
       )}
       {index > 0 && (
         // 초안을 지웠거나 다시 만들 때: 1번 칸으로 (뭉치는 [광고 관리자 열기]로 다시 부른다)
-        <button type="button" onClick={() => dispatch({ type: "guideProgress", index: 0 })} className="min-h-11 self-start text-label text-accent-ink underline">1번 칸부터 다시</button>
+        // 뭉치가 나가 있으면 뭉치에게도 1번 칸으로 가라고 알린다 (패널 번호만 바꾸면 다음 움직임에 되돌아감, 재검토 A7)
+        <button type="button" onClick={() => { dispatch({ type: "guideProgress", index: 0 }); if (away) void goTo(0); }} className="min-h-11 self-start text-label text-accent-ink underline">뭉치 안내만 1번 칸부터 (답은 그대로)</button>
       )}
       {mode === "create" && !next && (
         // 기간·금액·지역·클릭 주소를 바꾸려면 ② 질문으로 (① 찾기·문구·준비물 답은 그대로, 날짜는 오늘 기준으로 다시, 화면 검토 9)

@@ -100,9 +100,9 @@ export default function CopyStep({ state, dispatch }: Props) {
         const on = picked.includes(m.word);
         return (
           <button key={m.word} type="button" aria-pressed={on} onClick={() => toggle(m.word)}
-            className={`inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
+            className={`min-h-11 inline-flex items-center gap-1.5 rounded-badge border px-3 py-1.5 text-caption transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
               on ? "border-accent bg-accent-soft text-ink" : "border-line bg-paper text-soft"}`}>
-            <span>{on ? "✓ " : ""}{m.word}{isHealth(m.word) && <span aria-label="효능 표현 주의" className="ml-0.5 text-warn">▲</span>}</span>
+            <span>{on ? "✓ " : ""}{m.word}{isHealth(m.word) && <span className="ml-0.5 text-warn"><span aria-hidden="true">▲</span><span className="sr-only">효능 표현 주의</span></span>}</span>
             <span className="text-small text-soft">{compact(m.total_qc)}번</span>
           </button>
         );
@@ -154,7 +154,7 @@ export default function CopyStep({ state, dispatch }: Props) {
       <Coach>
         {hasMods
           ? `손님이 '${state.product ?? ""}' 찾을 때 함께 쓰는 말이에요. 사장님 상품에 해당하는 것을 눌러 주세요. 문구에 그대로 넣을게요.`
-          : "상품의 좋은 점을 한두 마디로 알려 주세요. 찾은 키워드와 섞어 광고 문구 3개를 써 드릴게요."}
+          : "상품의 좋은 점을 한두 마디로 알려 주세요. 찾은 검색어와 섞어 광고 문구 3개를 써 드릴게요."}
       </Coach>
       {(seg || state.target) && (
         <div className="flex items-start justify-between gap-3 rounded-card border border-line bg-paper px-4 py-3">
@@ -167,7 +167,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             className="shrink-0 rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">바꾸기</button>
         </div>
       )}
-      {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요 (이 도구가 권하는 개수예요). 칩 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
+      {hasMods && <p className="-mt-2 text-small text-soft">1~3개 고르면 좋아요 (이 도구가 권하는 개수예요). 말 옆 숫자는 한 달에 그 말로 네이버에서 찾는 횟수예요 (많이 찾는 순서).</p>}
       {hasMods && groups.map((g) => {
         const items = mods.filter((m) => m.group === g);
         if (items.length === 0) return null;
@@ -196,7 +196,8 @@ export default function CopyStep({ state, dispatch }: Props) {
           placeholder={hasMods ? "예: 버터 듬뿍 (적고 엔터)" : "예: 버터 듬뿍 (적고 엔터)"}
           className="rounded-button border border-field-line bg-paper px-3 py-2.5 text-body"
         />
-        <p id="strengths-help" className="text-caption text-soft">적고 엔터를 누르면 칩으로 붙어요. 쉼표로 여러 개 적어도 돼요.</p>
+        <p id="strengths-help" className="text-caption text-soft">적고 엔터를 누르면 고른 말로 붙어요. 쉼표로 여러 개 적어도 돼요.</p>
+        {blocked && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 위에서 하나 이상 고르거나 여기에 적어 주세요 (그래야 [문구 써 주세요]가 눌려요)</p>}
         {added.length > 0 && (
           <ul aria-label="직접 적은 말" className="flex flex-wrap gap-2">
             {added.map((w) => (
@@ -234,7 +235,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             <legend className="mb-2 text-caption font-semibold text-soft">문구 말투</legend>
             <div className="flex flex-wrap gap-2">
               {TONES.map((t) => (
-                <label key={t} className={`cursor-pointer rounded-badge border px-3 py-1.5 text-label has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
+                <label key={t} className={`inline-flex min-h-11 items-center cursor-pointer rounded-badge border px-3 py-1.5 text-label has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-accent ${
                   tone === t ? "border-accent bg-accent font-semibold text-on-accent" : "border-line"}`}>
                   <input type="radio" name="tone" value={t} checked={tone === t} onChange={() => { setTone(t); setToneOpen(false); }} className="sr-only" />
                   {t}
@@ -244,9 +245,11 @@ export default function CopyStep({ state, dispatch }: Props) {
           </fieldset>
           )}
           {all.some(isHealth) && (
-            <p role="note" className="text-caption text-warn">
-              ▲ {all.filter(isHealth).map((w) => `'${w}'`).join(", ")} 같은 효능 말은 '낫는다·좋아진다'고 쓰면 법에 걸릴 수 있어요 (식품은 식품표시광고법 제8조, 화장품은 화장품법 제13조). 기능성화장품 심사를 받았다면 심사받은 내용 안에서는 쓸 수 있어요. 문구에는 '○○이 고민인 분께'처럼만 쓸게요.
-            </p>
+            <div role="note" className="text-caption text-warn">
+              <p><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {all.filter(isHealth).map((w) => `'${w}'`).join(", ")}: 문구에는 '○○이 고민인 분께'처럼만 쓸게요 ('낫는다·좋아진다'는 법에 걸릴 수 있어요).</p>
+              <details><summary className="cursor-pointer">왜 그래요?</summary>
+                <p>식품은 식품표시광고법 제8조, 화장품은 화장품법 제13조. 기능성화장품 심사를 받았다면 심사받은 내용 안에서는 쓸 수 있어요.</p></details>
+            </div>
           )}
           {all.length > 0 && (
             <p className="text-caption text-soft">
@@ -254,7 +257,6 @@ export default function CopyStep({ state, dispatch }: Props) {
             </p>
           )}
           <PrimaryButton onClick={write} busy={busy} disabled={blocked}>문구 써 주세요</PrimaryButton>
-          {blocked && <p className="text-caption text-warn">▲ 하나 이상 고르거나 적어 주세요</p>}
           <button type="button" onClick={() => choose("own")}
             className="inline-flex min-h-11 items-center self-start text-caption text-soft underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
             문구를 직접 쓸게요
@@ -269,7 +271,7 @@ export default function CopyStep({ state, dispatch }: Props) {
             const cards = rounds[ri]!.map((c, k) => card(c, start + k));
             const fallback = sources[ri] === "template" && ri === rounds.length - 1 && (
               <p role="status" className="rounded-soft border-[1.5px] border-warn-line bg-warn-bg px-3 py-2 text-caption text-warn">
-                ▲ 이번엔 Claude가 문구를 쓰지 못해 기본 문장 틀로 썼어요. [다른 문구로 다시 써 주세요]를 누르면 나아질 수 있어요.
+                <span aria-hidden="true">▲</span><span className="sr-only">주의</span> 이번엔 어시스턴트가 문구를 쓰지 못해 기본 문장 틀로 썼어요. [다른 문구로 다시 써 주세요]를 누르면 나아질 수 있어요.
               </p>
             );
             if (rounds.length === 1) return <div key={ri} className="flex flex-col gap-3">{fallback}{cards}</div>;
@@ -318,9 +320,10 @@ export default function CopyStep({ state, dispatch }: Props) {
       )}
       {choice !== null && (
         <div className="flex flex-col gap-2">
+          {/* 왜 안 눌리는지를 버튼보다 먼저 (재검토 C) */}
+          {(!headOk || !textOk) && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요 (이 도구가 정한 범위예요)</p>}
           <PrimaryButton onClick={confirm} disabled={!headOk || !textOk || banned.length > 0}>이 문구로 할게요</PrimaryButton>
           <p className="text-small text-soft">다음: 광고 설정 질문 몇 개에 답하면, 광고 관리자에 넣을 값을 만들어 드려요.</p>
-          {(!headOk || !textOk) && <p className="text-caption text-warn">▲ 제목은 1~{HEADLINE_MAX}자, 본문은 1~{TEXT_MAX}자로 적어 주세요 (이 도구가 정한 범위예요)</p>}
         </div>
       )}
       {list && (
@@ -329,7 +332,7 @@ export default function CopyStep({ state, dispatch }: Props) {
         </button>
       )}
       {list && error && <ErrorLine message={error} onRetry={write} />}
-      <p className="text-caption text-soft">사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.</p>
+      {choice === null && <p className="text-caption text-soft">사실이 아닌 말(최저가, 1위 등)은 넣지 않아요.</p>}
     </section>
   );
 }
@@ -389,7 +392,7 @@ function Editor({ draft, setDraft, banned, original, product }: {
       {draft.text.trim() && draft.text.length < TEXT_REC_MIN && (
         <p className="text-caption text-soft">메타 권장 본문 길이는 페이스북 피드 {TEXT_REC_MIN}~150자, 인스타 125자예요 (지금 {draft.text.length}자).</p>
       )}
-      {noName && <p className="text-caption text-warn">▲ 문구에 상품 이름('{product}')이 없어요. 무엇을 파는지 알 수 있게 넣어 주세요.</p>}
+      {noName && <p className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> 문구에 상품 이름('{product}')이 없어요. 무엇을 파는지 알 수 있게 넣어 주세요.</p>}
       <div className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => void copy()} disabled={!draft.headline.trim() && !draft.text.trim()}
           className="rounded-button border border-line bg-paper min-h-11 px-3 py-1 text-caption font-semibold disabled:cursor-default disabled:border-disabled-line disabled:bg-disabled-bg disabled:text-disabled-fg disabled:shadow-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
@@ -401,7 +404,7 @@ function Editor({ draft, setDraft, banned, original, product }: {
         {copied && <span role="status" className="text-small text-soft">{copied === "ok" ? "제목과 본문을 복사했어요." : "복사하지 못했어요. 직접 골라 복사해 주세요."}</span>}
       </div>
       {banned.length > 0
-        ? <p role="alert" className="text-caption text-warn">▲ {banned.map((b) => `'${b}'`).join(", ")} 같은 말은 근거 자료가 있어야 쓸 수 있어요 (표시광고법 제5조). 이 도구는 근거를 확인할 수 없어서 빼거나 바꿔 주세요.</p>
+        ? <p role="alert" className="text-caption text-warn"><span aria-hidden="true">▲</span><span className="sr-only">주의</span> {banned.map((b) => `'${b}'`).join(", ")} 같은 말은 근거 자료가 있어야 쓸 수 있어요 (표시광고법 제5조). 이 도구는 근거를 확인할 수 없어서 빼거나 바꿔 주세요.</p>
         : <p className="text-small text-soft">사실이 아닌 말(최저가, 1위 등)은 쓰지 마세요.</p>}
     </div>
   );
