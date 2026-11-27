@@ -49,7 +49,7 @@ def test_the_analysis_page_is_served_with_its_assets():
         import pytest
         pytest.skip("web/dist가 없음 (cd web && npm run build)")
     page = c.get("/analysis")
-    assert page.status_code == 200 and "Ad assistant" in page.text
+    assert page.status_code == 200 and "Ad Assistant" in page.text
     asset = next(pathlib.Path("web/dist/assets").glob("*.js")).name
     assert c.get(f"/analysis/assets/{asset}").status_code == 200
 
