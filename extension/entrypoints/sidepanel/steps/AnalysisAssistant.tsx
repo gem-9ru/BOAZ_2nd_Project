@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { askAssistant, plan as fetchPlan, type AssistantAlert } from "../../../lib/api";
+import { askAssistant, BadInput, plan as fetchPlan, type AssistantAlert } from "../../../lib/api";
 import { ANALYSIS_STEPS, type AnalysisTab } from "../../../lib/analysisTab";
 import type { FlowEvent, Plan, Step } from "../../../lib/flow";
 import { ADS_MANAGER_URL } from "../../../lib/guideList";
@@ -50,6 +50,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);   // 단계 첫 말을 기다리는 중
   const [sendError, setSendError] = useState<string | null>(null);
+  const [gone, setGone] = useState(false);   // 서버가 결과를 못 찾음(다시 켜져 지워짐) → 다시 시도·코드 넣기로는 안 된다
   const [receiving, setReceiving] = useState(false);   // 보내기를 받아 오는 중
   const [offline, setOffline] = useState(false);   // 이 단계 설명·알림을 못 받음
   const [retry, setRetry] = useState(0);
@@ -86,7 +87,7 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
       // 사장님이 ③에서 고른 예산·기간이 있으면 그 값으로 (서버 계획은 기본값 per_set·days)
       const p = { ...got, change: { ...got.change, ...(tab.budget ? { per_set: tab.budget, picked: true } : {}), ...(tab.days ? { days: tab.days } : {}) } };
       dispatch({ type: "planLoaded", plan: p, sent: mine });
-    }, (e: Error) => { if (sent.current !== mine) return; sent.current = null; setSendError(e.message); });
+    }, (e: Error) => { if (sent.current !== mine) return; sent.current = null; setGone(e instanceof BadInput); setSendError(e.message); });
   }, [code, tab.send, tab.budget, tab.days, dispatch, handled, retry]);
 
   useEffect(() => { end.current?.scrollIntoView?.({ block: "end" }); }, [bubbles]);
@@ -128,6 +129,10 @@ export default function AnalysisAssistant({ tab, dispatch, handled, plan, flowSt
           <p className="text-label">분석은 끝났어요. 이제 광고 관리자에서 다음 테스트를 준비해요. 게시는 사장님이 직접 해요.</p>
           <PrimaryButton onClick={() => void goAds()}>광고 관리자에서 다음 테스트 준비 ▶</PrimaryButton>
         </section>
+      ) : sendError && gone ? (
+        <div className="rounded-button bg-paper px-3 py-2">
+          <ErrorLine message="분석 결과가 서버에서 지워졌어요 (서버를 다시 켜면 지워져요). 왼쪽 분석 페이지에서 파일을 다시 올리고 보내 주세요." />
+        </div>
       ) : sendError ? (
         <div className="flex flex-col gap-1 rounded-button bg-paper px-3 py-2">
           <ErrorLine message={`바꿀 칸을 받지 못했어요. ${sendError}`} onRetry={() => setRetry((n) => n + 1)} />

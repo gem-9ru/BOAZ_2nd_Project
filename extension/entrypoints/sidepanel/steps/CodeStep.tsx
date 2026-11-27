@@ -18,6 +18,7 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lost, setLost] = useState(false);   // 세팅값을 분석 페이지로 넘기지 못함 (서버가 잠깐 안 됨)
 
   async function load() {
     const c = tidyCode(code);
@@ -79,7 +80,13 @@ export default function CodeStep({ state, dispatch }: { state: FlowState; dispat
           {end && <p>종료 날짜: {end}{budget ? ` · 세트당 총 ${budget}` : " · 예산은 광고 관리자에 넣은 값 그대로예요"}</p>}
         </section>
       )}
-      <PrimaryButton onClick={async () => { mark(1); await browser.tabs.create({ url: await analysisPageUrl(settings) }); }}>분석 페이지 열기 (새 창)</PrimaryButton>
+      <PrimaryButton onClick={async () => {
+        mark(1);
+        const url = await analysisPageUrl(settings);
+        setLost(Object.keys(settings).length > 0 && !url.includes("#s="));   // 맡기기 실패 → 열쇠 없이 열림
+        await browser.tabs.create({ url });
+      }}>분석 페이지 열기 (새 창)</PrimaryButton>
+      {lost && <ErrorLine message="이번 세팅값을 넘기지 못했어요. 분석 페이지에서 '내 광고 설정 5개만 직접 입력하기'로 넣어 주세요." />}
       <details className="rounded-button bg-paper px-3 py-2">
         <summary className="flex min-h-11 cursor-pointer items-center text-label font-semibold text-accent-ink">보내기가 안 되면: 코드 4자리로 넣기</summary>
       <form className="mt-2 flex flex-col gap-2" onSubmit={(e) => { e.preventDefault(); void load(); }}>

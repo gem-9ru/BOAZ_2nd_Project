@@ -160,6 +160,16 @@ describe("분석 페이지 옆 광고 어시스턴트", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
+  it("when the server lost the result (restarted), it says to upload again instead of retry / code", async () => {
+    vi.stubGlobal("fetch", vi.fn((u: string) => String(u).includes("/plan/")
+      ? Promise.resolve(new Response(JSON.stringify({ detail: "코드를 찾지 못했어요." }), { status: 404 }))
+      : ok({ message: "m", suggestions: [] })));
+    render(<AnalysisAssistant tab={{ tabId: 1, code: "AB12", step: "AN-06", send: "9" }} dispatch={() => {}} />);
+    expect((await screen.findByRole("alert")).textContent).toContain("파일을 다시 올리고 보내 주세요");
+    expect(screen.queryByRole("button", { name: "다시 시도" })).toBeNull();
+    expect(screen.queryByText(/코드 4자리로 넣기/)).toBeNull();
+  });
+
   it("sending twice quickly: a late answer for the first send does not overwrite the second", async () => {
     const plan = (per_set: number) => ({ code: "AB12", action: "a", change: { field_id: "meta.ad.media", label: "l", new: "n", note: "n", per_set }, summary: [], badge: null });
     const waits: ((r: Response) => void)[] = [];

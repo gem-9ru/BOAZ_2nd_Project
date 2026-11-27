@@ -26,6 +26,16 @@ describe("③ 코드 넣기", () => {
     await waitFor(() => expect(create).toHaveBeenCalledWith({ url: "http://localhost:8000/analysis" }));
   });
 
+  it("says so when the settings could not be handed to the analysis page", async () => {
+    const create = vi.spyOn(fakeBrowser.tabs, "create");
+    vi.stubGlobal("fetch", vi.fn(() => Promise.resolve(new Response("{}", { status: 500 }))));
+    const settings = [{ fieldId: "meta.campaign.objective", label: "목표", value: "트래픽" }];
+    render(<CodeStep state={{ ...initialState(), step: "upload", settings }} dispatch={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: "분석 페이지 열기 (새 창)" }));
+    await waitFor(() => expect(create).toHaveBeenCalledWith({ url: "http://localhost:8000/analysis" }));
+    expect((await screen.findByRole("alert")).textContent).toContain("세팅값을 넘기지 못했어요");
+  });
+
   it("tidies the code and fetches the plan", async () => {
     const f = vi.fn((_url: string) => ok(plan));
     vi.stubGlobal("fetch", f);
