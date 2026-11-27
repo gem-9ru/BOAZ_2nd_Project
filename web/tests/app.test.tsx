@@ -21,7 +21,7 @@ function show(result: unknown = oven) {
       const budgets = [...Array.from({ length: 28 }, (_, i) => 3000 + i * 1000), ...Array.from({ length: 14 }, (_, i) => 35000 + i * 5000)];
       const rows = budgets.map((b) => ({ budget: b,
         visits: { median: (b * 16) / 6000, lo: (b * 11) / 6000, hi: (b * 22) / 6000 }, judge: b >= 10000 ? 0.999 : b >= 6000 ? 0.89 : 0.69,
-        hard: b < 6000, tried: b <= 5308, daily_tried: b / days <= 2643, below_daily_min: b / days < 1336, daily_min: 1336 }));
+        hard: b < 6000, tried: b <= 5308, daily_tried: b / days <= 2643, below_daily_min: b / days < 1336, daily_min: 1336, daily_max: 2643 }));
       return ok({ arm: "B", days, rows, mid: 30000, many_from: 50000 });
     }
     if (String(url).includes("/simulate")) {
@@ -385,14 +385,21 @@ describe("③ 준비하기 (예산 슬라이더, 최종안(1))", () => {
     expect(screen.getByText("100,000원", { selector: "span.absolute" }).className).toMatch(/calc\(100%-0\.75rem\)/);
   });
 
-  it("🔎 inside the budget box compares 2x and 4x of the picked amount with solid/dotted lines", async () => {
-    await prep();
+  it("🔎 inside the budget box compares 2x and 4x of the picked amount with solid/dotted lines, from the result table (no extra server calls)", async () => {
+    const f = await prep();
+    const before = f.mock.calls.filter(([u]) => /\/simulate$/.test(String(u))).length;
     expect(screen.getByText("금액 2배·4배 비교 · 실선/점선 뜻 · 계산 방법")).toBeTruthy();
     open("이 숫자는 어떻게 나왔나요?");
     expect(await screen.findByRole("heading", { name: "금액을 2배·4배로 하면" })).toBeTruthy();
     expect(await screen.findByText("12,000원")).toBeTruthy();
     expect(screen.getByText(/실선 = 써 본 금액 · 점선 = 써 본 적 없는 금액/)).toBeTruthy();
     expect(screen.getAllByText("이 숫자는 어떻게 나왔나요?").length).toBe(1);
+    expect(screen.getByText("보통 16명 (적게 11명 ~ 많이 22명)")).toBeTruthy();   // 6,000원 · 써 본 금액 (하루 1,500원)
+    expect(screen.getByText("보통 64명 (적게 44명 ~ 많이 88명)")).toBeTruthy();   // 24,000원 = 6,000원 × 4
+    expect(screen.getAllByText("가설").length).toBeGreaterThan(0);                 // 24,000원은 하루 6,000원 > 2,643원
+    key(await slider(), "ArrowRight", 3);
+    expect(screen.getByText("보통 48명 (적게 33명 ~ 많이 66명)")).toBeTruthy();   // 슬라이더를 따라 바로 (9,000원 × 2 = 18,000원)
+    expect(f.mock.calls.filter(([u]) => /\/simulate$/.test(String(u))).length).toBe(before);
     expect(screen.getByText("계산 방법")).toBeTruthy();
   });
 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { simulate, type Result, type Simulation } from "../api";
+import { simulate, type GridRow, type Result, type Simulation } from "../api";
 import { armName, Lead } from "../steps/shared";
 import { AlertMark, band, Button, Card, HowCalculated, won } from "../ui";
 
@@ -7,10 +7,12 @@ import { AlertMark, band, Button, Card, HowCalculated, won } from "../ui";
  *  방문자 수 범위는 총액으로 계산하고, 기간은 하루 금액을 바꾼다: 하루에 써 본 적 없는 금액이면 '가설',
  *  메타 하루 최소보다 적으면 ▲ (광고가 안 나갈 수 있어요).
  *  10번 중 8번은 이 안에 들어요(10~90%). 써 본 적 없는 금액은 점선 + '가설'. 보통 값은 진한 보라 점(주황은 주의 색). */
-export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days: fixedDays }: {
+export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days: fixedDays, grid }: {
   r: Result; onReload?: () => void; part?: "all" | "visits" | "roll" | "compare";
   /** part "compare" (③ 슬라이더 아래 '🔎 이 숫자는 어떻게 나왔나요?'): 슬라이더가 고른 금액·기간으로 2배·4배를 비교한다 */
   budget?: number; days?: number;
+  /** ③ 슬라이더 결과표: 있으면 2배·4배를 이 표로 계산하고 서버에 묻지 않는다 (슬라이더를 끌 때마다 요청하면 분당 제한에 걸림) */
+  grid?: GridRow[] | null;
 }) {
   const arms = r.summary.arms;
   const bi = r.verdict?.badge.better === "A" || arms.length < 2 ? 0 : 1;
@@ -20,24 +22,28 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
   const [total, setTotal] = useState(100000);
   const [daysState, setDays] = useState(r.matrix.change?.days ?? (r.check.read.days === 7 ? 7 : 4));
   const budget = fixedBudget ?? budgetState, days = fixedDays ?? daysState;
-  const compare = part === "compare";
+  const compare = part === "compare", roll1 = part === "roll";
   const [sims, setSims] = useState<Simulation[]>([]);
   const [error, setError] = useState<string | null>(null);
   const budgets = [budget, budget * 2, budget * 4];
   const spent = arm?.spend ?? 0;
   const c = r.matrix.change;
 
+  // 방문자 수는 금액에 비례한다: 서버가 같은 표본(원당 방문자)에 금액을 곱하므로 범위(10~90%)도 그대로 비례 → 결과표의 한 칸으로 어느 금액이든 계산
+  const fromGrid = compare && grid?.length ? fromRows(grid, [budget, budget * 2, budget * 4], days) : null;
   useEffect(() => {
-    if (!arm) return;
+    if (!arm || fromGrid) return;
     const t = setTimeout(() => {
-      Promise.all([budget, budget * 2, budget * 4].map((b) => simulate(r.code, arm.name, b, total, days)))
+      // Test & Roll(roll)은 전체 예산·기간만 보므로 한 번만 묻는다 (슬라이더 금액이 바뀌어도 다시 묻지 않음)
+      Promise.all((roll1 ? [start] : [budget, budget * 2, budget * 4]).map((b) => simulate(r.code, arm.name, b, total, days)))
         .then((s) => { setSims(s); setError(null); }, (e: Error) => setError(e.message));
     }, compare ? 600 : 250);   // 슬라이더를 끄는 동안 서버에 너무 자주 묻지 않게 (분당 요청 제한)
     return () => clearTimeout(t);
-  }, [r.code, arm, budget, total, days]);
+  }, [r.code, arm, roll1 ? start : budget, total, days]);
 
   if (!arm) return null;
-  const first = sims[0];
+  const shown = fromGrid ?? sims;
+  const first = shown[0];
   // 한 번도 계산을 못 받았으면(서버가 다시 켜져 결과가 지워진 경우 등) '계산하는 중…'에 멈추지 않고 이유와 다음 행동 하나
   if (error && !first) {
     return (
@@ -46,7 +52,7 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
       </Card>
     );
   }
-  const max = Math.max(...sims.map((s) => s.visits.hi), 1);
+  const max = Math.max(...shown.map((s) => s.visits.hi), 1);
   const nt = first?.next_test;
   const who = armName(arm.name, bi);
   const roll = nt && (
@@ -92,7 +98,7 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
         </>}
         <ul className="flex flex-col gap-3" aria-live="polite">
           {budgets.map((b, i) => {
-            const s = sims[i];
+            const s = shown[i];
             // ③ 슬라이더와 같은 기준: '써 본 금액' = 하루 금액이 써 본 최대 이하 (최종안(1) '하루 2,643원(써 본 최대)'). 따로 볼 땐 총액까지
             const tried = compare ? s?.daily_tried ?? true : s?.tried ?? b <= spent;
             const at = (x: number) => `${(x / max) * 100}%`;
@@ -126,10 +132,23 @@ export function Simulator({ r, onReload, part = "all", budget: fixedBudget, days
       {part === "all" && roll}
       <HowCalculated title={compare ? "계산 방법" : undefined} easy="실측으로 맞춘 범위에서 광고비·누르는 정도·페이지 도착을 무작위로 뽑아 수만 번 가상으로 돌려 보고, 가운데 80%를 보여 드려요.">
         <p>예산 ÷ 광고 1,000번 보여주는 데 드는 돈 (CPM, 범위로 뽑음) → 보여진 횟수 × 누른 비율 (CTR) → 클릭 × 도착 비율 → 방문자. 골라 뽑지 않고 전체 분포를 써요.</p>
-        <p>한계: {first?.limits ?? "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>
+        <p>한계: {first?.limits || "예산을 크게 늘리면 단가가 오르거나 학습 기간이 생길 수 있지만 반영하지 않았어요."} 근거: Jin 외 (2017) 포화 구조</p>
         {nt && <p>Test & Roll (Feit & Berman 2019): 실측으로 맞춘 몫 {(nt.share_lo * 100).toFixed(1)}~{Math.round(nt.share_hi * 100)}%.</p>}
         {r.verdict?.min_budget.per_group && <p>고전적 표본 크기: 방문 1명당 비용이 20% 나은 걸 확실하게 고르려면 세트당 약 {won(r.verdict.min_budget.per_group)} (10번 중 8번). 작게 시험할 때는 '확실해요'까지 가지 않아도 돼요. 두 세트를 작게 비교해 나은 쪽을 고르고, 남은 돈은 그쪽에 써요 (Test & Roll).</p>}
       </HowCalculated>
     </>
   );
+}
+
+/** 결과표 한 칸(비례 기준)과 하루 최대로 금액 b의 예상을 만든다. '써 본 금액' = 하루 금액이 써 본 최대 이하 (③ 슬라이더와 같은 기준) */
+function fromRows(rows: GridRow[], budgets: number[], days: number): Simulation[] {
+  const base = rows.find((x) => x.visits.median > 0) ?? rows[0]!;
+  const k = (b: number) => b / base.budget;
+  return budgets.map((b) => {
+    const daily = b / days, max = base.daily_max ?? null;
+    const dailyTried = max == null || daily <= max + 0.5;
+    return { budget: b, runs: 0, arm: "", impressions: base.visits, link_clicks: base.visits, histogram: [], limits: "",
+      visits: { median: base.visits.median * k(b), lo: base.visits.lo * k(b), hi: base.visits.hi * k(b) },
+      tried: dailyTried, daily_tried: dailyTried, days, daily, daily_max: max } as Simulation;
+  });
 }

@@ -149,7 +149,7 @@ export function Prep({ r, onCopied, onSend, onReload, onBack }: { r: Result; onC
         )}
         <Folds label="이 숫자는 어떻게 나왔나요?">
           <Fold label={<><span aria-hidden="true">🔎 </span>이 숫자는 어떻게 나왔나요?</>} preview="금액 2배·4배 비교 · 실선/점선 뜻 · 계산 방법">
-            <Simulator r={r} onReload={onReload} part="compare" budget={budget} days={days} />
+            <Simulator r={r} onReload={onReload} part="compare" budget={budget} days={days} grid={grid} />
           </Fold>
         </Folds>
         <p className="mt-2 flex items-start gap-2 rounded-soft border-[1.5px] border-info-line bg-info-bg px-4 py-2.5 text-label text-info-ink">

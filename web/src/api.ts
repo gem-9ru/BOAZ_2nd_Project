@@ -89,6 +89,6 @@ export const receivedSettings = (key: string) => call<{ count: number }>(`/setti
 export interface BaselineRow { key: string; label: string; value: number; range: [number, number] | null; standard: string;
   signal: "ok" | "low" | "unknown"; text: string; why: string | null }
 /** ③ 예산 슬라이더 결과표 (서버 /simulate/grid): 3,000~30,000원 1,000원 단위 */
-export interface GridRow { budget: number; visits: Band; judge: number; hard: boolean; tried: boolean; daily_tried: boolean; below_daily_min: boolean; daily_min?: number | null }
+export interface GridRow { budget: number; visits: Band; judge: number; hard: boolean; tried: boolean; daily_tried: boolean; below_daily_min: boolean; daily_min?: number | null; daily_max?: number | null }
 export const simulateGrid = (code: string, arm: string, days = 4) =>
   call<{ arm: string; days: number; rows: GridRow[]; mid: number; many_from: number }>("/simulate/grid", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code, arm, days }) });
