@@ -1,19 +1,21 @@
 import type { ReactNode } from "react";
-import type { Metric, Result } from "../api";
-import { Fold, Folds, josa, md, pct, people, TestTag, VerdictBadge, won, wordOf } from "../ui";
+import type { Result } from "../api";
+import { Fold, Folds, josa, pct, people, Sub, TestTag, VerdictBadge, won } from "../ui";
 import { FunnelDetail, funnelPreview } from "./WhyFunnel";
 import { SettingsDetail, settingPreview } from "./WhySettings";
 import { CostPerCustomer, Method, Places, PlacesLead, short } from "./WhyCompare";
 import { armName, SignalTag } from "./shared";
 import { sameMoney } from "./shared";
 
-/** ② 왜 그런지 (축소안 v5 · 기존 AN-02 + AN-03 + AN-04 합침): 한 줄 답 → 이유 3줄(판정 배지로 끝나는 문장) → 접기 6줄.
- *  지표 이름(CPM·CTR) 없이 사장님 말로. 기존 화면 내용은 지우지 않고 접기 안으로. */
+/** ② 왜 그런지 (최종안 · 기존 AN-02 + AN-03 + AN-04 합침): 이유 3장, 장마다 문장 1줄 + 근거 그래프 1개 + 판정 배지 → '더 자세히' 접기 1개.
+ *  ① 릴스로 간 돈 ② 방문 1명당 비용(○ 쪽이에요, 날짜별로 굳어지는 한 줄) ③ 광고비 범위(안 겹치면 확실해요) + 메타 권장과 다른 실측 한 줄.
+ *  지표 이름(CPM·CTR) 없이 사장님 말로. 기존 화면 내용은 지우지 않고 '더 자세히' 안으로. */
 export function Why({ r }: { r: Result }) {
   const c = r.matrix.change ?? r.next.change;
   const keep = r.matrix.keep[0];
   const v = r.verdict;
   const arms = r.summary.arms.slice(0, 2);
+  const names = arms.map((a, i) => armName(a.name, i));
   const same = sameMoney(r);
   const cpm = v?.metrics.find((m) => m.key === "cpm");
   const top = r.placements[0];
@@ -24,11 +26,11 @@ export function Why({ r }: { r: Result }) {
   const days = r.replay;
   const side = days.length && days[days.length - 1]!.prob < 0.5 ? "A" : "B";
   const of = (p: number) => (side === "B" ? p : 1 - p);
-
-  const [keepWord, keepBadge] = (keep?.reason ?? "").split(" · ");
-  const keepValue = keep?.value.split(",")[0]!.trim();
   const costs = arms.map((a) => (a.landing_page_views ? a.spend / a.landing_page_views : null));
   const m = v?.metrics.find((x) => x.key === v.badge.metric);
+  const win = v ? names["AB".indexOf(v.badge.better)] ?? v.badge.better : "";
+  const cheap = cpm ? names["AB".indexOf(cpm.better)] ?? cpm.better : "";
+  const placementKeep = keep?.field_id === "meta.adset.placements";
 
   return (
     <>
@@ -38,8 +40,8 @@ export function Why({ r }: { r: Result }) {
             { name: short(top.label), value: top.share, text: pct(top.share), on: true },
             { name: "나머지 자리", value: 1 - top.share, text: pct(1 - top.share) },
           ]} />
-        )} tag={<TestTag text={c.tag ?? "테스트 제안"} />} sub={c.field_id === "meta.ad.media" && c.now ? `그런데 소재는 ${c.now}${batchim(c.now) ? "이었어요" : "였어요"} → 이번에 테스트할 칸` : "→ 이번에 테스트할 칸"}>
-        {firstSentence(c.reason ?? c.note)}
+        )} tag={<TestTag text={c.tag ?? "테스트 제안"} />} sub={c.field_id === "meta.ad.media" && c.now ? `소재는 ${c.now}${batchim(c.now) ? "이었어요" : "였어요"} → 이번에 테스트할 칸` : "→ 이번에 테스트할 칸"}>
+        {reasonOne(r)}
       </Reason>
       {/* ①b 세트 1개: 이유 2·3은 A/B 비교 대신 '기준 대비' 문장 (같은 틀, 배지 대신 ✓ / ↓ / – 신호) */}
       {r.summary.arms.length === 1 && (r.baseline ?? []).map((b, i) => (
@@ -49,58 +51,51 @@ export function Why({ r }: { r: Result }) {
           {b.label}: {b.text}
         </Reason>
       ))}
-      {keep && keepValue && (
-        <Reason n={2} graph={cpm && <Ranges m={cpm} names={arms.map((a, i) => armName(a.name, i))} />} tag={keepBadge && <VerdictBadge word={keepBadge} small />}
-          sub={keep.field_id === "meta.adset.placements" && meta
-            ? "메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (모닝빈은 36%)"
-            : "지금처럼 그대로 두세요"}>
-          {keep.title ?? `${josa(keep.path.split(" › ").pop()!, "은는")} ${josa(keepValue, "이가")} ${keepWord!.replace("싸요", "쌌어요")}`}
+      {v && same && m && (
+        <Reason n={2} graph={<>
+            <Bars label="방문 1명당 비용 (짧을수록 좋아요)" rows={arms.map((_, i) => ({ name: `방문 1명당 ${"AB"[i]}`, value: (costs[i] ?? 0) / Math.max(...costs.map((x) => x ?? 0), 1), text: won(costs[i]), on: "AB"[i] === v.badge.better }))} />
+            <p className="mt-1.5 text-caption font-medium text-soft">{v.badge.better}가 나을 확률 <b className="text-ink">{pct(v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better)}</b>
+              {days.length > 1 && ` · 날짜가 쌓일수록 ${days.map((d) => pct(of(d.prob))).join(" → ")}로 ${side} 쪽으로 ${of(days[days.length - 1]!.prob) >= of(days[0]!.prob) ? "굳어지는 중" : "오락가락하는 중"}`}</p>
+          </>} tag={<VerdictBadge word={v.badge.word} small />}
+          sub={`세트당 ${won(same.base)}으로 방문자 A ${same.counts[0]}명 · B ${same.counts[1]}명`}>
+          {v.badge.word === "아직 몰라요" ? "같은 돈으로 온 방문자는 아직 비슷해요" : `같은 돈으로 방문자를 ${paren(win)}가 더 데려왔어요`}
         </Reason>
       )}
-      {v && same && m && (
-        <Reason n={keep ? 3 : 2} graph={<>
-            <Bars label="방문 1명당 비용 (짧을수록 좋아요)" rows={arms.map((a, i) => ({ name: `방문 1명당 ${"AB"[i]}`, value: (costs[i] ?? 0) / Math.max(...costs.map((x) => x ?? 0), 1), text: won(costs[i]), on: "AB"[i] === v.badge.better }))} />
-            {days.length > 1 && <p className="mt-1.5 text-caption font-medium text-soft">날짜가 쌓일수록 {days.map((d) => pct(of(d.prob))).join(" → ")}로 {side} 쪽으로 {of(days[days.length - 1]!.prob) >= of(days[0]!.prob) ? "굳어지는 중" : "오락가락하는 중"}</p>}
-          </>} tag={<VerdictBadge word={v.badge.word} small />}
-          sub={`방문 1명당 A ${won(costs[0])} · B ${won(costs[1])} · ${v.badge.better}가 나을 확률 ${pct(v.badge.better === "B" ? m.prob_b_better : 1 - m.prob_b_better)}`}>
-          같은 돈({won(same.base)})으로 방문자 A {same.counts[0]}명 · B {same.counts[1]}명
+      {cpm && arms.length === 2 && (
+        <Reason n={3} graph={<>
+            <Bars label="광고 1,000번 보여 주는 데 드는 돈 (짧을수록 좋아요)" rows={arms.map((a, i) => ({ name: names[i]!, value: (a.cpm ?? 0) / Math.max(...arms.map((x) => x.cpm ?? 0), 1), text: won(a.cpm), on: "AB"[i] === cpm.better }))} />
+            <p className="mt-1.5 text-caption font-medium text-soft">{arms.map((_, i) => { const iv = i ? cpm.b_interval : cpm.a_interval; return `${"AB"[i]} 적게 ${won(iv[0])} ~ 많이 ${won(iv[1])}`; }).join(" · ")}</p>
+            {placementKeep && meta && <p className="mt-2 rounded-button bg-belly px-3 py-2 text-caption text-belly-ink"><span aria-hidden="true">💡 </span>메타는 '자동'을 권했지만, 우리가 돌려 본 2번 모두 수동이 쌌어요 (베이커리 실험 2는 36%) → 노출 위치는 지금처럼 그대로</p>}
+          </>} tag={<VerdictBadge word={cpm.word} small />}
+          sub={`광고 1,000번 보여 주는 데 드는 돈 · ${cpm.overlap ? "두 범위가 겹쳐요" : "두 범위가 안 겹쳐요"}`}>
+          {cpm.word === "확실해요" ? `광고비 자체는 확실히 ${cheap.split(" ")[0]}가 쌌어요` : "광고비 차이는 아직 몰라요"}
         </Reason>
       )}
       </div>
       {act?.status === "skip" && <p className="-mt-1 pl-1 text-label text-soft">들어온 뒤 행동{label && few?.actions != null ? `(${label} ${few.actions}건)` : ""}은 아직 몰라요</p>}
 
-      <Folds title="궁금하면 열어 보세요">
-        <Fold label="어디서 막혔나 · 단계별 신호" preview={funnelPreview(r)}><FunnelDetail r={r} /></Fold>
-        {days.length > 0 && (
-          <Fold label="날짜별로 확률이 어떻게 굳어졌나" preview={days.map((d) => `${md(d.date)} ${pct(of(d.prob))}`).join(" → ")}>
-            <div className="flex flex-wrap items-end gap-4">
-              <div className="relative flex h-40 items-end gap-5 px-1" role="img" aria-label={days.map((d) => `${md(d.date)} ${pct(of(d.prob))} ${d.word ?? wordOf(d.prob)}`).join(", ")}>
-                {/* 점선 = 70% (방향이 보이는 선). 막대 높이 = 그날까지의 확률 (위 글자칸 2.5rem 빼고) */}
-                <span aria-hidden="true" className="absolute inset-x-0 border-t-2 border-dashed border-belly-strong" style={{ bottom: `calc(2.75rem + (100% - 2.75rem) * 0.7)` }} />
-                {days.map((d, i) => (
-                  <div key={d.date} aria-hidden="true" className="flex h-full w-30 flex-col items-center justify-end whitespace-nowrap text-caption">
-                    <i className={`block w-11 rounded-t-button rounded-b-mark ${i === days.length - 1 ? "bg-accent" : "bg-accent-line"}`} style={{ height: `calc((100% - 2.75rem) * ${of(d.prob)})` }} />
-                    <span className="flex h-11 flex-col items-center justify-start pt-1.5 leading-tight"><b className="text-label">{pct(of(d.prob))}</b>{md(d.date)} · {d.word ?? wordOf(d.prob)}</span>
-                  </div>
-                ))}
-              </div>
-              <p className="min-w-40 flex-1 self-center text-label text-soft">점선 = 70% (방향이 보이는 선) · {side}가 나을 확률{of(days[0]!.prob) < 0.5 && days.length > 1 ? <><br />하루치만 보고 골랐다면 반대쪽을 골랐을 거예요</> : ""}</p>
-            </div>
-          </Fold>
-        )}
-        {top && (
-          <Fold label="노출 위치별 클릭" preview={`${short(top.label)} 1,000번 보이면 ${people(top.ctr_adjusted, 1000, "번")}`}>
-            <PlacesLead r={r} /><Places r={r} />
-          </Fold>
-        )}
-        <Fold label="내 세팅 칸별 상태" preview={settingPreview(r)}><SettingsDetail r={r} /></Fold>
-        <Fold label="계산 방법 · 근거" preview="베이지안 · 논문 · 한계">
-          {v && <CostPerCustomer r={r} />}
-          <Method r={r} />
+      {/* 최종안: 접기는 '더 자세히' 1개. 열면 단계별 신호 · 노출 위치별 클릭 · 내 세팅 칸별 상태 · 계산 방법 */}
+      <Folds label="더 자세히">
+        <Fold label="더 자세히" preview="단계별 신호 · 노출 위치별 클릭 · 내 세팅 칸별 상태 · 계산 방법">
+          <Sub title="어디서 막혔나 · 단계별 신호" note={funnelPreview(r)}><FunnelDetail r={r} /></Sub>
+          {top && <Sub title="노출 위치별 클릭" note={`${short(top.label)} 1,000번 보이면 ${people(top.ctr_adjusted, 1000, "번")}`}><PlacesLead r={r} /><Places r={r} /></Sub>}
+          <Sub title="내 세팅 칸별 상태" note={settingPreview(r)}><SettingsDetail r={r} /></Sub>
+          <Sub title="계산 방법 · 근거" note="베이지안 · 논문 · 한계">{v && <CostPerCustomer r={r} />}<Method r={r} /></Sub>
         </Fold>
       </Folds>
     </>
   );
+}
+
+
+const paren = (s: string) => (s.includes(" ") ? `${s.replace(" ", "(")})` : s);   // 'B 수동' → 'B(수동)'
+
+/** 이유 1 (최종안): '돈이 인스타 릴스로 갔는데, 세로 소재가 없었어요' (설정을 받았을 때) · 아니면 서버 이유의 첫 문장 */
+function reasonOne(r: Result): string {
+  const c = r.matrix.change ?? r.next.change;
+  const top = r.placements[0];
+  if ((c.rule?.row ?? c.row) === "5" && top && (c.reason ?? "").includes("없었어요")) return `돈이 ${short(top.label)}로 갔는데, ${josa(c.what ?? "맞는 소재", "이가")} 없었어요`;
+  return firstSentence(c.reason ?? c.note);
 }
 
 /** 이유 한 줄: 번호 · 굵은 문장 + 작은 설명 · 끝에 판정 배지(또는 테스트 제안 태그). */
@@ -157,24 +152,3 @@ function Bars({ label, rows }: { label: string; rows: { name: string; value: num
   );
 }
 
-/** 광고비 범위 (CPM 95%): 두 세트 범위를 한 눈금 위에. 안 겹치면 '확실해요'. */
-function Ranges({ m, names }: { m: Metric; names: string[] }) {
-  const ivs = [m.a_interval, m.b_interval];
-  const lo = Math.min(...ivs.map((x) => x[0])) * 0.97, hi = Math.max(...ivs.map((x) => x[1])) * 1.03;
-  const at = (x: number) => ((x - lo) / (hi - lo || 1)) * 100;
-  return (
-    <figure className="mt-3 flex flex-col gap-1.5" aria-label={`광고 1,000번 보여주는 데 드는 돈 범위: ${ivs.map((x, i) => `${names[i]} ${won(x[0])}~${won(x[1])}`).join(", ")}`}>
-      <figcaption className="mt-1 text-caption text-soft">광고 1,000번 보여주는 데 드는 돈 · {m.overlap ? "두 범위가 겹쳐요" : "두 범위가 안 겹쳐요"}</figcaption>
-      {ivs.map((x, i) => {
-        const on = "AB"[i] === m.better;
-        return (
-          <div key={i} aria-hidden="true" className="grid grid-cols-[minmax(0,7rem)_minmax(3rem,1fr)_auto] items-center gap-2 text-caption">
-            <span className={on ? "font-bold text-ink" : "text-soft"}>{names[i]}</span>
-            <span className="relative h-2.5 rounded-badge bg-sunk"><i className={`absolute inset-y-0 block rounded-badge ${on ? "bg-accent" : "bg-series-soft"}`} style={{ left: `${at(x[0])}%`, width: `${at(x[1]) - at(x[0])}%` }} /></span>
-            <b className={`whitespace-nowrap text-right tabular-nums ${on ? "text-accent" : "text-soft"}`}>{won(x[0])}~{won(x[1])}</b>
-          </div>
-        );
-      })}
-    </figure>
-  );
-}

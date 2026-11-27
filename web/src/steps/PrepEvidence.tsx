@@ -31,14 +31,14 @@ export function Evidence({ r }: { r: Result }) {
             {c.meta_says && <p>· {c.meta_says}</p>}
           </>}
           {tab === "우리 실측 2건" && <>
-            <p>· 오븐로그: 수동 노출 위치가 광고비(CPM) {ok ? ok.reason.replace("↓ 광고비 ", "").replace(" 싸요 · 확실해요", "") : "15%"} 저렴 · 판정 {DEV_LABEL["채택"]}</p>
-            <p>· 모닝빈: 수동 세트 광고비(CPM) 36% 저렴 — 두 실측이 같은 방향이에요.</p>
+            <p>· 베이커리 실험 1: 수동 노출 위치가 광고비(CPM) {ok ? ok.reason.replace("↓ 광고비 ", "").replace(" 싸요 · 확실해요", "") : "15%"} 저렴 · 판정 {DEV_LABEL["채택"]}</p>
+            <p>· 베이커리 실험 2: 수동 세트 광고비(CPM) 36% 저렴 — 두 실측이 같은 방향이에요.</p>
             {r.verdict && <p>· 방문 1명당 비용 판정: {DEV_LABEL[r.verdict.badge.level]} ({Math.round(r.verdict.badge.prob * 100)}%){r.verdict.badge.capped ? ` · ${r.verdict.badge.capped.join(", ")}` : ""}</p>}
             {c.rule && <p>· 이번 결론 규칙(진단 {c.rule.row}번): {DEV_LABEL[c.rule.level]} · 효과는 {DEV_LABEL[c.certainty?.level ?? "보류"]} (돌려 본 적 없음)</p>}
           </>}
           {tab === "논문" && <p>Lewis & Rao 2015 · Gordon 외 2019 · Johnson 외 2017 · Feit & Berman 2019 · Scott 2010 · Efron & Morris 1975 · Kohavi 외 2020</p>}
           {tab === "가상 케이스" && <>
-            <p>메타 설정을 하나만 다르게 한 A/B 두 세트를 오븐로그 실측 비율로 만들어, 이 분석을 그대로 돌려 본 결과예요.
+            <p>메타 설정을 하나만 다르게 한 A/B 두 세트를 베이커리 실험 1 실측 비율로 만들어, 이 분석을 그대로 돌려 본 결과예요.
               판정 규칙이 맞게 움직이는지 보려는 것이라 <b>판정에는 쓰지 않아요</b>. (네이버 광고는 돌리지 않아서 메타만)</p>
             <div className="overflow-x-auto">
               <table className="w-full text-body">
@@ -60,7 +60,7 @@ export function Evidence({ r }: { r: Result }) {
                 </tbody>
               </table>
             </div>
-            <p>· 실측: 오븐로그 A(자동)·B(직접 고르기)의 광고비·누르는 비율·도착 비율 · 가정: 실측에 없는 값(V5·V6) · 시드 고정이라 다시 돌려도 같은 숫자</p>
+            <p>· 실측: 베이커리 실험 1 A(자동)·B(직접 고르기)의 광고비·누르는 비율·도착 비율 · 가정: 실측에 없는 값(V5·V6) · 시드 고정이라 다시 돌려도 같은 숫자</p>
           </>}
           {tab === "한계" && <p>세트를 복제하면 같은 사람에게 두 세트가 겹쳐 보일 수 있어요. 소액·짧은 기간이라 범위가 넓어요. 예산을 크게 늘릴 때 단가가 오르는 효과는 넣지 않았어요. 광고 전후 비교로는 효과를 말하지 않고, 같은 기간에 동시에 돌린 A/B 비교로만 말해요.</p>}
         </div>

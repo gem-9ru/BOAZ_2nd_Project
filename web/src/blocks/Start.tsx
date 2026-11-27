@@ -44,7 +44,7 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
             aria-describedby={error ? "csv-error" : undefined} aria-invalid={error ? true : undefined} className="sr-only"
             onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
           {received !== null
-            ? <span className="mt-4 rounded-badge bg-ok-bg px-3 py-1.5 text-caption text-ink"><span aria-hidden="true" className="font-bold text-ok">✓ </span>내 광고 설정은 확장 프로그램에서 자동으로 받았어요 ({received}칸)</span>
+            ? <span className="mt-4 rounded-badge bg-ok-bg px-3 py-1.5 text-caption text-ink"><span aria-hidden="true" className="font-bold text-ok">✓ </span>내 광고 설정은 확장 프로그램에서 자동으로 받았어요</span>
             : <button type="button" onClick={(e) => { e.preventDefault(); setMine(true); }} className="mt-4 text-caption text-accent-ink underline">내 광고 설정 5개만 직접 입력하기 ▸</button>}
         </label>
         {busy && <p role="status" className="text-body text-soft">파일을 읽고 계산하는 중이에요…</p>}
@@ -52,37 +52,36 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
         {/* 올린 파일 검사 결과: 통과면 ✓ 파일 · 줄 수, 차단이면 고칠 방법을 파일 칸 바로 아래에 */}
         {checked && !checked.blocks.length && <p role="status" className="text-body font-semibold text-ok">✓ {checked.name} · {checked.rows}줄 확인</p>}
         {checked && checked.blocks.length > 0 && <ul role="alert" className="flex flex-col gap-2 rounded-soft border-[1.5px] border-block-line bg-block-bg px-4 py-3">{checked.blocks.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
-        {/* [분석 시작]은 파일 칸 바로 아래 (통과 표시와 다음에 누를 버튼을 붙여 둔다). 회색일 땐 이유를 글로 */}
-        <div className="flex items-center justify-end gap-3">
-          {!ready && <span className="text-label text-soft">파일을 올리면 눌러져요</span>}
-          <Button onClick={onStart} disabled={!ready}>분석 시작 ▶</Button>
-        </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-body text-soft">파일이 없나요?</span>
-        <Example icon="🍪" onClick={() => onExample("ovenlog")} disabled={busy}>오븐로그 예시로 보기</Example>
-        <Example icon="☕" onClick={() => onExample("heesu")} disabled={busy}>모닝빈 예시로 보기</Example>
+        <Example icon="🍪" onClick={() => onExample("ovenlog")} disabled={busy}>베이커리 실험 1 예시</Example>
+        <Example icon="🧪" onClick={() => onExample("heesu")} disabled={busy}>베이커리 실험 2 예시</Example>
       </div>
 
+      {/* 최종안: 접기는 '도움말' 1개 (결과 파일 받는 법 · 꼭 있어야 하는 열 · 내 광고 설정 · 광고를 아직 안 돌렸을 때) */}
       <Folds label="도움말">
-        <Fold label="결과 파일은 어떻게 받아요?" preview="광고 관리자 › 보고서 › 일 · 노출 위치">
-          <ol className="list-decimal pl-5">
-            <li>광고 관리자 → <b>광고 세트</b> 탭에서 비교할 세트 체크</li>
-            <li>날짜를 광고를 돌린 기간으로</li>
-            <li><b>보고서 › 분석 기준</b>에서 <b>일</b>과 <b>노출 위치</b>를 고른 뒤 내보내기(.csv)</li>
-          </ol>
-        </Fold>
-        <Fold label="꼭 있어야 하는 열" preview="지출 금액 · 노출 · 링크 클릭 · 랜딩 페이지 조회">
-          <ul className="flex flex-wrap gap-x-3">{["지출 금액", "노출", "링크 클릭", "랜딩 페이지 조회"].map((c) => <li key={c}>✓ {c}</li>)}</ul>
-          <p className="text-soft">'조회'는 랜딩 페이지 조회가 아니에요. '랜딩 페이지 조회'를 골라 주세요. (없으면 '들어온 사람'을 계산하지 못해요)</p>
-        </Fold>
-        <Fold key={mine ? "mine-open" : "mine"} open={mine} label="내 광고 설정이 없어요" preview={received !== null ? `확장 프로그램에서 받음 (${received}칸)` : "5개만 직접 입력"}>
-          <MySettings received={received} value={settings} onChange={onSettings} />
-        </Fold>
-        <Fold label="아직 광고를 안 돌려 봤어요" preview="작게 두 세트로 돌리는 법">
+        <Fold key={mine ? "help-open" : "help"} open={mine} label="도움말" preview="결과 파일 받는 법 · 꼭 있어야 하는 열 · 광고를 아직 안 돌렸을 때">
+          <section className="flex flex-col gap-1">
+            <h2 className="font-bold">결과 파일은 어떻게 받아요?</h2>
+            <ol className="list-decimal pl-5">
+              <li>광고 관리자 → <b>광고 세트</b> 탭에서 비교할 세트 체크</li>
+              <li>날짜를 광고를 돌린 기간으로</li>
+              <li><b>보고서 › 분석 기준</b>에서 <b>일</b>과 <b>노출 위치</b>를 고른 뒤 내보내기(.csv)</li>
+            </ol>
+          </section>
+          <section className="flex flex-col gap-1">
+            <h2 className="font-bold">꼭 있어야 하는 열</h2>
+            <ul className="flex flex-wrap gap-x-3">{["지출 금액", "노출", "링크 클릭", "랜딩 페이지 조회"].map((c) => <li key={c}>✓ {c}</li>)}</ul>
+            <p className="text-soft">'조회'는 랜딩 페이지 조회가 아니에요. '랜딩 페이지 조회'를 골라 주세요. (없으면 '들어온 사람'을 계산하지 못해요)</p>
+          </section>
+          <section className="flex flex-col gap-1">
+            <h2 className="font-bold">내 광고 설정이 없어요</h2>
+            <MySettings received={received} value={settings} onChange={onSettings} />
+          </section>
           <fieldset className="flex flex-col gap-2">
-            <legend className="mb-2 font-semibold">광고 전 준비 <span className="tabular-nums text-soft">{done.filter(Boolean).length}/{PREP.length}</span></legend>
+            <legend className="mb-2 font-bold">광고를 아직 안 돌렸다면: 5,000원씩 두 세트로 작게 <span className="tabular-nums font-normal text-soft">{done.filter(Boolean).length}/{PREP.length}</span></legend>
             {PREP.map((t, i) => (
               <label key={t} className="flex items-start gap-2">
                 <input type="checkbox" checked={done[i]} onChange={() => setDone((d) => d.map((x, j) => (j === i ? !x : x)))} className="mt-1 accent-action" />{t}
@@ -92,6 +91,12 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
           </fieldset>
         </Fold>
       </Folds>
+
+      {/* 최종안: [분석 시작]은 맨 아래. 파일이 통과해야 진해지고, 회색일 땐 이유를 글로 */}
+      <div className="flex items-center justify-end gap-3">
+        {!ready && <span className="text-label text-soft">파일을 올리면 눌러져요</span>}
+        <Button onClick={onStart} disabled={!ready}>분석 시작 ▶</Button>
+      </div>
 
     </div>
   );

@@ -227,3 +227,13 @@ export function BigButton({ children, onClick }: { children: ReactNode; onClick?
 export function Title({ parts }: { parts: readonly [string, string, string] }) {
   return <>{parts[0]}<em className="mark-belly">{parts[1]}</em>{parts[2]}</>;
 }
+
+/** '더 자세히' 안의 작은 제목 한 덩어리 */
+export function Sub({ title, note, children }: { title: string; note: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-stack border-t border-line pt-3 first:border-t-0 first:pt-0">
+      <h3 className="flex flex-wrap items-baseline justify-between gap-2 font-bold">{title}<span className="text-caption font-normal text-soft">{note}</span></h3>
+      {children}
+    </section>
+  );
+}

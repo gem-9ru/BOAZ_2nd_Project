@@ -2,11 +2,11 @@ import { useEffect, useRef, useState } from "react";
 import { analyzeFile, example, receivedSettings, type ExampleName, type Result } from "./api";
 import type { Settings } from "./blocks/MySettings";
 import { Start } from "./blocks/Start";
-import { Conclusion, oneLine } from "./steps/Conclusion";
+import { Conclusion } from "./steps/Conclusion";
 import { Prep, prepLine } from "./steps/Prep";
 import { answer, Why } from "./steps/Why";
 import { AlertLine, SCREEN_ORDER, STEPS } from "./steps/shared";
-import { AlertMark, Button, Card, Ghost, Title, Toast } from "./ui";
+import { AlertMark, BigButton, Card, Ghost, Title, Toast } from "./ui";
 import { Mungchi } from "./ui/Mungchi";
 
 /** 분석 페이지 (축소안 v5): 업로드 → ① 결론 → ② 왜 그런지 → ③ 준비하기. 한 열로 읽고, 화면마다 진한 버튼은 하나.
@@ -123,7 +123,7 @@ export default function App() {
             <h1 ref={title} tabIndex={-1} aria-label={step === 0 && result.blocked ? undefined : s.title} className="text-hero-sm font-extrabold leading-tight tracking-tight focus:outline-none">
               {step === 0 && result.blocked ? "이 파일로는 아직 결론을 낼 수 없어요" : <Title parts={s.parts} />}
             </h1>
-            {!(step === 0 && result.blocked) && <p className="text-lead font-medium text-soft">{[oneLine(result.matrix.change ?? result.next.change), answer(result), prepLine(result)][step]}</p>}
+            {!(step === 0 && result.blocked) && <p className="text-lead font-medium text-soft">{[LEAD_1, result.summary.arms.length === 1 ? answer(result) : LEAD_2, prepLine(result)][step]}</p>}
           </div>
           {step === 1 && <Mungchi pose="idle" className="w-24 shrink-0 max-sm:hidden" />}
         </div>
@@ -132,17 +132,15 @@ export default function App() {
             <ul className="flex flex-col gap-2">{result.alerts.filter((a) => a.level === "block").map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>
           </Card>
         )}
-        {step === 0 && !result.blocked && <Conclusion r={result} onPrep={() => go(2)} />}
+        {step === 0 && !result.blocked && <Conclusion r={result} onPrep={() => go(2)} onWhy={() => go(1)} />}
         {step === 1 && <Why r={result} />}
-        {step === 2 && <Prep r={result} onCopied={showToast} onSend={sendToExtension} onReload={() => setResult(null)} />}
-        <nav aria-label="이전 다음" className="flex flex-wrap items-center justify-between gap-3 pt-2 print:hidden">
-          {/* 화면마다 진한 버튼은 하나: ①은 [이 테스트 준비하기], ②는 [준비하기 ▶], ③은 [확장 프로그램으로 보내기] */}
-          {step === 0 && <><span className="text-body text-soft">{result.blocked ? "" : "여기서 바로 준비해도 돼요"}</span>
-            <Ghost onClick={() => go(1)} disabled={result.blocked}>왜 그런지 보기 ▶</Ghost></>}
-          {step === 1 && <><Ghost onClick={() => go(0)}>◀ 결론</Ghost><Button onClick={() => go(2)}>준비하기 ▶</Button></>}
-          {step === 2 && <><Ghost onClick={() => go(1)}>◀ 왜 그런지</Ghost>
-            <button type="button" onClick={() => go(0)} className="inline-flex min-h-11 items-center px-2 text-body text-soft underline hover:text-ink">처음으로</button></>}
-        </nav>
+        {step === 2 && <Prep r={result} onCopied={showToast} onSend={sendToExtension} onReload={() => setResult(null)} onBack={() => go(1)} />}
+        {/* 최종안: ①은 결론 카드 안 [이 테스트 준비하기] + '왜 이 칸인지 보기' 글자 링크, ③은 보내기 줄에 [◀ 왜 그런지] → 여기선 ②만 */}
+        {step === 1 && (
+          <nav aria-label="이전 다음" className="flex flex-wrap items-center justify-between gap-3 pt-2 print:hidden">
+            <Ghost onClick={() => go(0)}>◀ 결론</Ghost><BigButton onClick={() => go(2)}>준비하기 ▶</BigButton>
+          </nav>
+        )}
         {result.blocked && <p className="text-body text-block-ink">■ 차단 알림을 먼저 해결해야 다음 화면으로 갈 수 있어요.</p>}
       </main>
       <Toast text={toast} />
@@ -162,7 +160,9 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
           <span aria-hidden="true" className="grid size-9 shrink-0 place-items-start justify-center overflow-hidden rounded-badge bg-belly"><Mungchi pose="idle" className="mt-1 w-8" /></span>
           광고 어시스턴트
         </p>
-        <span className="min-w-0 truncate rounded-badge bg-sunk px-3 py-1.5 text-caption text-soft">{file ? `분석 · ${file}` : "새 분석"}</span>
+        <span className="min-w-0 truncate rounded-badge bg-sunk px-3 py-1.5 text-caption text-soft">{file ?? "새 분석"}</span>
+        {/* 결과를 지우는 일이라 한 번 묻는다. 최종안: 오른쪽 위 작은 글자 링크 '다른 파일' */}
+        {onLeave && <button type="button" onClick={onLeave} className="print:hidden inline-flex min-h-9 items-center text-caption text-soft underline hover:text-ink">다른 파일</button>}
         <nav aria-label="단계" className="ml-auto print:hidden max-sm:w-full max-sm:overflow-x-auto">
           <ol className="flex items-center gap-1 rounded-badge bg-sunk p-1">
             {STEPS.map((x, i) => {
@@ -179,48 +179,33 @@ function AppHeader({ file, step, reached = -1, blocked = false, onGo, onLeave }:
             })}
           </ol>
         </nav>
-        {/* 결과를 지우는 일이라 한 번 묻는다. 자주 쓰는 버튼이 아니라 작은 글자 버튼으로 */}
-        {onLeave && <button type="button" onClick={onLeave} className="print:hidden inline-flex min-h-9 items-center text-caption text-soft underline hover:text-ink">다른 파일 올리기</button>}
       </div>
     </header>
   );
 }
 
-const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "오븐로그_메타AB_20261117-20261120.csv", heesu: "모닝빈_메타AB_20261117-20261120.csv" };
+const EXAMPLE_FILE: Record<ExampleName, string> = { ovenlog: "베이커리실험1_메타AB_20261117-20261120.csv", heesu: "베이커리실험2_메타AB_20261117-20261120.csv" };   // 화면 이름 (최종안: 오븐로그 → 베이커리 실험 1, 희수 실험 → 베이커리 실험 2)
 const ORDER = SCREEN_ORDER;
+// 최종안의 한 줄 답 (①·②는 고정 문장, ③은 바꿀 칸에 따라)
+const LEAD_1 = "나머지 칸은 그대로 둬야 무엇 덕분인지 알 수 있어요";
+const LEAD_2 = "이유 3가지와 그 근거 숫자예요. 위에서부터 읽으면 돼요";
 const NAME = { block: "차단", warn: "주의", info: "참고" } as const;
 
 /** 맨 위 알림 바 (v4.2 규칙 그대로, 축소안 v5): 경고는 결론보다 먼저. 가장 심각한 알림 1개 한 줄 + 등급별 개수 + [모두 보기 ▾].
  *  ③ 준비하기(AN-06)에선 남은 주의를 체크리스트로 옮겼다고 알려 준다. 고정 안내(Breakdown)는 여기 넣지 않는다. */
 function AlertBar({ r, step }: { r: Result; step: string }) {
-  const [all, setAll] = useState(false);
   const at = ORDER.indexOf(step);
   const list = r.alerts.filter((a) => !a.shown_from || at >= ORDER.indexOf(a.shown_from));
-  if (!list.length) return null;
-  const count = (l: keyof typeof NAME) => list.filter((a) => a.level === l).length;
-  const counts = (["block", "warn", "info"] as const).filter((l) => count(l) > 0).map((l) => `${NAME[l]} ${count(l)}`).join(" · ");
-  if (step === "AN-06" && !count("block")) {
-    return (
-      <section aria-label="알림" className="flex flex-wrap items-center gap-3 rounded-soft border-[1.5px] border-ok-line bg-ok-bg px-4 py-2.5 text-label text-ok-ink">
-        <AlertMark level="ok" />
-        <b className="flex-1 min-w-48">차단 알림 없음{count("warn") ? ` · 주의 ${count("warn")}건은 아래 체크리스트에 넣었어요` : ""}</b>
-      </section>
-    );
-  }
-  // 가장 심각한 1개: 차단 → 주의 → 참고 (같은 등급이면 앞 단계 것). 짧은 글(later)이 있으면 그것.
-  const top = list.find((a) => a.level === "block") ?? list.find((a) => a.level === "warn") ?? list[0]!;
+  // 최종안: 가장 중요한 알림 한 줄만 (개수·[모두 보기] 없음). 나머지 주의는 ③ 체크리스트로, ③에선 알림 바를 띄우지 않는다 (차단이면 언제나)
+  const top = list.find((a) => a.level === "block") ?? (step === "AN-06" ? undefined : list.find((a) => a.level === "warn"));
+  if (!top) return null;
   const text = top.later ?? top.text;
   // 상자 = 연한 바탕 + 같은 계열 1.5px 테두리 + 진한 글자 (디자인 시스템 '알림 상자', 꾸미기안_뭉치 .alert)
-  const box = top.level === "block" ? "bg-block-bg border-block-line text-block-ink" : top.level === "warn" ? "bg-warn-bg border-warn-line text-warn" : "bg-info-bg border-info-line text-info-ink";
+  const box = top.level === "block" ? "bg-block-bg border-block-line text-block-ink" : "bg-warn-bg border-warn-line text-warn";
   return (
-    <section aria-label="알림" className={`rounded-soft border-[1.5px] px-4 py-2.5 ${box}`}>
-      <div className="flex flex-wrap items-center gap-3 text-label">
-        <AlertMark level={top.level} />
-        <b className="flex-1 min-w-48"><span className="font-normal">{NAME[top.level]} · </span>{text}</b>
-        <span className="text-caption text-soft">{counts}</span>
-        <button type="button" onClick={() => setAll((x) => !x)} aria-expanded={all} className="inline-flex min-h-8 items-center px-2 text-caption underline">{all ? "접기 ▴" : "모두 보기 ▾"}</button>
-      </div>
-      {all && <ul className="mt-3 flex flex-col gap-2">{list.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
+    <section aria-label="알림" className={`flex items-center gap-3 rounded-soft border-[1.5px] px-4 py-2.5 text-label ${box}`}>
+      <AlertMark level={top.level} />
+      <b className="flex-1"><span className="sr-only">{NAME[top.level]} · </span>{text}</b>
     </section>
   );
 }

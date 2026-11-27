@@ -38,7 +38,7 @@ CASES: List[Dict] = [
     {"id": "V3", "setting": "총예산이 '하루 최소 × 기간'보다 적음 (두 세트 모두 2,000원)", "basis": "실측 (11/17 안 나간 날)",
      "settings": {"meta.adset.lifetime_budget": "2,000원"},
      "arms": [_arm("A_자동노출위치", AUTO, [0, 300, 300, 300]), _arm("B_수동노출위치", MANUAL, [0, 300, 300, 300])]},
-    {"id": "V4", "setting": "예산 공유(최대 20%) 켬 → 한 세트에 돈이 몰림", "basis": "실측 (모닝빈 28 : 72)",
+    {"id": "V4", "setting": "예산 공유(최대 20%) 켬 → 한 세트에 돈이 몰림", "basis": "실측 (베이커리 실험 2 28 : 72)",
      "arms": [_arm("A_자동노출위치", AUTO, _per_set(2800, 4)), _arm("B_수동노출위치", MANUAL, _per_set(7200, 4))]},
     {"id": "V5", "setting": "B 웹사이트 주소 잘못 (페이지가 늦게 열림)", "basis": "가정: 도착 비율 45%",
      "arms": [_arm("A_수동노출위치", MANUAL, _per_set(5000, 4)), _arm("B_수동노출위치", {**MANUAL, "visit": 0.45}, _per_set(5000, 4))]},

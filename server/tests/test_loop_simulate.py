@@ -38,3 +38,17 @@ def test_judge_chance_matches_v5_wire():
     b = next(a for a in oven["summary"]["arms"] if a["name"].startswith("B"))
     got = [simulate.judge_chance(b, x, runs=50000) for x in (5000, 6000, 10000)]
     assert 0.64 < got[0] < 0.74 and 0.85 < got[1] < 0.93 and got[2] > 0.99
+
+
+def test_grid_for_the_budget_slider():
+    """최종안 ③ 슬라이더: 3,000~30,000원 1,000원 단위, 판단 어려운 금액 표시, run과 같은 방문자 범위."""
+    import json, pathlib
+    oven = json.loads((pathlib.Path(__file__).parents[2] / "web/tests/fixtures/oven.json").read_text())
+    b = next(a for a in oven["summary"]["arms"] if a["name"].startswith("B"))
+    g = simulate.grid(b, days=4, runs=50000)
+    rows = {r["budget"]: r for r in g["rows"]}
+    assert min(rows) == 3000 and max(rows) == 30000 and len(rows) == 28
+    assert rows[5000]["hard"] and not rows[6000]["hard"]          # 69% · 89% (기준 80%)
+    assert rows[5000]["below_daily_min"] and not rows[6000]["below_daily_min"]
+    one = simulate.run(b, 6000, runs=50000)
+    assert abs(rows[6000]["visits"]["median"] - one["visits"]["median"]) < 0.5

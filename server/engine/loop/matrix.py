@@ -103,15 +103,17 @@ def _checklist(alerts: List[Dict], label: str, days: int = 4) -> List[str]:
     cfg = _loop()
     words = cfg.get("checklist", {})
     out: List[str] = []
-    last: List[str] = []   # 축소안 v5 ③ 순서: 준비 → 같은 날 → 칸 1개 → 'N일 뒤 갈림길'은 맨 끝
+    last: List[str] = []   # 최종안 ③ 순서: 같은 날·여유 → 칸 1개 → N일 그대로 → 연장 규칙
+    kinds = {a["kind"] for a in alerts if a["level"] == "warn"}
     for a in alerts:
         t = words.get(a["kind"]) if a["level"] == "warn" else None
-        if t:
-            t = t.format(min_clicks=cfg["alerts"]["min_clicks"], label=label, days=days)
+        for line in ([t] if isinstance(t, str) else t or []):
+            line = line.format(min_clicks=cfg["alerts"]["min_clicks"], label=label, days=days)
             into = last if a["kind"] == "small_sample" else out
-            if t not in into:
-                into.append(t)
-    out.append(words.get("same_day", "두 세트를 같은 날 같이 시작"))
+            if line not in into:
+                into.append(line)
+    if "no_delivery" not in kinds:   # 안 나간 날이 있으면 그 줄에 '같은 날 같이 시작'이 들어 있다
+        out.insert(0, words.get("same_day", "두 세트를 같은 날 같이 시작"))
     out.append(words.get("one_field", "바꾸는 칸은 {label} 1개만").format(label=label))
     return out + last
 
@@ -139,7 +141,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
     elif no_delivery:
         rows.append(_row("0", "게재", f"광고가 안 나간 날 {len(no_delivery)}일", "watch", "meta.adset.end_date"))
         watch.append({"field_id": "meta.adset.end_date", "path": PATH["meta.adset.end_date"], "title": "시작 날짜",
-                      "text": "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게", "short": "첫날 안 보여졌어요"})
+                      "text": "첫날 안 보여졌어요 → 다음엔 시작 시간을 하루 여유 있게", "short": "첫날이 비었고"})   # short: ① '다음엔 이렇게' 이유 (최종안)
     else:
         rows.append(_row("0", "게재", "매일 광고가 나갔어요", "ok"))
 
@@ -275,7 +277,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
                   # 설계서 AN-06 '(Test & Roll 권장 범위 안)': AN-05 전체 예산 칸 기본값(10만 원) 기준
                   "test_roll": _tr["per_set_lo"] <= per_set <= _tr["per_set_hi"],
                   "test": f"지금 세트와 {won(per_set)}씩 같이 돌려서 직접 비교해요.",
-                  "unknown": f"{josa(what)} 방문자를 더 데려올지는 아직 몰라요 → 이번 테스트로 확인해요.",   # 축소안 v5 ①
+                  "unknown": f"{josa(what)} 방문자를 더 데려올지는 이번 테스트로 확인해요.",   # 최종안 ①
                   "certainty": _certainty("보류", "돌려 본 적 없는 값이라 이번 테스트로 확인해요"),
                   # 근거 탭·개발 문서용: 진단 규칙 자체의 신뢰도 (확실/유력/보류 그대로)
                   "rule": {"row": pick, "level": p["level"], "why": "실측 + 진단 규칙" + (" + 메타 권장" if p.get("meta_says") else "")},
@@ -285,7 +287,7 @@ def run(summary: Dict, check: Dict, verdict: Optional[Dict], alerts: List[Dict],
         mb = (verdict.get("min_budget") or {}).get("per_group")
         ss = next((a for a in alerts if a["kind"] == "small_sample"), None)
         # 문구는 화면설계서 v4.2 AN-01 '알림 신청이 1건뿐이라 아직 몰라요' 그대로
-        why, short = ((f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요", f"{act_label} {int(ss['actions'])}건뿐") if ss and ss.get("actions") is not None
+        why, short = ((f"{act_label}이 {int(ss['actions'])}건뿐이라 아직 몰라요", f"{josa(act_label, '은는')} {int(ss['actions'])}건뿐이라 행동은 아직 몰라요") if ss and ss.get("actions") is not None
                       else (f"클릭이 {_loop()['alerts']['min_clicks']}번이 안 모여서 아직 몰라요", f"클릭 {_loop()['alerts']['min_clicks']}번 안 됨") if ss
                       else (f"지금은 '{verdict['badge']['word']}' 단계라 더 모아야 확실해요", "더 모아야 확실해요"))
         # short: 분석 페이지 ① '다시 보기' 요약 한 줄 (축소안 v5)

@@ -73,3 +73,22 @@ def judge_chance(arm: Dict, budget: float, sets: int = 2, runs: int = RUNS, seed
     rng = np.random.default_rng(seed)
     clicks = sum(budget / d["cpm"] * 1000 * d["ctr"] for d in (posterior.draws(arm, n=runs, seed=seed + i) for i in range(sets)))
     return float((rng.poisson(clicks) >= _loop()["alerts"]["min_clicks"]).mean())
+
+
+def grid(arm: Dict, days: int = 4, runs: int = RUNS, seed: int = 0) -> Dict:
+    """③ 예산 슬라이더 결과표 (최종안): 3,000~30,000원을 1,000원 단위로 미리 계산해 두면 움직일 때 바로 바뀐다.
+    방문자 수는 예산에 비례하므로 표본(원당 방문자)을 한 번만 뽑아 금액마다 곱한다 (run과 같은 seed라 같은 숫자).
+    hard = 두 세트 합쳐 클릭 30번이 모일 가능성이 judge_min보다 낮음 → '이 금액이면 결과를 판단하기 어려워요'."""
+    cfg = _loop()
+    g = cfg["simulation"]["grid"]
+    need = cfg["alerts"]["min_clicks"]
+    d = posterior.draws(arm, n=runs, seed=seed)
+    visit_rate = 1000 / d["cpm"] * d["ctr"] * d["click_to_visit"]            # 1원당 방문자
+    clicks_per_won = sum(1000 / x["cpm"] * x["ctr"] for x in (d, posterior.draws(arm, n=runs, seed=seed + 1)))   # 두 세트
+    rng = np.random.default_rng(seed)
+    rows = []
+    for b in range(int(g["lo"]), int(g["hi"]) + 1, int(g["step"])):
+        judge = float((rng.poisson(clicks_per_won * b) >= need).mean())
+        rows.append({"budget": b, "visits": _band(visit_rate * b), "judge": judge,
+                     "hard": judge < cfg["simulation"]["judge_min"], **tried(arm, float(b), days)})
+    return {"arm": arm["name"], "days": days, "rows": rows}

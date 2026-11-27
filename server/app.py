@@ -60,7 +60,7 @@ app = FastAPI(title="광고 코치 v3", docs_url=None, redoc_url=None, openapi_u
 
 # ── 공개 주소 보호 (감사 3·4, 2026-11-26): 터널로 온 요청은 주소마다 분당 횟수 제한, 본문 크기는 누구든 제한 ──
 RATE_PER_MIN = 30          # Claude·네이버를 부르는 경로, 공개 주소 하나당 1분에
-RATE_PATHS = {"/research", "/copies", "/assistant", "/audience/split", "/simulate", "/analysis"}
+RATE_PATHS = {"/research", "/copies", "/assistant", "/audience/split", "/simulate", "/simulate/grid", "/analysis"}
 MAX_BODY = 64 * 1024       # 파일 올리기 말고는 작은 JSON뿐
 _HITS: Dict[str, List[float]] = {}   # shortcut: 서버 하나 메모리에만 센다, 서버를 여러 대 띄우면 공유 저장소로
 
@@ -409,6 +409,22 @@ def simulate(body: SimulateIn):
     return {**out, **loop_simulate.tried(arm, budget, body.days if body.days and body.days > 0 else None),
             "next_test": loop_simulate.next_test_budget(max(body.total, 0.0), body.days or 4),
             "judge": loop_simulate.judge_chance(arm, budget)}   # 두 세트 합쳐 클릭 30번 넘게 모일 가능성 (③ 예산 칩)
+
+
+class GridIn(BaseModel):
+    code: str = Field(max_length=8)
+    arm: str = Field(max_length=120)
+    days: int = Field(4, ge=1, le=365)
+
+
+@app.post("/simulate/grid")
+def simulate_grid(body: GridIn):
+    """③ 예산 슬라이더: 1,000원 단위 결과표를 한 번에 (움직일 때마다 서버에 묻지 않게)."""
+    plan = _plan(body.code)
+    arm = next((a for a in (plan or {}).get("summary", {}).get("arms", []) if a["name"] == body.arm), None)
+    if arm is None:
+        raise HTTPException(status_code=404, detail="분석 결과나 광고 세트를 찾지 못했어요. 파일을 다시 올려 주세요.")
+    return loop_simulate.grid(arm, body.days)
 
 
 @app.get("/plan/{code}")

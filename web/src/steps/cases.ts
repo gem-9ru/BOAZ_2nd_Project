@@ -43,7 +43,7 @@ export const VIRTUAL_CASES: VirtualCase[] = [
   {
     "id": "V4",
     "setting": "예산 공유(최대 20%) 켬 → 한 세트에 돈이 몰림",
-    "basis": "실측 (모닝빈 28 : 72)",
+    "basis": "실측 (베이커리 실험 2 28 : 72)",
     "conclusion": "광고 › 형식·미디어: + 세로(9:16) 1개",
     "word": "아직 몰라요",
     "prob": 0.88,
