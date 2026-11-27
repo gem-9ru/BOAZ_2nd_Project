@@ -48,10 +48,10 @@ export function Start({ onFile, onExample, onStart, checked, busy, error, receiv
             : <button type="button" onClick={(e) => { e.preventDefault(); setMine(true); }} className="mt-4 text-caption text-accent-ink underline">내 광고 설정 5개만 직접 입력하기 ▸</button>}
         </label>
         {busy && <p role="status" className="text-body text-soft">파일을 읽고 계산하는 중이에요…</p>}
-        {error && <p id="csv-error" role="alert" className="rounded-button bg-block-bg px-4 py-3 text-body text-block-ink">{error}</p>}
+        {error && <p id="csv-error" role="alert" className="rounded-soft border-[1.5px] border-block-line bg-block-bg px-4 py-3 text-body text-block-ink">{error}</p>}
         {/* 올린 파일 검사 결과: 통과면 ✓ 파일 · 줄 수, 차단이면 고칠 방법을 파일 칸 바로 아래에 */}
         {checked && !checked.blocks.length && <p role="status" className="text-body font-semibold text-ok">✓ {checked.name} · {checked.rows}줄 확인</p>}
-        {checked && checked.blocks.length > 0 && <ul role="alert" className="flex flex-col gap-2 rounded-button bg-block-bg px-4 py-3">{checked.blocks.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
+        {checked && checked.blocks.length > 0 && <ul role="alert" className="flex flex-col gap-2 rounded-soft border-[1.5px] border-block-line bg-block-bg px-4 py-3">{checked.blocks.map((a) => <AlertLine key={a.kind + a.text} a={a} />)}</ul>}
         {/* [분석 시작]은 파일 칸 바로 아래 (통과 표시와 다음에 누를 버튼을 붙여 둔다). 회색일 땐 이유를 글로 */}
         <div className="flex items-center justify-end gap-3">
           {!ready && <span className="text-label text-soft">파일을 올리면 눌러져요</span>}
