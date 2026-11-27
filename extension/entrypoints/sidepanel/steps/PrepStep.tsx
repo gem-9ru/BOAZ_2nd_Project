@@ -18,7 +18,7 @@ export default function PrepStep({ state, dispatch, fields }: { state: FlowState
   return (
     <section className="flex flex-col gap-5">
       {index === 0 && (
-        <Coach>시작하기 전에 준비물을 확인할게요 (2분). 없는 게 있으면 만드는 방법을 바로 알려 드려요. 예산과 기간은 뒤에서 같이 정해요.</Coach>
+        <Coach avatar={false}>시작하기 전에 준비물을 확인할게요 (2분). 없는 게 있으면 만드는 방법을 바로 알려 드려요. 예산과 기간은 뒤에서 같이 정해요.</Coach>
       )}
       {next ? (
         <>

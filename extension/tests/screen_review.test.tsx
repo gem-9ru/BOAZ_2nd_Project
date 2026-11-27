@@ -317,3 +317,14 @@ describe("재검토 고치기 (2026-11-27 오후)", () => {
     expect((await loadState()).guide?.index).toBe(3);
   });
 });
+
+describe("한 화면에 말풍선 뭉치는 한 번만 (2026-11-27)", () => {
+  it("② 세팅 첫 질문: 안내 말풍선과 질문 말풍선이 이어지면 뭉치 그림은 마지막(질문)에만", async () => {
+    const QuestionStep = (await import("../entrypoints/sidepanel/steps/QuestionStep")).default;
+    const target = { ageMin: 30, ageMax: 39, gender: "all" as const };
+    const copy = { headline: "h", primary_text: "t" } as never;
+    const { container } = render(<QuestionStep state={{ ...initialState(), step: "questions", target, copy }} dispatch={() => {}} fields={fieldsJson} defaults={[]} />);
+    expect(container.querySelectorAll("img").length).toBe(1);
+    expect(screen.getByText(/가지만 물어볼게요/)).toBeTruthy();
+  });
+});

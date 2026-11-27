@@ -45,7 +45,7 @@ export default function QuestionStep({ state, dispatch, fields, defaults: all }:
   return (
     <section className="flex flex-col gap-5">
       {index === 0 && (
-        <Coach>광고 관리자에 넣을 것 {asked.length}가지만 물어볼게요. 사장님이 마지막에 '게시'를 누르기 전에는 돈이 나가지 않아요.</Coach>
+        <Coach avatar={!next}>광고 관리자에 넣을 것 {asked.length}가지만 물어볼게요. 사장님이 마지막에 '게시'를 누르기 전에는 돈이 나가지 않아요.</Coach>
       )}
       <p className="text-caption text-soft">질문 {Math.min(index + 1, asked.length)} / {asked.length}</p>
       {index > 0 && next && (
