@@ -239,7 +239,7 @@ export default function GuideStep({ state, dispatch }: Props) {
         <ul aria-label="다른 할 일" className="flex flex-col divide-y divide-line rounded-card border border-line bg-paper">
           {away && (
             // 탭을 닫았거나 뭉치가 안 보이면 다시 부른다
-            <MoreRow id="more-call" icon="↻" title={login ? "로그인을 기다리는 중…" : "어시스턴트 다시 부르기"} desc="뭉치가 안 보이면 눌러요"
+            <MoreRow id="more-call" icon="↻" title={login ? "로그인을 기다리는 중…" : "어시스턴트 다시 부르기"} desc="어시스턴트가 안 보이면 눌러요"
               onClick={open} disabled={busy || login} />
           )}
           {index > 0 && (
