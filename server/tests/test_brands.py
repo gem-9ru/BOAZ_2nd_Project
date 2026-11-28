@@ -40,6 +40,14 @@ def test_memory_is_capped(monkeypatch):
     assert len(brands._known) == 2   # 넘치면 비우고 새로 물은 2개만 남김
 
 
+def test_known_brand_still_dropped_when_memory_is_emptied(monkeypatch):
+    monkeypatch.setattr(brands, "MAX_KNOWN", 3)
+    monkeypatch.setattr(brands, "_ask", lambda c, p, ws: ({"스탠리"} & set(ws), {w: "기능" for w in ws if w != "스탠리"}))
+    brands.classify("텀블러", ["스탠리", "보온"], client=object())
+    got, groups = brands.classify("텀블러", ["스탠리", "보온", "유리", "대용량"], client=object())   # 여기서 상한을 넘어 비움
+    assert got == {"스탠리"} and groups == {"보온": "기능", "유리": "기능", "대용량": "기능"}
+
+
 def test_remembers_words_and_asks_only_new_ones(monkeypatch):
     asked = []
     monkeypatch.setattr(brands, "_ask", lambda c, p, ws: (asked.append(list(ws)) or {"투썸"} & set(ws), {w: "기능" for w in ws if w != "투썸"}))

@@ -68,15 +68,16 @@ def classify(product: str, words: Iterable[str], client=None) -> Tuple[Set[str],
     """→ (브랜드 낱말, {낱말: 묶음 이름}). client가 None이면 키로 만들고, False면 묻지 않는다 (기억한 것만)."""
     words = [w for w in dict.fromkeys(words) if w]
     p = _norm(product)
-    unknown = [w for w in words if (p, w) not in _known or (not _known[(p, w)] and (p, w) not in _groups)]
+    unknown = [w for w in words if not _known.get((p, w)) and (p, w) not in _groups]   # 모르는 말 + 거르지 않는데 묶음이 없는 말
     if unknown and client is not False:
         client = client or copywriter.make_client()
         if client:
+            if len(_known) + len(unknown) > MAX_KNOWN:   # 묻기 전에 비우고 이번 낱말을 모두 묻는다 (물은 뒤 비우면 이미 알던 말이 이번 답에서 빠짐)
+                _known.clear()
+                _groups.clear()
+                unknown = words
             try:
                 found, groups = _ask(client, product, unknown)
-                if len(_known) + len(unknown) > MAX_KNOWN:
-                    _known.clear()
-                    _groups.clear()
                 for w in unknown:
                     _known[(p, w)] = w in found
                     if w in groups:
@@ -85,7 +86,7 @@ def classify(product: str, words: Iterable[str], client=None) -> Tuple[Set[str],
             except Exception as e:  # noqa: BLE001 (요청 내용이 섞일 수 있어 메시지는 남기지 않음)
                 log.warning("claude degraded part=brands err=%s", type(e).__name__)
     brand = {w for w in words if _known.get((p, w))}
-    return brand, {w: _groups[(p, w)] for w in words if (p, w) in _groups and w not in brand}
+    return brand, {w: g for w in words if (g := _groups.get((p, w))) and w not in brand}   # get: 다른 요청이 그사이 비워도 안 깨지게
 
 
 def brand_words(product: str, words: Iterable[str], client=None) -> Set[str]:
